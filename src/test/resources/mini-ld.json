@@ -2,8 +2,7 @@
   "@context": {
     "name": "http://xmlns.com/foaf/0.1/name",
     "knows": "http://xmlns.com/foaf/0.1/knows",
-	"modified": "http://xmlns.com/foaf/0.1/modified",
-	"yesorno":"http://xmlns.com/foaf/0.1/yesorno"
+	"modified": "http://xmlns.com/foaf/0.1/modified"
   },
   "@id": "http://me.markus-lanthaler.com/",
   "name": "Markus Lanthaler",
@@ -18,12 +17,7 @@
 	    {
 	      "@value": "2010-05-29T14:17:39+02:00",
 	      "@type": "http://www.w3.org/2001/XMLSchema#dateTime"
-	    },
-  	  "yesorno":
-  	    {
-  	      "@value": "false",
-  	      "@type": "http://www.w3.org/2001/XMLSchema#boolean"
-  	    }
+	    }
     }
   ]
 }
