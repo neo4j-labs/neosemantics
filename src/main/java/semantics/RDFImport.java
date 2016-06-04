@@ -2,6 +2,10 @@ package semantics;
 
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
+import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.PerformsWrites;
@@ -16,6 +20,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 
 /**
@@ -29,7 +38,10 @@ import java.util.stream.Stream;
  */
 public class RDFImport {
     @Context
-    public GraphDatabaseService db;
+    public GraphDatabaseAPI db;
+    @Context
+    public Log log;
+
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
@@ -39,7 +51,8 @@ public class RDFImport {
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format) {
         ImportResults importResults = new ImportResults();
         URL documentUrl;
-        StatementLoader statementLoader = new StatementLoader(db);
+
+        StatementLoader statementLoader = new StatementLoader(db, 25000);
         try {
             documentUrl = new URL(url);
             InputStream inputStream = documentUrl.openStream();
@@ -66,14 +79,24 @@ public class RDFImport {
         return RDFFormat.TURTLE; //some default
     }
 
-    class StatementLoader extends RDFHandlerBase {
+    class StatementLoader extends RDFHandlerBase implements Callable<Integer>{
 
         private int ingestedTriples = 0;
         private GraphDatabaseService graphdb;
+        private int commitFreq;
+        private List<QueryWithParams> cypherStatements = new ArrayList<QueryWithParams>();
+        //private List<Map<String, Object>> cypherStatementParams = new ArrayList<Map<String, Object>>();
 
-        public StatementLoader(GraphDatabaseService db) {
-
+        public StatementLoader(GraphDatabaseService db, int batchSize) {
             graphdb = db;
+            commitFreq = batchSize;
+        }
+
+        @Override
+        public void endRDF() throws RDFHandlerException {
+            int finalCount = Utils.inTx(graphdb,this);
+            ingestedTriples+= finalCount;
+            log.info("Successfully committed " + finalCount + " cypher statements. Total number of triples imported is " + ingestedTriples);
         }
 
         @Override
@@ -85,26 +108,33 @@ public class RDFImport {
             if (object instanceof Literal) {
                 // known issue: does not deal with multivalued properties. Probably the obvious approach would be
                 // to create arrays when multiple values
-                cypher = String.format("MERGE (x:%s {uri:'%s'}) SET x.`%s` = %s",
-                        (subject instanceof BNode ? "BNode" : "URI"), subject.stringValue(),
-                        predicate.stringValue(), getObjectValue((Literal) object));
-                graphdb.execute(cypher);
+                Map<String, Object> params = new HashMap<>();
+                params.put("subject", subject.stringValue().replace("'", "\'"));
+                params.put("object", getObjectValue((Literal) object));
+                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) SET x.`%s` = {object}",
+                        (subject instanceof BNode ? "BNode" : "URI"), predicate.stringValue()), params));
             } else if (predicate.equals(RDF.TYPE) && !(object instanceof BNode)){
                 // Optimization -> rdf:type is transformed into a label. Reduces node density and uses indexes.
-                // Notice that we are doing some inference here by adding :Class to the object
-                cypher = String.format("MERGE (x:%s {uri:'%s'}) SET x:`%s` MERGE (y:%s {uri:'%s'}) SET y:Class",
-                        (subject instanceof BNode ? "BNode" : "URI"), subject.stringValue(),
-                        object.stringValue(), (object instanceof BNode ? "BNode" : "URI"), object.stringValue());
-                graphdb.execute(cypher);
+                Map<String, Object> params = new HashMap<>();
+                params.put("subject", subject.stringValue().replace("'", "\'"));
+                params.put("object", object.stringValue());
+                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) SET x:`%s` MERGE (y:%s {uri:{object}}) SET y:Class",
+                        (subject instanceof BNode ? "BNode" : "URI"),
+                        object.stringValue(), (object instanceof BNode ? "BNode" : "URI")), params));
             } else {
-                cypher = String.format("MERGE (x:%s {uri:'%s'}) MERGE (y:%s {uri:'%s'}) MERGE (x)-[:`%s`]->(y)",
-                        (subject instanceof BNode ? "BNode" : "URI"), subject.stringValue(),
-                        (object instanceof BNode ? "BNode" : "URI"), object.stringValue(),
-                        predicate.stringValue());
-                graphdb.execute(cypher);
+                Map<String, Object> params = new HashMap<>();
+                params.put("subject", subject.stringValue().replace("'", "\'"));
+                params.put("object", object.stringValue());
+                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) MERGE (y:Resource:%s {uri:{object}}) MERGE (x)-[:`%s`]->(y)",
+                        (subject instanceof BNode ? "BNode" : "URI"),
+                        (object instanceof BNode ? "BNode" : "URI"),
+                        predicate.stringValue()),params));
             }
 
-            ingestedTriples++;
+            if (cypherStatements.size()%commitFreq == 0) {
+                ingestedTriples+= Utils.inTx(graphdb,this);
+                log.info("Successful periodic commit of " + commitFreq + " cypher statements. " + ingestedTriples + " triples ingested so far...");
+            }
         }
 
         private String getObjectValue(Literal object) {
@@ -116,7 +146,7 @@ public class RDFImport {
             } else if (datatype.equals(XMLSchema.BOOLEAN)) {
                 return object.stringValue();
             } else {
-                return "'" + object.stringValue().replace("\\", "\\\\").replace("'", "\\'") + "'";
+                return object.stringValue().replace("\\", "\\\\").replace("'", "\\'");
                 //not sure this is the best way to 'clean' the property value
             }
         }
@@ -124,7 +154,39 @@ public class RDFImport {
         public int getIngestedTriples() {
             return ingestedTriples;
         }
+
+        @Override
+        public Integer call() throws Exception {
+            int count = 0;
+            for(QueryWithParams qwp : cypherStatements){
+                graphdb.execute(qwp.getCypherString(), qwp.getParams());
+                count++;
+            }
+            cypherStatements.clear();
+            return count;
+        }
+
+        private class QueryWithParams {
+
+            private final String cypherString;
+            private final Map<String, Object> params;
+
+            public QueryWithParams(String cypherStr, Map<String, Object> par) {
+                cypherString = cypherStr;
+                params = par;
+            }
+
+
+            public String getCypherString() {
+                return cypherString;
+            }
+
+            public Map<String, Object> getParams() {
+                return params;
+            }
+        }
     }
+
 
     public static class ImportResults {
         public String terminationStatus = "OK";
@@ -141,4 +203,5 @@ public class RDFImport {
         }
 
     }
+
 }

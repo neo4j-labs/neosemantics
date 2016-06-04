@@ -63,7 +63,7 @@ public class LiteOntologyImporter {
         } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
             importResults.setTerminationKO(e.getMessage());
         } finally {
-            importResults.setTriplesLoaded(classesLoaded + datatypePropsLoaded + objPropsLoaded);
+            importResults.setElementsLoaded(classesLoaded + datatypePropsLoaded + objPropsLoaded);
         }
         return Stream.of(importResults);
     }
@@ -167,11 +167,11 @@ public class LiteOntologyImporter {
 
     public static class ImportResults {
         public String terminationStatus = "OK";
-        public long triplesLoaded = 0;
+        public long elementsLoaded = 0;
         public String extraInfo = "";
 
-        public void setTriplesLoaded(long triplesLoaded) {
-            this.triplesLoaded = triplesLoaded;
+        public void setElementsLoaded(long elementsLoaded) {
+            this.elementsLoaded = elementsLoaded;
         }
 
         public void setTerminationKO(String message) {

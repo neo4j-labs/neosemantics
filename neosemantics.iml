@@ -54,6 +54,7 @@
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.commons:commons-lang3:3.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: junit:junit:4.11" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.hamcrest:hamcrest-core:1.3" level="project" />
+    <orderEntry type="library" name="Maven: org.neo4j.procedure:apoc:1.0.0" level="project" />
     <orderEntry type="library" name="Maven: org.openrdf.sesame:sesame-rio-rdfxml:4.1.1" level="project" />
     <orderEntry type="library" name="Maven: org.openrdf.sesame:sesame-model:4.1.1" level="project" />
     <orderEntry type="library" name="Maven: org.openrdf.sesame:sesame-rio-api:4.1.1" level="project" />

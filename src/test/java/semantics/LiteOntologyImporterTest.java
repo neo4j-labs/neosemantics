@@ -27,7 +27,7 @@ public class LiteOntologyImporterTest {
                 LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
                 + "','RDF/XML')");
 
-        assertEquals(new Long(16), importResult.next().get("triplesLoaded"));
+        assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
 
         assertEquals(new Long(2), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
 
