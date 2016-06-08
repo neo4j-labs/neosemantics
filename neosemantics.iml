@@ -12,45 +12,45 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-kernel:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-lucene-index:3.0.0-M05" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-kernel:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-lucene-index:3.0.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.lucene:lucene-analyzers-common:5.5.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.lucene:lucene-core:5.5.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.lucene:lucene-queryparser:5.5.0" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.lucene:lucene-codecs:5.5.0" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graph-algo:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-udc:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graph-matching:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.scala-lang:scala-library:2.11.7" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.scala-lang:scala-reflect:2.11.7" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-codegen:3.0.0-M05" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graph-algo:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-udc:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graph-matching:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.scala-lang:scala-library:2.11.8" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.scala-lang:scala-reflect:2.11.8" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-codegen:3.0.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.ow2.asm:asm:5.0.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-compiler-2.3:2.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-frontend-2.3:2.3.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-compiler-3.0:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-frontend-3.0:3.0.0-M05" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-compiler-2.3:2.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-frontend-2.3:2.3.3" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-compiler-3.0:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-cypher-frontend-3.0:3.0.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.parboiled:parboiled-scala_2.11:1.1.7" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.parboiled:parboiled-core:1.1.7" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: net.sf.opencsv:opencsv:2.3" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: com.googlecode.concurrentlinkedhashmap:concurrentlinkedhashmap-lru:1.4.2" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-jmx:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-consistency-check:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.neo4j:neo4j-kernel:test-jar:tests:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graphdb-api:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-resource:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-common:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-collections:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-primitive-collections:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-io:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-csv:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-logging:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-security:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-lucene-upgrade:3.0.0-M05" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-jmx:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-consistency-check:3.0.1" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.neo4j:neo4j-kernel:test-jar:tests:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-graphdb-api:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-resource:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-common:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-collections:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-primitive-collections:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-io:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-csv:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-logging:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-security:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-lucene-upgrade:3.0.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.lucene:lucene-backward-codecs:5.5.0" level="project" />
-    <orderEntry type="library" scope="TEST" name="Maven: org.neo4j:neo4j-io:test-jar:tests:3.0.0-M05" level="project" />
-    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-unsafe:3.0.0-M05" level="project" />
+    <orderEntry type="library" scope="TEST" name="Maven: org.neo4j:neo4j-io:test-jar:tests:3.0.1" level="project" />
+    <orderEntry type="library" scope="PROVIDED" name="Maven: org.neo4j:neo4j-unsafe:3.0.1" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.apache.commons:commons-lang3:3.3.2" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: junit:junit:4.11" level="project" />
     <orderEntry type="library" scope="PROVIDED" name="Maven: org.hamcrest:hamcrest-core:1.3" level="project" />
