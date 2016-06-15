@@ -163,14 +163,14 @@ public class RDFImport {
                         params));
             } else if (predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
                 // Optimization -> rdf:type is transformed into a label. Reduces node density and uses indexes.
+                // How often do we find classes identified by blanck nodes? (x rdf:type _:abc), (_:abc rdf:type rdfs:Class)
                 Map<String, Object> params = new HashMap<>();
                 params.put("subject", subject.stringValue().replace("'", "\'"));
-                params.put("object", (object instanceof BNode ? object.stringValue() : shorten((IRI)object)));
+                params.put("object", shorten((IRI)object));
                 cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) " +
-                                "SET x:`%s` MERGE (y:%s {uri:{object}}) SET y:Class",
+                                "SET x:`%s` MERGE (y:URI {uri:{object}}) SET y:Class",
                         (subject instanceof BNode ? "BNode" : "URI"),
-                        (object instanceof BNode ? object.stringValue() : shorten((IRI)object)),
-                        (object instanceof BNode ? "BNode" : "URI")), params));
+                        shorten((IRI)object)), params));
             } else {
                 Map<String, Object> params = new HashMap<>();
                 params.put("subject", subject.stringValue().replace("'", "\'"));
