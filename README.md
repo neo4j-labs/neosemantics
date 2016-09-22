@@ -7,5 +7,5 @@ This repository contains the following stored procedures
 | semantics.LiteOntoImport      | <ul><li>URL of the dataset</li><li>serialization(*)</li></ul> | Imports the basic elements of an OWL or RDFS ontology, i.e. Classes, Properties, Domains, Ranges. Extended description [here](https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/) <br> **Example:**<br>CALL semantics.LiteOntoImport("http://.../myonto.trig","TriG")  |
 
 
-(*) Valid formats: Turtle, N-Triples, JSON-LD, TriG
+(*) Valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
 
