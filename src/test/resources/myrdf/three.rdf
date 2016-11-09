@@ -1,0 +1,17 @@
+<rdf:RDF xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:voc="http://neo4j.com/voc/">
+         <rdf:Description rdf:about="http://neo4j.com/invividual/JC">
+            <voc:livesIn>Chesham</voc:livesIn>
+            <voc:nationality>British</voc:nationality>
+            <voc:reads rdf:resource="http://neo4j.com/invividual/FT"/>
+            <voc:name>JC</voc:name>
+         </rdf:Description>
+         <rdf:Description rdf:about="http://neo4j.com/invividual/FT">
+             <rdf:type rdf:resource="http://neo4j.com/category/Publication"/>
+             <voc:name>The Financial Times</voc:name>
+         </rdf:Description>
+
+
+</rdf:RDF>

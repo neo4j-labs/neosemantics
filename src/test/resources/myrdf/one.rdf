@@ -1,0 +1,11 @@
+<rdf:RDF xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:voc="http://neo4j.com/voc/">
+         <rdf:Description rdf:about="http://neo4j.com/invividual/JB">
+            <rdf:type rdf:resource="http://neo4j.com/category/Person"/>
+            <voc:name>JB</voc:name>
+            <voc:friendOf rdf:resource="http://neo4j.com/invividual/JC"/>
+         </rdf:Description>
+
+</rdf:RDF>
