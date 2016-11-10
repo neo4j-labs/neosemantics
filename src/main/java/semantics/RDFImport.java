@@ -1,5 +1,6 @@
 package semantics;
 
+import apoc.result.GraphResult;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.graphdb.schema.Schema;
@@ -16,10 +17,12 @@ import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.*;
 import org.openrdf.rio.helpers.RDFHandlerBase;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
@@ -42,14 +45,17 @@ public class RDFImport {
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
 
+
     @Procedure
     @PerformsWrites
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
-                                           @Name("shorten") boolean shortenUrls, @Name("commitSize") long commitSize) {
+                                                         @Name("shorten") boolean shortenUrls,
+                                                         @Name("typesToLabels") boolean typesToLabels,
+                                                         @Name("commitSize") long commitSize) {
+
         ImportResults importResults = new ImportResults();
         URL documentUrl;
-        // hardcoded periodic commit and shortening
-        StatementLoader statementLoader = new StatementLoader(db, (commitSize > 0 ? commitSize : 5000), shortenUrls);
+        DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000), shortenUrls, typesToLabels, log);
         try {
             checkIndexesExist();
             documentUrl = new URL(url);
@@ -68,12 +74,65 @@ public class RDFImport {
         return Stream.of(importResults);
     }
 
+    @Procedure
+    public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
+                                          @Name("shorten") boolean shortenUrls,
+                                          @Name("typesToLabels") boolean typesToLabels) {
+        URL documentUrl;
+        Map<String,Node> virtualNodes = new HashMap<>();
+        List<Relationship> virtualRels = new ArrayList<>();
+
+        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, log);
+        try {
+            documentUrl = new URL(url);
+            InputStream inputStream = documentUrl.openStream();
+            RDFFormat rdfFormat = getFormat(format);
+            log.info("Data set to be parsed as " + rdfFormat);
+            RDFParser rdfParser = Rio.createParser(rdfFormat);
+            rdfParser.setRDFHandler(statementViewer);
+            rdfParser.parse(inputStream, "http://neo4j.com/base/");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+            e.printStackTrace();
+        }
+
+        GraphResult graphResult = new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
+        return Stream.of(graphResult);
+
+
+    }
+
+    @Procedure
+    public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
+                                                 @Name("shorten") boolean shortenUrls,
+                                                 @Name("typesToLabels") boolean typesToLabels) {
+        Map<String,Node> virtualNodes = new HashMap<>();
+        List<Relationship> virtualRels = new ArrayList<>();
+
+        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, log);
+        try {
+            InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
+            RDFFormat rdfFormat = getFormat(format);
+            log.info("Data set to be parsed as " + rdfFormat);
+            RDFParser rdfParser = Rio.createParser(rdfFormat);
+            rdfParser.setRDFHandler(statementViewer);
+            rdfParser.parse(inputStream, "http://neo4j.com/base/");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+            e.printStackTrace();
+        }
+
+        GraphResult graphResult = new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
+        return Stream.of(graphResult);
+
+
+    }
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
         Iterable<IndexDefinition> indexes = db.schema().getIndexes();
-        if(missing(indexes.iterator(),"Resource")||missing(indexes.iterator(),"URI")||
-                missing(indexes.iterator(),"BNode")||missing(indexes.iterator(),"Class")){
-            throw new RDFImportPreRequisitesNotMet("At least one of the required indexes was not found " +
-                    "[ :Resource(uri), :URI(uri), :BNode(uri), :Class(uri) ]");
+        if(missing(indexes.iterator(),"Resource")){
+            throw new RDFImportPreRequisitesNotMet("The required index on :Resource(uri) could not be found");
         }
     }
 
@@ -98,175 +157,7 @@ public class RDFImport {
         throw new RDFImportPreRequisitesNotMet("Unrecognized serialization format: " + format);
     }
 
-    class StatementLoader extends RDFHandlerBase implements Callable<Integer> {
 
-        private final boolean shortenUris;
-        private int ingestedTriples = 0;
-        private GraphDatabaseService graphdb;
-        private long commitFreq;
-        private List<QueryWithParams> cypherStatements = new ArrayList<QueryWithParams>();
-        private Map<String,String> namespaces =  new HashMap<>();
-
-        public StatementLoader(GraphDatabaseService db, long batchSize, boolean shortenUrls) {
-            graphdb = db;
-            commitFreq = batchSize;
-            shortenUris = shortenUrls;
-        }
-
-        @Override
-        public void startRDF() throws RDFHandlerException {
-            getExistingNamespaces();
-            log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
-        }
-
-        private void getExistingNamespaces() {
-            Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                    "UNWIND keys(n) AS namespace\n" +
-                    "RETURN namespace, n[namespace] as prefix");
-            while (nslist.hasNext()){
-                Map<String, Object> ns = nslist.next();
-                namespaces.put((String)ns.get("namespace"),(String)ns.get("prefix"));
-            }
-        }
-
-        @Override
-        public void endRDF() throws RDFHandlerException {
-            int finalCount = Utils.inTx(graphdb, this);
-            ingestedTriples += finalCount;
-            addNamespaceNode();
-
-            log.info("Successfully committed " + finalCount + " cypher statements. " +
-                    "Total number of triples imported is " + ingestedTriples);
-        }
-
-        private void addNamespaceNode() {
-            Map<String, Object> params = new HashMap<>();
-            params.put("props", namespaces);
-            graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
-        }
-
-        @Override
-        public void handleStatement(Statement st) {
-            IRI predicate = st.getPredicate();
-            Resource subject = st.getSubject(); //includes blank nodes
-            Value object = st.getObject();
-            String cypher;
-            if (object instanceof Literal) {
-                // known issue: does not deal with multivalued properties. Probably the obvious approach would be
-                // to create arrays when multiple values
-                // predicates are always URIs
-                Map<String, Object> params = new HashMap<>();
-                params.put("subject", subject.stringValue().replace("'", "\'"));
-                params.put("object", getObjectValue((Literal) object));
-                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) " +
-                        "SET x.`%s` = {object}", (subject instanceof BNode ? "BNode" : "URI"), shorten(predicate)),
-                        params));
-            } else if (predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
-                // Optimization -> rdf:type is transformed into a label. Reduces node density and uses indexes.
-                // How often do we find classes identified by blank nodes? (x rdf:type _:abc), (_:abc rdf:type rdfs:Class)
-                Map<String, Object> params = new HashMap<>();
-                params.put("subject", subject.stringValue().replace("'", "\'"));
-                params.put("object", shorten((IRI)object));
-                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:`%s` {uri:{subject}}) " +
-                                "SET x:`%s` MERGE (y:URI {uri:{object}}) SET y:Class",
-                        (subject instanceof BNode ? "BNode" : "URI"),
-                        shorten((IRI)object)), params));
-            } else {
-                Map<String, Object> params = new HashMap<>();
-                params.put("subject", subject.stringValue().replace("'", "\'"));
-                params.put("object", object.stringValue());
-                cypherStatements.add(new QueryWithParams(String.format("MERGE (x:Resource:%s {uri:{subject}}) " +
-                                "MERGE (y:Resource:%s {uri:{object}}) MERGE (x)-[:`%s`]->(y)",
-                        (subject instanceof BNode ? "BNode" : "URI"),
-                        (object instanceof BNode ? "BNode" : "URI"),
-                        shorten(predicate)), params));
-            }
-
-            if (cypherStatements.size() % commitFreq == 0) {
-                ingestedTriples += Utils.inTx(graphdb, this);
-                log.info("Successful periodic commit of " + commitFreq + " cypher statements. " +
-                        ingestedTriples + " triples ingested so far...");
-            }
-        }
-
-        private String shorten(IRI iri) {
-            if (shortenUris) {
-                String localName = iri.getLocalName();
-                String prefix = getPrefix(iri.getNamespace());
-                return prefix + "_" + localName;
-            } else
-            {
-                return iri.stringValue();
-            }
-        }
-
-        private String getPrefix(String namespace) {
-            if (namespaces.containsKey(namespace)){
-                return namespaces.get(namespace);
-            } else{
-                namespaces.put(namespace, createPrefix(namespace));
-                return namespaces.get(namespace);
-            }
-        }
-
-        private String createPrefix(String namespace) {
-            return "ns" + namespaces.size();
-        }
-
-        private String getObjectValue(Literal object) {
-            IRI datatype = object.getDatatype();
-            if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-                    datatype.equals(XMLSchema.FLOAT) || datatype.equals(XMLSchema.INT) ||
-                    datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)) {
-                return object.stringValue();
-            } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-                return object.stringValue();
-            } else {
-                return object.stringValue().replace("\\", "\\\\").replace("'", "\\'");
-                //not sure this is the best way to 'clean' the property value
-            }
-        }
-
-        public int getIngestedTriples() {
-            return ingestedTriples;
-        }
-        public Map<String,String> getNamespaces() {
-
-            return namespaces;
-        }
-
-
-        @Override
-        public Integer call() throws Exception {
-            int count = 0;
-            for (QueryWithParams qwp : cypherStatements) {
-                graphdb.execute(qwp.getCypherString(), qwp.getParams());
-                count++;
-            }
-            cypherStatements.clear();
-            return count;
-        }
-
-        private class QueryWithParams {
-
-            private final String cypherString;
-            private final Map<String, Object> params;
-
-            public QueryWithParams(String cypherStr, Map<String, Object> par) {
-                cypherString = cypherStr;
-                params = par;
-            }
-
-
-            public String getCypherString() {
-                return cypherString;
-            }
-
-            public Map<String, Object> getParams() {
-                return params;
-            }
-        }
-    }
 
 
     public static class ImportResults {
