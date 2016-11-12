@@ -1,7 +1,10 @@
 package semantics;
 
+import apoc.util.Util;
+import apoc.util.Utils;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.openrdf.model.*;
 import org.openrdf.model.vocabulary.RDF;
@@ -54,7 +57,7 @@ class CypherStatementLoader implements RDFHandler, Callable<Integer> {
 
     @Override
     public void endRDF() throws RDFHandlerException {
-        int finalCount = Utils.inTx(graphdb, this);
+        int finalCount = Util.inTx((GraphDatabaseAPI) graphdb, this);
         ingestedTriples += finalCount;
         addNamespaceNode();
 
@@ -111,7 +114,7 @@ class CypherStatementLoader implements RDFHandler, Callable<Integer> {
         }
 
         if (cypherStatements.size() % commitFreq == 0) {
-            ingestedTriples += Utils.inTx(graphdb, this);
+            ingestedTriples += Util.inTx((GraphDatabaseAPI) graphdb, this);
             log.info("Successful periodic commit of " + commitFreq + " cypher statements. " +
                     ingestedTriples + " triples ingested so far...");
         }

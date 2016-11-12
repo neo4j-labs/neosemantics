@@ -1,6 +1,8 @@
 package semantics;
 
+import apoc.util.Util;
 import org.neo4j.graphdb.*;
+import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.openrdf.model.*;
 import org.openrdf.model.Resource;
@@ -56,7 +58,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     @Override
     public void endRDF() throws RDFHandlerException {
-        Utils.inTx(graphdb, this);
+        Util.inTx((GraphDatabaseAPI) graphdb, this);
         ingestedTriples += triplesParsed;
         addNamespaceNode();
 
@@ -150,7 +152,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         }
         triplesParsed++;
         if (triplesParsed % commitFreq == 0) {
-            Utils.inTx(graphdb, this);
+            Util.inTx((GraphDatabaseAPI) graphdb, this);
             ingestedTriples += triplesParsed;
             log.info("Successful periodic commit of " + commitFreq + " triples. " +
                     ingestedTriples + " triples ingested so far...");
