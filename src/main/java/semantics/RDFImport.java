@@ -67,6 +67,7 @@ public class RDFImport {
             e.printStackTrace();
         } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
             importResults.setTerminationKO(e.getMessage());
+            e.printStackTrace();
         } finally {
             importResults.setTriplesLoaded(statementLoader.getIngestedTriples());
             importResults.setNamespaces(statementLoader.getNamespaces());
