@@ -1,4 +1,11 @@
 # neosemantics
+
+##Installation
+To install, just complie and drop the jar in the plugins directory of your Neo4j instance.
+Restart the server.
+You can check that the installation went well by running ***call dbms.procedures()***. The list of procedures should include the ones documented below.
+
+##Contents
 This repository contains the following stored procedures
 
 | Stored Proc Name        | params           | Description and example usage  |
