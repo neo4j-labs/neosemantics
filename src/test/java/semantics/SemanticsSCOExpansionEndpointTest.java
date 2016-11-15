@@ -1,7 +1,6 @@
 package semantics;
 
 import org.junit.Test;
-import org.neo4j.csv.reader.SourceTraceability;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -13,11 +12,7 @@ import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.server.HTTP;
 
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.function.Function;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static org.junit.Assert.assertEquals;
 import static org.neo4j.helpers.collection.Iterators.count;

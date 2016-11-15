@@ -1,11 +1,14 @@
 package semantics;
 
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Result;
 import org.neo4j.procedure.Context;
-import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 /**
