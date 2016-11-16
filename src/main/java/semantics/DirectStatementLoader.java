@@ -27,7 +27,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     private long commitFreq;
     private Map<String,Map<String,Object>> resourceProps = new HashMap<>();
     private Map<String,Set<String>> resourceLabels = new HashMap<>();
-    private List<Statement> statements = new ArrayList<>();
+    private Set<Statement> statements = new HashSet<>();
     private Map<String,String> namespaces =  new HashMap<>();
     private final boolean labellise;
     Log log;
