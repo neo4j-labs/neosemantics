@@ -4,7 +4,9 @@
  
 1. Build it
 
+  ```
   mvn clean package
+  ```
 
 2. Drop the jar in the <NEO_HOME>/plugins directory of your Neo4j instance.
 3. Download additional jars to the plugins directory if needed. 
