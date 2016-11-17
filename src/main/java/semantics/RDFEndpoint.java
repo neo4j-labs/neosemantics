@@ -1,5 +1,6 @@
 package semantics;
 
+import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import org.openrdf.model.IRI;
@@ -32,44 +33,10 @@ public class RDFEndpoint {
     @Context
     public Log log;
 
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
-
-    @POST
-    @Path("/onto")
-    //@Consumes(MediaType.TEXT_PLAIN)
-    public Response exportOnto(@Context GraphDatabaseService gds, String body) {
-        return Response.ok().entity(new StreamingOutput() {
-            @Override
-            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-                Result res = gds.execute("call apoc.meta.graph ");
-                Map<String, Object> next = res.next();
-                List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
-                for(Relationship r: relationshipList){
-                    System.out.println(r.getStartNode().getLabels().iterator().next().name());
-                    System.out.println(r.getEndNode().getLabels().iterator().next().name());
-                    System.out.println(r.getType().name());
-                }
-                ///
-                ///
-                String query = "";
-                Result result = gds.execute(query);
-                RDFWriter writer = Rio.createWriter(RDFFormat.JSONLD, outputStream);
-                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-                String baseNS = "http://neo4j.com/";
-                writer.startRDF();
-                while (result.hasNext()) {
-                    Map<String, Object> row = result.next();
-                    IRI subject = valueFactory.createIRI(baseNS, (String) row.get("subject"));
-                    IRI predicate = valueFactory.createIRI(baseNS, (String) row.get("predicate"));
-                    Literal object = valueFactory.createLiteral((String) row.get("object"));
-                    writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
-                }
-                writer.endRDF();
-                result.close();
-            }
-        }).build();
-    }
 
     @GET
     @Path("/cypher")
@@ -252,7 +219,7 @@ public class RDFEndpoint {
     @Path("/describe/uri")
     @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
             "application/ld+json"})
-    public Response nodebyuri(@Context GraphDatabaseService gds, @QueryParam("uri") String idParam,
+    public Response nodebyuri(@Context GraphDatabaseService gds, @QueryParam("nodeuri") String idParam,
                               @QueryParam("excludeContext") String excludeContextParam,
                               @HeaderParam("accept") String acceptHeaderParam) {
         return Response.ok().entity(new StreamingOutput() {
@@ -453,6 +420,52 @@ public class RDFEndpoint {
                     }
                 }
 
+                writer.endRDF();
+                result.close();
+            }
+        }).build();
+    }
+
+
+    @GET
+    @Path("/ping")
+    public Response ping() throws IOException {
+        Map<String, String> results = new HashMap<String,String>(){{
+            put("ping","here!");
+        }};
+        return Response.ok().entity(objectMapper.writeValueAsString(results)).build();
+    }
+
+    @GET
+    @Path("/onto")
+    //@Consumes(MediaType.TEXT_PLAIN)
+    public Response exportOnto(@Context GraphDatabaseService gds, String body) {
+        return Response.ok().entity(new StreamingOutput() {
+            @Override
+            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+                Result res = gds.execute("call apoc.meta.graph ");
+                Map<String, Object> next = res.next();
+                List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+                for(Relationship r: relationshipList){
+                    System.out.println(r.getStartNode().getLabels().iterator().next().name());
+                    System.out.println(r.getEndNode().getLabels().iterator().next().name());
+                    System.out.println(r.getType().name());
+                }
+                ///
+                ///
+                String query = "";
+                Result result = gds.execute(query);
+                RDFWriter writer = Rio.createWriter(RDFFormat.JSONLD, outputStream);
+                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+                String baseNS = "http://neo4j.com/";
+                writer.startRDF();
+                while (result.hasNext()) {
+                    Map<String, Object> row = result.next();
+                    IRI subject = valueFactory.createIRI(baseNS, (String) row.get("subject"));
+                    IRI predicate = valueFactory.createIRI(baseNS, (String) row.get("predicate"));
+                    Literal object = valueFactory.createLiteral((String) row.get("object"));
+                    writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+                }
                 writer.endRDF();
                 result.close();
             }

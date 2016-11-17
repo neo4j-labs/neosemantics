@@ -93,6 +93,60 @@ public class RDFEndpointTest {
         }
     }
 
+    @Test
+    public void testGetNodeByIdNotFoundOrInvalid() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withExtension( "/rdf", RDFEndpoint.class ).newServer() )
+        {
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=9999999");
+
+            assertEquals( "[ ]", response.rawContent() );
+            assertEquals( 200, response.status() );
+
+            //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
+            response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=adb");
+
+            assertEquals( "", response.rawContent() );
+            assertEquals( 404, response.status() );
+
+        }
+    }
+
+    @Test
+    public void testGetNodeByUriNotFoundOrInvalid() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withExtension( "/rdf", RDFEndpoint.class ).newServer() )
+        {
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/uri?uri=9999999");
+
+            assertEquals( "[ ]", response.rawContent() );
+            assertEquals( 200, response.status() );
+
+        }
+    }
+
+    @Test
+    public void testPing() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withExtension( "/rdf", RDFEndpoint.class ).newServer() )
+        {
+            HTTP.Response response = HTTP.GET(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "ping");
+
+            assertEquals( "{\"ping\":\"here!\"}", response.rawContent() );
+            assertEquals( 200, response.status() );
+
+        }
+    }
 
     @Test
     public void testCypherOnLPG() throws Exception
@@ -187,7 +241,7 @@ public class RDFEndpointTest {
             Long id = (Long)result.next().get("id");
 
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
-                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?uri=https://permid.org/1-21523433750");
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://permid.org/1-21523433750");
 
             assertEquals( "@prefix neovoc: <neo4j://vocabulary#> .\n" +
                             "\n" +
