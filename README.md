@@ -12,11 +12,13 @@
 3. Download additional jars to the plugins directory if needed. 
 4. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
+  ```
   dbms.unmanaged_extension_classes=semantics=/rdf
-
+  ```
+  
 5. Restart the server. 
-6. Check that the installation went well by running ***call dbms.procedures()***. The list of procedures should include the ones documented below.
-You can check that the extension is mounted by running ***:GET /rdf/ping***
+6. Check that the installation went well by running `call dbms.procedures()`. The list of procedures should include the ones documented below.
+You can check that the extension is mounted by running `:GET /rdf/ping`
 
 ##What's in this repository
 This repository contains a set of stored procedures and extensions to both produce and consume RDF from Neo4j.
