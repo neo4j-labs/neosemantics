@@ -1,12 +1,29 @@
 # neosemantics
 
 ##Installation
-To install, just complie and drop the jar in the plugins directory of your Neo4j instance.
-Restart the server.
-You can check that the installation went well by running ***call dbms.procedures()***. The list of procedures should include the ones documented below.
+ 
+1. Build it
 
-##Contents
-This repository contains the following stored procedures
+  ```
+  mvn clean package
+  ```
+
+2. Drop the jar in the <NEO_HOME>/plugins directory of your Neo4j instance.
+3. Download additional jars to the plugins directory if needed. 
+4. Add the following line to your <NEO_HOME>/conf/neo4j.conf
+
+  ```
+  dbms.unmanaged_extension_classes=semantics=/rdf
+  ```
+  
+5. Restart the server. 
+6. Check that the installation went well by running `call dbms.procedures()`. The list of procedures should include the ones documented below.
+You can check that the extension is mounted by running `:GET /rdf/ping`
+
+##What's in this repository
+This repository contains a set of stored procedures and extensions to both produce and consume RDF from Neo4j.
+
+###Stored Procedures
 
 | Stored Proc Name        | params           | Description and example usage  |
 |:------------- |:-------------|:-----|
@@ -18,3 +35,9 @@ This repository contains the following stored procedures
 
 (*) Valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
 
+###Extensions
+
+| Extension        | params           | Description and example usage  |
+|:------------- |:-------------|:-----|
+| /rdf/describe/id      | <ul><li><b>nodeid:</b>the id of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. The format will be determined by the **accept** parameter in the header. Default is JSON-LD <br> **Examples:**<br>:GET /rdf/describe/id?nodeid=0&excludeContext |
+| /rdf/describe/uri      | <ul><li><b>nodeuri:</b>the uri of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri. This property is the one used by this extension to lookup a node.<br> **Examples:**<br>:GET /rdf/describe/uri?nodeuri=http://dataset.com#id_1234  |
