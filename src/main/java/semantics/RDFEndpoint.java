@@ -38,18 +38,18 @@ public class RDFEndpoint {
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
-    @GET
+    @POST
     @Path("/cypher")
     @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
             "application/ld+json"})
-    public Response cypherOnPlainLPG(@Context GraphDatabaseService gds, @QueryParam("query") String query,
-                           @HeaderParam("accept") String acceptHeaderParam) {
+    public Response cypherOnPlainLPG(@Context GraphDatabaseService gds,
+                           @HeaderParam("accept") String acceptHeaderParam, String body) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
             public void write(OutputStream outputStream) throws IOException, WebApplicationException {
 
                 try (Transaction tx = gds.beginTx()) {
-                    Result result = gds.execute(query);
+                    Result result = gds.execute(removeQuotes(body));
                     Set<Long> serializedNodes = new HashSet<Long>();
                     RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
@@ -81,6 +81,13 @@ public class RDFEndpoint {
 
             }
         }).build();
+    }
+
+    private String removeQuotes(String str) {
+        if (str.matches("^(\"|').*(\"|')$")){
+            return str.substring(1,str.length()-1);
+        }
+        return str;
     }
 
     private void processRelationshipInLPG(RDFWriter writer, SimpleValueFactory valueFactory, String baseVocabNS, String baseIndivNS, Relationship r) {
@@ -118,12 +125,12 @@ public class RDFEndpoint {
         }
     }
 
-    @GET
+    @POST
     @Path("/cypheronrdf")
     @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
             "application/ld+json"})
-    public Response cypherOnImportedRDF(@Context GraphDatabaseService gds, @QueryParam("query") String query,
-                              @HeaderParam("accept") String acceptHeaderParam) {
+    public Response cypherOnImportedRDF(@Context GraphDatabaseService gds,
+                              @HeaderParam("accept") String acceptHeaderParam, String body) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
             public void write(OutputStream outputStream) throws IOException, WebApplicationException {
@@ -131,7 +138,7 @@ public class RDFEndpoint {
                 Map<String,String> namespaces = getNamespacesFromDB(gds);
 
                 try (Transaction tx = gds.beginTx()) {
-                    Result result = gds.execute(query);
+                    Result result = gds.execute(removeQuotes(body));
                     Set<String> serializedNodes = new HashSet<String>();
                     RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();

@@ -187,8 +187,8 @@ public class RDFEndpointTest {
             Result result = server.graph().execute( "MATCH (n:Critic) return id(n) as id " );
             assertEquals( 1, count( result ) );
 
-            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
-                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "cypher?query=MATCH+%28n%3ACategory%29--%28m%3ACategory%29+RETURN+n%2Cm+LIMIT+4");
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
 
             assertEquals( "<neo4j://indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n" +
                     "<neo4j://indiv#0> <neo4j://vocabulary#catName> \"Person\" .\n" +
@@ -295,8 +295,8 @@ public class RDFEndpointTest {
 
             Long id = (Long)result.next().get("id");
 
-            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
-                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf?query=MATCH+%28n%3AResource%29+RETURN+n+LIMIT+1");
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", "MATCH (n:Resource) RETURN n LIMIT 1");
 
             assertEquals( "[ {\n" +
                     "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
@@ -350,8 +350,8 @@ public class RDFEndpointTest {
 
             Long id = (Long)result.next().get("id");
 
-            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
-                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf?query=MATCH%20(a)-%5Br%3Ans0_Likes%5D-(b)%20RETURN%20*");
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).POST(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf","MATCH (a)-[r:ns0_Likes]-(b) RETURN *");
 
             assertEquals( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     "<rdf:RDF\n" +
