@@ -1,6 +1,8 @@
 # neosemantics
 
 ##Installation
+
+*Note: this version is compatible with Neo4j v. >= 3.1*
  
 1. Build it
 
