@@ -1,4 +1,4 @@
-package semantics;
+package semantics.extension;
 
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -10,6 +10,8 @@ import org.neo4j.harness.TestServerBuilders;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.server.HTTP;
+
+import semantics.extension.SemanticsSCOExpansionEndpoint;
 
 import java.io.IOException;
 import java.util.function.Function;

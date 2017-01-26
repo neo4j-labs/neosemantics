@@ -1,4 +1,13 @@
-package semantics;
+package semantics.extension;
+
+import static org.junit.Assert.assertEquals;
+import static org.neo4j.helpers.collection.Iterators.count;
+import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
+
+import java.io.IOException;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
 
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -11,19 +20,21 @@ import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
 import org.neo4j.test.server.HTTP;
 
-import java.io.IOException;
-import java.util.function.Function;
-
-import static org.junit.Assert.assertEquals;
-import static org.neo4j.helpers.collection.Iterators.count;
-import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 
 /**
  * Created by jbarrasa on 14/09/2016.
  */
 public class RDFEndpointTest {
+	
+	private static final ObjectMapper jsonMapper = new ObjectMapper();
+	
+	private static final CollectionType collectionType = TypeFactory
+			.defaultInstance().constructCollectionType(Set.class, Map.class);
 
-    @Test
+	@Test
     public void testGetNodeById() throws Exception
     {
         // Given
@@ -69,7 +80,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=" + id.toString());
 
-            assertEquals( "[ {\n" +
+            Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
                     "  \"@id\" : \"neo4j://indiv#5\",\n" +
                     "  \"neo4j://vocabulary#FRIEND_OF\" : [ {\n" +
                     "    \"@id\" : \"neo4j://indiv#7\"\n" +
@@ -87,7 +98,10 @@ public class RDFEndpointTest {
                     "  \"neo4j://vocabulary#name\" : [ {\n" +
                     "    \"@value\" : \"Hugo Weaving\"\n" +
                     "  } ]\n" +
-                    "} ]", response.rawContent() );
+                    "} ]", collectionType);
+            Set<Map<String, String>> resultSet = jsonMapper
+            		.readValue(response.rawContent(), collectionType);
+            assertEquals( expected, resultSet );
             assertEquals( 200, response.status() );
 
         }
@@ -242,18 +256,19 @@ public class RDFEndpointTest {
 
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://permid.org/1-21523433750");
-
-            assertEquals( "@prefix neovoc: <neo4j://vocabulary#> .\n" +
-                            "\n" +
-                            "\n" +
-                            "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor> ;\n" +
-                            "\t<http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\" ;\n" +
-                            "\t<http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
-                            "\n" +
-                            "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf> <https://permid.org/1-21523433750> .\n" +
-                            "\n" +
-                            "<https://permid.org/1-21523433750> <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .\n"
-                    , response.rawContent() );
+            //TODO Make it better
+            String expected = "@prefix neovoc: <neo4j://vocabulary#> .\n" +
+                    "\n" +
+                    "\n" +
+                    "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor> ;\n" +
+                    "\t<http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\" ;\n" +
+                    "\t<http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+                    "\n" +
+                    "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf> <https://permid.org/1-21523433750> .\n" +
+                    "\n" +
+                    "<https://permid.org/1-21523433750> <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .";
+            assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
+            		response.rawContent().replaceAll("[\n|\r]", "").trim() );
             assertEquals( 200, response.status() );
         }
     }
@@ -298,7 +313,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", "MATCH (n:Resource) RETURN n LIMIT 1");
 
-            assertEquals( "[ {\n" +
+            Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
                     "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
                     "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
                     "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
@@ -308,7 +323,10 @@ public class RDFEndpointTest {
                     "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
                     "    \"@value\" : \"Keanu Reeves\"\n" +
                     "  } ]\n" +
-                    "} ]" , response.rawContent() );
+                    "} ]", collectionType);
+            Set<Map<String, String>> resultSet = jsonMapper.readValue(response.rawContent(),
+            		collectionType);
+            assertEquals( expected , resultSet );
 
             assertEquals( 200, response.status() );
         }

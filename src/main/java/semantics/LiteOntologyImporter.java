@@ -3,6 +3,7 @@ package semantics;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.procedure.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.PerformsWrites;
 import org.neo4j.procedure.Procedure;
@@ -36,9 +37,8 @@ public class LiteOntologyImporter {
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
 
-    @Procedure
-    @PerformsWrites
-    public Stream<ImportResults> LiteOntoImport(@Name("url") String url, @Name("format") String format) {
+    @Procedure(mode = Mode.WRITE)
+    public Stream<ImportResults> liteOntoImport(@Name("url") String url, @Name("format") String format) {
         ImportResults importResults = new ImportResults();
         URL documentUrl;
         int classesLoaded = 0;

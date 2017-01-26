@@ -44,7 +44,7 @@ public class RDFImportTest {
     @Test
     public void testAbortIfNoIndices() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',false, true, 500)");
@@ -60,7 +60,7 @@ public class RDFImportTest {
     @Test
     public void testImportJSONLD() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -78,7 +78,7 @@ public class RDFImportTest {
     @Test
     public void testImportJSONLDShortening() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -103,7 +103,7 @@ public class RDFImportTest {
     @Test
     public void testImportRDFXML() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -123,7 +123,7 @@ public class RDFImportTest {
     @Test
     public void testImportRDFXMLShortening() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -149,7 +149,7 @@ public class RDFImportTest {
     @Test
     public void testImportRDFXMLShorteningWithPrefixPreDefinition() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -186,7 +186,7 @@ public class RDFImportTest {
     @Test
     public void testImportRDFXMLShorteningWithPrefixPreDefinitionOneTriple() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -214,7 +214,7 @@ public class RDFImportTest {
     @Test
     public void testImportTurtle() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         createIndices(db);
 
@@ -237,7 +237,7 @@ public class RDFImportTest {
     @Test
     public void testPreviewFromSnippet() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         Result importResults1 = db.execute("CALL semantics.previewRDFSnippet('" + jsonLdFragment
                 + "','JSON-LD',false,false)");
@@ -249,7 +249,7 @@ public class RDFImportTest {
     @Test
     public void testPreviewFromFile() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(RDFImport.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
 
         Result importResults1 = db.execute("CALL semantics.previewRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")

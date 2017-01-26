@@ -7,6 +7,8 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import semantics.ConsistencyChecker;
+
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
@@ -18,7 +20,7 @@ public class ConsistencyCheckerTest {
     @Test
     public void runConsistencyChecks() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(ConsistencyChecker.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(ConsistencyChecker.class);
 
         String dbInit = "create " +
                 "(person_class:Class {\turi:\"http://neo4j.com/voc/movies#Person\", \n" +

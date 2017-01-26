@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <rdf:RDF
         xmlns     = "http://neo4j.com/voc/movies#"
-        xmlns:mov = "hhttp://neo4j.com/voc/movies#"
+        xmlns:mov = "http://neo4j.com/voc/movies#"
         xml:base  = "http://neo4j.com/voc/movies#"
         xmlns:owl = "http://www.w3.org/2002/07/owl#"
         xmlns:rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
