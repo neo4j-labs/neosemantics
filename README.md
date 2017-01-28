@@ -15,7 +15,7 @@
 4. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
-  dbms.unmanaged_extension_classes=semantics=/rdf
+  dbms.unmanaged_extension_classes=semantics.extension=/rdf
   ```
   
 5. Restart the server. 
