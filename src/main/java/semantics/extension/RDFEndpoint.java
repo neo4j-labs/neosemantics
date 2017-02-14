@@ -1,4 +1,4 @@
-package semantics;
+package semantics.extension;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.graphdb.*;
@@ -376,59 +376,61 @@ public class RDFEndpoint {
 
                 Map<String, Object> params = new HashMap<>();
                 params.put("theid", idParam);
-                Result result = gds.execute((excludeContextParam != null ? queryNoContext : queryWithContext), params);
+                try (Transaction tx = gds.beginTx()) {
+                	Result result = gds.execute((excludeContextParam != null ? queryNoContext : queryWithContext), params);
 
 
-                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
-                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-                String baseVocabNS = "neo4j://vocabulary#";
-                String baseIndivNS = "neo4j://indiv#";
-                writer.handleNamespace("neovoc", baseVocabNS);
-                writer.handleNamespace("neoind", baseIndivNS);
-                writer.startRDF();
-                boolean doneOnce = false;
-                while (result.hasNext()) {
-                    Map<String, Object> row = result.next();
-                    if (!doneOnce) {
-                        //Output only once the props of the selected node as literal properties
-                        Node node = (Node) row.get("x");
-                        Iterable<Label> nodeLabels = node.getLabels();
-                        for (Label label : nodeLabels) {
-                            writer.handleStatement(
-                                    valueFactory.createStatement(valueFactory.createIRI(baseIndivNS, idParam.toString()),
-                                            RDF.TYPE,
-                                            valueFactory.createIRI(baseVocabNS, label.name())));
-                        }
-                        Map<String, Object> allProperties = node.getAllProperties();
-                        for (String key : allProperties.keySet()) {
-                            IRI subject = valueFactory.createIRI(baseIndivNS, idParam.toString());
-                            IRI predicate = valueFactory.createIRI(baseVocabNS, key);
-                            Object propertyValueObject = allProperties.get(key);
-                            if (propertyValueObject instanceof Object[]) {
-                                for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-                                    Literal object = createTypedLiteral(valueFactory, ((Object[]) propertyValueObject)[i]);
+                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
+                    SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+                    String baseVocabNS = "neo4j://vocabulary#";
+                    String baseIndivNS = "neo4j://indiv#";
+                    writer.handleNamespace("neovoc", baseVocabNS);
+                    writer.handleNamespace("neoind", baseIndivNS);
+                    writer.startRDF();
+                    boolean doneOnce = false;
+                    while (result.hasNext()) {
+                        Map<String, Object> row = result.next();
+                        if (!doneOnce) {
+                            //Output only once the props of the selected node as literal properties
+                            Node node = (Node) row.get("x");
+                            Iterable<Label> nodeLabels = node.getLabels();
+                            for (Label label : nodeLabels) {
+                                writer.handleStatement(
+                                        valueFactory.createStatement(valueFactory.createIRI(baseIndivNS, idParam.toString()),
+                                                RDF.TYPE,
+                                                valueFactory.createIRI(baseVocabNS, label.name())));
+                            }
+                            Map<String, Object> allProperties = node.getAllProperties();
+                            for (String key : allProperties.keySet()) {
+                                IRI subject = valueFactory.createIRI(baseIndivNS, idParam.toString());
+                                IRI predicate = valueFactory.createIRI(baseVocabNS, key);
+                                Object propertyValueObject = allProperties.get(key);
+                                if (propertyValueObject instanceof Object[]) {
+                                    for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
+                                        Literal object = createTypedLiteral(valueFactory, ((Object[]) propertyValueObject)[i]);
+                                        writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+                                    }
+                                } else {
+                                    Literal object = createTypedLiteral(valueFactory, propertyValueObject);
                                     writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
                                 }
-                            } else {
-                                Literal object = createTypedLiteral(valueFactory, propertyValueObject);
-                                writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+
                             }
-
+                            doneOnce = true;
                         }
-                        doneOnce = true;
+                        Relationship rel = (Relationship) row.get("r");
+                        if (rel != null) {
+                            // output each relationship and connected node as an object property
+                            IRI subject = valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getStartNode().getId()));
+                            IRI predicate = valueFactory.createIRI(baseVocabNS, rel.getType().name());
+                            IRI object = valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getEndNode().getId()));
+                            writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+                        }
                     }
-                    Relationship rel = (Relationship) row.get("r");
-                    if (rel != null) {
-                        // output each relationship and connected node as an object property
-                        IRI subject = valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getStartNode().getId()));
-                        IRI predicate = valueFactory.createIRI(baseVocabNS, rel.getType().name());
-                        IRI object = valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getEndNode().getId()));
-                        writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
-                    }
-                }
 
-                writer.endRDF();
-                result.close();
+                    writer.endRDF();
+                    result.close();
+                }
             }
         }).build();
     }

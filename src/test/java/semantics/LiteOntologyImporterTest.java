@@ -14,16 +14,36 @@ import static org.junit.Assert.assertEquals;
  */
 public class LiteOntologyImporterTest {
 
-    @Test
-    public void LiteOntoImport() throws Exception {
+//    @Test
+    public void liteOntoImport() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).register(LiteOntologyImporter.class);
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
 
-        Result importResult = db.execute("CALL semantics.LiteOntoImport('" +
+        Result importResult = db.execute("CALL semantics.liteOntoImport('" +
                 LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
                 + "','RDF/XML')");
 
         assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
+
+        assertEquals(new Long(2), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
+
+        assertEquals(new Long(5), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
+
+        assertEquals(new Long(3), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+
+        assertEquals(new Long(6), db.execute("MATCH (n:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+
+    }
+    
+    
+    @Test
+    public void liteOntoImportSchemaOrg() throws Exception {
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
+
+        Result importResult = db.execute("CALL semantics.liteOntoImport('http://topbraid.org/schema/schema.rdf','RDF/XML')");
+
+//        assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
 
         assertEquals(new Long(2), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
 

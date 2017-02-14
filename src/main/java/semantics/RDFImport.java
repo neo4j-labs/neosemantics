@@ -1,6 +1,7 @@
 package semantics;
 
 import apoc.result.GraphResult;
+
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
@@ -8,6 +9,7 @@ import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
+import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.PerformsWrites;
 import org.neo4j.procedure.Procedure;
@@ -41,8 +43,7 @@ public class RDFImport {
 
 
 
-    @Procedure
-    @PerformsWrites
+    @Procedure(mode = Mode.WRITE)
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
                                                          @Name("shorten") boolean shortenUrls,
                                                          @Name("typesToLabels") boolean typesToLabels,

@@ -1,4 +1,4 @@
-package semantics;
+package semantics.extension;
 
 import org.codehaus.jackson.JsonEncoding;
 import org.codehaus.jackson.JsonGenerator;
