@@ -21,6 +21,7 @@
 		    <groupId>org.neo4j</groupId>
 		    <artifactId>server-api</artifactId>
 		    <version>${neo4j.version}</version>
+            <scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.neo4j.procedure</groupId>
