@@ -10,7 +10,9 @@
   mvn clean package
   ```
 
-2. Drop the jar in the <NEO_HOME>/plugins directory of your Neo4j instance.
+2. Drop the jar in the <NEO_HOME>/plugins directory of your Neo4j instance. There are two options here:
+  1. You use the neosemantics-[...].jar This is the easiest way and the recommended one. This jar bundles all the dependencies and also [apoc](https://github.com/neo4j-contrib/neo4j-apoc-procedures). So if apoc is already in your plugins directory, remember to remove it to avoid conflicts.
+  2. You use the original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if for whatever reason you want to have control on the dependencies. Say you have forked apoc and extended it with your own stuff. In this case you will have to add apoc and all third party dependencies (look at the pom.xml). 
 3. Download additional jars to the plugins directory if needed. 
 4. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
