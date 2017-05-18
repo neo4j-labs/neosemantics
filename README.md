@@ -41,14 +41,12 @@ This repository contains a set of stored procedures and extensions to both produ
 
 | Param        | values(default)           | Description  |
 |:------------- |:-------------|:-----|
-| shortenUrls      | [**true(d)**, false] |  |
-| typesToLabels      | [**true(d)**, false] |  |
-| languageFilter      | ['en','fr','es',...] |  |
-| commitSize      | integer(25000) |  |
-| nodeCacheSize      | integer (10000) |  |
+| shortenUrls      | boolean (true) | when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels |
+| typesToLabels      | boolean (true) | when set to true, rdf:type statements are imported as node labels in Neo4j |
+| languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported  |
+| commitSize      | integer (25000) | commit a partial transaction every n triples |
+| nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB |
 
-
-(**) Params: shorten urls [true,false] , convert types to labels, periodic commit, ...
 
 ### Extensions
 
