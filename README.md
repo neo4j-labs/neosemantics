@@ -38,6 +38,16 @@ This repository contains a set of stored procedures and extensions to both produ
 
 
 (*) Valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
+
+| Param        | values(default)           | Description  |
+|:------------- |:-------------|:-----|
+| shortenUrls      | [**true(d)**, false] |  |
+| typesToLabels      | [**true(d)**, false] |  |
+| languageFilter      | ['en','fr','es',...] |  |
+| commitSize      | integer(25000) |  |
+| nodeCacheSize      | integer (10000) |  |
+
+
 (**) Params: shorten urls [true,false] , convert types to labels, periodic commit, ...
 
 ### Extensions
