@@ -1,28 +1,30 @@
 # neosemantics
 
 ## Installation
-
-*Note: this version is compatible with Neo4j v. >= 3.2*
  
-1. Build it
+You can either download a prebuilt jar from the [releases area](https://github.com/jbarrasa/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
 
-  ```
-  mvn clean package
-  ```
-
-2. Drop the jar in the <NEO_HOME>/plugins directory of your Neo4j instance. There are two options here:
-  1. You use the neosemantics-[...].jar This is the easiest way and the recommended one. This jar bundles all the dependencies and also [apoc](https://github.com/neo4j-contrib/neo4j-apoc-procedures). So if apoc is already in your plugins directory, remember to remove it to avoid conflicts.
-  2. You use the original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if for whatever reason you want to have control on the dependencies. Say you have forked apoc and extended it with your own stuff. In this case you will have to add apoc and all third party dependencies (look at the pom.xml). 
-3. Download additional jars to the plugins directory if needed. 
-4. Add the following line to your <NEO_HOME>/conf/neo4j.conf
+1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. If present, **remember to remove APOC from this folder as it is already bundled with neosemantics**.
+2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
   dbms.unmanaged_extension_classes=semantics.extension=/rdf
   ```
   
-5. Restart the server. 
-6. Check that the installation went well by running `call dbms.procedures()`. The list of procedures should include the ones documented below.
+3. Restart the server. 
+4. Check that the installation went well by running `call dbms.procedures()`. The list of procedures should include the ones documented below.
 You can check that the extension is mounted by running `:GET /rdf/ping`
+
+
+**Note on build**
+Run
+  ```
+  mvn clean package
+  ```
+  This will produce two jars :
+  1. A neosemantics-[...].jar This jar bundles all the dependencies and also [apoc](https://github.com/neo4j-contrib/neo4j-apoc-procedures). So if apoc is already in your plugins directory, remember to remove it to avoid conflicts.
+  2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add APOC and all third party dependencies (look at the pom.xml). 
+  
 
 ## What's in this repository
 This repository contains a set of stored procedures and extensions to both produce and consume RDF from Neo4j.
