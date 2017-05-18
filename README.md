@@ -16,12 +16,14 @@ You can either download a prebuilt jar from the [releases area](https://github.c
 You can check that the extension is mounted by running `:GET /rdf/ping`
 
 
+
 **Note on build**
-Run
+
+When you run
   ```
   mvn clean package
   ```
-  This will produce two jars :
+This will produce two jars :
   1. A neosemantics-[...].jar This jar bundles all the dependencies and also [apoc](https://github.com/neo4j-contrib/neo4j-apoc-procedures). So if apoc is already in your plugins directory, remember to remove it to avoid conflicts.
   2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add APOC and all third party dependencies (look at the pom.xml). 
   
