@@ -19,6 +19,7 @@ import java.util.*;
 class StatementPreviewer implements RDFHandler {
 
     private final boolean shortenUris;
+    private final String langFilter;
     private GraphDatabaseService graphdb;
     private Map<String,Map<String,Object>> resourceProps = new HashMap<>();
     private Map<String,Set<String>> resourceLabels = new HashMap<>();
@@ -31,10 +32,11 @@ class StatementPreviewer implements RDFHandler {
     Log log;
 
     public StatementPreviewer(GraphDatabaseService db, boolean shortenUrls, boolean typesToLabels,
-                              Map<String, Node> virtualNodes, List<Relationship> virtualRels, Log l) {
+                              Map<String, Node> virtualNodes, List<Relationship> virtualRels, String languageFilter, Log l) {
         graphdb = db;
         shortenUris = shortenUrls;
         labellise =  typesToLabels;
+        langFilter = languageFilter;
         vNodes = virtualNodes;
         vRels = virtualRels;
         log = l;
@@ -79,7 +81,10 @@ class StatementPreviewer implements RDFHandler {
         org.openrdf.model.Resource subject = st.getSubject(); //includes blank nodes
         Value object = st.getObject();
         if (object instanceof Literal) {
-            setProp(subject.stringValue().replace("'", "\'"), shorten(predicate), getObjectValue((Literal)object));
+            final Object literalStringValue = getObjectValue((Literal) object);
+            if (literalStringValue != null) {
+                setProp(subject.stringValue().replace("'", "\'"), shorten(predicate), literalStringValue);
+            }
         } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
             setLabel(subject.stringValue().replace("'", "\'"),shorten((IRI)object));
 
@@ -114,7 +119,7 @@ class StatementPreviewer implements RDFHandler {
         return props;
     }
 
-    private void setProp(String subjectUri, String propName, String propValue){
+    private void setProp(String subjectUri, String propName, Object propValue){
         Map<String, Object> props;
 
         if(!resourceProps.containsKey(subjectUri)){
@@ -177,17 +182,24 @@ class StatementPreviewer implements RDFHandler {
         return "ns" + namespaces.size();
     }
 
-    private String getObjectValue(Literal object) {
+    private Object getObjectValue(Literal object) {
         IRI datatype = object.getDatatype();
-        if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-                datatype.equals(XMLSchema.FLOAT) || datatype.equals(XMLSchema.INT) ||
-                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)) {
-            return object.stringValue();
+        if (datatype.equals(XMLSchema.INT) ||
+                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)){
+            return object.longValue();
+        } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
+                datatype.equals(XMLSchema.FLOAT)) {
+            return object.doubleValue();
         } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-            return object.stringValue();
+            return object.booleanValue();
         } else {
-            return object.stringValue().replace("\\", "\\\\").replace("'", "\\'");
-            //not sure this is the best way to 'clean' the property value
+            // it's a string, and it can be tagged with language info.
+            // if a language filter has been defined we apply it here
+            final Optional<String> language = object.getLanguage();
+            if(langFilter == null || !language.isPresent() || (language.isPresent() && langFilter.equals(language.get()))){
+                return object.stringValue();
+            }
+            return null; //string is filtered
         }
     }
 

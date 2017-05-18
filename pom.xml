@@ -6,8 +6,9 @@
 	<artifactId>neosemantics</artifactId>
 	<version>1.0-SNAPSHOT</version>
 	<properties>
-		<neo4j.version>3.1.1</neo4j.version>
+		<neo4j.version>3.2.0</neo4j.version>
 		<sesame.version>4.1.1</sesame.version>
+		<apoc.version>3.2.0.1</apoc.version>
 	</properties>
 
 	<dependencies>
@@ -26,7 +27,7 @@
 		<dependency>
 			<groupId>org.neo4j.procedure</groupId>
 			<artifactId>apoc</artifactId>
-			<version>3.1.0.3</version>
+			<version>${apoc.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.openrdf.sesame</groupId>
@@ -59,6 +60,13 @@
 			<artifactId>jackson-mapper-asl</artifactId>
 			<version>1.9.7</version>
 		</dependency>
+
+		<dependency>
+			<groupId>com.google.guava</groupId>
+			<artifactId>guava</artifactId>
+			<version>19.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>javax.ws.rs</groupId>
 			<artifactId>javax.ws.rs-api</artifactId>

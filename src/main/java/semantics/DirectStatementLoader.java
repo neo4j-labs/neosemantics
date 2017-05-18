@@ -1,6 +1,8 @@
 package semantics;
 
 import apoc.util.Util;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import org.neo4j.graphdb.*;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
@@ -20,7 +22,9 @@ import java.util.concurrent.Callable;
 
 class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
+    public static final Label RESOURCE = Label.label("Resource");
     private final boolean shortenUris;
+    private final String langFilter;
     private int ingestedTriples = 0;
     private int triplesParsed = 0;
     private GraphDatabaseService graphdb;
@@ -30,13 +34,19 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     private Set<Statement> statements = new HashSet<>();
     private Map<String,String> namespaces =  new HashMap<>();
     private final boolean labellise;
+    Cache<String, Node> nodeCache;
     Log log;
 
-    public DirectStatementLoader(GraphDatabaseService db, long batchSize, boolean shortenUrls, boolean typesToLabels, Log l) {
+    public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
+                                 boolean shortenUrls, boolean typesToLabels, String languageFilter, Log l) {
         graphdb = db;
         commitFreq = batchSize;
         shortenUris = shortenUrls;
         labellise =  typesToLabels;
+        nodeCache = CacheBuilder.newBuilder()
+                .maximumSize(nodeCacheSize)
+                .build();
+        langFilter = languageFilter;
         log = l;
     }
 
@@ -88,19 +98,17 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     private Set<String> initialiseLabels(String subjectUri) {
         Set<String> labels =  new HashSet<>();
-        labels.add("Resource");
         resourceLabels.put(subjectUri, labels);
         return labels;
     }
 
     private HashMap<String, Object> initialiseProps(String subjectUri) {
         HashMap<String, Object> props = new HashMap<>();
-        props.put("uri", subjectUri);
         resourceProps.put(subjectUri,props);
         return props;
     }
 
-    private void setProp(String subjectUri, String propName, String propValue){
+    private void setProp(String subjectUri, String propName, Object propValue){
         Map<String, Object> props;
 
         if(!resourceProps.containsKey(subjectUri)){
@@ -139,20 +147,23 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         IRI predicate = st.getPredicate();
         Resource subject = st.getSubject(); //includes blank nodes
         Value object = st.getObject();
-        String cypher;
         if (object instanceof Literal) {
-            setProp(subject.stringValue().replace("'", "\'"), shorten(predicate), getObjectValue((Literal)object));
+            final Object literalValue = getObjectValue((Literal) object);
+            if (literalValue != null) {
+                setProp(subject.stringValue(), shorten(predicate), literalValue);
+                triplesParsed++;
+            }
         } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
-            setLabel(subject.stringValue().replace("'", "\'"),shorten((IRI)object));
-
+            setLabel(subject.stringValue(),shorten((IRI)object));
+            triplesParsed++;
         } else {
-            addResource(subject.stringValue().replace("'", "\'"));
-            addResource(object.stringValue().replace("'", "\'"));
+            addResource(subject.stringValue());
+            addResource(object.stringValue());
             addStatement(st);
+            triplesParsed++;
         }
-        triplesParsed++;
         if (triplesParsed % commitFreq == 0) {
-            Util.inTx((GraphDatabaseAPI) graphdb, this);
+            Util.inTx(graphdb, this);
             ingestedTriples += triplesParsed;
             log.info("Successful periodic commit of " + commitFreq + " triples. " +
                     ingestedTriples + " triples ingested so far...");
@@ -180,26 +191,33 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         if (namespaces.containsKey(namespace)){
             return namespaces.get(namespace);
         } else{
-            namespaces.put(namespace, createPrefix(namespace));
+            namespaces.put(namespace, createPrefix());
             return namespaces.get(namespace);
         }
     }
 
-    private String createPrefix(String namespace) {
+    private String createPrefix() {
         return "ns" + namespaces.size();
     }
 
-    private String getObjectValue(Literal object) {
+    private Object getObjectValue(Literal object) {
         IRI datatype = object.getDatatype();
-        if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-                datatype.equals(XMLSchema.FLOAT) || datatype.equals(XMLSchema.INT) ||
-                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)) {
-            return object.stringValue();
+        if (datatype.equals(XMLSchema.INT) ||
+                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)){
+            return object.longValue();
+        } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
+                datatype.equals(XMLSchema.FLOAT)) {
+            return object.doubleValue();
         } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-            return object.stringValue();
+            return object.booleanValue();
         } else {
-            return object.stringValue().replace("\\", "\\\\").replace("'", "\\'");
-            //not sure this is the best way to 'clean' the property value
+            // it's a string, and it can be tagged with language info.
+            // if a language filter has been defined we apply it here
+            final Optional<String> language = object.getLanguage();
+            if(langFilter == null || !language.isPresent() || (language.isPresent() && langFilter.equals(language.get()))){
+                return object.stringValue();
+            }
+            return null; //string is filtered
         }
     }
 
@@ -215,25 +233,69 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     @Override
     public Integer call() throws Exception {
         int count = 0;
-        Map<String,Node> nodes = new HashMap<>();
-        for(String uri:resourceLabels.keySet()){
-            final Node node = (graphdb.findNode(Label.label("Resource"), "uri", uri)==null?
-                    graphdb.createNode(Label.label("Resource")):
-                    graphdb.findNode(Label.label("Resource"), "uri", uri));
-            resourceLabels.get(uri).forEach( l -> node.addLabel(Label.label(l)));
-            resourceProps.get(uri).forEach(node::setProperty);
-            nodes.put(uri, node);
+
+        for(Map.Entry<String, Set<String>> entry:resourceLabels.entrySet()){
+
+            final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
+                @Override
+                public Node call() {
+                    Node node =  graphdb.findNode(RESOURCE, "uri", entry.getKey());
+                    if (node==null){
+                        node = graphdb.createNode(RESOURCE);
+                        node.setProperty("uri",entry.getKey());
+                    }
+                    return node;
+                }
+            });
+
+            entry.getValue().forEach( l -> node.addLabel(Label.label(l)));
+            resourceProps.get(entry.getKey()).forEach(node::setProperty);
         }
 
         for(Statement st:statements){
-            nodes.get(st.getSubject().stringValue().replace("'", "\'")).createRelationshipTo(
-                    nodes.get(st.getObject().stringValue().replace("'", "\'")),
-                    RelationshipType.withName(shorten(st.getPredicate())));
+
+            final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+                @Override
+                public Node call() {  //throws AnyException
+                    return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+                }
+            });
+
+            final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+                @Override
+                public Node call() {  //throws AnyException
+                    return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+                }
+            });
+
+            // check if the rel is already present. If so, don't recreate.
+            // explore the node with the lowest degree
+            boolean found = false;
+            if(fromNode.getDegree(RelationshipType.withName(shorten(st.getPredicate())), Direction.OUTGOING) <
+                    toNode.getDegree(RelationshipType.withName(shorten(st.getPredicate())), Direction.INCOMING)) {
+                for (Relationship rel : fromNode.getRelationships(RelationshipType.withName(shorten(st.getPredicate())), Direction.OUTGOING)) {
+                    if (rel.getEndNode().equals(toNode)) {
+                        found = true;
+                        break;
+                    }
+                }
+            }else {
+                for (Relationship rel : toNode.getRelationships(RelationshipType.withName(shorten(st.getPredicate())), Direction.INCOMING)) {
+                    if (rel.getStartNode().equals(fromNode)) {
+                        found = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!found) {
+                fromNode.createRelationshipTo(
+                        toNode,
+                        RelationshipType.withName(shorten(st.getPredicate())));
+            }
         }
 
-        //TODO do we clear all? keep cache?
         statements.clear();
-        nodes.clear();
         resourceLabels.clear();
         resourceProps.clear();
 

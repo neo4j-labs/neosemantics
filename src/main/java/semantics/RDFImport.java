@@ -2,6 +2,7 @@ package semantics;
 
 import apoc.result.GraphResult;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
@@ -33,8 +34,13 @@ import java.util.stream.Stream;
  * 3. rdf:type relationships generate :Class nodes on the object
  */
 public class RDFImport {
+    private static final boolean DEFAULT_SHORTEN_URLS = true;
+    private static final boolean DEFAULT_TYPES_TO_LABELS = true;
+    private static final long DEFAULT_COMMIT_SIZE = 25000;
+    private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
+
     @Context
-    public GraphDatabaseAPI db;
+    public GraphDatabaseService db;
     @Context
     public Log log;
 
@@ -45,13 +51,18 @@ public class RDFImport {
 
     @Procedure(mode = Mode.WRITE)
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
-                                                         @Name("shorten") boolean shortenUrls,
-                                                         @Name("typesToLabels") boolean typesToLabels,
-                                                         @Name("commitSize") long commitSize) {
+                                           @Name("props") Map<String, Object> props) {
+
+        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final long commitSize = (props.containsKey("commitSize")?(long)props.get("commitSize"):DEFAULT_COMMIT_SIZE);
+        final long nodeCacheSize = (props.containsKey("nodeCacheSize")?(long)props.get("nodeCacheSize"):DEFAULT_NODE_CACHE_SIZE);
+        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         ImportResults importResults = new ImportResults();
         URL documentUrl;
-        DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000), shortenUrls, typesToLabels, log);
+        DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
+                nodeCacheSize, shortenUrls, typesToLabels, languageFilter, log);
         try {
             checkIndexesExist();
             documentUrl = new URL(url);
@@ -71,15 +82,19 @@ public class RDFImport {
         return Stream.of(importResults);
     }
 
-    @Procedure
+    @Procedure(mode = Mode.READ)
     public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
-                                          @Name("shorten") boolean shortenUrls,
-                                          @Name("typesToLabels") boolean typesToLabels) {
+                                          @Name("props") Map<String, Object> props) {
+
+        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+
         URL documentUrl;
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, languageFilter, log);
         try {
             documentUrl = new URL(url);
             InputStream inputStream = documentUrl.openStream();
@@ -100,14 +115,18 @@ public class RDFImport {
 
     }
 
-    @Procedure
+    @Procedure(mode = Mode.READ)
     public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
-                                                 @Name("shorten") boolean shortenUrls,
-                                                 @Name("typesToLabels") boolean typesToLabels) {
+                                                 @Name("props") Map<String, Object> props) {
+
+        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, languageFilter, log);
         try {
             InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
             RDFFormat rdfFormat = getFormat(format);
