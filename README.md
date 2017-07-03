@@ -1,10 +1,10 @@
-# neosemantics
+# neosemantics 3.1.x for Neo4j 3.1.x
 
 ## Installation
  
 You can either download a prebuilt jar from the [releases area](https://github.com/jbarrasa/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
 
-1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. If present, **remember to remove APOC from this folder as it is already bundled with neosemantics**.
+1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance.
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
@@ -24,8 +24,8 @@ When you run
   mvn clean package
   ```
 This will produce two jars :
-  1. A neosemantics-[...].jar This jar bundles all the dependencies and also [apoc](https://github.com/neo4j-contrib/neo4j-apoc-procedures). So if apoc is already in your plugins directory, remember to remove it to avoid conflicts.
-  2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add APOC and all third party dependencies (look at the pom.xml). 
+  1. A neosemantics-[...].jar This jar bundles all the dependencies.
+  2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add all third party dependencies (look at the pom.xml). 
   
 
 ## What's in this repository
