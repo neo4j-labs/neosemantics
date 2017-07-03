@@ -1,10 +1,8 @@
 package semantics;
 
-import apoc.util.Util;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import org.neo4j.graphdb.*;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.openrdf.model.*;
 import org.openrdf.model.Resource;
@@ -68,7 +66,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     @Override
     public void endRDF() throws RDFHandlerException {
-        Util.inTx((GraphDatabaseAPI) graphdb, this);
+        Util.inTx(graphdb, this);
         ingestedTriples += triplesParsed;
         addNamespaceNode();
 

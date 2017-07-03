@@ -1,20 +1,17 @@
 package semantics;
 
-import apoc.result.GraphResult;
-
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.schema.IndexDefinition;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
-import org.neo4j.procedure.PerformsWrites;
 import org.neo4j.procedure.Procedure;
 import org.openrdf.rio.*;
+import semantics.result.GraphResult;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;

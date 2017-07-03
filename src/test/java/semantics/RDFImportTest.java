@@ -61,7 +61,7 @@ public class RDFImportTest {
 
         Map<String, Object> singleResult = importResults1.next();
 
-        assertEquals(new Long(0), singleResult.get("triplesLoaded"));
+        assertEquals(0L, singleResult.get("triplesLoaded"));
         assertEquals("KO", singleResult.get("terminationStatus"));
         assertEquals("The required index on :Resource(uri) could not be found", singleResult.get("extraInfo"));
 
@@ -76,11 +76,11 @@ public class RDFImportTest {
 
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(6), importResults1.next().get("triplesLoaded"));
+        assertEquals(6L, importResults1.next().get("triplesLoaded"));
         assertEquals("http://me.markus-lanthaler.com/",
                 db.execute("MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
                         .next().get("uri"));
-        assertEquals(new Long(1),
+        assertEquals(1L,
                 db.execute("MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
                         .next().get("count"));
     }
@@ -94,11 +94,11 @@ public class RDFImportTest {
 
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(6), importResults1.next().get("triplesLoaded"));
+        assertEquals(6L, importResults1.next().get("triplesLoaded"));
         assertEquals("http://me.markus-lanthaler.com/",
                 db.execute("MATCH (n{ns0_name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
                         .next().get("uri"));
-        assertEquals(new Long(1),
+        assertEquals(1L,
                 db.execute("MATCH (n) WHERE exists(n.ns0_modified) RETURN count(n) AS count")
                         .next().get("count"));
 
@@ -120,8 +120,8 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
                         .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(38), importResults1.next().get("triplesLoaded"));
-        assertEquals(new Long(7),
+        assertEquals(38L, importResults1.next().get("triplesLoaded"));
+        assertEquals(7L,
                 db.execute("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
                         .next().get("count"));
         assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
@@ -140,8 +140,8 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
                         .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(38), importResults1.next().get("triplesLoaded"));
-            assertEquals(new Long(7),
+        assertEquals(38L, importResults1.next().get("triplesLoaded"));
+            assertEquals(7L,
                 db.execute("MATCH ()-[r]->(b) WHERE type(r) CONTAINS 'relation' RETURN count(b) as count")
                         .next().get("count"));
 
@@ -176,8 +176,8 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
                         .toURI() + "','RDF/XML', { shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(38), importResults1.next().get("triplesLoaded"));
-        assertEquals(new Long(7),
+        assertEquals(38L, importResults1.next().get("triplesLoaded"));
+        assertEquals(7L,
                 db.execute("MATCH ()-[r:dc_relation]->(b) RETURN count(b) as count")
                         .next().get("count"));
 
@@ -209,7 +209,7 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
                         .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(1), importResults1.next().get("triplesLoaded"));
+        assertEquals(1L, importResults1.next().get("triplesLoaded"));
         assertEquals("JB",
                 db.execute("MATCH (jb {uri: 'http://neo4j.com/invividual/JB'}) RETURN jb.voc_name AS name")
                         .next().get("name"));
@@ -237,7 +237,7 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("badUris.rdf")
                         .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(1), importResults1.next().get("triplesLoaded"));
+        assertEquals(1L, importResults1.next().get("triplesLoaded"));
         assertEquals("JB",
                 db.execute("MATCH (jb {uri: 'http://neo4j.com/invividual/JB\\'sUri'}) RETURN jb.voc_name AS name")
                         .next().get("name"));
@@ -259,7 +259,7 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
                         .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'en', commitSize: 500})");
-        assertEquals(new Long(1), importResults1.next().get("triplesLoaded"));
+        assertEquals(1L, importResults1.next().get("triplesLoaded"));
         assertEquals("That Seventies Show",
                 db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
                         .next().get("name"));
@@ -269,7 +269,7 @@ public class RDFImportTest {
         importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
                         .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr', commitSize: 500})");
-        assertEquals(new Long(1), importResults1.next().get("triplesLoaded"));
+        assertEquals(1L, importResults1.next().get("triplesLoaded"));
         assertEquals("Cette Série des Années Soixante-dix",
                 db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
                         .next().get("name"));
@@ -279,7 +279,7 @@ public class RDFImportTest {
         importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
                         .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr-be', commitSize: 500})");
-        assertEquals(new Long(1), importResults1.next().get("triplesLoaded"));
+        assertEquals(1L, importResults1.next().get("triplesLoaded"));
         assertEquals("Cette Série des Années Septante",
                 db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
                         .next().get("name"));
@@ -290,7 +290,7 @@ public class RDFImportTest {
                 RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
                         .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
         // no language filter means three triples are ingested
-        assertEquals(new Long(3), importResults1.next().get("triplesLoaded"));
+        assertEquals(3L, importResults1.next().get("triplesLoaded"));
         //but actually only the last one is kept as they overwrite each other
         //TODO: Find a consistent solution for this problem
         assertEquals("Cette Série des Années Septante",
@@ -309,7 +309,7 @@ public class RDFImportTest {
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("opentox-example.ttl")
                         .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
-        assertEquals(new Long(157), importResults1.next().get("triplesLoaded"));
+        assertEquals(157L, importResults1.next().get("triplesLoaded"));
         Result algoNames = db.execute("MATCH (n:`http://www.opentox.org/api/1.1#Algorithm`) " +
                 "\nRETURN n.`http://purl.org/dc/elements/1.1/title` AS algos ORDER By algos");
 

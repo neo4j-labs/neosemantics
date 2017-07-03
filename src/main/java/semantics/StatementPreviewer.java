@@ -1,8 +1,5 @@
 package semantics;
 
-import apoc.result.VirtualNode;
-import apoc.result.VirtualRelationship;
-import apoc.util.Util;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import org.openrdf.model.*;
@@ -10,6 +7,8 @@ import org.openrdf.model.vocabulary.RDF;
 import org.openrdf.model.vocabulary.XMLSchema;
 import org.openrdf.rio.RDFHandler;
 import org.openrdf.rio.RDFHandlerException;
+import semantics.result.VirtualNode;
+import semantics.result.VirtualRelationship;
 
 import java.util.*;
 

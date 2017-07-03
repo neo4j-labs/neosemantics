@@ -5,7 +5,6 @@ import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
-import org.neo4j.procedure.PerformsWrites;
 import org.neo4j.procedure.Procedure;
 import org.openrdf.model.*;
 import org.openrdf.model.impl.LinkedHashModel;
