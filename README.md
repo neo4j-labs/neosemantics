@@ -48,6 +48,7 @@ This repository contains a set of stored procedures and extensions to both produ
 | shortenUrls      | boolean (true) | when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels |
 | typesToLabels      | boolean (true) | when set to true, rdf:type statements are imported as node labels in Neo4j |
 | languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported  |
+| headerParams      | map {} | parameters to be passed in the HTTP GET request. <br> Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'} |
 | commitSize      | integer (25000) | commit a partial transaction every n triples |
 | nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB |
 
