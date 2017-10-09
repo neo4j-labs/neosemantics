@@ -75,7 +75,8 @@ public class RDFImportTest {
         createIndices(db);
 
         Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+                RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500, " +
+                "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
         assertEquals(6L, importResults1.next().get("triplesLoaded"));
         assertEquals("http://me.markus-lanthaler.com/",
                 db.execute("MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")

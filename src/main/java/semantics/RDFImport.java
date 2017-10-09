@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Stream;
@@ -57,16 +58,19 @@ public class RDFImport {
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         ImportResults importResults = new ImportResults();
-        URL documentUrl;
+        URLConnection urlConn;
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
                 nodeCacheSize, shortenUrls, typesToLabels, languageFilter, log);
         try {
             checkIndexesExist();
-            documentUrl = new URL(url);
-            InputStream inputStream = documentUrl.openStream();
+            urlConn = new URL(url).openConnection();
+            if (props.containsKey("headerParams")) {
+                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            }
+            InputStream inputStream = urlConn.getInputStream();
             RDFParser rdfParser = Rio.createParser(getFormat(format));
             rdfParser.setRDFHandler(statementLoader);
-            rdfParser.parse(inputStream, documentUrl.toString());
+            rdfParser.parse(inputStream, url);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -87,14 +91,17 @@ public class RDFImport {
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
-        URL documentUrl;
+        URLConnection urlConn;
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
         StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, languageFilter, log);
         try {
-            documentUrl = new URL(url);
-            InputStream inputStream = documentUrl.openStream();
+            urlConn = new URL(url).openConnection();
+            if (props.containsKey("headerParams")) {
+                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            }
+            InputStream inputStream = urlConn.getInputStream();
             RDFFormat rdfFormat = getFormat(format);
             log.info("Data set to be parsed as " + rdfFormat);
             RDFParser rdfParser = Rio.createParser(rdfFormat);
