@@ -9,6 +9,7 @@ import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.harness.TestServerBuilders;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.configuration.ServerSettings;
+import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.test.server.HTTP;
 
 import semantics.extension.SemanticsSCOExpansionEndpoint;
@@ -73,8 +74,8 @@ public class SemanticsSCOExpansionEndpointTest {
 
     private TestServerBuilder getServerBuilder() throws IOException {
         TestServerBuilder serverBuilder = TestServerBuilders.newInProcessBuilder();
-        serverBuilder.withConfig(ServerSettings.certificates_directory.name(),
-                ServerTestUtils.getRelativePath(getSharedTestTemporaryFolder(), ServerSettings.certificates_directory));
+        serverBuilder.withConfig(LegacySslPolicyConfig.certificates_directory.name(),
+                ServerTestUtils.getRelativePath(getSharedTestTemporaryFolder(), LegacySslPolicyConfig.certificates_directory));
         return serverBuilder;
     }
 }

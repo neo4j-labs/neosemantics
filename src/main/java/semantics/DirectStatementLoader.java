@@ -14,6 +14,8 @@ import org.openrdf.rio.RDFHandlerException;
 import java.util.*;
 import java.util.concurrent.Callable;
 
+import static semantics.RDFImport.PREFIX_SEPARATOR;
+
 /**
  * Created by jbarrasa on 09/11/2016.
  */
@@ -178,7 +180,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         if (shortenUris) {
             String localName = iri.getLocalName();
             String prefix = getPrefix(iri.getNamespace());
-            return prefix + "_" + localName;
+            return prefix + PREFIX_SEPARATOR + localName;
         } else
         {
             return iri.stringValue();

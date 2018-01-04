@@ -24,6 +24,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static semantics.RDFImport.PREFIX_SEPARATOR;
+
 /**
  * Created by jbarrasa on 08/09/2016.
  */
@@ -307,9 +309,11 @@ public class RDFEndpoint {
     }
 
     private Map<String,String> getNamespacesFromDB(GraphDatabaseService graphdb) {
+
         Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
                 "UNWIND keys(n) AS namespace\n" +
                 "RETURN namespace, n[namespace] as prefix");
+
         Map<String, String> result = new HashMap<String, String>();
         while (nslist.hasNext()){
             Map<String, Object> ns = nslist.next();
@@ -321,12 +325,13 @@ public class RDFEndpoint {
     private String buildURI(String baseVocabNS, String name, Map<String, String> namespaces) {
         //TODO
         // if uri then return as is
-        Pattern regex = Pattern.compile("^(ns\\d+)_(.*)$");
+        Pattern regex = Pattern.compile("^(\\w+)" + PREFIX_SEPARATOR + "(.*)$");
         Matcher matcher = regex.matcher(name);
         if (matcher.matches()){
             String prefix = matcher.group(1);
             String uriPrefix = getKeyFromValue(prefix, namespaces);
-            //if namespace but does not exist, then ??? Default to default
+            // if namespace but does not exist, then ??? Default to default.
+            // this can also be when a property name folows the name structure of pseudonamespace.
 
             String localName = matcher.group(2);
             return uriPrefix + localName;

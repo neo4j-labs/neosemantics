@@ -1,20 +1,20 @@
 package semantics;
 
+import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.driver.v1.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.harness.junit.Neo4jRule;
 
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.neo4j.server.rest.domain.TraverserReturnType.node;
+import static org.neo4j.driver.v1.Values.ofNode;
+import static semantics.RDFImport.PREFIX_SEPARATOR;
 
 /**
  * Created by jbarrasa on 21/03/2016.
@@ -51,346 +51,369 @@ public class RDFImportTest {
             "show:218 show:localName \"Cette Série des Années Soixante-dix\"@fr . \n" +
             "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
 
+    @Rule
+    public Neo4jRule neo4j = new Neo4jRule()
+            .withProcedure( RDFImport.class );
+
     @Test
     public void testAbortIfNoIndices() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try( Driver driver = GraphDatabase.driver( neo4j.boltURI() , Config.build().withEncryptionLevel( Config.EncryptionLevel.NONE ).toConfig() ) ) {
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+            Session session = driver.session();
 
-        Map<String, Object> singleResult = importResults1.next();
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
+                    "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
 
-        assertEquals(0L, singleResult.get("triplesLoaded"));
-        assertEquals("KO", singleResult.get("terminationStatus"));
-        assertEquals("The required index on :Resource(uri) could not be found", singleResult.get("extraInfo"));
+            Map<String, Object> singleResult = importResults1.single().asMap();
 
+            assertEquals(0L, singleResult.get("triplesLoaded"));
+            assertEquals("KO", singleResult.get("terminationStatus"));
+            assertEquals("The required index on :Resource(uri) could not be found", singleResult.get("extraInfo"));
+        }
     }
 
     @Test
     public void testImportJSONLD() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500, " +
-                "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-        assertEquals(6L, importResults1.next().get("triplesLoaded"));
-        assertEquals("http://me.markus-lanthaler.com/",
-                db.execute("MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
-                        .next().get("uri"));
-        assertEquals(1L,
-                db.execute("MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
-                        .next().get("count"));
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500, " +
+                    "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+            assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
+            assertEquals("http://me.markus-lanthaler.com/",
+                    session.run("MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+                            .next().get("uri").asString());
+            assertEquals(1L,
+                    session.run("MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+                            .next().get("count").asLong());
+        }
     }
 
     @Test
     public void testImportJSONLDShortening() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(6L, importResults1.next().get("triplesLoaded"));
-        assertEquals("http://me.markus-lanthaler.com/",
-                db.execute("MATCH (n{ns0_name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
-                        .next().get("uri"));
-        assertEquals(1L,
-                db.execute("MATCH (n) WHERE exists(n.ns0_modified) RETURN count(n) AS count")
-                        .next().get("count"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("http://me.markus-lanthaler.com/",
+                    session.run("MATCH (n{ns0"+ PREFIX_SEPARATOR +"name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+                            .next().get("uri").asString());
+            assertEquals(1L,
+                    session.run("MATCH (n) WHERE exists(n.ns0"+ PREFIX_SEPARATOR +"modified) RETURN count(n) AS count")
+                            .next().get("count").asLong());
 
-        HashMap<String, String> expectedNamespaceDefs = new HashMap<String, String>();
-        expectedNamespaceDefs.put("baseName", "http://xmlns.com/foaf/0.1/");
-        expectedNamespaceDefs.put("prefix", "ns0");
-        assertEquals(expectedNamespaceDefs,
-                db.execute("MATCH (n:NamespacePrefixDefinition) RETURN { baseName: keys(n)[0] ,  prefix: n[keys(n)[0]]} AS namespaces")
-                        .next().get("namespaces"));
+            HashMap<String, String> expectedNamespaceDefs = new HashMap<String, String>();
+            expectedNamespaceDefs.put("baseName", "http://xmlns.com/foaf/0.1/");
+            expectedNamespaceDefs.put("prefix", "ns0");
+            assertEquals(expectedNamespaceDefs,
+                    session.run("MATCH (n:NamespacePrefixDefinition) RETURN { baseName: keys(n)[0] ,  prefix: n[keys(n)[0]]} AS namespaces")
+                            .next().get("namespaces").asMap());
+        }
     }
 
     @Test
     public void testImportRDFXML() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                        .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
-        assertEquals(38L, importResults1.next().get("triplesLoaded"));
-        assertEquals(7L,
-                db.execute("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
-                        .next().get("count"));
-        assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
-                db.execute("MATCH (x:Resource) WHERE x.`http://www.w3.org/2000/01/rdf-schema#label` = 'harvest_dataset_url'" +
-                "\nRETURN x.`http://www.w3.org/1999/02/22-rdf-syntax-ns#value` AS datasetUrl").next().get("datasetUrl"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
+                            .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+            assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals(7L,
+                    session.run("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
+                            .next().get("count").asLong());
+            assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+                    session.run("MATCH (x:Resource) WHERE x.`http://www.w3.org/2000/01/rdf-schema#label` = 'harvest_dataset_url'" +
+                            "\nRETURN x.`http://www.w3.org/1999/02/22-rdf-syntax-ns#value` AS datasetUrl").next().get("datasetUrl").asString());
 
+        }
     }
 
     @Test
     public void testImportRDFXMLShortening() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                        .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(38L, importResults1.next().get("triplesLoaded"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
+                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals(7L,
-                db.execute("MATCH ()-[r]->(b) WHERE type(r) CONTAINS 'relation' RETURN count(b) as count")
-                        .next().get("count"));
+                    session.run("MATCH ()-[r]->(b) WHERE type(r) CONTAINS 'relation' RETURN count(b) as count")
+                            .next().get("count").asLong());
 
-        assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
-                db.execute("MATCH (x:Resource) WHERE x.ns2_label = 'harvest_dataset_url'" +
-                        "\nRETURN x.ns4_value AS datasetUrl").next().get("datasetUrl"));
+            assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+                    session.run("MATCH (x:Resource) WHERE x.ns2" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
+                            "\nRETURN x.ns4"+ PREFIX_SEPARATOR +"value AS datasetUrl").next().get("datasetUrl").asString());
 
-        assertEquals("ns0",
-                db.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                        "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
-                        .next().get("prefix"));
+            assertEquals("ns0",
+                    session.run("MATCH (n:NamespacePrefixDefinition) \n" +
+                            "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
+                            .next().get("prefix").asString());
 
+        }
     }
 
     @Test
     public void testImportRDFXMLShorteningWithPrefixPreDefinition() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        //prefix predefinition by creating the NamespacePrefixDefinitionNode
-        db.execute("WITH {`http://purl.org/dc/terms/`:'dc',\n" +
-                "`http://www.w3.org/1999/02/22-rdf-syntax-ns#`:'rdf',\n" +
-                "`http://www.w3.org/2002/07/owl#`:'owl',\n" +
-                "`http://www.w3.org/ns/dcat#`:'dcat',\n" +
-                "`http://www.w3.org/2000/01/rdf-schema#`:'rdfs',\n" +
-                "`http://xmlns.com/foaf/0.1/`:'foaf'} as nslist\n" +
-                "MERGE (n:NamespacePrefixDefinition)\n" +
-                "SET n+=nslist");
+            session.run("WITH {`http://purl.org/dc/terms/`:'dc',\n" +
+                    "`http://www.w3.org/1999/02/22-rdf-syntax-ns#`:'rdf',\n" +
+                    "`http://www.w3.org/2002/07/owl#`:'owl',\n" +
+                    "`http://www.w3.org/ns/dcat#`:'dcat',\n" +
+                    "`http://www.w3.org/2000/01/rdf-schema#`:'rdfs',\n" +
+                    "`http://xmlns.com/foaf/0.1/`:'foaf'} as nslist\n" +
+                    "MERGE (n:NamespacePrefixDefinition)\n" +
+                    "SET n+=nslist");
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                        .toURI() + "','RDF/XML', { shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(38L, importResults1.next().get("triplesLoaded"));
-        assertEquals(7L,
-                db.execute("MATCH ()-[r:dc_relation]->(b) RETURN count(b) as count")
-                        .next().get("count"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
+                            .toURI() + "','RDF/XML', { shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals(7L,
+                    session.run("MATCH ()-[r:dc" + PREFIX_SEPARATOR + "relation]->(b) RETURN count(b) as count")
+                            .next().get("count").asLong());
 
-        assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
-                db.execute("MATCH (x) WHERE x.rdfs_label = 'harvest_dataset_url'" +
-                        "\nRETURN x.rdf_value AS datasetUrl").next().get("datasetUrl"));
+            assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+                    session.run("MATCH (x) WHERE x.rdfs"+ PREFIX_SEPARATOR +"label = 'harvest_dataset_url'" +
+                            "\nRETURN x.rdf"+ PREFIX_SEPARATOR +"value AS datasetUrl").next().get("datasetUrl").asString());
 
-        assertEquals("dcat",
-                db.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                        "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
-                        .next().get("prefix"));
+            assertEquals("dcat",
+                    session.run("MATCH (n:NamespacePrefixDefinition) \n" +
+                            "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
+                            .next().get("prefix").asString());
 
+        }
     }
 
 
     @Test
     public void testImportRDFXMLShorteningWithPrefixPreDefinitionOneTriple() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        //prefix predefinition by creating the NamespacePrefixDefinitionNode
-        db.execute("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
-                "MERGE (n:NamespacePrefixDefinition)\n" +
-                "SET n+=nslist " +
-                "RETURN n ");
+            session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
+                    "MERGE (n:NamespacePrefixDefinition)\n" +
+                    "SET n+=nslist " +
+                    "RETURN n ");
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
-                        .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(1L, importResults1.next().get("triplesLoaded"));
-        assertEquals("JB",
-                db.execute("MATCH (jb {uri: 'http://neo4j.com/invividual/JB'}) RETURN jb.voc_name AS name")
-                        .next().get("name"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
+                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("JB",
+                    session.run("MATCH (jb {uri: 'http://neo4j.com/invividual/JB'}) RETURN jb.voc" + PREFIX_SEPARATOR + "name AS name")
+                            .next().get("name").asString());
 
-        assertEquals("voc",
-                db.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                        "RETURN n.`http://neo4j.com/voc/` as prefix")
-                        .next().get("prefix"));
+            assertEquals("voc",
+                    session.run("MATCH (n:NamespacePrefixDefinition) \n" +
+                            "RETURN n.`http://neo4j.com/voc/` as prefix")
+                            .next().get("prefix").asString());
 
+        }
     }
 
     @Test
     public void testImportRDFXMLBadUris() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        //prefix predefinition by creating the NamespacePrefixDefinitionNode
-        db.execute("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
-                "MERGE (n:NamespacePrefixDefinition)\n" +
-                "SET n+=nslist " +
-                "RETURN n ");
+            session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
+                    "MERGE (n:NamespacePrefixDefinition)\n" +
+                    "SET n+=nslist " +
+                    "RETURN n ");
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("badUris.rdf")
-                        .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        assertEquals(1L, importResults1.next().get("triplesLoaded"));
-        assertEquals("JB",
-                db.execute("MATCH (jb {uri: 'http://neo4j.com/invividual/JB\\'sUri'}) RETURN jb.voc_name AS name")
-                        .next().get("name"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("badUris.rdf")
+                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("JB",
+                    session.run("MATCH (jb {uri: 'http://neo4j.com/invividual/JB\\'sUri'}) RETURN jb.voc"+ PREFIX_SEPARATOR +"name AS name")
+                            .next().get("name").asString());
+        }
     }
 
     @Test
     public void testImportLangFilter() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        //prefix predefinition by creating the NamespacePrefixDefinitionNode
-        db.execute("WITH {`http://example.org/vocab/show/`:'voc' } as nslist\n" +
-                "MERGE (n:NamespacePrefixDefinition)\n" +
-                "SET n+=nslist " +
-                "RETURN n ");
+            session.run("WITH {`http://example.org/vocab/show/`:'voc' } as nslist\n" +
+                    "MERGE (n:NamespacePrefixDefinition)\n" +
+                    "SET n+=nslist " +
+                    "RETURN n ");
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'en', commitSize: 500})");
-        assertEquals(1L, importResults1.next().get("triplesLoaded"));
-        assertEquals("That Seventies Show",
-                db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
-                        .next().get("name"));
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'en', commitSize: 500})");
+            assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("That Seventies Show",
+                    session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
+                            .next().get("name").asString());
 
-        db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
+            session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
-        importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr', commitSize: 500})");
-        assertEquals(1L, importResults1.next().get("triplesLoaded"));
-        assertEquals("Cette Série des Années Soixante-dix",
-                db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
-                        .next().get("name"));
+            importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr', commitSize: 500})");
+            assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("Cette Série des Années Soixante-dix",
+                    session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
+                            .next().get("name").asString());
 
-        db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
+            session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
-        importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr-be', commitSize: 500})");
-        assertEquals(1L, importResults1.next().get("triplesLoaded"));
-        assertEquals("Cette Série des Années Septante",
-                db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
-                        .next().get("name"));
+            importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr-be', commitSize: 500})");
+            assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("Cette Série des Années Septante",
+                    session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
+                            .next().get("name").asString());
 
-        db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
+            session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
-        importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
-        // no language filter means three triples are ingested
-        assertEquals(3L, importResults1.next().get("triplesLoaded"));
-        //but actually only the last one is kept as they overwrite each other
-        //TODO: Find a consistent solution for this problem
-        assertEquals("Cette Série des Années Septante",
-                db.execute("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc_localName AS name")
-                        .next().get("name"));
+            importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+            // no language filter means three triples are ingested
+            assertEquals(3L, importResults1.next().get("triplesLoaded").asLong());
+            //but actually only the last one is kept as they overwrite each other
+            //TODO: Find a consistent solution for this problem
+            assertEquals("Cette Série des Années Septante",
+                    session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
+                            .next().get("name").asString());
 
+        }
     }
 
     @Test
     public void testImportTurtle() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        createIndices(db);
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
 
-        Result importResults1 = db.execute("CALL semantics.importRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("opentox-example.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
-        assertEquals(157L, importResults1.next().get("triplesLoaded"));
-        Result algoNames = db.execute("MATCH (n:`http://www.opentox.org/api/1.1#Algorithm`) " +
-                "\nRETURN n.`http://purl.org/dc/elements/1.1/title` AS algos ORDER By algos");
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("opentox-example.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+            assertEquals(157L, importResults1.next().get("triplesLoaded").asLong());
+            StatementResult algoNames = session.run("MATCH (n:`http://www.opentox.org/api/1.1#Algorithm`) " +
+                    "\nRETURN n.`http://purl.org/dc/elements/1.1/title` AS algos ORDER By algos");
 
-        assertEquals("J48", algoNames.next().get("algos"));
-        assertEquals("XLogP", algoNames.next().get("algos"));
+            assertEquals("J48", algoNames.next().get("algos").asString());
+            assertEquals("XLogP", algoNames.next().get("algos").asString());
 
-        Result compounds = db.execute("MATCH ()-[r:`http://www.opentox.org/api/1.1#compound`]->(c) RETURN DISTINCT c.uri AS compound order by compound");
-        assertEquals("http://www.opentox.org/example/1.1#benzene", compounds.next().get("compound"));
-        assertEquals("http://www.opentox.org/example/1.1#phenol", compounds.next().get("compound"));
+            StatementResult compounds = session.run("MATCH ()-[r:`http://www.opentox.org/api/1.1#compound`]->(c) RETURN DISTINCT c.uri AS compound order by compound");
+            assertEquals("http://www.opentox.org/example/1.1#benzene", compounds.next().get("compound").asString());
+            assertEquals("http://www.opentox.org/example/1.1#phenol", compounds.next().get("compound").asString());
 
+        }
     }
 
     @Test
     public void testPreviewFromSnippet() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResults1 = db.execute("CALL semantics.previewRDFSnippet('" + jsonLdFragment
-                + "','JSON-LD',{ shortenUrls: false, typesToLabels: false})");
-        Map<String, Object> next = importResults1.next();
-        final ArrayList<Node> nodes = (ArrayList<Node>) next.get("nodes");
-        assertEquals(3, nodes.size());
-        final ArrayList<Relationship> rels = (ArrayList<Relationship>) next.get("relationships");
-        assertEquals(2, rels.size());
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
+                    + "','JSON-LD',{ shortenUrls: false, typesToLabels: false})");
+            Map<String, Object> next = importResults1.next().asMap();
+            final List<Node> nodes = (List<Node>) next.get("nodes");
+            assertEquals(3, nodes.size());
+            final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+            assertEquals(2, rels.size());
+        }
     }
 
     @Test
     public void testPreviewFromSnippetLangFilter() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResults1 = db.execute("CALL semantics.previewRDFSnippet('" + turtleFragment
-                + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
-        Map<String, Object> next = importResults1.next();
-        final ArrayList<Node> nodes = (ArrayList<Node>) next.get("nodes");
-        assertEquals(1, nodes.size());
-        assertEquals("Cette Série des Années Soixante-dix", nodes.get(0).getProperty("http://example.org/vocab/show/localName"));
-        assertEquals(0, ((ArrayList<Relationship>) next.get("relationships")).size());
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.previewRDFSnippet('" + turtleFragment
+                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
+            Record next = importResults1.next();
+            assertEquals(1, next.get("nodes").size());
+            assertEquals("Cette Série des Années Soixante-dix", next.get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
+            assertEquals(0, next.get("relationships").size());
 
 
-        importResults1 = db.execute("CALL semantics.previewRDFSnippet('" + turtleFragment
-                + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
-        assertEquals("That Seventies Show", ((ArrayList<Node>)importResults1.next().get("nodes")).get(0).getProperty("http://example.org/vocab/show/localName"));
+            importResults1 = session.run("CALL semantics.previewRDFSnippet('" + turtleFragment
+                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
+            assertEquals("That Seventies Show", importResults1.next().get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
 
+        }
     }
 
     @Test
     public void testPreviewFromFile() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResults1 = db.execute("CALL semantics.previewRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                        .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: false})");
-        Map<String, Object> next = importResults1.next();
-        final ArrayList<Node> nodes = (ArrayList<Node>) next.get("nodes");
-        assertEquals(15, nodes.size());
-        final ArrayList<Relationship> rels = (ArrayList<Relationship>) next.get("relationships");
-        assertEquals(15, rels.size());
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
+                            .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: false})");
+            Map<String, Object> next = importResults1.next().asMap();
+            final List<Node> nodes = (List<Node>) next.get("nodes");
+            assertEquals(15, nodes.size());
+            final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+            assertEquals(15, rels.size());
+        }
     }
 
     @Test
     public void testPreviewFromFileLangFilter() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResults1 = db.execute("CALL semantics.previewRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                        .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
-        Map<String, Object> next = importResults1.next();
-        final ArrayList<Node> nodes = (ArrayList<Node>) next.get("nodes");
-        assertEquals(1, nodes.size());
-        assertEquals("Cette Série des Années Soixante-dix", nodes.get(0).getProperty("http://example.org/vocab/show/localName"));
-        assertEquals(0, ((ArrayList<Relationship>) next.get("relationships")).size());
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
+            Record next = importResults1.next();
+
+            assertEquals(1, next.get("nodes").size());
+            assertEquals("Cette Série des Années Soixante-dix", next.get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
+            assertEquals(0, (next.get("relationships")).size());
 
 
-        importResults1 = db.execute("CALL semantics.previewRDF('" +
-                RDFImportTest.class.getClassLoader().getResource("multilang.ttl").toURI()
-                + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
-        assertEquals("That Seventies Show", ((ArrayList<Node>)importResults1.next().get("nodes")).get(0).getProperty("http://example.org/vocab/show/localName"));
+            importResults1 = session.run("CALL semantics.previewRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl").toURI()
+                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
+            assertEquals("That Seventies Show", importResults1.next().get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
+        }
     }
 
     private void createIndices(GraphDatabaseService db) {

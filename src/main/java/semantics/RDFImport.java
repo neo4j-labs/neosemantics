@@ -36,6 +36,7 @@ public class RDFImport {
     private static final boolean DEFAULT_TYPES_TO_LABELS = true;
     private static final long DEFAULT_COMMIT_SIZE = 25000;
     private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
+    public static final String PREFIX_SEPARATOR = "__";
 
     @Context
     public GraphDatabaseService db;

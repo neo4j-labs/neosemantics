@@ -1,11 +1,9 @@
 package semantics;
 
+import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.driver.v1.*;
+import org.neo4j.harness.junit.Neo4jRule;
 
 import semantics.ConsistencyChecker;
 
@@ -17,10 +15,12 @@ import static org.junit.Assert.assertTrue;
  */
 public class ConsistencyCheckerTest {
 
+    @Rule
+    public Neo4jRule neo4j = new Neo4jRule()
+            .withProcedure( ConsistencyChecker.class );
+
     @Test
     public void runConsistencyChecks() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(ConsistencyChecker.class);
 
         String dbInit = "create " +
                 "(person_class:Class {\turi:\"http://neo4j.com/voc/movies#Person\", \n" +
@@ -33,15 +33,21 @@ public class ConsistencyCheckerTest {
                 "\t\t\tlabel:\"Actor\"})," +
                 "(name_dtp)-[:DOMAIN]->(person_class),\n" +
                 "(name_dtp)-[:DOMAIN]->(actor_class)";
-        db.execute(dbInit).close();
 
-        Result res = db.execute("CALL semantics.runConsistencyChecks()");
-        assertFalse(res.hasNext());
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        db.execute("CREATE (n{ name: 'An unlabeled node with a name. Inconsistency!!'}) return id(n) as created");
-        //System.out.println(created);
-        Result res2 = db.execute("CALL semantics.runConsistencyChecks()");
-        assertTrue(res2.hasNext());
+            Session session = driver.session();
+
+            StatementResult importResults1 = session.run(dbInit);
+
+            StatementResult res = session.run("CALL semantics.runConsistencyChecks()");
+            assertFalse(res.hasNext());
+
+            session.run("CREATE (n{ name: 'An unlabeled node with a name. Inconsistency!!'}) return id(n) as created");
+
+            StatementResult res2 = session.run("CALL semantics.runConsistencyChecks()");
+            assertTrue(res2.hasNext());
+        }
     }
 
 }
