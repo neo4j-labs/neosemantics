@@ -9,6 +9,8 @@ import org.neo4j.kernel.impl.proc.Procedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
 import org.neo4j.test.TestGraphDatabaseFactory;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -103,7 +105,7 @@ public class RDFImportTest {
                 db.execute("MATCH (n) WHERE exists(n.ns0_modified) RETURN count(n) AS count")
                         .next().get("count"));
 
-        HashMap<String, String> expectedNamespaceDefs = new HashMap<String, String>();
+        HashMap<String, String> expectedNamespaceDefs = new HashMap<>();
         expectedNamespaceDefs.put("baseName", "http://xmlns.com/foaf/0.1/");
         expectedNamespaceDefs.put("prefix", "ns0");
         assertEquals(expectedNamespaceDefs,
@@ -322,6 +324,30 @@ public class RDFImportTest {
         assertEquals("http://www.opentox.org/example/1.1#phenol", compounds.next().get("compound"));
 
     }
+    
+    /**
+     * Can we populate the cache correctly when we have a miss?
+     */
+    @Test
+    public void testImportTurtle02() throws Exception {
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(RDFImport.class);
+
+        createIndices(db);
+        db.execute("CREATE (rdf:NamespacePrefixDefinition {" +
+        		"  `http://www.example.com/ontology/1.0.0#`: 'ex'," +
+        		"  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})");
+    	Result importResults = db.execute(String.format(
+    			"CALL semantics.importRDF('%s','Turtle',{nodeCacheSize: 1})", file("myrdf/testImportTurtle02.ttl")));
+    	assertEquals(5L, importResults.next().get("triplesLoaded"));
+        
+        Result result = db.execute(
+        		"MATCH (:ex_DISTANCEVALUE)-[:ex_units]->(mu) " +
+        		"RETURN mu.uri AS unitsUri, mu.ex_name as unitsName");
+        Map<String, Object> first = result.next();
+		assertEquals("http://www.example.com/ontology/1.0.0/common#MEASUREMENTUNIT-T1510615421640", first.get("unitsUri"));
+		assertEquals("metres", first.get("unitsName"));
+    }
 
     @Test
     public void testPreviewFromSnippet() throws Exception {
@@ -397,4 +423,12 @@ public class RDFImportTest {
         db.execute("CREATE INDEX ON :Resource(uri)");
     }
 
+    private static URI file(String path) {
+    	try {
+			return RDFImportTest.class.getClassLoader().getResource(path).toURI();
+		} catch (URISyntaxException e) {
+			String msg = String.format("Failed to load the resource with path '%s'", path);
+			throw new RuntimeException(msg, e);
+		}
+    }
 }
