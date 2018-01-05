@@ -264,7 +264,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
             final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
                 @Override
                 public Node call() {  //throws AnyException
-                    return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+                    return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
                 }
             });
 
