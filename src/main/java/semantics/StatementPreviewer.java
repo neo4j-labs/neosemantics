@@ -2,15 +2,17 @@ package semantics;
 
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import org.openrdf.model.*;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.model.vocabulary.XMLSchema;
-import org.openrdf.rio.RDFHandler;
-import org.openrdf.rio.RDFHandlerException;
+import org.eclipse.rdf4j.model.*;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import semantics.result.VirtualNode;
 import semantics.result.VirtualRelationship;
 
 import java.util.*;
+
+import static semantics.RDFImport.PREFIX_SEPARATOR;
 
 /**
  * Created by jbarrasa on 09/11/2016.
@@ -22,7 +24,7 @@ class StatementPreviewer implements RDFHandler {
     private GraphDatabaseService graphdb;
     private Map<String,Map<String,Object>> resourceProps = new HashMap<>();
     private Map<String,Set<String>> resourceLabels = new HashMap<>();
-    private List<Statement> statements = new ArrayList<>();
+    private Set<Statement> statements = new HashSet<>();
 
     private Map<String,String> namespaces =  new HashMap<>();
     private final boolean labellise;
@@ -77,7 +79,7 @@ class StatementPreviewer implements RDFHandler {
 
     public void handleStatement(Statement st) {
         IRI predicate = st.getPredicate();
-        org.openrdf.model.Resource subject = st.getSubject(); //includes blank nodes
+        org.eclipse.rdf4j.model.Resource subject = st.getSubject(); //includes blank nodes
         Value object = st.getObject();
         if (object instanceof Literal) {
             final Object literalStringValue = getObjectValue((Literal) object);
@@ -161,7 +163,7 @@ class StatementPreviewer implements RDFHandler {
         if (shortenUris) {
             String localName = iri.getLocalName();
             String prefix = getPrefix(iri.getNamespace());
-            return prefix + "_" + localName;
+            return prefix + PREFIX_SEPARATOR +  localName;
         } else
         {
             return iri.stringValue();

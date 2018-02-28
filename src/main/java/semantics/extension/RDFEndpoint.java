@@ -3,15 +3,15 @@ package semantics.extension;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import org.openrdf.model.IRI;
-import org.openrdf.model.Literal;
-import org.openrdf.model.Resource;
-import org.openrdf.model.ValueFactory;
-import org.openrdf.model.impl.SimpleValueFactory;
-import org.openrdf.model.vocabulary.RDF;
-import org.openrdf.rio.RDFFormat;
-import org.openrdf.rio.RDFWriter;
-import org.openrdf.rio.Rio;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFWriter;
+import org.eclipse.rdf4j.rio.Rio;
 
 import javax.ws.rs.*;
 import javax.ws.rs.Path;
@@ -522,9 +522,7 @@ public class RDFEndpoint {
 
         log.info("Unrecognized serialization in accept header param. Defaulting to JSON-LD serialization");
 
-        return RDFFormat.JSONLD;
+        return RDFFormat.NTRIPLES;
 
     }
 }
-
-//curl -i -d 'match ()-[r]->() return toString(id(startNode(r))) as subject, type(r) as predicate, toString(id(endNode(r))) as oct limit 10' http://localhost:7474/rdf/export -H accept:text/plain -H content-type:text/plain

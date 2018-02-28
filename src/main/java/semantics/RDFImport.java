@@ -10,7 +10,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import org.openrdf.rio.*;
+import org.eclipse.rdf4j.rio.*;
 import semantics.result.GraphResult;
 
 import java.io.ByteArrayInputStream;

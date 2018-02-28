@@ -119,7 +119,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=9999999");
 
-            assertEquals( "[ ]", response.rawContent() );
+            assertEquals( "[]", response.rawContent() );
             assertEquals( 200, response.status() );
 
             //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
@@ -142,7 +142,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/uri?uri=9999999");
 
-            assertEquals( "[ ]", response.rawContent() );
+            assertEquals( "[]", response.rawContent() );
             assertEquals( 200, response.status() );
 
         }
@@ -381,14 +381,14 @@ public class RDFEndpointTest {
                     "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
                     "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Actor\"/>\n" +
                     "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1964</born>\n" +
-                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">Keanu Reeves</name>\n" +
+                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Keanu Reeves</name>\n" +
                     "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n" +
                     "</rdf:Description>\n" +
                     "\n" +
                     "<rdf:Description rdf:about=\"https://permid.org/1-21523433751\">\n" +
                     "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Director\"/>\n" +
                     "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1967</born>\n" +
-                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">Carrie-Anne Moss</name>\n" +
+                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Carrie-Anne Moss</name>\n" +
                     "</rdf:Description>\n" +
                     "\n" +
                     "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
