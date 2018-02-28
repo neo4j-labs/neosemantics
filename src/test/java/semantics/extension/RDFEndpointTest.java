@@ -378,13 +378,6 @@ public class RDFEndpointTest {
                     "\txmlns:neovoc=\"neo4j://vocabulary#\"\n" +
                     "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
                     "\n" +
-                    "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
-                    "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Actor\"/>\n" +
-                    "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1964</born>\n" +
-                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Keanu Reeves</name>\n" +
-                    "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n" +
-                    "</rdf:Description>\n" +
-                    "\n" +
                     "<rdf:Description rdf:about=\"https://permid.org/1-21523433751\">\n" +
                     "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Director\"/>\n" +
                     "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1967</born>\n" +
@@ -392,6 +385,10 @@ public class RDFEndpointTest {
                     "</rdf:Description>\n" +
                     "\n" +
                     "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
+                    "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n" +
+                    "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Actor\"/>\n" +
+                    "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1964</born>\n" +
+                    "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Keanu Reeves</name>\n" +
                     "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n" +
                     "</rdf:Description>\n" +
                     "\n" +

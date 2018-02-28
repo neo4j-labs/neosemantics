@@ -53,6 +53,18 @@ This repository contains a set of stored procedures and extensions to both produ
 | nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB |
 
 
+#### Note on namespace prefixes
+If `shortenUrls : true`, you'll have prefixes used to shorten property and relationship names; and labels. You don't need to define your own namespaces prefixes as ones will be automatically generated for you with the format `ns0`, `ns1`, etc. If you're coming from the RDF and SPARQL world and you're used to defining your own prefixes, you can do so here too. You need to create (or merge, depending on whether it exists already) a `NamesapcePrefixDefinition` node before you perform the load of RDF data:
+
+    // create the prefix mapping 
+    CREATE (:NamespacePrefixDefinition {
+      `http://www.example.com/ontology/1.0.0#`: 'ex',
+      `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})
+      
+    // the actual load will use the NamespacePrefixDefinition if it exists already. 
+    //Note 'shortenUrls' defaults to true but we're just being explicit
+    CALL semantics.importRDF("file:///path/to/some-file.ttl", "Turtle", {shortenUrls: true})
+
 ### Extensions
 
 | Extension        | params           | Description and example usage  |
