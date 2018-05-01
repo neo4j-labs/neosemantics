@@ -1,0 +1,14 @@
+@prefix :      <http://www.example.com/ontology/1.0.0#> .
+@prefix common: <http://www.example.com/ontology/1.0.0/common#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix project: <http://www.example.com/ontology/1.0.0/project#> .
+
+project:DISTANCEVALUE-A181453
+        a       :DISTANCEVALUE ;
+        :units  common:MEASUREMENTUNIT-T1510615421643 ;
+        :value  0.55 .
+
+common:MEASUREMENTUNIT-T1510615421643
+        a               :MEASUREMENTUNIT ;
+        :name           "metres" .
