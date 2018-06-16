@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static java.util.Arrays.asList;
 
 /**
+ * (taken from APOC)
  * @author mh
  * @since 16.03.16
  */

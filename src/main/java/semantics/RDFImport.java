@@ -150,6 +150,7 @@ public class RDFImport {
 
 
     }
+
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
         Iterable<IndexDefinition> indexes = db.schema().getIndexes();
         if(missing(indexes.iterator(),"Resource")){

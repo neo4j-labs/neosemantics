@@ -4,10 +4,10 @@
 
 	<groupId>org.neo4j</groupId>
 	<artifactId>neosemantics</artifactId>
-	<version>3.3.2.1-SNAPSHOT</version>
+	<version>3.4.0</version>
 	<packaging>jar</packaging>
 	<properties>
-		<neo4j.version>3.3.2</neo4j.version>
+		<neo4j.version>3.4.0</neo4j.version>
 		<sesame.version>2.2.4</sesame.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
@@ -106,7 +106,7 @@
 		<dependency>
 			<groupId>org.neo4j.driver</groupId>
 			<artifactId>neo4j-java-driver</artifactId>
-			<version>1.5.0-beta03</version>
+			<version>1.6.1</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

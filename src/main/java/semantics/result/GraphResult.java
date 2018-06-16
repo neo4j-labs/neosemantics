@@ -6,6 +6,7 @@ import org.neo4j.graphdb.Relationship;
 import java.util.List;
 
 /**
+ * (taken from APOC)
  * @author mh
  * @since 26.02.16
  */
