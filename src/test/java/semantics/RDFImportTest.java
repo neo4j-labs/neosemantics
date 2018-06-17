@@ -445,6 +445,33 @@ public class RDFImportTest {
         }
     }
 
+    /**
+     * Can we load ttl files in sub folders if a root folder is supplied
+     * @throws Exception
+     */
+    @Test
+    public void testImportMultipleTurtleFiles01() throws Exception {
+    	
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+            session.run("CREATE (rdf:NamespacePrefixDefinition {" +
+                    "  `http://www.example.com/ontology/1.0.0#`: 'ex'," +
+                    "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})");
+            StatementResult importResults = session.run(String.format(
+                    "CALL semantics.importRDF('%s','Turtle',{nodeCacheSize: 1})", file("rootTTLs/")));
+            assertEquals(15, importResults.next().get("triplesLoaded").asInt());
+
+            StatementResult result = session.run(
+                    "MATCH (:ex" + PREFIX_SEPARATOR + "DISTANCEVALUE)-[:ex" + PREFIX_SEPARATOR + "units]->(mu) " +
+                            "RETURN mu.uri AS unitsUri, mu.ex" + PREFIX_SEPARATOR + "name as unitsName");
+            
+            assertEquals(3, result.list().size());
+        }
+    }
+    
+    
     private void createIndices(GraphDatabaseService db) {
         db.execute("CREATE INDEX ON :Resource(uri)");
     }
