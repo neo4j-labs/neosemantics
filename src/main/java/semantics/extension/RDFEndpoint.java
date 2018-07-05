@@ -45,7 +45,7 @@ public class RDFEndpoint {
     @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
             "application/ld+json"})
     public Response cypherOnPlainLPG(@Context GraphDatabaseService gds,
-                           @HeaderParam("accept") String acceptHeaderParam, String body) {
+                                     @HeaderParam("accept") String acceptHeaderParam, String body) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
             public void write(OutputStream outputStream) throws IOException, WebApplicationException {
@@ -103,10 +103,10 @@ public class RDFEndpoint {
     private void processNodeInLPG(RDFWriter writer, SimpleValueFactory valueFactory, String baseVocabNS, String baseIndivNS, Node node) {
         Iterable<Label> nodeLabels = node.getLabels();
         for (Label label : nodeLabels) {
-                writer.handleStatement(
-                        valueFactory.createStatement(valueFactory.createIRI(baseIndivNS, String.valueOf(node.getId())),
-                                RDF.TYPE,
-                                valueFactory.createIRI(baseVocabNS, label.name())));
+            writer.handleStatement(
+                    valueFactory.createStatement(valueFactory.createIRI(baseIndivNS, String.valueOf(node.getId())),
+                            RDF.TYPE,
+                            valueFactory.createIRI(baseVocabNS, label.name())));
 
         }
         Map<String, Object> allProperties = node.getAllProperties();
@@ -132,7 +132,7 @@ public class RDFEndpoint {
     @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
             "application/ld+json"})
     public Response cypherOnImportedRDF(@Context GraphDatabaseService gds,
-                              @HeaderParam("accept") String acceptHeaderParam, String body) {
+                                        @HeaderParam("accept") String acceptHeaderParam, String body) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
             public void write(OutputStream outputStream) throws IOException, WebApplicationException {
@@ -382,7 +382,7 @@ public class RDFEndpoint {
                 Map<String, Object> params = new HashMap<>();
                 params.put("theid", idParam);
                 try (Transaction tx = gds.beginTx()) {
-                	Result result = gds.execute((excludeContextParam != null ? queryNoContext : queryWithContext), params);
+                    Result result = gds.execute((excludeContextParam != null ? queryNoContext : queryWithContext), params);
 
 
                     RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
@@ -522,7 +522,7 @@ public class RDFEndpoint {
 
         log.info("Unrecognized serialization in accept header param. Defaulting to JSON-LD serialization");
 
-        return RDFFormat.NTRIPLES;
+        return RDFFormat.JSONLD;
 
     }
 }
