@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.neo4j.driver.v1.Values.ofNode;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 
@@ -442,6 +443,26 @@ public class RDFImportTest {
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl").toURI()
                     + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
             assertEquals("That Seventies Show", importResults1.next().get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
+        }
+    }
+
+    @Test
+    public void testStreamFromFile() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.streamRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
+                            .toURI() + "','RDF/XML',{})");
+            Map<String, Object> next = importResults1.next().asMap();
+            assertEquals("http://neo4j.com/invividual/JB", next.get("subject"));
+            assertEquals("http://neo4j.com/voc/name", next.get("predicate"));
+            assertEquals("JB", next.get("object"));
+            assertEquals(true, next.get("isLiteral"));
+            assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("literalType"));
+            assertNull(next.get("literalLang"));
         }
     }
 

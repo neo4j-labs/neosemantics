@@ -12,6 +12,7 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.eclipse.rdf4j.rio.*;
 import semantics.result.GraphResult;
+import semantics.result.StreamedStatement;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -116,6 +117,41 @@ public class RDFImport {
 
         GraphResult graphResult = new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
         return Stream.of(graphResult);
+
+
+    }
+
+    @Procedure(mode = Mode.READ)
+    public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
+                                               @Name("props") Map<String, Object> props) {
+
+        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+
+        URLConnection urlConn;
+        Map<String,Node> virtualNodes = new HashMap<>();
+        List<Relationship> virtualRels = new ArrayList<>();
+
+        StatementStreamer statementStreamer = new StatementStreamer();
+        try {
+            urlConn = new URL(url).openConnection();
+            if (props.containsKey("headerParams")) {
+                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            }
+            InputStream inputStream = urlConn.getInputStream();
+            RDFFormat rdfFormat = getFormat(format);
+            log.info("Data set to be parsed as " + rdfFormat);
+            RDFParser rdfParser = Rio.createParser(rdfFormat);
+            rdfParser.setRDFHandler(statementStreamer);
+            rdfParser.parse(inputStream, "http://neo4j.com/base/");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+            e.printStackTrace();
+        }
+
+        return statementStreamer.getStatements().stream();
 
 
     }

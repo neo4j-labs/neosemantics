@@ -29,6 +29,7 @@ public class MicroReasoners {
         params.put("virtLabel", virtLabel);
         Result results = db.execute(sloInferenceCypher, params);
         StringBuilder sb = new StringBuilder();
+        sb.append("cypher runtime=slotted ");
         boolean isFirstSubLabel = true;
         while (results.hasNext()) {
             Map<String, Object> result = results.next();
