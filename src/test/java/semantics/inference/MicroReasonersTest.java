@@ -71,6 +71,33 @@ public class MicroReasonersTest {
             assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
             assertEquals(2L, next.get("ct").asLong());
             assertEquals(false, results.hasNext());
+
+            //Non-existent relationship
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, 'TYPE') YIELD node RETURN node");
+            assertEquals(false, results.hasNext());
+
+            //Custom relationship
+            session.run("MATCH (a)-[ic:IN_CAT]->(b) CREATE (a)-[:TYPE]->(b) DELETE ic");
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, 'TYPE') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            assertEquals(true, results.hasNext());
+            next = results.next();
+            expectedNodeIds = new HashSet<String>();
+            expectedNodeIds.add("iama");
+            expectedNodeIds.add("iamb");
+            assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
+            assertEquals(2L, next.get("ct").asLong());
+            assertEquals(false, results.hasNext());
+            session.run("MATCH (a)-[sco:SCO]->(b) CREATE (a)-[:SUBCAT_OF]->(b) DELETE sco");
+
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, 'TYPE', 'SUBCAT_OF') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            assertEquals(true, results.hasNext());
+            next = results.next();
+            expectedNodeIds = new HashSet<String>();
+            expectedNodeIds.add("iama");
+            expectedNodeIds.add("iamb");
+            assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
+            assertEquals(2L, next.get("ct").asLong());
+            assertEquals(false, results.hasNext());
         }
     }
 
