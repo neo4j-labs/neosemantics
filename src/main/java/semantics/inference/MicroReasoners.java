@@ -14,16 +14,18 @@ import static org.neo4j.graphdb.RelationshipType.withName;
 
 public class MicroReasoners {
 
-    static final String sloInferenceCypher = "MATCH (:Label { name: $virtLabel})<-[:SLO*0..]-(sublabel:Label) WITH collect(sublabel.name) + $virtLabel AS subPlusSelf UNWIND subPlusSelf as sublabel RETURN distinct sublabel";
-    static final String sroInferenceCypher = "MATCH (:Relationship { name: $virtRel})<-[:SRO*0..]-(subRel:Relationship) WITH COLLECT(subRel.name) + $virtRel AS subPlusSelf UNWIND subPlusSelf as subRel RETURN DISTINCT subRel";
+    private static final String sloInferenceCypher = "RETURN $virtLabel as sublabel UNION MATCH (:Label { name: $virtLabel})<-[:SLO*]-(sublabel:Label) RETURN distinct sublabel.name as sublabel";
+    private static final String scoInferenceCypher = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE ID(cat) = $catId RETURN distinct ID(subcat) as catId";
+    private static final String sroInferenceCypher = "RETURN $virtRel as subRel UNION MATCH (:Relationship { name: $virtRel})<-[:SRO*]-(subRel:Relationship) RETURN DISTINCT subRel.name as subRel";
+    private static final String DEFAULT_REL = "SCO";
     @Context
     public GraphDatabaseService db;
     @Context
     public Log log;
 
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.getNodes('virtLabel') - returns all nodes with label 'virtLabel' or its sublabels.")
-    public Stream<NodeResult> getNodes(@Name("virtLabel") String virtLabel) {
+    @Description("semantics.inference.getNodesWithLabel('virtLabel') - returns all nodes with label 'virtLabel' or its sublabels.")
+    public Stream<NodeResult> getNodesWithLabel(@Name("virtLabel") String virtLabel) {
 
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("virtLabel", virtLabel);
@@ -37,7 +39,32 @@ public class MicroReasoners {
             if (!isFirstSubLabel) sb.append(" UNION "); else isFirstSubLabel = false;
             sb.append(" MATCH (x:`").append(subLabel).append("`) RETURN x as result ");
         }
-        if (!sb.toString().isEmpty()) {
+        if (!sb.toString().equals("cypher runtime=slotted ")) {
+            return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result")).map(NodeResult::new);
+        } else {
+            return null;
+        }
+    }
+
+    @Procedure(mode = Mode.READ)
+    @Description("semantics.inference.getNodesLinkedTo('catNode') - returns all nodes connected to Node 'catNode' or its subcategories.")
+    public Stream<NodeResult> getNodesLinkedTo(@Name("catNode") Node catNode, @Name(value="relName",defaultValue = "IN_CAT") String relName) {
+
+
+
+        Map<String, Object> params = new HashMap<String, Object>();
+        params.put("catId", catNode.getId());
+        Result results = db.execute(scoInferenceCypher, params);
+        StringBuilder sb = new StringBuilder();
+        sb.append("cypher runtime=slotted ");
+        boolean isFirstSubLabel = true;
+        while (results.hasNext()) {
+            Map<String, Object> result = results.next();
+            Long catId = (Long) result.get("catId");
+            if (!isFirstSubLabel) sb.append(" UNION "); else isFirstSubLabel = false;
+            sb.append(" MATCH (x)-[:`").append(relName).append("`]->(cat) WHERE ID(cat)=").append(catId).append(" RETURN x as result ");
+        }
+        if (!sb.toString().equals("cypher runtime=slotted ")) {
             return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result")).map(NodeResult::new);
         } else {
             return null;

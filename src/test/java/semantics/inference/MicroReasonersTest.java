@@ -22,7 +22,7 @@ public class MicroReasonersTest {
             Session session = driver.session();
 
             session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
-            StatementResult results = session.run("CALL semantics.inference.getNodes('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
@@ -41,7 +41,28 @@ public class MicroReasonersTest {
 
             session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
             session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
-            StatementResult results = session.run("CALL semantics.inference.getNodes('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            assertEquals(true, results.hasNext());
+            Record next = results.next();
+            Set<String> expectedNodeIds = new HashSet<String>();
+            expectedNodeIds.add("iama");
+            expectedNodeIds.add("iamb");
+            assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
+            assertEquals(2L, next.get("ct").asLong());
+            assertEquals(false, results.hasNext());
+        }
+    }
+
+    @Test
+    public void testGetNodesLinkedTo() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+
+            session.run("CREATE (b:Thing {id:'iamb'}) CREATE (a:Thing {id: 'iama' }) ");
+            session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SCO]->(b) ");
+            session.run("MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
+            StatementResult results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
