@@ -51,8 +51,6 @@ public class MicroReasoners {
     public Stream<NodeResult> getNodesLinkedTo(@Name("catNode") Node catNode, @Name(value="inCatRelName",defaultValue = "IN_CAT") String inCatRelName
             , @Name(value="subCatRelName",defaultValue = "SCO") String subCatRelName) {
 
-
-
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("catId", catNode.getId());
         Result results = db.execute((subCatRelName==null?scoInferenceCypher:scoInferenceCypher.replace("SCO",subCatRelName)), params);
