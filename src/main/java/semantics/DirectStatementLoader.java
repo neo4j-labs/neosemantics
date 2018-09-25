@@ -60,6 +60,16 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
                 "UNWIND keys(n) AS namespace\n" +
                 "RETURN namespace, n[namespace] as prefix");
+        if (!nslist.hasNext()){
+            // initialise with most frequent ones (should this be done or extracted
+            // to a separate SP to make it optional? looks generally useful)
+            String cypherInitialise = " CREATE (ns:NamespacePrefixDefinition { `http://schema.org/`: 'sch' , `http://purl.org/dc/elements/1.1/`: 'dc',\n" +
+                    "  `http://purl.org/dc/terms/`: 'dct',`http://www.w3.org/2004/02/skos/core#`: 'skos',\n" +
+                    "  `http://www.w3.org/2000/01/rdf-schema#`: 'rdfs' , `http://www.w3.org/2002/07/owl#`: 'owl',\n" +
+                    "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdf' }) WITH ns\n" +
+                    "  UNWIND keys(ns) as key  RETURN key AS namespace, ns[key] as prefix ";
+            nslist = graphdb.execute(cypherInitialise);
+        }
         while (nslist.hasNext()){
             Map<String, Object> ns = nslist.next();
             namespaces.put((String)ns.get("namespace"),(String)ns.get("prefix"));
@@ -197,7 +207,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     }
 
     private String createPrefix() {
-        return "ns" + namespaces.size();
+        return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
     }
 
     private Object getObjectValue(Literal object) {

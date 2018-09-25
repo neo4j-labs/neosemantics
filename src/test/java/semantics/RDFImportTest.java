@@ -115,12 +115,9 @@ public class RDFImportTest {
                     session.run("MATCH (n) WHERE exists(n.ns0"+ PREFIX_SEPARATOR +"modified) RETURN count(n) AS count")
                             .next().get("count").asLong());
 
-            HashMap<String, String> expectedNamespaceDefs = new HashMap<>();
-            expectedNamespaceDefs.put("baseName", "http://xmlns.com/foaf/0.1/");
-            expectedNamespaceDefs.put("prefix", "ns0");
-            assertEquals(expectedNamespaceDefs,
-                    session.run("MATCH (n:NamespacePrefixDefinition) RETURN { baseName: keys(n)[0] ,  prefix: n[keys(n)[0]]} AS namespaces")
-                            .next().get("namespaces").asMap());
+            assertEquals("ns0",
+                    session.run("MATCH (n:NamespacePrefixDefinition) RETURN n.`http://xmlns.com/foaf/0.1/` AS prefix")
+                            .next().get("prefix").asString());
         }
 
     }
@@ -162,8 +159,8 @@ public class RDFImportTest {
                             .next().get("count").asLong());
 
             assertEquals("http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
-                    session.run("MATCH (x:Resource) WHERE x.ns2" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
-                            "\nRETURN x.ns4"+ PREFIX_SEPARATOR +"value AS datasetUrl").next().get("datasetUrl").asString());
+                    session.run("MATCH (x:Resource) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
+                            "\nRETURN x.rdf"+ PREFIX_SEPARATOR +"value AS datasetUrl").next().get("datasetUrl").asString());
 
             assertEquals("ns0",
                     session.run("MATCH (n:NamespacePrefixDefinition) \n" +

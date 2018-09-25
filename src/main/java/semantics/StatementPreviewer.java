@@ -56,6 +56,19 @@ class StatementPreviewer implements RDFHandler {
             Map<String, Object> ns = nslist.next();
             namespaces.put((String)ns.get("namespace"),(String)ns.get("prefix"));
         }
+        if (namespaces.isEmpty()){
+            addPopularNamespaces();
+        }
+    }
+
+    private void addPopularNamespaces() {
+        namespaces.put("http://schema.org/","sch");
+        namespaces.put("http://purl.org/dc/elements/1.1/","dc");
+        namespaces.put("http://purl.org/dc/terms/","dct");
+        namespaces.put("http://www.w3.org/2004/02/skos/core#","skos");
+        namespaces.put("http://www.w3.org/2000/01/rdf-schema#","rdfs");
+        namespaces.put("http://www.w3.org/2002/07/owl#","owl");
+        namespaces.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#","rdfs");
     }
 
 
