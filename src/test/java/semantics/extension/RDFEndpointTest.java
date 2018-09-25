@@ -1,6 +1,7 @@
 package semantics.extension;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterators.count;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
@@ -8,8 +9,7 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 
 import org.junit.Test;
@@ -25,14 +25,15 @@ import org.neo4j.test.server.HTTP;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import semantics.RDFImport;
 
 /**
  * Created by jbarrasa on 14/09/2016.
  */
 public class RDFEndpointTest {
-	
+
 	private static final ObjectMapper jsonMapper = new ObjectMapper();
-	
+
 	private static final CollectionType collectionType = TypeFactory
 			.defaultInstance().constructCollectionType(Set.class, Map.class);
 
@@ -84,20 +85,20 @@ public class RDFEndpointTest {
 
             Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
                     "  \"@id\" : \"neo4j://indiv#5\",\n" +
-                    "  \"neo4j://vocabulary#FRIEND_OF\" : [ {\n" +
+                    "  \"neo4j://defaultvocabulary#FRIEND_OF\" : [ {\n" +
                     "    \"@id\" : \"neo4j://indiv#7\"\n" +
                     "  } ]\n" +
                     "}, {\n" +
                     "  \"@id\" : \"neo4j://indiv#7\",\n" +
-                    "  \"@type\" : [ \"neo4j://vocabulary#Critic\" ],\n" +
-                    "  \"neo4j://vocabulary#WORKS_WITH\" : [ {\n" +
+                    "  \"@type\" : [ \"neo4j://defaultvocabulary#Critic\" ],\n" +
+                    "  \"neo4j://defaultvocabulary#WORKS_WITH\" : [ {\n" +
                     "    \"@id\" : \"neo4j://indiv#8\"\n" +
                     "  } ],\n" +
-                    "  \"neo4j://vocabulary#born\" : [ {\n" +
+                    "  \"neo4j://defaultvocabulary#born\" : [ {\n" +
                     "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
                     "    \"@value\" : \"1960\"\n" +
                     "  } ],\n" +
-                    "  \"neo4j://vocabulary#name\" : [ {\n" +
+                    "  \"neo4j://defaultvocabulary#name\" : [ {\n" +
                     "    \"@value\" : \"Hugo Weaving\"\n" +
                     "  } ]\n" +
                     "} ]", collectionType);
@@ -203,17 +204,21 @@ public class RDFEndpointTest {
             Result result = server.graph().execute( "MATCH (n:Critic) return id(n) as id " );
             assertEquals( 1, count( result ) );
 
-            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
-                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
+            Map<String,String> map = new HashMap<>();
+            map.put("cypher","MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
+            //map.put("showOnlyMapped", "true");
 
-            assertEquals( "<neo4j://indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n" +
-                    "<neo4j://indiv#0> <neo4j://vocabulary#catName> \"Person\" .\n" +
-                    "<neo4j://indiv#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n" +
-                    "<neo4j://indiv#3> <neo4j://vocabulary#catName> \"Critic\" .\n" +
-                    "<neo4j://indiv#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n" +
-                    "<neo4j://indiv#2> <neo4j://vocabulary#catName> \"Director\" .\n" +
-                    "<neo4j://indiv#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n" +
-                    "<neo4j://indiv#1> <neo4j://vocabulary#catName> \"Actor\" .\n", response.rawContent() );
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "cypher", map);
+
+            assertEquals( "<neo4j://indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://defaultvocabulary#Category> .\n" +
+                    "<neo4j://indiv#0> <neo4j://defaultvocabulary#catName> \"Person\" .\n" +
+                    "<neo4j://indiv#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://defaultvocabulary#Category> .\n" +
+                    "<neo4j://indiv#3> <neo4j://defaultvocabulary#catName> \"Critic\" .\n" +
+                    "<neo4j://indiv#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://defaultvocabulary#Category> .\n" +
+                    "<neo4j://indiv#2> <neo4j://defaultvocabulary#catName> \"Director\" .\n" +
+                    "<neo4j://indiv#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://defaultvocabulary#Category> .\n" +
+                    "<neo4j://indiv#1> <neo4j://defaultvocabulary#catName> \"Actor\" .\n", response.rawContent() );
             assertEquals( 200, response.status() );
 
         }
@@ -275,6 +280,63 @@ public class RDFEndpointTest {
         }
     }
 
+    @Test
+    public void testNodeByUriAfterImport() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withProcedure(RDFImport.class)
+                .withExtension( "/rdf", RDFEndpoint.class )
+                .withFixture( new Function<GraphDatabaseService, Void>()
+                {
+                    @Override
+                    public Void apply( GraphDatabaseService graphDatabaseService ) throws RuntimeException
+                    {
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+
+                            tx.success();
+                        }catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                                    RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                                            .toURI() + "','RDF/XML',{})");
+
+                            tx.success();
+                        }catch (Exception e){
+                            fail(e.getMessage());
+                        }
+                        return null;
+                    }
+                } )
+                .newServer() )
+        {
+
+
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement"
+             + "&excludeContext=true");
+            //TODO Make it better
+            String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
+                    "<rdf:RDF\txmlns:neovoc=\"neo4j://vocabulary#\"" +
+                    "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">" +
+                    "<rdf:Description rdf:about=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement\">" +
+                    "\t<rdf:type rdf:resource=\"http://www.w3.org/2002/07/owl#Class\"/>" +
+                    "\t<definition xmlns=\"http://www.w3.org/2004/02/skos/core#\">a formal, legally binding agreement between members of the Board of Directors of the organization</definition>" +
+                    "\t<label xmlns=\"http://www.w3.org/2000/01/rdf-schema#\">board agreement</label>" +
+                    "</rdf:Description></rdf:RDF>";
+
+            assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
+                    response.rawContent().replaceAll("[\n|\r]", "").trim() );
+            assertEquals( 200, response.status() );
+        }
+    }
+
 
     @Test
     public void testCypherWithUrisSerializeAsJsonLd() throws Exception
@@ -312,8 +374,11 @@ public class RDFEndpointTest {
 
             Long id = (Long)result.next().get("id");
 
+            Map<String,String> params = new HashMap<>();
+            params.put("cypher","MATCH (n:Resource) RETURN n LIMIT 1");
+
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
-                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", "MATCH (n:Resource) RETURN n LIMIT 1");
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
             Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
                     "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
@@ -370,8 +435,11 @@ public class RDFEndpointTest {
 
             Long id = (Long)result.next().get("id");
 
+            Map<String,String> params = new HashMap<>();
+            params.put("cypher","MATCH (a)-[r:ns0" + PREFIX_SEPARATOR + "Likes]-(b) RETURN *");
+
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).POST(
-                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf","MATCH (a)-[r:ns0" + PREFIX_SEPARATOR + "Likes]-(b) RETURN *");
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",params);
 
             assertEquals( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     "<rdf:RDF\n" +
