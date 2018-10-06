@@ -9,6 +9,7 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.function.Function;
 
@@ -317,7 +318,6 @@ public class RDFEndpointTest {
                 .newServer() )
         {
 
-
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement"
              + "&excludeContext=true");
@@ -333,6 +333,16 @@ public class RDFEndpointTest {
 
             assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
                     response.rawContent().replaceAll("[\n|\r]", "").trim() );
+            assertEquals( 200, response.status() );
+
+            //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
+            response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri="
+                            + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace","UTF-8")
+                            );
+
+            assertEquals("<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .",
+                    response.rawContent().replaceAll("[\n|\r]", "").trim());
             assertEquals( 200, response.status() );
         }
     }

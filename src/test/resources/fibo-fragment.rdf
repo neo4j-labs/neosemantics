@@ -51,6 +51,7 @@
         <dct:license rdf:datatype="&xsd;anyURI">http://opensource.org/licenses/MIT</dct:license>
         <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.omg.org/spec/ODM/</sm:contentLanguage>
         <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.w3.org/standards/techs/owl#w3c_all</sm:contentLanguage>
+        <sm:linkToResourceAddedForTestingPurposesByJB rdf:resource="&skos;TestyMcTestFace"/>
         <sm:copyright>Copyright (c) 2013-2017 EDM Council, Inc.
             Copyright (c) 2013-2017 Object Management Group, Inc.</sm:copyright>
         <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/</sm:dependsOn>
