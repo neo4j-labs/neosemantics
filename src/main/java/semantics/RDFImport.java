@@ -1,15 +1,14 @@
 package semantics;
 
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
-import org.neo4j.procedure.Context;
-import org.neo4j.procedure.Mode;
-import org.neo4j.procedure.Name;
-import org.neo4j.procedure.Procedure;
+import org.neo4j.procedure.*;
 import org.eclipse.rdf4j.rio.*;
 import semantics.result.GraphResult;
 import semantics.result.StreamedStatement;
@@ -185,6 +184,16 @@ public class RDFImport {
         return Stream.of(graphResult);
 
 
+    }
+
+    @UserFunction
+    public String getIRILocalName(@Name("url") String url) {
+        return url.substring(URIUtil.getLocalNameIndex(url));
+    }
+
+    @UserFunction
+    public String getIRINamespace(@Name("url") String url) {
+        return url.substring(0,URIUtil.getLocalNameIndex(url));
     }
 
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
