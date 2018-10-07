@@ -75,23 +75,46 @@ public class MappingUtils {
     @Procedure(mode = Mode.WRITE)
     public Stream<NodeResult> addMappingToSchema(@Name("schemaNode") Node schema, @Name("graphElementName") String gElem,
                                                  @Name("schemaElementlocalName") String schElem) {
-        Node sch = schema;
-        String cypher = "MERGE (mp:_MapDef { _key : $elem }) SET mp._local = $localName RETURN mp";
-        Map<String,Object> params = new HashMap<>();
-        params.put("elem",gElem);
-        params.put("localName",schElem);
+        Node mapDef;
+        Map<String,Object> props = new HashMap<>();
+        props.put("_key",gElem);
+        ResourceIterator<Node> matchingNodes = db.findNodes(Label.label("_MapDef"), props);
+        // we need to find the schema it links to
+        if(matchingNodes.hasNext()) {
+            mapDef = matchingNodes.next();
+            //if there is a mapping defined already for this element...
+            Relationship rel = mapDef.getRelationships(RelationshipType.withName("_IN"), Direction.OUTGOING).iterator().next();
+            if (rel.getEndNode().equals(schema)){
+                //and it links to the right schema, then just replace the local
+                mapDef.setProperty("_local", schElem);
+            } else {
+                rel.delete();
+                mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
+            }
 
-        Node newMapping = (Node)db.execute(cypher, params).next().get("mp");
-        newMapping.createRelationshipTo(schema, RelationshipType.withName("_IN"));
-        return Stream.of(new NodeResult(newMapping));
+        }else{
+            mapDef = db.createNode(Label.label("_MapDef"));
+            mapDef.setProperty("_key",gElem);
+            mapDef.setProperty("_local",schElem);
+            mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
+        }
+
+        return Stream.of(new NodeResult(mapDef));
     }
 
     @Procedure(mode = Mode.WRITE)
     public Stream<StringOutput> dropSchema(@Name("schemaUri") String schemaUri) {
-        String cypher = "MATCH (mns:_MapNs { _ns: $ns } )<-[:_IN]-(elem:_MapDef) DETACH DELETE mns, elem RETURN count(elem) as ct";
-        Map<String,Object> params = new HashMap<>();
-        params.put("ns",schemaUri);
-        return Stream.of(new StringOutput("successfully deleted schema with " + db.execute(cypher, params).next().get("ct").toString() + " mappings"));
+        Map<String,Object> props = new HashMap<>();
+        props.put("_ns",schemaUri);
+        ResourceIterator<Node> schemas = db.findNodes(Label.label("_MapNs"), props);
+        if (!schemas.hasNext()){
+            return Stream.of(new StringOutput("schema not found"));
+        } else {
+            String cypher = "MATCH (mns:_MapNs { _ns: $ns } )<-[:_IN]-(elem:_MapDef) DETACH DELETE mns, elem RETURN count(elem) as ct";
+            Map<String,Object> params = new HashMap<>();
+            params.put("ns",schemaUri);
+            return Stream.of(new StringOutput("successfully deleted schema with " + db.execute(cypher, params).next().get("ct").toString() + " mappings"));
+        }
     }
 
 
@@ -100,26 +123,41 @@ public class MappingUtils {
         String cypher = "MATCH (elem:_MapDef { _key : $local }) DETACH DELETE elem RETURN count(elem) as ct";
         Map<String,Object> params = new HashMap<>();
         params.put("local",gElem);
-        return Stream.of(new StringOutput(((Integer)db.execute(cypher, params).next().get("ct")).equals(1)?"successfully deleted mapping":"mapping not found"));
+        return Stream.of(new StringOutput(((Long)db.execute(cypher, params).next().get("ct")).equals(new Long(1))?"successfully deleted mapping":"mapping not found"));
     }
 
     @Procedure(mode = Mode.READ)
-    public Stream<NodeResult> listMappings(@Name(value="schemaUri",defaultValue = "") String schemaUri,
-                                           @Name(value="schemaElem",defaultValue = "") String schemaElem) {
+    public Stream<MappingDesc> listMappings(@Name(value="schemaElem",defaultValue = "") String schemaElem) {
 
         Map<String,Object> params = new HashMap<>();
-        params.put("schemaUri",schemaUri);
+        params.put("elemName",schemaElem);
 
-        String cypher = ("MATCH (mns:_MapNs)<-[:_IN]-(elem:_MapDef) WHERE mns._ns CONTAINS $schemaUri AND elem._key CONTAINS $elemName RETURN mns, elem ");
-        //incomplete
-        return db.execute(cypher, params).stream().map(n -> (Node) n.get("mns")).map(NodeResult::new);
+        String cypher = ("MATCH (mns:_MapNs)<-[:_IN]-(elem:_MapDef) WHERE elem._key CONTAINS $elemName " +
+                " RETURN elem._key as elemName, elem._local as schemaElement, mns._prefix as schemaPrefix, mns._ns as schemaNs  ");
+
+        return db.execute(cypher, params).stream().map(MappingDesc::new);
     }
 
     public class StringOutput {
+
         public String output;
 
         public StringOutput(String output) {
             this.output = output;
+        }
+    }
+
+    public class MappingDesc {
+        public String elemName;
+        public String schemaElement;
+        public String schemaNs;
+        public String schemaPrefix;
+
+        public MappingDesc( Map<String, Object> record){
+            this.elemName = record.get("elemName").toString();
+            this.schemaElement = record.get("schemaElement").toString();
+            this.schemaNs = record.get("schemaNs").toString();
+            this.schemaPrefix = record.get("schemaPrefix").toString();
         }
     }
 }
