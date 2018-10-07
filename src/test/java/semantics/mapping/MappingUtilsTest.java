@@ -2,10 +2,7 @@ package semantics.mapping;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.v1.*;
 import org.neo4j.driver.v1.types.Node;
 import org.neo4j.harness.junit.Neo4jRule;
 
@@ -236,10 +233,33 @@ public class MappingUtilsTest {
             assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
             assertEquals("schema not found", session.run("CALL semantics.mapping.dropSchema('doesnotexist')").next().get("output").asString());
             assertEquals(3, session.run("CALL semantics.mapping.listMappings() yield elemName RETURN count(elemName) as ct ").next().get("ct").asInt());
-            assertEquals("successfully deleted schema with 3 mappings", session.run("CALL semantics.mapping.dropSchema('http://schema.org/')").next().get("output").asString());
+            assertEquals("successfully deleted schema (and mappings)", session.run("CALL semantics.mapping.dropSchema('http://schema.org/')").next().get("output").asString());
             assertEquals(0, session.run("CALL semantics.mapping.listMappings() yield elemName RETURN count(elemName) as ct ").next().get("ct").asInt());
             assertEquals(0, session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ").next().get("ct").asInt());
 
         }
     }
+
+    @Test
+    public void testBatchDropSchema() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+
+            // when DB is empty
+            assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+            String addCommonSchemasCypher = " call semantics.mapping.addCommonSchemas() ";
+            assertTrue(session.run(addCommonSchemasCypher).hasNext());
+            assertEquals(18, session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ").next().get("ct").asInt());
+            assertEquals(2, session.run("CALL semantics.mapping.listSchemas('schema') yield node RETURN count(node) as ct ").next().get("ct").asInt());
+            String batchDropSchemasCypher = "CALL semantics.mapping.listSchemas('schema') YIELD node AS schemaDef WITH schemaDef,  schemaDef._ns AS schName " +
+                    "    CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schName , output ";
+            StatementResult batchResult = session.run(batchDropSchemasCypher);
+            assertTrue(batchResult.hasNext());
+            assertEquals(16, session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ").next().get("ct").asInt());
+
+        }
+    }
+
 }
