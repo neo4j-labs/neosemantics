@@ -29,9 +29,9 @@ This will produce two jars :
   
 
 ## What's in this repository
-This repository contains a set of stored procedures and extensions to both produce and consume RDF from Neo4j.
+This repository contains a set of stored procedures, user definded functions and extensions to integrate with RDF from Neo4j.
 
-### Stored Procedures
+### Stored Procedures for RDF Parsing/Previewing/Ingesting 
 
 | Stored Proc Name        | params           | Description and example usage  |
 |:------------- |:-------------|:-----|
@@ -65,6 +65,21 @@ If `shortenUrls : true`, you'll have prefixes used to shorten property and relat
     // the actual load will use the NamespacePrefixDefinition if it exists already. 
     //Note 'shortenUrls' defaults to true but we're just being explicit
     CALL semantics.importRDF("file:///path/to/some-file.ttl", "Turtle", {shortenUrls: true})
+    
+### Stored Procedures for Ontology Mapping 
+
+| Stored Proc Name        | params           | Description and example usage  |
+|:------------- |:-------------|:-----|
+| semantics.mapping.addSchema      | <ul><li>URL of the schema/vocabulary/ontology</li><li>prefix to be used in serialisations</li></ul> | Creates a reference to a vocabulary. Needed to define mappings. <br>**Examples:**<br>call semantics.mapping.addSchema("http://schema.org","sch") |
+| semantics.mapping.dropSchema      | <ul><li>URL of the schema/vocabulary/ontology</li>| Deletes a vocabulary reference and all associated mappings. <br>**Examples:**<br>call semantics.mapping.dropSchema("http://schema.org") |
+| semantics.mapping.listSchemas      | <ul><li>[optional] search string to list only schemas containing the search string in their uri or in the associated prefix</li></ul> | Returns all vocabulary references. <br>**Examples:**<br>call semantics.mapping.listSchemas() <br> call semantics.mapping.listSchemas('schema') |
+| semantics.mapping.addCommonSchemas      | | Creates a references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, FIBO, etc. <br>**Examples:**<br>call semantics.mapping.addCommonSchemas() |
+| semantics.mapping.addMappingToSchema      | <ul><li>The mapping reference node (can be retrieved by addSchema or listSchemas)</li><li>Neo4j DB schema element. It can be either a Label, property key or relationship type </li><li>Local name of the element in the selected schema (Class name, DataTypeProperty name or ObjectProperty name)</li></ul> | Creates a mapping for an element in the Neo4j DB schema to a vocabulary element. <br>**Examples:**<br> Getting a schema reference using listSchemas and creating a mapping for it: <br>call semantics.mapping.listSchemas("http://schema.org") yield node as sch <br> call semantics.mapping.addMappingToSchema(sch,"Movie","Movie") yield node as mapping return mapping |
+| semantics.mapping.dropMapping      | <ul><li>mapped DB element name to remove the mapping for</li></ul> | Returns an output text message indicating success/failure of the deletion. <br>**Examples:**<br>call semantics.mapping.dropMapping("Person") |
+| semantics.mapping.listMappings      | <ul><li>[optional]search string to list only mappings containing the search string in the DB element name</li></ul> | Returns a list with all the mappings. <br>**Examples:**<br>call semantics.mapping.listMappings() |
+
+
+
 
 ### Extensions
 
