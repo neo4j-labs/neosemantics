@@ -68,12 +68,12 @@ If `shortenUrls : true`, you'll have prefixes used to shorten property and relat
     //Note 'shortenUrls' defaults to true but we're just being explicit
     CALL semantics.importRDF("file:///path/to/some-file.ttl", "Turtle", {shortenUrls: true})
     
-### Stored Procedures for Ontology Mapping 
+### Stored Procedures for Schema (Ontology) Mapping 
 
 | Stored Proc Name        | params           | Description and example usage  |
 |:------------- |:-------------|:-----|
-| semantics.mapping.addSchema      | <ul><li>URL of the schema/vocabulary/ontology</li><li>prefix to be used in serialisations</li></ul> | Creates a reference to a vocabulary. Needed to define mappings. <br>**Examples:**<br>call semantics.mapping.addSchema("http://schema.org","sch") |
-| semantics.mapping.dropSchema      | <ul><li>URL of the schema/vocabulary/ontology</li>| Deletes a vocabulary reference and all associated mappings. <br>**Examples:**<br>call semantics.mapping.dropSchema("http://schema.org") |
+| semantics.mapping.addSchema      | <ul><li>URL of the schema/vocabulary/ontology</li><li>prefix to be used in serialisations</li></ul> | Creates a reference to a vocabulary. Needed to define mappings. <br>**Examples:**<br>call semantics.mapping.addSchema("http://schema.org/","sch") |
+| semantics.mapping.dropSchema      | <ul><li>URL of the schema/vocabulary/ontology</li>| Deletes a vocabulary reference and all associated mappings. <br>**Examples:**<br>call semantics.mapping.dropSchema("http://schema.org/") |
 | semantics.mapping.listSchemas      | <ul><li>[optional] search string to list only schemas containing the search string in their uri or in the associated prefix</li></ul> | Returns all vocabulary references. <br>**Examples:**<br>call semantics.mapping.listSchemas() <br> call semantics.mapping.listSchemas('schema') <br> Combining list and drop to delet a set of schemas by name: <br> CALL semantics.mapping.listSchemas("fibo") YIELD node AS schemaDef WITH schemaDef, schemaDef._ns AS schname CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schname, output |
 | semantics.mapping.addCommonSchemas      | | Creates a references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc. <br>**Examples:**<br>call semantics.mapping.addCommonSchemas() |
 | semantics.mapping.addMappingToSchema      | <ul><li>The mapping reference node (can be retrieved by addSchema or listSchemas)</li><li>Neo4j DB schema element. It can be either a Label, property key or relationship type </li><li>Local name of the element in the selected schema (Class name, DataTypeProperty name or ObjectProperty name)</li></ul> | Creates a mapping for an element in the Neo4j DB schema to a vocabulary element. <br>**Examples:**<br> Getting a schema reference using listSchemas and creating a mapping for it: <br>call semantics.mapping.listSchemas("http://schema.org") yield node as sch <br> call semantics.mapping.addMappingToSchema(sch,"Movie","Movie") yield node as mapping return mapping |
