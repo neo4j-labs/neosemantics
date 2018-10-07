@@ -110,7 +110,7 @@ public class MappingUtils {
         if (!schemas.hasNext()){
             return Stream.of(new StringOutput("schema not found"));
         } else {
-            String cypher = "MATCH (mns:_MapNs { _ns: $ns } )<-[:_IN]-(elem:_MapDef) DETACH DELETE mns, elem RETURN count(elem) as ct";
+            String cypher = "MATCH (mns:_MapNs { _ns: $ns } ) OPTIONAL MATCH (mns)<-[:_IN]-(elem:_MapDef) DETACH DELETE mns, elem RETURN count(elem) as ct";
             Map<String,Object> params = new HashMap<>();
             params.put("ns",schemaUri);
             return Stream.of(new StringOutput("successfully deleted schema with " + db.execute(cypher, params).next().get("ct").toString() + " mappings"));

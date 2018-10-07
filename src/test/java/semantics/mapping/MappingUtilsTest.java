@@ -238,6 +238,7 @@ public class MappingUtilsTest {
             assertEquals(3, session.run("CALL semantics.mapping.listMappings() yield elemName RETURN count(elemName) as ct ").next().get("ct").asInt());
             assertEquals("successfully deleted schema with 3 mappings", session.run("CALL semantics.mapping.dropSchema('http://schema.org/')").next().get("output").asString());
             assertEquals(0, session.run("CALL semantics.mapping.listMappings() yield elemName RETURN count(elemName) as ct ").next().get("ct").asInt());
+            assertEquals(0, session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ").next().get("ct").asInt());
 
         }
     }
