@@ -57,16 +57,12 @@ This repository contains a set of stored procedures, user definded functions and
 
 
 #### Note on namespace prefixes
-If `shortenUrls : true`, you'll have prefixes used to shorten property and relationship names; and labels. You don't need to define your own namespaces prefixes as ones will be automatically generated for you with the format `ns0`, `ns1`, etc. If you're coming from the RDF and SPARQL world and you're used to defining your own prefixes, you can do so here too. You need to create (or merge, depending on whether it exists already) a `NamesapcePrefixDefinition` node before you perform the load of RDF data:
+If `shortenUrls : true`, you'll have prefixes used to shorten property and relationship names; and labels. You don't need to define your own namespaces prefixes as some of the most popular ones will be predefined for you (rdf, rdfs, owl, skos, sch, org) and for any other used in the imported dataset, the loader will automatically generate prefixes with the format `ns0`, `ns1`, etc. You can also define your own set of prefixes. For that you need to create (or merge, depending on whether it exists already) a `NamesapcePrefixDefinition` node before you perform the load of RDF data and the loader will use it:
 
     // create the prefix mapping 
     CREATE (:NamespacePrefixDefinition {
       `http://www.example.com/ontology/1.0.0#`: 'ex',
-      `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})
-      
-    // the actual load will use the NamespacePrefixDefinition if it exists already. 
-    //Note 'shortenUrls' defaults to true but we're just being explicit
-    CALL semantics.importRDF("file:///path/to/some-file.ttl", "Turtle", {shortenUrls: true})
+      `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdf'})
     
 ### Stored Procedures for Schema (Ontology) Mapping 
 
