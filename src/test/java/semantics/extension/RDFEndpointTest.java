@@ -121,7 +121,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=9999999");
 
-            assertEquals( "[]", response.rawContent() );
+            assertEquals( "[ ]", response.rawContent() );
             assertEquals( 200, response.status() );
 
             //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
@@ -144,7 +144,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/uri?uri=9999999");
 
-            assertEquals( "[]", response.rawContent() );
+            assertEquals( "[ ]", response.rawContent() );
             assertEquals( 200, response.status() );
 
         }
@@ -268,13 +268,14 @@ public class RDFEndpointTest {
             String expected = "@prefix neovoc: <neo4j://vocabulary#> .\n" +
                     "\n" +
                     "\n" +
-                    "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor> ;\n" +
-                    "\t<http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> ;\n" +
-                    "\t<http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\" .\n" +
+                    "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor>;\n" +
+                    "  <http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
+                    "  <http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\";\n" +
+                    "  <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .\n" +
                     "\n" +
-                    "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf> <https://permid.org/1-21523433750> .\n" +
-                    "\n" +
-                    "<https://permid.org/1-21523433750> <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .";
+                    "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n" +
+                    "    <https://permid.org/1-21523433750> .\n";
+
             assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
             		response.rawContent().replaceAll("[\n|\r]", "").trim() );
             assertEquals( 200, response.status() );
