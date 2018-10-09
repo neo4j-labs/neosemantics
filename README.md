@@ -4,7 +4,7 @@
  
 You can either download a prebuilt jar from the [releases area](https://github.com/jbarrasa/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
 
-1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance.
+1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. (**note:** If you're going to use the JSON-LD serialisation format for RDF, you'll need to include also [APOC](https://neo4j-contrib.github.io/neo4j-apoc-procedures/))
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
