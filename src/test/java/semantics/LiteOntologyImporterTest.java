@@ -14,7 +14,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class LiteOntologyImporterTest {
 
-//    @Test
+    @Test
     public void liteOntoImport() throws Exception {
         GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
         ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
@@ -27,11 +27,11 @@ public class LiteOntologyImporterTest {
 
         assertEquals(new Long(2), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(5), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(5), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(3), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(3), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(6), db.execute("MATCH (n:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(6), db.execute("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count"));
 
     }
     
@@ -47,13 +47,13 @@ public class LiteOntologyImporterTest {
 
 //        assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
 
-        assertEquals(new Long(592), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(596), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(343), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(371), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(0), db.execute("MATCH (n:DatatypeProperty)-[:DOMAIN]->(:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(0), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(377), db.execute("MATCH (n:ObjectProperty) RETURN count(n) AS count").next().get("count"));
+        assertEquals(new Long(416), db.execute("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count"));
 
     }
 
