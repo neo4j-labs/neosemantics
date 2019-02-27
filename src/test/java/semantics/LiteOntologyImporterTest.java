@@ -56,5 +56,17 @@ public class LiteOntologyImporterTest {
         assertEquals(new Long(416), db.execute("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count"));
 
     }
+    @Test
+    public void liteOntoImportClassHierarchy() throws Exception{
+        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
+        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
+
+        Result importResult = db.execute("CALL semantics.liteOntoImport('" +
+                LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf").toURI() +
+                "','RDF/XML')");
+
+        assertEquals(new Long(1), db.execute("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+                " RETURN count(p) AS count").next().get("count"));
+    }
 
 }

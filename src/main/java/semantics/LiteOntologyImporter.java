@@ -3,6 +3,7 @@ package semantics;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
+import org.neo4j.graphdb.Result;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
@@ -145,6 +146,11 @@ public class LiteOntologyImporter {
             }
         }
     }
+    private boolean createClass(Resource classResource) {
+        String cypher = String.format("MERGE (p:Class { uri:'%s'})", classResource.stringValue());
+        Result execute = db.execute(cypher);
+        return execute.hasNext();
+    }
 
     private int extractClasses(Model model) {
         // loads Simple Named Classes (https://www.w3.org/TR/2004/REC-owl-guide-20040210/#SimpleClasses)
@@ -156,6 +162,7 @@ public class LiteOntologyImporter {
         scoStatements.objects().stream().filter(x -> x instanceof IRI).forEach( x -> allClasses.add((IRI)x));
         for ( Resource classResource : allClasses) {
             if (!(classResource instanceof BNode)) {
+                createClass(classResource);
                 String cypher = String.format("MERGE (p:Class { uri:'%s'}) SET p+={props}", classResource.stringValue());
                 Map<String, Object> props = new HashMap<>();
                 for (Value classLabel : model.filter(classResource, RDFS.LABEL, null).objects()) {
@@ -179,6 +186,8 @@ public class LiteOntologyImporter {
     private void extractClassHierarchy(Model model, Resource classResource) {
         for (Value object: model.filter(classResource, RDFS.SUBCLASSOF, null).objects()){
             if (object instanceof IRI){
+                createClass(classResource);
+                createClass((Resource) object);
                 db.execute(String.format(
                         "MATCH (p:Class { uri:'%s'}), (c { uri:'%s'}) MERGE (p)-[:SCO]->(c)",
                         classResource.stringValue(), object.stringValue()));
