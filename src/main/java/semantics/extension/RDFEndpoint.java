@@ -2,6 +2,8 @@ package semantics.extension;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.logging.Log;
@@ -34,7 +36,9 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 @Path("/")
 public class RDFEndpoint {
 
-    public static final String BASE_VOCAB_NS = "neo4j://defaultvocabulary#";
+    public static final String BASE_VOCAB_NS = "neo4j://com.neo4j/voc#";
+    public static final String BASE_INDIV_NS = "neo4j://com.neo4j/indiv#";
+
     @Context
     public Log log;
 
@@ -42,7 +46,7 @@ public class RDFEndpoint {
 
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
-    public static final String BASE_INDIV_NS = "neo4j://indiv#";
+
 
     @POST
     @Path("/cypher")
@@ -59,7 +63,7 @@ public class RDFEndpoint {
                     final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
                     Result result = gds.execute(jsonMap.get("cypher"));
                     Set<Long> serializedNodes = new HashSet<Long>();
-                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
+                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")), outputStream);
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
                     handleNamespaces(writer,gds);
                     writer.startRDF();
@@ -111,7 +115,7 @@ public class RDFEndpoint {
                     final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
                     Result result = gds.execute(jsonMap.get("cypher"));
                     Set<String> serializedNodes = new HashSet<String>();
-                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
+                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")), outputStream);
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
                     String baseVocabNS = "neo4j://vocabulary#";
                     writer.handleNamespace("neovoc", baseVocabNS);
@@ -206,6 +210,7 @@ public class RDFEndpoint {
             "application/ld+json"})
     public Response nodebyuri(@Context GraphDatabaseService gds, @QueryParam("nodeuri") String idParam,
                               @QueryParam("excludeContext") String excludeContextParam,
+                              @QueryParam("format") String format,
                               @HeaderParam("accept") String acceptHeaderParam) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
@@ -226,7 +231,7 @@ public class RDFEndpoint {
                     Result result = gds.execute((excludeContextParam != null ? queryNoContext : queryWithContext), params);
 
 
-                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
+                    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
                     String baseVocabNS = "neo4j://vocabulary#";
                     writer.handleNamespace("neovoc", baseVocabNS);
@@ -357,12 +362,13 @@ public class RDFEndpoint {
     public Response nodebyid(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
                              @QueryParam("excludeContext") String excludeContextParam,
                              @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+                             @QueryParam("format") String format,
                              @HeaderParam("accept") String acceptHeaderParam) {
         return Response.ok().entity(new StreamingOutput() {
             @Override
             public void write(OutputStream outputStream) throws IOException, WebApplicationException {
 
-                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
+                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
                 SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
                 handleNamespaces(writer, gds);
                 writer.startRDF();
@@ -450,72 +456,6 @@ public class RDFEndpoint {
     }
 
     @GET
-    @Path("/describe/id2")
-    @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
-            "application/ld+json"})
-    public Response nodebyid2(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
-                              @QueryParam("excludeContext") String excludeContextParam,
-                              @HeaderParam("accept") String acceptHeaderParam) {
-        return Response.ok().entity(new StreamingOutput() {
-            @Override
-            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-
-                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam), outputStream);
-                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-                String baseVocabNS = "neo4j://vocabulary#";
-                String baseIndivNS = "neo4j://indiv#";
-                writer.handleNamespace("neovoc", baseVocabNS);
-                writer.handleNamespace("neoind", baseIndivNS);
-                writer.startRDF();
-
-                try (Transaction tx = gds.beginTx()) {
-                    Node node = (Node) gds.getNodeById(idParam);
-                    Iterable<Label> nodeLabels = node.getLabels();
-                    for (Label label : nodeLabels) {
-                        writer.handleStatement(
-                                valueFactory.createStatement(valueFactory.createIRI(baseIndivNS, idParam.toString()),
-                                        RDF.TYPE,
-                                        valueFactory.createIRI(baseVocabNS, label.name())));
-                    }
-                    Map<String, Object> allProperties = node.getAllProperties();
-                    for (String key : allProperties.keySet()) {
-                        IRI subject = valueFactory.createIRI(baseIndivNS, idParam.toString());
-                        IRI predicate = valueFactory.createIRI(baseVocabNS, key);
-                        Object propertyValueObject = allProperties.get(key);
-                        if (propertyValueObject instanceof Object[]) {
-                            for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-                                writer.handleStatement(valueFactory.createStatement(subject, predicate,
-                                        createTypedLiteral(valueFactory, ((Object[]) propertyValueObject)[i])));
-                            }
-                        } else {
-                            writer.handleStatement(valueFactory.createStatement(subject, predicate,
-                                    createTypedLiteral(valueFactory, propertyValueObject)));
-                        }
-
-                    }
-
-                    if (excludeContextParam == null) {
-                        Iterable<Relationship> relationships = node.getRelationships();
-                        relationships.forEach(rel -> {
-                            writer.handleStatement(valueFactory.createStatement(
-                                    valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getStartNode().getId())),
-                                    valueFactory.createIRI(baseVocabNS, rel.getType().name()),
-                                    valueFactory.createIRI(baseIndivNS, String.valueOf(rel.getEndNode().getId()))));
-                        });
-                    }
-
-                    writer.endRDF();
-
-                }catch(NotFoundException e){
-                    writer.endRDF();
-                }
-            }
-
-
-        }).build();
-    }
-
-    @GET
     @Path("/ping")
     public Response ping() throws IOException {
         Map<String, String> results = new HashMap<String, String>() {{
@@ -524,41 +464,43 @@ public class RDFEndpoint {
         return Response.ok().entity(objectMapper.writeValueAsString(results)).build();
     }
 
-//    @GET
-//    @Path("/onto")
-//    //@Consumes(MediaType.TEXT_PLAIN)
-//    public Response exportOnto(@Context GraphDatabaseService gds, String body) {
-//        return Response.ok().entity(new StreamingOutput() {
-//            @Override
-//            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-//                Result res = gds.execute("CALL apoc.meta.graph ");
-//                Map<String, Object> next = res.next();
-//                List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
-//                for (Relationship r : relationshipList) {
-//                    System.out.println(r.getStartNode().getLabels().iterator().next().name());
-//                    System.out.println(r.getEndNode().getLabels().iterator().next().name());
-//                    System.out.println(r.getType().name());
-//                }
-//                ///
-//                ///
-//                String query = "";
-//                Result result = gds.execute(query);
-//                RDFWriter writer = Rio.createWriter(RDFFormat.JSONLD, outputStream);
-//                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-//                String baseNS = "http://neo4j.com/";
-//                writer.startRDF();
-//                while (result.hasNext()) {
-//                    Map<String, Object> row = result.next();
-//                    IRI subject = valueFactory.createIRI(baseNS, (String) row.get("subject"));
-//                    IRI predicate = valueFactory.createIRI(baseNS, (String) row.get("predicate"));
-//                    Literal object = valueFactory.createLiteral((String) row.get("object"));
-//                    writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
-//                }
-//                writer.endRDF();
-//                result.close();
-//            }
-//        }).build();
-//    }
+    @GET
+    @Path("/onto")
+    @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
+            "application/ld+json"})
+    public Response exportOnto(@Context GraphDatabaseService gds, @QueryParam("format") String format,
+                               @HeaderParam("accept") String acceptHeaderParam) {
+        return Response.ok().entity(new StreamingOutput() {
+            @Override
+            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+                writer.startRDF();
+
+                Result res = gds.execute("CALL db.schema() ");
+                Map<String, Object> next = res.next();
+                List<Node> nodeList = (List<Node>) next.get("nodes");
+                nodeList.forEach(node -> {
+                    IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, node.getAllProperties().get("name").toString());
+                    writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+                });
+
+                List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+                for (Relationship r : relationshipList) {
+                    IRI relUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getType().name());
+                    writer.handleStatement(valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
+                    IRI domainUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getStartNode().getLabels().iterator().next().name());
+                    writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
+                    IRI rangeUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getEndNode().getLabels().iterator().next().name());
+                    writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+                }
+
+                writer.endRDF();
+
+            }
+        }).build();
+    }
+
 
     private Literal createTypedLiteral(SimpleValueFactory valueFactory, Object value) {
         Literal result = null;
@@ -583,18 +525,31 @@ public class RDFEndpoint {
     }
 
 
-    private RDFFormat getFormat(String mimetype) {
-        if (mimetype != null) {
-            log.info("mimetipe in request: " + mimetype);
+    private RDFFormat getFormat(String mimetype, String formatParam) {
+        // format request param overrides the one defined in the accept header param
+        if (formatParam != null) {
+            log.info("serialization from param in request: " + formatParam);
             for (RDFFormat parser : availableParsers) {
-                if (parser.getMIMETypes().contains(mimetype)) {
+                if (parser.getName().contains(formatParam)) {
                     log.info("parser to be used: " + parser.getDefaultMIMEType());
                     return parser;
                 }
             }
         }
+        else {
+            if (mimetype != null) {
+                log.info("serialization from mimetipe in request: " + mimetype);
+                for (RDFFormat parser : availableParsers) {
+                    if (parser.getMIMETypes().contains(mimetype)) {
+                        log.info("parser to be used: " + parser.getDefaultMIMEType());
+                        return parser;
+                    }
+                }
+            }
+        }
 
-        log.info("Unrecognized serialization in accept header param. Defaulting to Turtle serialization");
+
+        log.info("Unrecognized or undefined serialization. Defaulting to Turtle serialization");
 
         return RDFFormat.TURTLE;
 

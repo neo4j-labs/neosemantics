@@ -14,7 +14,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import java.util.*;
 import java.util.concurrent.Callable;
 
-import static semantics.RDFImport.PREFIX_SEPARATOR;
+import static semantics.RDFImport.*;
 
 /**
  * Created by jbarrasa on 09/11/2016.
@@ -23,7 +23,7 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     public static final Label RESOURCE = Label.label("Resource");
-    private final boolean shortenUris;
+    private final int handleUris;
     private final String langFilter;
     private int ingestedTriples = 0;
     private int triplesParsed = 0;
@@ -38,10 +38,10 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     Log log;
 
     public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-                                 boolean shortenUrls, boolean typesToLabels, String languageFilter, Log l) {
+                                 int handleUrls, boolean typesToLabels, String languageFilter, Log l) {
         graphdb = db;
         commitFreq = batchSize;
-        shortenUris = shortenUrls;
+        handleUris = handleUrls;
         labellise =  typesToLabels;
         nodeCache = CacheBuilder.newBuilder()
                 .maximumSize(nodeCacheSize)
@@ -52,27 +52,34 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     @Override
     public void startRDF() throws RDFHandlerException {
-        getExistingNamespaces();
-        log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
+        if (handleUris!=URL_IGNORE){
+            getExistingNamespaces();
+            log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
+        } else {
+            log.info("URIs will be ignored. Only local names will be kept.");
+        }
+
     }
 
     private void getExistingNamespaces() {
-        Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                "UNWIND keys(n) AS namespace\n" +
-                "RETURN namespace, n[namespace] as prefix");
-        if (!nslist.hasNext()){
-            // initialise with most frequent ones (should this be done or extracted
-            // to a separate SP to make it optional? looks generally useful)
-            String cypherInitialise = " CREATE (ns:NamespacePrefixDefinition { `http://schema.org/`: 'sch' , `http://purl.org/dc/elements/1.1/`: 'dc',\n" +
-                    "  `http://purl.org/dc/terms/`: 'dct',`http://www.w3.org/2004/02/skos/core#`: 'skos',\n" +
-                    "  `http://www.w3.org/2000/01/rdf-schema#`: 'rdfs' , `http://www.w3.org/2002/07/owl#`: 'owl',\n" +
-                    "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdf' }) WITH ns\n" +
-                    "  UNWIND keys(ns) as key  RETURN key AS namespace, ns[key] as prefix ";
-            nslist = graphdb.execute(cypherInitialise);
-        }
-        while (nslist.hasNext()){
-            Map<String, Object> ns = nslist.next();
-            namespaces.put((String)ns.get("namespace"),(String)ns.get("prefix"));
+        if (handleUris==0) {
+            Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
+                    "UNWIND keys(n) AS namespace\n" +
+                    "RETURN namespace, n[namespace] AS prefix");
+            if (!nslist.hasNext()) {
+                // initialise with most frequent ones (should this be done or extracted
+                // to a separate SP to make it optional? looks generally useful)
+                String cypherInitialise = " CREATE (ns:NamespacePrefixDefinition { `http://schema.org/`: 'sch' , `http://purl.org/dc/elements/1.1/`: 'dc',\n" +
+                        "  `http://purl.org/dc/terms/`: 'dct',`http://www.w3.org/2004/02/skos/core#`: 'skos',\n" +
+                        "  `http://www.w3.org/2000/01/rdf-schema#`: 'rdfs' , `http://www.w3.org/2002/07/owl#`: 'owl',\n" +
+                        "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdf' }) WITH ns\n" +
+                        "  UNWIND keys(ns) AS key  RETURN key AS namespace, ns[key] AS prefix ";
+                nslist = graphdb.execute(cypherInitialise);
+            }
+            while (nslist.hasNext()) {
+                Map<String, Object> ns = nslist.next();
+                namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
+            }
         }
     }
 
@@ -80,7 +87,9 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     public void endRDF() throws RDFHandlerException {
         Util.inTx(graphdb, this);
         ingestedTriples += triplesParsed;
-        addNamespaceNode();
+        if (handleUris==0) {
+            addNamespaceNode();
+        }
 
         log.info("Successfully committed " + triplesParsed + " triples. " +
                 "Total number of triples imported is " + ingestedTriples);
@@ -160,11 +169,11 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         if (object instanceof Literal) {
             final Object literalValue = getObjectValue((Literal) object);
             if (literalValue != null) {
-                setProp(subject.stringValue(), shorten(predicate), literalValue);
+                setProp(subject.stringValue(), handleIRI(predicate,PROPERTY), literalValue);
                 triplesParsed++;
             }
         } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
-            setLabel(subject.stringValue(),shorten((IRI)object));
+            setLabel(subject.stringValue(),handleIRI((IRI)object,LABEL));
             triplesParsed++;
         } else {
             addResource(subject.stringValue());
@@ -186,14 +195,26 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
 
     }
 
-    private String shorten(IRI iri) {
-        if (shortenUris) {
+    private String handleIRI(IRI iri, int element) {
+        //TODO: cache this? It's kind of cached in getPrefix()
+        if (handleUris  ==  URL_SHORTEN) {
             String localName = iri.getLocalName();
             String prefix = getPrefix(iri.getNamespace());
             return prefix + PREFIX_SEPARATOR + localName;
-        } else
-        {
+        } else if (handleUris  ==  URL_IGNORE) {
+            return neo4jCapitalisation(iri.getLocalName(), element);
+        } else { //if (handleUris  ==  URL_KEEP){
             return iri.stringValue();
+        }
+    }
+
+    private String neo4jCapitalisation(String name, int element) {
+        if( element == RELATIONSHIP){
+            return name.toUpperCase();
+        } else if( element == LABEL){
+            return name.substring(0, 1).toUpperCase() + name.substring(1);
+        } else {
+            return name;
         }
     }
 
@@ -281,16 +302,16 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
             // check if the rel is already present. If so, don't recreate.
             // explore the node with the lowest degree
             boolean found = false;
-            if(fromNode.getDegree(RelationshipType.withName(shorten(st.getPredicate())), Direction.OUTGOING) <
-                    toNode.getDegree(RelationshipType.withName(shorten(st.getPredicate())), Direction.INCOMING)) {
-                for (Relationship rel : fromNode.getRelationships(RelationshipType.withName(shorten(st.getPredicate())), Direction.OUTGOING)) {
+            if(fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.OUTGOING) <
+                    toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.INCOMING)) {
+                for (Relationship rel : fromNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.OUTGOING)) {
                     if (rel.getEndNode().equals(toNode)) {
                         found = true;
                         break;
                     }
                 }
             }else {
-                for (Relationship rel : toNode.getRelationships(RelationshipType.withName(shorten(st.getPredicate())), Direction.INCOMING)) {
+                for (Relationship rel : toNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.INCOMING)) {
                     if (rel.getStartNode().equals(fromNode)) {
                         found = true;
                         break;
@@ -301,7 +322,7 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
             if (!found) {
                 fromNode.createRelationshipTo(
                         toNode,
-                        RelationshipType.withName(shorten(st.getPredicate())));
+                        RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)));
             }
         }
 

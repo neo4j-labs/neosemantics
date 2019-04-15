@@ -37,6 +37,13 @@ public class RDFImport {
     private static final long DEFAULT_COMMIT_SIZE = 25000;
     private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
     public static final String PREFIX_SEPARATOR = "__";
+    static final int URL_SHORTEN = 0;
+    static final int URL_IGNORE = 1;
+    static final int URL_KEEP = 2;
+
+    static final int RELATIONSHIP = 0;
+    static final int LABEL = 1;
+    static final int PROPERTY = 2;
 
     @Context
     public GraphDatabaseService db;
@@ -52,7 +59,8 @@ public class RDFImport {
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
                                            @Name("props") Map<String, Object> props) {
 
-        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
+        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final long commitSize = (props.containsKey("commitSize")?(long)props.get("commitSize"):DEFAULT_COMMIT_SIZE);
         final long nodeCacheSize = (props.containsKey("nodeCacheSize")?(long)props.get("nodeCacheSize"):DEFAULT_NODE_CACHE_SIZE);
@@ -61,7 +69,7 @@ public class RDFImport {
         ImportResults importResults = new ImportResults();
         URLConnection urlConn;
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
-                nodeCacheSize, shortenUrls, typesToLabels, languageFilter, log);
+                nodeCacheSize, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, languageFilter, log);
         try {
             checkIndexesExist();
             urlConn = new URL(url).openConnection();

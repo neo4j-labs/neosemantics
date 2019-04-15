@@ -165,10 +165,11 @@ public class LiteOntologyImporter {
                 createClass(classResource);
                 String cypher = String.format("MERGE (p:Class { uri:'%s'}) SET p+={props}", classResource.stringValue());
                 Map<String, Object> props = new HashMap<>();
-                for (Value classLabel : model.filter(classResource, RDFS.LABEL, null).objects()) {
-                    props.put("name", classLabel.stringValue().replace("'", "\'"));
-                    break;
-                }
+
+                Set<Value> classNames = model.filter(classResource, RDFS.LABEL, null).objects();
+                props.put("name",classNames.isEmpty()?((IRI)classResource).getLocalName():
+                                classNames.iterator().next().stringValue().replace("'", "\'"));
+
                 for (Value classComment : model.filter(classResource, RDFS.COMMENT, null).objects()) {
                     props.put("comment", classComment.stringValue().replace("'", "\'"));
                     break;

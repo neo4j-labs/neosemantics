@@ -192,6 +192,7 @@ class StatementPreviewer implements RDFHandler {
         }
     }
 
+    //sync up with the one in DirectStatementLoader
     private String nextPrefix() {
         return "ns" + namespaces.size();
     }
