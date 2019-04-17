@@ -1,72 +1,80 @@
 package semantics;
 
+import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
-import org.neo4j.kernel.impl.proc.Procedures;
-import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.TestGraphDatabaseFactory;
+import org.neo4j.driver.v1.*;
+import org.neo4j.harness.junit.Neo4jRule;
 
 import static org.junit.Assert.assertEquals;
+
 
 /**
  * Created by jbarrasa on 21/03/2016.
  */
 public class LiteOntologyImporterTest {
 
+    @Rule
+    public Neo4jRule neo4j = new Neo4jRule()
+            .withProcedure( LiteOntologyImporter.class );
+
     @Test
     public void liteOntoImport() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResult = db.execute("CALL semantics.liteOntoImport('" +
-                LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
-                + "','RDF/XML')");
+            Session session = driver.session();
 
-        assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
+            StatementResult importResults =  session.run("CALL semantics.liteOntoImport('" +
+                    LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+                    + "','RDF/XML')");
 
-        assertEquals(new Long(2), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
 
-        assertEquals(new Long(5), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
+            assertEquals(16L, importResults.next().get("elementsLoaded").asLong());
 
-        assertEquals(new Long(3), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count"));
+            assertEquals(2L, session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
 
-        assertEquals(new Long(6), db.execute("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count"));
+            assertEquals(5L, session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count").asLong());
+
+            assertEquals(3L, session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count").asLong());
+
+            assertEquals(6L, session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count").asLong());
+        }
 
     }
-    
-    
+
+
     @Test
     public void liteOntoImportSchemaOrg() throws Exception {
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResult = db.execute("CALL semantics.liteOntoImport('" +
-                        LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
-                "','RDF/XML')");
+            Session session = driver.session();
 
-//        assertEquals(new Long(16), importResult.next().get("elementsLoaded"));
+            StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+                    LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
+                    "','RDF/XML')");
 
-        assertEquals(new Long(596), db.execute("MATCH (n:Class) RETURN count(n) AS count").next().get("count"));
+            assertEquals(596L, session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
 
-        assertEquals(new Long(371), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count"));
+            assertEquals(371L, session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next().get("count").asLong());
 
-        assertEquals(new Long(0), db.execute("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count"));
+            assertEquals(0L, session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count").next().get("count").asLong());
 
-        assertEquals(new Long(416), db.execute("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count"));
+            assertEquals(416L, session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count").asLong());
+        }
 
     }
     @Test
     public void liteOntoImportClassHierarchy() throws Exception{
-        GraphDatabaseService db = new TestGraphDatabaseFactory().newImpermanentDatabase();
-        ((GraphDatabaseAPI)db).getDependencyResolver().resolveDependency(Procedures.class).registerProcedure(LiteOntologyImporter.class);
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-        Result importResult = db.execute("CALL semantics.liteOntoImport('" +
-                LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf").toURI() +
-                "','RDF/XML')");
+            Session session = driver.session();
 
-        assertEquals(new Long(1), db.execute("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
-                " RETURN count(p) AS count").next().get("count"));
+            StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+                    LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf").toURI() +
+                    "','RDF/XML')");
+
+            assertEquals(1L, session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+                    " RETURN count(p) AS count").next().get("count").asLong());
+        }
     }
 
 }

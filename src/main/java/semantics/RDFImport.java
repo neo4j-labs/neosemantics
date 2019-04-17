@@ -1,6 +1,5 @@
 package semantics;
 
-import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -86,7 +85,7 @@ public class RDFImport {
             importResults.setTerminationKO(e.getMessage());
             e.printStackTrace();
         } finally {
-            importResults.setTriplesLoaded(statementLoader.getIngestedTriples());
+            importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
             importResults.setNamespaces(statementLoader.getNamespaces());
         }
         return Stream.of(importResults);
@@ -96,7 +95,8 @@ public class RDFImport {
     public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
                                           @Name("props") Map<String, Object> props) {
 
-        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
+        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
@@ -104,7 +104,7 @@ public class RDFImport {
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, languageFilter, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, virtualNodes, virtualRels, languageFilter, log);
         try {
             urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
@@ -167,14 +167,15 @@ public class RDFImport {
     public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
                                                  @Name("props") Map<String, Object> props) {
 
-        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
+        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
+        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, shortenUrls, typesToLabels, virtualNodes, virtualRels, languageFilter, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, virtualNodes, virtualRels, languageFilter, log);
         try {
             InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
             RDFFormat rdfFormat = getFormat(format);

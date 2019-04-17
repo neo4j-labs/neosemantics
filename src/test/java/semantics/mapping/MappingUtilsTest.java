@@ -146,7 +146,7 @@ public class MappingUtilsTest {
             params.put("graphElemName", key);
             params.put("localVocElem", localNameInVoc);
             String addMappingAndSchemaCypher = " CALL semantics.mapping.addSchema($ns,$prefix) YIELD node AS sch WITH sch " +
-                                              " CALL semantics.mapping.addMappingToSchema(sch,$graphElemName, $localVocElem) YIELD node RETURN node";
+                    " CALL semantics.mapping.addMappingToSchema(sch,$graphElemName, $localVocElem) YIELD node RETURN node";
             Node mapping = session.run(addMappingAndSchemaCypher, params).next().get("node").asNode();
             assertEquals(key,mapping.get("_key").asString());
             assertEquals(localNameInVoc,mapping.get("_local").asString());

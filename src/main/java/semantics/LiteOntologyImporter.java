@@ -125,8 +125,8 @@ public class LiteOntologyImporter {
         for (Value object: model.filter(propResource, RDFS.RANGE, null).objects()){
             if (object instanceof IRI && (model.contains((IRI)object,RDF.TYPE, OWL.CLASS) ||
                     model.contains((IRI)object,RDF.TYPE, RDFS.CLASS))){
-                    //only picks ranges that are classes, which means, only ObjectProperties
-                    // (no XSD ranges for DatatypeProps)
+                //only picks ranges that are classes, which means, only ObjectProperties
+                // (no XSD ranges for DatatypeProps)
                 db.execute(String.format(
                         "MATCH (p:%s { uri:'%s'}), (c:Class { uri:'%s'}) MERGE (p)-[:RANGE]->(c)",
                         getNeoEquivalentForProp(propType), propResource.stringValue(), object.stringValue()));
@@ -168,7 +168,7 @@ public class LiteOntologyImporter {
 
                 Set<Value> classNames = model.filter(classResource, RDFS.LABEL, null).objects();
                 props.put("name",classNames.isEmpty()?((IRI)classResource).getLocalName():
-                                classNames.iterator().next().stringValue().replace("'", "\'"));
+                        classNames.iterator().next().stringValue().replace("'", "\'"));
 
                 for (Value classComment : model.filter(classResource, RDFS.COMMENT, null).objects()) {
                     props.put("comment", classComment.stringValue().replace("'", "\'"));

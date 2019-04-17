@@ -336,7 +336,7 @@ public class RDFImportTest {
 
         }
     }
-    
+
     /**
      * Can we populate the cache correctly when we have a miss?
      */
@@ -468,11 +468,11 @@ public class RDFImportTest {
     }
 
     private static URI file(String path) {
-    	try {
-			return RDFImportTest.class.getClassLoader().getResource(path).toURI();
-		} catch (URISyntaxException e) {
-			String msg = String.format("Failed to load the resource with path '%s'", path);
-			throw new RuntimeException(msg, e);
-		}
+        try {
+            return RDFImportTest.class.getClassLoader().getResource(path).toURI();
+        } catch (URISyntaxException e) {
+            String msg = String.format("Failed to load the resource with path '%s'", path);
+            throw new RuntimeException(msg, e);
+        }
     }
 }

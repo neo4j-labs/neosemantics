@@ -2,102 +2,47 @@ package semantics;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import org.eclipse.rdf4j.model.*;
-import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.eclipse.rdf4j.rio.RDFHandler;
-import org.eclipse.rdf4j.rio.RDFHandlerException;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 
-import static semantics.RDFImport.*;
+import static semantics.RDFImport.RELATIONSHIP;
 
 /**
  * Created by jbarrasa on 09/11/2016.
  */
 
-class DirectStatementLoader implements RDFHandler, Callable<Integer> {
+class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
     public static final Label RESOURCE = Label.label("Resource");
-    private final int handleUris;
-    private final String langFilter;
-    private int ingestedTriples = 0;
-    private int triplesParsed = 0;
-    private GraphDatabaseService graphdb;
-    private long commitFreq;
-    private Map<String,Map<String,Object>> resourceProps = new HashMap<>();
-    private Map<String,Set<String>> resourceLabels = new HashMap<>();
-    private Set<Statement> statements = new HashSet<>();
-    private Map<String,String> namespaces =  new HashMap<>();
-    private final boolean labellise;
     Cache<String, Node> nodeCache;
-    Log log;
 
     public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
                                  int handleUrls, boolean typesToLabels, String languageFilter, Log l) {
-        graphdb = db;
-        commitFreq = batchSize;
-        handleUris = handleUrls;
-        labellise =  typesToLabels;
+
+        super(db, languageFilter, handleUrls, typesToLabels, batchSize);
         nodeCache = CacheBuilder.newBuilder()
                 .maximumSize(nodeCacheSize)
                 .build();
-        langFilter = languageFilter;
         log = l;
-    }
-
-    @Override
-    public void startRDF() throws RDFHandlerException {
-        if (handleUris!=URL_IGNORE){
-            getExistingNamespaces();
-            log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
-        } else {
-            log.info("URIs will be ignored. Only local names will be kept.");
-        }
-
-    }
-
-    private void getExistingNamespaces() {
-        if (handleUris==0) {
-            Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-                    "UNWIND keys(n) AS namespace\n" +
-                    "RETURN namespace, n[namespace] AS prefix");
-            if (!nslist.hasNext()) {
-                // initialise with most frequent ones (should this be done or extracted
-                // to a separate SP to make it optional? looks generally useful)
-                String cypherInitialise = " CREATE (ns:NamespacePrefixDefinition { `http://schema.org/`: 'sch' , `http://purl.org/dc/elements/1.1/`: 'dc',\n" +
-                        "  `http://purl.org/dc/terms/`: 'dct',`http://www.w3.org/2004/02/skos/core#`: 'skos',\n" +
-                        "  `http://www.w3.org/2000/01/rdf-schema#`: 'rdfs' , `http://www.w3.org/2002/07/owl#`: 'owl',\n" +
-                        "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdf' }) WITH ns\n" +
-                        "  UNWIND keys(ns) AS key  RETURN key AS namespace, ns[key] AS prefix ";
-                nslist = graphdb.execute(cypherInitialise);
-            }
-            while (nslist.hasNext()) {
-                Map<String, Object> ns = nslist.next();
-                namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
-            }
-        }
     }
 
     @Override
     public void endRDF() throws RDFHandlerException {
         Util.inTx(graphdb, this);
-        ingestedTriples += triplesParsed;
+        totalTriplesMapped += mappedTripleCounter;
         if (handleUris==0) {
             addNamespaceNode();
         }
 
-        log.info("Successfully committed " + triplesParsed + " triples. " +
-                "Total number of triples imported is " + ingestedTriples);
-    }
-
-    @Override
-    public void handleNamespace(String prefix, String uri) throws RDFHandlerException {
-
+        log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
+                "Total number of triples imported is " + totalTriplesMapped + " out of " +  totalTriplesParsed + " parsed.");
     }
 
     private void addNamespaceNode() {
@@ -106,155 +51,6 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
         graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
     }
 
-    private void addStatement(Statement st) {
-        statements.add(st);
-    }
-
-    private void initialise(String subjectUri) {
-        initialiseProps(subjectUri);
-        initialiseLabels(subjectUri);
-    }
-
-    private Set<String> initialiseLabels(String subjectUri) {
-        Set<String> labels =  new HashSet<>();
-        resourceLabels.put(subjectUri, labels);
-        return labels;
-    }
-
-    private HashMap<String, Object> initialiseProps(String subjectUri) {
-        HashMap<String, Object> props = new HashMap<>();
-        resourceProps.put(subjectUri,props);
-        return props;
-    }
-
-    private void setProp(String subjectUri, String propName, Object propValue){
-        Map<String, Object> props;
-
-        if(!resourceProps.containsKey(subjectUri)){
-            props = initialiseProps(subjectUri);
-            initialiseLabels(subjectUri);
-        } else {
-            props = resourceProps.get(subjectUri);
-        }
-        // we are overwriting multivalued properties.
-        // An array should be created. Check that all data types are compatible.
-        props.put(propName, propValue);
-    }
-
-    private void setLabel(String subjectUri, String label){
-        Set<String> labels;
-
-        if(!resourceLabels.containsKey(subjectUri)){
-            initialiseProps(subjectUri);
-            labels = initialiseLabels(subjectUri);
-        } else {
-            labels = resourceLabels.get(subjectUri);
-        }
-
-        labels.add(label);
-    }
-
-    private void addResource(String subjectUri){
-
-        if(!resourceLabels.containsKey(subjectUri)){
-            initialise(subjectUri);
-        }
-    }
-
-    @Override
-    public void handleStatement(Statement st) {
-        IRI predicate = st.getPredicate();
-        Resource subject = st.getSubject(); //includes blank nodes
-        Value object = st.getObject();
-        if (object instanceof Literal) {
-            final Object literalValue = getObjectValue((Literal) object);
-            if (literalValue != null) {
-                setProp(subject.stringValue(), handleIRI(predicate,PROPERTY), literalValue);
-                triplesParsed++;
-            }
-        } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
-            setLabel(subject.stringValue(),handleIRI((IRI)object,LABEL));
-            triplesParsed++;
-        } else {
-            addResource(subject.stringValue());
-            addResource(object.stringValue());
-            addStatement(st);
-            triplesParsed++;
-        }
-        if (triplesParsed % commitFreq == 0) {
-            Util.inTx(graphdb, this);
-            ingestedTriples += triplesParsed;
-            log.info("Successful periodic commit of " + commitFreq + " triples. " +
-                    ingestedTriples + " triples ingested so far...");
-            triplesParsed = 0;
-        }
-    }
-
-    @Override
-    public void handleComment(String comment) throws RDFHandlerException {
-
-    }
-
-    private String handleIRI(IRI iri, int element) {
-        //TODO: cache this? It's kind of cached in getPrefix()
-        if (handleUris  ==  URL_SHORTEN) {
-            String localName = iri.getLocalName();
-            String prefix = getPrefix(iri.getNamespace());
-            return prefix + PREFIX_SEPARATOR + localName;
-        } else if (handleUris  ==  URL_IGNORE) {
-            return neo4jCapitalisation(iri.getLocalName(), element);
-        } else { //if (handleUris  ==  URL_KEEP){
-            return iri.stringValue();
-        }
-    }
-
-    private String neo4jCapitalisation(String name, int element) {
-        if( element == RELATIONSHIP){
-            return name.toUpperCase();
-        } else if( element == LABEL){
-            return name.substring(0, 1).toUpperCase() + name.substring(1);
-        } else {
-            return name;
-        }
-    }
-
-    private String getPrefix(String namespace) {
-        if (namespaces.containsKey(namespace)){
-            return namespaces.get(namespace);
-        } else{
-            namespaces.put(namespace, createPrefix());
-            return namespaces.get(namespace);
-        }
-    }
-
-    private String createPrefix() {
-        return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
-    }
-
-    private Object getObjectValue(Literal object) {
-        IRI datatype = object.getDatatype();
-        if (datatype.equals(XMLSchema.INT) ||
-                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)){
-            return object.longValue();
-        } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-                datatype.equals(XMLSchema.FLOAT)) {
-            return object.doubleValue();
-        } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-            return object.booleanValue();
-        } else {
-            // it's a string, and it can be tagged with language info.
-            // if a language filter has been defined we apply it here
-            final Optional<String> language = object.getLanguage();
-            if(langFilter == null || !language.isPresent() || (language.isPresent() && langFilter.equals(language.get()))){
-                return object.stringValue();
-            }
-            return null; //string is filtered
-        }
-    }
-
-    public int getIngestedTriples() {
-        return ingestedTriples;
-    }
     public Map<String,String> getNamespaces() {
 
         return namespaces;
@@ -335,4 +131,23 @@ class DirectStatementLoader implements RDFHandler, Callable<Integer> {
     }
 
 
+    @Override
+    protected Map<String, String> getPopularNamespaces() {
+        //get namespaces and persist them in the db
+        Map<String, String> nsList = namespaceList();
+        Map<String, Object> params = new HashMap();
+        params.put("namespaces",nsList);
+        graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
+        return nsList;
+
+    }
+
+    @Override
+    protected void periodicOperation() {
+        Util.inTx(graphdb, this);
+        totalTriplesMapped += mappedTripleCounter;
+        log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
+                totalTriplesMapped + " triples ingested so far...");
+        mappedTripleCounter = 0;
+    }
 }

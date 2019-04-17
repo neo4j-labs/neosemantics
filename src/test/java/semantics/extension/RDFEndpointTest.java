@@ -1,18 +1,11 @@
 package semantics.extension;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import static org.neo4j.helpers.collection.Iterators.count;
-import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
-import static semantics.RDFImport.PREFIX_SEPARATOR;
-
-import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
-
-import java.io.IOException;
-import java.net.URLEncoder;
-import java.util.*;
-import java.util.function.Function;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.CollectionType;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Test;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
@@ -20,25 +13,36 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.harness.TestServerBuilders;
+import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.server.HTTP;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.CollectionType;
-import com.fasterxml.jackson.databind.type.TypeFactory;
+import semantics.ModelTestUtils;
 import semantics.RDFImport;
+
+import java.io.IOException;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+import static org.neo4j.helpers.collection.Iterators.count;
+import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
+import static semantics.RDFImport.PREFIX_SEPARATOR;
 
 /**
  * Created by jbarrasa on 14/09/2016.
  */
 public class RDFEndpointTest {
 
-	private static final ObjectMapper jsonMapper = new ObjectMapper();
+    private static final ObjectMapper jsonMapper = new ObjectMapper();
 
-	private static final CollectionType collectionType = TypeFactory
-			.defaultInstance().constructCollectionType(Set.class, Map.class);
+    private static final CollectionType collectionType = TypeFactory
+            .defaultInstance().constructCollectionType(Set.class, Map.class);
 
-	@Test
+    @Test
     public void testGetNodeById() throws Exception
     {
         // Given
@@ -84,7 +88,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "describe/id?nodeid=" + id.toString());
 
-            Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
+            String expected = "[ {\n" +
                     "  \"@id\" : \"neo4j://com.neo4j/indiv#5\",\n" +
                     "  \"neo4j://com.neo4j/voc#FRIEND_OF\" : [ {\n" +
                     "    \"@id\" : \"neo4j://com.neo4j/indiv#7\"\n" +
@@ -102,11 +106,9 @@ public class RDFEndpointTest {
                     "  \"neo4j://com.neo4j/voc#name\" : [ {\n" +
                     "    \"@value\" : \"Hugo Weaving\"\n" +
                     "  } ]\n" +
-                    "} ]", collectionType);
-            Set<Map<String, String>> resultSet = jsonMapper
-            		.readValue(response.rawContent(), collectionType);
-            assertEquals( expected, resultSet );
+                    "} ]";
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
         }
     }
@@ -212,15 +214,17 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "cypher", map);
 
-            assertEquals( "<neo4j://com.neo4j/indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Category> .\n" +
+            String expected = "<neo4j://com.neo4j/indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Category> .\n" +
                     "<neo4j://com.neo4j/indiv#0> <neo4j://com.neo4j/voc#catName> \"Person\" .\n" +
                     "<neo4j://com.neo4j/indiv#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Category> .\n" +
                     "<neo4j://com.neo4j/indiv#3> <neo4j://com.neo4j/voc#catName> \"Critic\" .\n" +
                     "<neo4j://com.neo4j/indiv#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Category> .\n" +
                     "<neo4j://com.neo4j/indiv#2> <neo4j://com.neo4j/voc#catName> \"Director\" .\n" +
                     "<neo4j://com.neo4j/indiv#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Category> .\n" +
-                    "<neo4j://com.neo4j/indiv#1> <neo4j://com.neo4j/voc#catName> \"Actor\" .\n", response.rawContent() );
+                    "<neo4j://com.neo4j/indiv#1> <neo4j://com.neo4j/voc#catName> \"Actor\" .\n";
+
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
         }
     }
@@ -238,15 +242,6 @@ public class RDFEndpointTest {
                     {
                         try ( Transaction tx = graphDatabaseService.beginTx() )
                         {
-//                            String ontoCreation = "MERGE (p:Category {catName: \"Person\"})\n" +
-//                                    "MERGE (a:Category {catName: \"Actor\"})\n" +
-//                                    "MERGE (d:Category {catName: \"Director\"})\n" +
-//                                    "MERGE (c:Category {catName: \"Critic\"})\n" +
-//                                    "CREATE (a)-[:SCO]->(p)\n" +
-//                                    "CREATE (d)-[:SCO]->(p)\n" +
-//                                    "CREATE (c)-[:SCO]->(p)\n" +
-//                                    "RETURN *";
-//                            graphDatabaseService.execute(ontoCreation);
                             String dataInsertion = "CREATE (kean:Actor {name:'Keanu Reeves', born:1964})\n" +
                                     "CREATE (mtrx:Movie {title:'The Matrix', released:2001})\n" +
                                     "CREATE (dir:Director {name:'Laurence Fishburne', born:1961})\n" +
@@ -270,7 +265,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "onto");
 
-            assertEquals( "<neo4j://com.neo4j/voc#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+            String expected  = "<neo4j://com.neo4j/voc#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
                     "<neo4j://com.neo4j/voc#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
                     "<neo4j://com.neo4j/voc#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
                     "<neo4j://com.neo4j/voc#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
@@ -282,8 +277,10 @@ public class RDFEndpointTest {
                     "<neo4j://com.neo4j/voc#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://com.neo4j/voc#Movie> .\n" +
                     "<neo4j://com.neo4j/voc#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
                     "<neo4j://com.neo4j/voc#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://com.neo4j/voc#Director> .\n" +
-                    "<neo4j://com.neo4j/voc#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://com.neo4j/voc#Movie> .\n", response.rawContent() );
+                    "<neo4j://com.neo4j/voc#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://com.neo4j/voc#Movie> .\n";
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
 
         }
     }
@@ -339,9 +336,9 @@ public class RDFEndpointTest {
                     "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n" +
                     "    <https://permid.org/1-21523433750> .\n";
 
-            assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
-            		response.rawContent().replaceAll("[\n|\r]", "").trim() );
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
         }
     }
 
@@ -384,7 +381,7 @@ public class RDFEndpointTest {
 
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement"
-             + "&excludeContext=true");
+                            + "&excludeContext=true");
             //TODO Make it better
             String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<rdf:RDF\txmlns:neovoc=\"neo4j://vocabulary#\"" +
@@ -395,18 +392,17 @@ public class RDFEndpointTest {
                     "\t<label xmlns=\"http://www.w3.org/2000/01/rdf-schema#\">board agreement</label>" +
                     "</rdf:Description></rdf:RDF>";
 
-            assertEquals( expected.replaceAll("[\n|\r]", "").trim(),
-                    response.rawContent().replaceAll("[\n|\r]", "").trim() );
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
 
             //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
             response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri="
                             + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace","UTF-8")
-                            );
+            );
 
-            assertEquals("<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .",
-                    response.rawContent().replaceAll("[\n|\r]", "").trim());
+            expected = "<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .";
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
             assertEquals( 200, response.status() );
         }
     }
@@ -454,7 +450,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
-            Set<Map<String, String>> expected = jsonMapper.readValue("[ {\n" +
+            String expected = "[ {\n" +
                     "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
                     "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
                     "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
@@ -464,19 +460,16 @@ public class RDFEndpointTest {
                     "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
                     "    \"@value\" : \"Keanu Reeves\"\n" +
                     "  } ]\n" +
-                    "} ]", collectionType);
-            Set<Map<String, String>> resultSet = jsonMapper.readValue(response.rawContent(),
-            		collectionType);
-            assertEquals( expected , resultSet );
+                    "} ]";
 
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
         }
     }
 
     @Test
     public void testCypherWithBNodesSerializeAsRDFXML() throws Exception
     {
-        // Given
         try ( ServerControls server = getServerBuilder()
                 .withExtension( "/rdf", RDFEndpoint.class )
                 .withFixture( new Function<GraphDatabaseService, Void>()
@@ -504,8 +497,9 @@ public class RDFEndpointTest {
                 .newServer() )
         {
 
+            ValueFactory factory = SimpleValueFactory.getInstance();
+
             Result result = server.graph().execute( "MATCH (n:ns0"+ PREFIX_SEPARATOR +"Critic) return id(n) as id " );
-            //assertEquals( 1, count( result ) );
 
             Long id = (Long)result.next().get("id");
 
@@ -515,7 +509,9 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).POST(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",params);
 
-            assertEquals( "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+
+
+            String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
                     "<rdf:RDF\n" +
                     "\txmlns:neovoc=\"neo4j://vocabulary#\"\n" +
                     "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
@@ -534,9 +530,11 @@ public class RDFEndpointTest {
                     "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n" +
                     "</rdf:Description>\n" +
                     "\n" +
-                    "</rdf:RDF>" , response.rawContent() );
+                    "</rdf:RDF>";
 
             assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected, RDFFormat.RDFXML,response.rawContent(), RDFFormat.RDFXML));
+
         }
     }
 

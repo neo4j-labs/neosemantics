@@ -84,7 +84,7 @@ public class MicroReasoners {
     @Description("semantics.inference.getRels(node,'virtRel','>') - returns all outgoing relationships of type 'virtRel' " +
             "or its subtypes along with the target nodes.")
     public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("virtRel") String virtRel,
-                                                 @Name(value="reldir",defaultValue = "") String directionString) {
+                                            @Name(value="reldir",defaultValue = "") String directionString) {
 
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("virtRel", virtRel);

@@ -1,14 +1,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.neo4j</groupId>
 	<artifactId>neosemantics</artifactId>
-	<version>3.4.0.2</version>
+	<version>3.5.0.1</version>
 	<packaging>jar</packaging>
 	<properties>
-		<neo4j.version>3.4.7</neo4j.version>
-		<sesame.version>2.4.0</sesame.version>
+		<neo4j.version>3.5.4</neo4j.version>
+		<sesame.version>2.5.1</sesame.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -20,10 +20,10 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
-		    <groupId>org.neo4j</groupId>
-		    <artifactId>server-api</artifactId>
-		    <version>${neo4j.version}</version>
-            <scope>provided</scope>
+			<groupId>org.neo4j</groupId>
+			<artifactId>server-api</artifactId>
+			<version>${neo4j.version}</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.rdf4j</groupId>
