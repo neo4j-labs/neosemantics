@@ -31,6 +31,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     protected final boolean labellise;
     protected final boolean keepLangTag;
     protected final Set<String> multivalPropList;
+    protected final Set<String> excludedPredicatesList;
     protected Set<Statement> statements = new HashSet<>();
     protected Map<String,Map<String,Object>> resourceProps = new HashMap<>();
     protected Map<String,Set<String>> resourceLabels = new HashMap<>();
@@ -40,12 +41,19 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     protected final long commitFreq;
 
     protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls, int handleMultival,
-                                         Set<String> multivalPropUriList, boolean klt, boolean labellise, long commitFreq) {
+                                         Set<String> multivalPropUriList, Set<String> predicateExclList, boolean klt,
+                                         boolean labellise, long commitFreq) {
         this.graphdb = db;
         this.langFilter = langFilter;
         this.handleUris = handleUrls;
         if (this.handleUris==URL_MAP){
-            this.vocMappings = getImportMappingsFromDB(this.graphdb);
+            Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
+            if (mappingsTemp.containsKey(RDF.TYPE.stringValue())){
+                //a mapping on RDF.TYPE is illegal
+                mappingsTemp.remove(RDF.TYPE.stringValue());
+                log.info("Mapping on rdf:type property is not applicable in RDF import and will be discarded");
+            }
+            this.vocMappings = mappingsTemp;
         } else{
             this.vocMappings = null;
         };
@@ -53,6 +61,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         this.labellise = labellise;
         this.commitFreq = commitFreq;
         this.multivalPropList = multivalPropUriList;
+        this.excludedPredicatesList = predicateExclList;
         this.keepLangTag = klt;
     }
 
@@ -272,21 +281,24 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     @Override
     public void handleStatement(Statement st) {
         IRI predicate = st.getPredicate();
-        Resource subject = st.getSubject(); //includes blank nodes
+        Resource subject = st.getSubject();
         Value object = st.getObject();
-        if (object instanceof Literal) {
-            if(setProp(subject.stringValue(), predicate, (Literal)object)){
-                // property may be filtered because of lang filter hence the conditional increment.
+
+        if(!excludedPredicatesList.contains(predicate.stringValue())) {
+            if (object instanceof Literal) {
+                if (setProp(subject.stringValue(), predicate, (Literal) object)) {
+                    // property may be filtered because of lang filter hence the conditional increment.
+                    mappedTripleCounter++;
+                }
+            } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
+                setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
+                mappedTripleCounter++;
+            } else {
+                addResource(subject.stringValue());
+                addResource(object.stringValue());
+                addStatement(st);
                 mappedTripleCounter++;
             }
-        } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
-            setLabel(subject.stringValue(),handleIRI((IRI)object,LABEL));
-            mappedTripleCounter++;
-        } else {
-            addResource(subject.stringValue());
-            addResource(object.stringValue());
-            addStatement(st);
-            mappedTripleCounter++;
         }
         totalTriplesParsed++;
 

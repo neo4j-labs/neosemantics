@@ -477,6 +477,41 @@ public class RDFImportTest {
     }
 
     @Test
+    public void testImportFromFileWithPredFilter() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            String addMapping1 = " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
+                    "call semantics.mapping.addMappingToSchema(sch,\"WHERE\",\"location\") yield node as mapping1\n" +
+                    "call semantics.mapping.addMappingToSchema(sch,\"desc\",\"description\") yield node as mapping2\n" +
+                    "return *";
+            session.run(addMapping1);
+
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("event.json")
+                            .toURI() + "','JSON-LD',{ handleVocabUris: 'MAP', predicateExclusionList: ['http://schema.org/price','http://schema.org/priceCurrency'] })");
+            assertEquals(26L, importResults1.next().get("triplesLoaded").asLong());
+
+            StatementResult postalAddresses = session.run("MATCH (m:PostalAddress) " +
+                    "\nRETURN m.postalCode as zip");
+
+            Record next = postalAddresses.next();
+            assertEquals("95051", next.get("zip").asString());
+
+            StatementResult whereRels = session.run("MATCH (e:Event)-[:WHERE]->(p:Place) " +
+                    "\nRETURN p.name as placeName, e.desc as desc ");
+
+            next = whereRels.next();
+            assertEquals("Join us for an afternoon of Jazz with Santa Clara resident and pianist Andy Lagunoff. Complimentary food and beverages will be served.",
+                    next.get("desc").asString());
+            assertEquals("Santa Clara City Library, Central Park Library", next.get("placeName").asString());
+
+        }
+    }
+
+    @Test
     public void testStreamFromFile() throws Exception {
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 

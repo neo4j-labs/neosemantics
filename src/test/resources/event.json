@@ -1,0 +1,62 @@
+{
+  "@context": {
+    "name": "http://schema.org/name",
+    "startDate": "http://schema.org/startDate",
+    "endDate": "http://schema.org/endDate",
+    "location": "http://schema.org/location",
+    "address": "http://schema.org/address",
+    "streetAddress": "http://schema.org/streetAddress",
+    "addressLocality": "http://schema.org/addressLocality",
+    "postalCode": "http://schema.org/postalCode",
+    "addressRegion": "http://schema.org/addressRegion",
+    "addressCountry": "http://schema.org/addressCountry",
+    "image": "http://schema.org/image",
+    "description": "http://schema.org/description",
+    "offers": "http://schema.org/offers",
+    "price": "http://schema.org/price",
+    "priceCurrency": "http://schema.org/priceCurrency",
+    "url": "http://schema.org/url",
+    "availability": "http://schema.org/availability",
+    "validFrom": "http://schema.org/validFrom",
+    "performer": "http://schema.org/performer",
+    "Event": "http://schema.org/Event",
+    "Place": "http://schema.org/Place",
+    "Offer": "http://schema.org/Offer",
+    "PerformingGroup": "http://schema.org/PerformingGroup",
+    "PostalAddress": "http://schema.org/PostalAddress"
+  },
+  "@type": "Event",
+  "name": "Jan Lieberman Concert Series: Journey in Jazz",
+  "startDate": "2025-01-01T19:30",
+  "endDate": "2025-01-01T23:00",
+  "location": {
+    "@type": "Place",
+    "name": "Santa Clara City Library, Central Park Library",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "2635 Homestead Rd",
+      "addressLocality": "Santa Clara",
+      "postalCode": "95051",
+      "addressRegion": "CA",
+      "addressCountry": "US"
+    }
+  },
+  "image": [
+    "http://example.com/photos/1x1/photo.jpg",
+    "http://example.com/photos/4x3/photo.jpg",
+    "http://example.com/photos/16x9/photo.jpg"
+  ],
+  "description": "Join us for an afternoon of Jazz with Santa Clara resident and pianist Andy Lagunoff. Complimentary food and beverages will be served.",
+  "offers": {
+    "@type": "Offer",
+    "url": "http://www.example.com/event_offer/12345_201803180430",
+    "price": "30",
+    "priceCurrency": "USD",
+    "availability": "http://schema.org/InStock",
+    "validFrom": "2024-10-20T16:00"
+  },
+  "performer": {
+    "@type": "PerformingGroup",
+    "name": "Andy Lagunoff"
+  }
+}

@@ -67,6 +67,7 @@ public class RDFImport {
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
         final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final long commitSize = (props.containsKey("commitSize")?(long)props.get("commitSize"):DEFAULT_COMMIT_SIZE);
@@ -77,7 +78,8 @@ public class RDFImport {
         URLConnection urlConn;
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
                 nodeCacheSize, handleVocabUris, handleMultival, (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
-                typesToLabels, keepLangTag, languageFilter, log);
+                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)), typesToLabels, keepLangTag,
+                languageFilter, log);
         try {
             checkIndexesExist();
             urlConn = new URL(url).openConnection();
@@ -131,6 +133,7 @@ public class RDFImport {
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
         final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
@@ -140,7 +143,8 @@ public class RDFImport {
         List<Relationship> virtualRels = new ArrayList<>();
 
         StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
-                (multivalPropList==null?null:new HashSet<String>(multivalPropList)), typesToLabels, virtualNodes,
+                (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
+                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)),typesToLabels, virtualNodes,
                 virtualRels, keepLangTag, languageFilter, log);
         try {
             urlConn = new URL(url).openConnection();
@@ -201,6 +205,7 @@ public class RDFImport {
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
         final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
         final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
@@ -209,8 +214,9 @@ public class RDFImport {
         List<Relationship> virtualRels = new ArrayList<>();
 
         StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
-                (multivalPropList==null?null:new HashSet<String>(multivalPropList)), typesToLabels, virtualNodes,
-                virtualRels, keepLangTag, languageFilter, log);
+                (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
+                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)),
+                typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, log);
         try {
             InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
             RDFFormat rdfFormat = getFormat(format);
