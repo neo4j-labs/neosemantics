@@ -284,7 +284,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         Resource subject = st.getSubject();
         Value object = st.getObject();
 
-        if(!excludedPredicatesList.contains(predicate.stringValue())) {
+        if(excludedPredicatesList==null || !excludedPredicatesList.contains(predicate.stringValue())) {
             if (object instanceof Literal) {
                 if (setProp(subject.stringValue(), predicate, (Literal) object)) {
                     // property may be filtered because of lang filter hence the conditional increment.
