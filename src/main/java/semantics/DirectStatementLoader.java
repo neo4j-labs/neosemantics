@@ -24,9 +24,10 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     Cache<String, Node> nodeCache;
 
     public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-                                 int handleUrls, boolean typesToLabels, String languageFilter, Log l) {
+                                 int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
+                                 boolean typesToLabels, boolean klt, String languageFilter, Log l) {
 
-        super(db, languageFilter, handleUrls, typesToLabels, batchSize);
+        super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, klt, typesToLabels, batchSize);
         nodeCache = CacheBuilder.newBuilder()
                 .maximumSize(nodeCacheSize)
                 .build();

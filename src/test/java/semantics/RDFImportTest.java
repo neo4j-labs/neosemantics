@@ -7,6 +7,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.harness.junit.Neo4jRule;
+import semantics.mapping.MappingUtils;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -57,7 +58,7 @@ public class RDFImportTest {
 
     @Rule
     public Neo4jRule neo4j = new Neo4jRule()
-            .withProcedure( RDFImport.class );
+            .withProcedure( RDFImport.class ).withFunction( RDFImport.class ).withProcedure(MappingUtils.class);
 
     @Test
     public void testAbortIfNoIndices() throws Exception {
@@ -67,7 +68,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
-                    "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+                    "','JSON-LD',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
 
             Map<String, Object> singleResult = importResults1.single().asMap();
 
@@ -86,7 +87,8 @@ public class RDFImportTest {
             createIndices(neo4j.getGraphDatabaseService());
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: false, typesToLabels: true, commitSize: 500, " +
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD'," +
+                    "{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, " +
                     "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
             assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
             assertEquals("http://me.markus-lanthaler.com/",
@@ -106,7 +108,8 @@ public class RDFImportTest {
             createIndices(neo4j.getGraphDatabaseService());
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD'," +
+                    "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("http://me.markus-lanthaler.com/",
                     session.run("MATCH (n{ns0"+ PREFIX_SEPARATOR +"name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
@@ -131,7 +134,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                            .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
             assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals(7L,
                     session.run("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
@@ -152,7 +155,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals(7L,
                     session.run("MATCH ()-[r]->(b) WHERE type(r) CONTAINS 'relation' RETURN count(b) as count")
@@ -188,7 +191,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                            .toURI() + "','RDF/XML', { shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','RDF/XML', { handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             assertEquals(38L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals(7L,
                     session.run("MATCH ()-[r:dc" + PREFIX_SEPARATOR + "relation]->(b) RETURN count(b) as count")
@@ -221,7 +224,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
-                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("JB",
                     session.run("MATCH (jb {uri: 'http://neo4j.com/invividual/JB'}) RETURN jb.voc" + PREFIX_SEPARATOR + "name AS name")
@@ -249,7 +252,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("badUris.rdf")
-                            .toURI() + "','RDF/XML',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("JB",
                     session.run("MATCH (jb {uri: 'http://neo4j.com/invividual/JB\\'sUri'}) RETURN jb.voc"+ PREFIX_SEPARATOR +"name AS name")
@@ -271,7 +274,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'en', commitSize: 500})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, languageFilter: 'en', commitSize: 500})");
             assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("That Seventies Show",
                     session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
@@ -281,7 +284,7 @@ public class RDFImportTest {
 
             importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr', commitSize: 500})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, languageFilter: 'fr', commitSize: 500})");
             assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("Cette Série des Années Soixante-dix",
                     session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
@@ -291,7 +294,7 @@ public class RDFImportTest {
 
             importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, languageFilter: 'fr-be', commitSize: 500})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, languageFilter: 'fr-be', commitSize: 500})");
             assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("Cette Série des Années Septante",
                     session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
@@ -301,7 +304,7 @@ public class RDFImportTest {
 
             importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: true, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             // no language filter means three triples are ingested
             assertEquals(3L, importResults1.next().get("triplesLoaded").asLong());
             //but actually only the last one is kept as they overwrite each other
@@ -322,7 +325,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("opentox-example.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: true, commitSize: 500})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
             assertEquals(157L, importResults1.next().get("triplesLoaded").asLong());
             StatementResult algoNames = session.run("MATCH (n:`http://www.opentox.org/api/1.1#Algorithm`) " +
                     "\nRETURN n.`http://purl.org/dc/elements/1.1/title` AS algos ORDER By algos");
@@ -370,7 +373,7 @@ public class RDFImportTest {
             createIndices(neo4j.getGraphDatabaseService());
 
             StatementResult importResults1 = session.run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
-                    + "','JSON-LD',{ shortenUrls: false, typesToLabels: false})");
+                    + "','JSON-LD',{ handleVocabUris: 'KEEP', typesToLabels: false})");
             Map<String, Object> next = importResults1.next().asMap();
             final List<Node> nodes = (List<Node>) next.get("nodes");
             assertEquals(3, nodes.size());
@@ -387,7 +390,7 @@ public class RDFImportTest {
             createIndices(neo4j.getGraphDatabaseService());
 
             StatementResult importResults1 = session.run("CALL semantics.previewRDFSnippet('" + turtleFragment
-                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
+                    + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, languageFilter: 'fr'})");
             Record next = importResults1.next();
             assertEquals(1, next.get("nodes").size());
             assertEquals("Cette Série des Années Soixante-dix", next.get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
@@ -395,7 +398,7 @@ public class RDFImportTest {
 
 
             importResults1 = session.run("CALL semantics.previewRDFSnippet('" + turtleFragment
-                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
+                    + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, languageFilter: 'en'})");
             assertEquals("That Seventies Show", importResults1.next().get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
 
         }
@@ -410,7 +413,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
-                            .toURI() + "','RDF/XML',{ shortenUrls: false, typesToLabels: false})");
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'KEEP', typesToLabels: false})");
             Map<String, Object> next = importResults1.next().asMap();
             final List<Node> nodes = (List<Node>) next.get("nodes");
             assertEquals(15, nodes.size());
@@ -428,7 +431,7 @@ public class RDFImportTest {
 
             StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
-                            .toURI() + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'fr'})");
+                            .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, languageFilter: 'fr', keepLangTag : false })");
             Record next = importResults1.next();
 
             assertEquals(1, next.get("nodes").size());
@@ -438,8 +441,38 @@ public class RDFImportTest {
 
             importResults1 = session.run("CALL semantics.previewRDF('" +
                     RDFImportTest.class.getClassLoader().getResource("multilang.ttl").toURI()
-                    + "','Turtle',{ shortenUrls: false, typesToLabels: false, languageFilter: 'en'})");
+                    + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, languageFilter: 'en', keepLangTag : false })");
             assertEquals("That Seventies Show", importResults1.next().get("nodes").asList(ofNode()).get(0).get("http://example.org/vocab/show/localName").asString());
+        }
+    }
+
+    @Test
+    public void testImportFromFileWithMapping() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            String addMapping1 = " call semantics.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield node as sch\n" +
+                    "call semantics.mapping.addMappingToSchema(sch,\"uniqueName\",\"name\") yield node as mapping1\n" +
+                    "return *";
+            session.run(addMapping1);
+            String addMapping2 = " call semantics.mapping.addSchema(\"http://neo4j.com/category/\",\"cats\") yield node as sch\n" +
+                    "call semantics.mapping.addMappingToSchema(sch,\"Media\",\"Publication\") yield node as mapping1\n" +
+                    "return *";
+            session.run(addMapping2);
+
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
+                            .toURI() + "','RDF/XML',{ handleVocabUris: 'MAP'})");
+            assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+            StatementResult mediaNames = session.run("MATCH (m:Media) " +
+                    "\nRETURN m.uniqueName AS nm, m.uri AS uri");
+
+            Record next = mediaNames.next();
+            assertEquals("The Financial Times", next.get("nm").asString());
+            assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
+
         }
     }
 
@@ -460,6 +493,35 @@ public class RDFImportTest {
             assertEquals(true, next.get("isLiteral"));
             assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("literalType"));
             assertNull(next.get("literalLang"));
+        }
+    }
+
+    @Test
+    public void testGetLangUDF() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("return semantics.getLangValue('fr',[\"The Hague@en\", \"Den Haag@nl\", \"La Haye@fr\"]) as val");
+            Map<String, Object> next = importResults1.next().asMap();
+            assertEquals("La Haye", next.get("val"));
+
+            importResults1 = session.run("return semantics.getLangValue('es',[\"The Hague@en\", \"Den Haag@nl\", \"La Haye@fr\"]) as val");
+            next = importResults1.next().asMap();
+            assertEquals(null, next.get("val"));
+
+            importResults1 = session.run("return semantics.getLangValue('fr','La Haye@fr') as val");
+            next = importResults1.next().asMap();
+            assertEquals("La Haye", next.get("val"));
+
+            importResults1 = session.run("return semantics.getLangValue('es','La Haye@fr') as val");
+            next = importResults1.next().asMap();
+            assertEquals(null, next.get("val"));
+
+            importResults1 = session.run("return semantics.getLangValue('es',[2, 45, 3]) as val");
+            next = importResults1.next().asMap();
+            assertEquals(null, next.get("val"));
         }
     }
 

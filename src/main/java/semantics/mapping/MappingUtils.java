@@ -139,6 +139,23 @@ public class MappingUtils {
         return db.execute(cypher, params).stream().map(MappingDesc::new);
     }
 
+    public static Map<String, String> getExportMappingsFromDB(GraphDatabaseService gds) {
+        Map<String, String> mappings = new HashMap<>();
+        gds.execute("MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key as key, mp._local as local, mns._ns as ns ").
+                forEachRemaining(result -> mappings.put((String)result.get("key"),
+                        (String)result.get("ns") + (String)result.get("local")));
+        return mappings;
+    }
+
+    public static Map<String, String> getImportMappingsFromDB(GraphDatabaseService gds) {
+        Map<String, String> mappings = new HashMap<>();
+        gds.execute("MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key as key, mp._local as local, mns._ns as ns ").
+                forEachRemaining(result -> mappings.put((String)result.get("ns") + (String)result.get("local"),
+                        (String)result.get("key")));
+        return mappings;
+    }
+
+
     public class StringOutput {
 
         public String output;

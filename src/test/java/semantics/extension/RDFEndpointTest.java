@@ -249,7 +249,7 @@ public class RDFEndpointTest {
                                     "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
                                     "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
                                     "CREATE (cri)-[:RATED]->(mtrx)\n" +
-                                    "RETURN *";;
+                                    "RETURN *";
                             graphDatabaseService.execute(dataInsertion);
                             tx.success();
                         }
@@ -266,9 +266,13 @@ public class RDFEndpointTest {
                     HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "onto");
 
             String expected  = "<neo4j://com.neo4j/voc#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://com.neo4j/voc#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\".\n" +
                     "<neo4j://com.neo4j/voc#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://com.neo4j/voc#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\".\n" +
                     "<neo4j://com.neo4j/voc#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://com.neo4j/voc#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\".\n" +
                     "<neo4j://com.neo4j/voc#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://com.neo4j/voc#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\".\n" +
                     "<neo4j://com.neo4j/voc#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
                     "<neo4j://com.neo4j/voc#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://com.neo4j/voc#Actor> .\n" +
                     "<neo4j://com.neo4j/voc#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://com.neo4j/voc#Movie> .\n" +

@@ -29,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static semantics.RDFImport.PREFIX_SEPARATOR;
+import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 /**
  * Created by jbarrasa on 08/09/2016.
@@ -67,7 +68,7 @@ public class RDFEndpoint {
                     SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
                     handleNamespaces(writer,gds);
                     writer.startRDF();
-                    Map<String, String> mappings = getMappingsFromDB(gds);
+                    Map<String, String> mappings = getExportMappingsFromDB(gds);
                     while (result.hasNext()) {
                         Map<String, Object> row = result.next();
                         Set<Map.Entry<String, Object>> entries = row.entrySet();
@@ -373,7 +374,7 @@ public class RDFEndpoint {
                 handleNamespaces(writer, gds);
                 writer.startRDF();
                 try (Transaction tx = gds.beginTx()) {
-                    Map<String, String> mappings = getMappingsFromDB(gds);
+                    Map<String, String> mappings = getExportMappingsFromDB(gds);
                     Node node = (Node) gds.getNodeById(idParam);
                     processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo!=null);
                     if (excludeContextParam == null) {
@@ -440,19 +441,11 @@ public class RDFEndpoint {
         }
     }
 
-    private void handleNamespaces(RDFWriter writer, @Context GraphDatabaseService gds) {
+    private void handleNamespaces(RDFWriter writer, GraphDatabaseService gds) {
         writer.handleNamespace("neovoc", BASE_VOCAB_NS);
         writer.handleNamespace("neoind", BASE_INDIV_NS);
         gds.execute("MATCH (mns:_MapNs) WHERE exists(mns._prefix) RETURN mns._ns as ns, mns._prefix as prefix").
                 forEachRemaining(result -> writer.handleNamespace((String)result.get("prefix"), (String)result.get("ns")));
-    }
-
-    private Map<String, String> getMappingsFromDB(@Context GraphDatabaseService gds) {
-        Map<String, String> mappings = new HashMap<>();
-        gds.execute("MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key as key, mp._local as local, mns._ns as ns ").
-                forEachRemaining(result -> mappings.put((String)result.get("key"),
-                        (String)result.get("ns") + (String)result.get("local")));
-        return mappings;
     }
 
     @GET
@@ -478,11 +471,14 @@ public class RDFEndpoint {
                 writer.startRDF();
 
                 Result res = gds.execute("CALL db.schema() ");
+
                 Map<String, Object> next = res.next();
                 List<Node> nodeList = (List<Node>) next.get("nodes");
                 nodeList.forEach(node -> {
-                    IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, node.getAllProperties().get("name").toString());
+                    String catName = node.getAllProperties().get("name").toString();
+                    IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
                     writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+                    writer.handleStatement(valueFactory.createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
                 });
 
                 List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");

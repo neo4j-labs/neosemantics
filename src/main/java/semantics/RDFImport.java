@@ -20,6 +20,8 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -38,7 +40,11 @@ public class RDFImport {
     public static final String PREFIX_SEPARATOR = "__";
     static final int URL_SHORTEN = 0;
     static final int URL_IGNORE = 1;
-    static final int URL_KEEP = 2;
+    static final int URL_MAP = 2;
+    static final int URL_KEEP = 3;
+    static final int PROP_OVERWRITE = 0;
+    static final int PROP_ARRAY = 1;
+    static final int PROP_REIFY = 2;
 
     static final int RELATIONSHIP = 0;
     static final int LABEL = 1;
@@ -58,9 +64,11 @@ public class RDFImport {
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
                                            @Name("props") Map<String, Object> props) {
 
-        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
-        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
+        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
+        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final long commitSize = (props.containsKey("commitSize")?(long)props.get("commitSize"):DEFAULT_COMMIT_SIZE);
         final long nodeCacheSize = (props.containsKey("nodeCacheSize")?(long)props.get("nodeCacheSize"):DEFAULT_NODE_CACHE_SIZE);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
@@ -68,7 +76,8 @@ public class RDFImport {
         ImportResults importResults = new ImportResults();
         URLConnection urlConn;
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
-                nodeCacheSize, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, languageFilter, log);
+                nodeCacheSize, handleVocabUris, handleMultival, (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
+                typesToLabels, keepLangTag, languageFilter, log);
         try {
             checkIndexesExist();
             urlConn = new URL(url).openConnection();
@@ -91,20 +100,48 @@ public class RDFImport {
         return Stream.of(importResults);
     }
 
+    private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
+        if (handleVocUrisAsText.equals("SHORTEN")){
+            return 0;
+        } else if(handleVocUrisAsText.equals("IGNORE")){
+            return 1;
+        } else if (handleVocUrisAsText.equals("MAP")){
+            return 2;
+        } else { //KEEP
+            return 3;
+        }
+    }
+
+    private int getHandleMultivalAsInt(String ignoreUrlsAsText) {
+        if (ignoreUrlsAsText.equals("OVERWRITE")){
+            return 0;
+        } else if(ignoreUrlsAsText.equals("ARRAY")){
+            return 1;
+        } else if (ignoreUrlsAsText.equals("REIFY")){
+            return 2;
+        } else { //HYBRID
+            return 3;
+        }
+    }
+
     @Procedure(mode = Mode.READ)
     public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
                                           @Name("props") Map<String, Object> props) {
 
-        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
-        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
+        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
+        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         URLConnection urlConn;
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, virtualNodes, virtualRels, languageFilter, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
+                (multivalPropList==null?null:new HashSet<String>(multivalPropList)), typesToLabels, virtualNodes,
+                virtualRels, keepLangTag, languageFilter, log);
         try {
             urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
@@ -132,13 +169,7 @@ public class RDFImport {
     public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
                                                @Name("props") Map<String, Object> props) {
 
-        final boolean shortenUrls = (props.containsKey("shortenUrls")?(boolean)props.get("shortenUrls"):DEFAULT_SHORTEN_URLS);
-        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
-        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
-
         URLConnection urlConn;
-        Map<String,Node> virtualNodes = new HashMap<>();
-        List<Relationship> virtualRels = new ArrayList<>();
 
         StatementStreamer statementStreamer = new StatementStreamer();
         try {
@@ -167,15 +198,19 @@ public class RDFImport {
     public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
                                                  @Name("props") Map<String, Object> props) {
 
-        final int handleUrls = (props.containsKey("shortenUrls")?((boolean)props.get("shortenUrls")?0:2):0);
-        final int ignoreUrls = (props.containsKey("ignoreUrls")?((boolean)props.get("ignoreUrls")?1:0):0);
+        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
+        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
         final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
+        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
-        StatementPreviewer statementViewer = new StatementPreviewer(db, (handleUrls>ignoreUrls?handleUrls:ignoreUrls), typesToLabels, virtualNodes, virtualRels, languageFilter, log);
+        StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
+                (multivalPropList==null?null:new HashSet<String>(multivalPropList)), typesToLabels, virtualNodes,
+                virtualRels, keepLangTag, languageFilter, log);
         try {
             InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
             RDFFormat rdfFormat = getFormat(format);
@@ -203,6 +238,28 @@ public class RDFImport {
     @UserFunction
     public String getIRINamespace(@Name("url") String url) {
         return url.substring(0,URIUtil.getLocalNameIndex(url));
+    }
+
+    @UserFunction
+    public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
+        Pattern p = Pattern.compile("^(.*)@([a-z,\\-]+)$");
+        if (values instanceof List) {
+            for (Object val : (List<Object>) values) {
+                if(val instanceof String) {
+                    //if not a string lang makes no sense
+                    Matcher m = p.matcher((String)val);
+                    if (m.matches() && m.group(2).equals(lang)) {
+                        return m.group(1);
+                    }
+                }
+            }
+        } else if (values instanceof String){
+            Matcher m = p.matcher((String)values);
+            if (m.matches() && m.group(2).equals(lang)) {
+                return m.group(1);
+            }
+        }
+        return null;
     }
 
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {

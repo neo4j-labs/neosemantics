@@ -12,6 +12,7 @@ import org.neo4j.logging.Log;
 import java.util.*;
 
 import static semantics.RDFImport.*;
+import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
 
 /**
@@ -20,12 +21,16 @@ import static semantics.RDFImport.*;
 
 abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
+    protected final Map<String, String> vocMappings;
     protected GraphDatabaseService graphdb;
     protected Log log;
     protected Map<String,String> namespaces =  new HashMap<>();
     protected final String langFilter;
     protected final int handleUris;
+    protected final int handleMultival;
     protected final boolean labellise;
+    protected final boolean keepLangTag;
+    protected final Set<String> multivalPropList;
     protected Set<Statement> statements = new HashSet<>();
     protected Map<String,Map<String,Object>> resourceProps = new HashMap<>();
     protected Map<String,Set<String>> resourceLabels = new HashMap<>();
@@ -34,12 +39,21 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     protected int mappedTripleCounter = 0;
     protected final long commitFreq;
 
-    protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls, boolean labellise, long commitFreq) {
+    protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls, int handleMultival,
+                                         Set<String> multivalPropUriList, boolean klt, boolean labellise, long commitFreq) {
         this.graphdb = db;
         this.langFilter = langFilter;
         this.handleUris = handleUrls;
+        if (this.handleUris==URL_MAP){
+            this.vocMappings = getImportMappingsFromDB(this.graphdb);
+        } else{
+            this.vocMappings = null;
+        };
+        this.handleMultival = handleMultival;
         this.labellise = labellise;
         this.commitFreq = commitFreq;
+        this.multivalPropList = multivalPropUriList;
+        this.keepLangTag = klt;
     }
 
 
@@ -81,10 +95,11 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
 
     String nextPrefix() {
+
         return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
     }
 
-    protected Object getObjectValue(Literal object) {
+    protected Object getObjectValue(Literal object, boolean keepLangTag) {
         IRI datatype = object.getDatatype();
         if (datatype.equals(XMLSchema.INT) ||
                 datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)){
@@ -95,9 +110,10 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         } else if (datatype.equals(XMLSchema.BOOLEAN)) {
             return object.booleanValue();
         } else {
+            //String or no datatype => String
             final Optional<String> language = object.getLanguage();
             if(langFilter == null || !language.isPresent() || (language.isPresent() && langFilter.equals(language.get()))){
-                return object.stringValue();
+                return object.stringValue() + (keepLangTag&&language.isPresent()? "@" + language.get(): "");
             }
             return null;
         }
@@ -109,14 +125,16 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
 
 
-    protected String handleIRI(IRI iri, int element) {
-        //TODO: cache this? It's kind of cached in getPrefix()
+    protected String handleIRI(IRI iri, int elementType) {
+        //TODO: would caching this improve perf? It's kind of cached in getPrefix()
         if (handleUris  ==  URL_SHORTEN) {
             String localName = iri.getLocalName();
             String prefix = getPrefix(iri.getNamespace());
             return prefix + PREFIX_SEPARATOR + localName;
         } else if (handleUris  ==  URL_IGNORE) {
-            return neo4jCapitalisation(iri.getLocalName(), element);
+            return neo4jCapitalisation(iri.getLocalName(), elementType);
+        } else if (handleUris  ==  URL_MAP) {
+            return mapElement(iri, elementType, null);
         } else { //if (handleUris  ==  URL_KEEP){
             return iri.stringValue();
         }
@@ -131,6 +149,19 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
             return name;
         }
     }
+
+
+    private String mapElement(IRI iri, int elementType, String mappingId) {
+        //Placeholder for mapping based data load
+        //if mappingId is null use default mapping
+        if(this.vocMappings.containsKey(iri.stringValue())){
+            return this.vocMappings.get(iri.stringValue());
+        } else {
+            //if no mapping defined, default to 'IGNORE'
+            return neo4jCapitalisation(iri.getLocalName(), elementType);
+        }
+    }
+
 
     @Override
     public void startRDF() throws RDFHandlerException {
@@ -173,18 +204,49 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         return props;
     }
 
-    protected void setProp(String subjectUri, String propName, Object propValue){
+    protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw){
         Map<String, Object> props;
 
-        if(!resourceProps.containsKey(subjectUri)){
-            props = initialiseProps(subjectUri);
-            initialiseLabels(subjectUri);
-        } else {
-            props = resourceProps.get(subjectUri);
+        String propName = handleIRI(propertyIRI, PROPERTY);
+
+        Object propValue = getObjectValue(propValueRaw, keepLangTag); //this will come from config var
+
+        if (propValue!= null) {
+            if (!resourceProps.containsKey(subjectUri)) {
+                props = initialiseProps(subjectUri);
+                initialiseLabels(subjectUri);
+            } else {
+                props = resourceProps.get(subjectUri);
+            }
+
+            if (handleMultival == PROP_OVERWRITE) {
+                // Ok for single valued props. If applied to multivalued ones
+                // only the last value read is kept.
+                props.put(propName, propValue);
+            } else if (handleMultival == PROP_ARRAY) {
+                if (multivalPropList == null || (multivalPropList != null && multivalPropList.contains(propertyIRI.stringValue()))) {
+                    if (props.containsKey(propName)) {
+                        // TODO We're assuming it's an array. If we run this load on a pre-existing dataset
+                        // potentially with data that's not an array, we'd have to check datatypes
+                        // and deal with it.
+                        List<Object> propVals = (List<Object>) props.get(propName);
+                        propVals.add(propValue);
+                    } else {
+                        List<Object> propVals = new ArrayList<>();
+                        propVals.add(propValue);
+                        props.put(propName, propVals);
+                    }
+                } else {
+                    //if handleMultival set to ARRAY but prop not in list, then default to overwrite.
+                    props.put(propName, propValue);
+                }
+            }
+            //  An option to reify multivalued property vals (literal nodes?)
+            //  else if (handleMultival == PROP_REIFY) {
+            //      //do reify
+            //  }
         }
-        // we are overwriting multivalued properties.
-        // An array should be created. Check that all data types are compatible.
-        props.put(propName, propValue);
+        return propValue!=null;
     }
 
     protected void setLabel(String subjectUri, String label){
@@ -213,9 +275,8 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         Resource subject = st.getSubject(); //includes blank nodes
         Value object = st.getObject();
         if (object instanceof Literal) {
-            final Object literalValue = getObjectValue((Literal) object);
-            if (literalValue != null) {
-                setProp(subject.stringValue(), handleIRI(predicate,PROPERTY), literalValue);
+            if(setProp(subject.stringValue(), predicate, (Literal)object)){
+                // property may be filtered because of lang filter hence the conditional increment.
                 mappedTripleCounter++;
             }
         } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
