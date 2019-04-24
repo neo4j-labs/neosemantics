@@ -5,13 +5,16 @@ import com.google.common.cache.CacheBuilder;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
+import static org.apache.commons.lang3.ArrayUtils.toArray;
 import static semantics.RDFImport.RELATIONSHIP;
 
 /**
@@ -21,6 +24,7 @@ import static semantics.RDFImport.RELATIONSHIP;
 class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
     public static final Label RESOURCE = Label.label("Resource");
+    public static final String[] EMPTY_ARRAY = new String[0];
     Cache<String, Node> nodeCache;
 
     public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
@@ -59,6 +63,16 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         return namespaces;
     }
 
+    // Stolen from APOC :)
+    private Object toPropertyValue(Object value) {
+        if (value instanceof Iterable) {
+            Iterable it = (Iterable) value;
+            Object first = Iterables.firstOrNull(it);
+            if (first==null) return EMPTY_ARRAY;
+            return Iterables.asArray(first.getClass(), it);
+        }
+        return value;
+    }
 
     @Override
     public Integer call() throws Exception {
@@ -79,7 +93,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
             });
 
             entry.getValue().forEach( l -> node.addLabel(Label.label(l)));
-            resourceProps.get(entry.getKey()).forEach(node::setProperty);
+            resourceProps.get(entry.getKey()).forEach( (k, v) -> { if (v instanceof List) {
+                node.setProperty(k,toPropertyValue(v));
+            } else {
+                node.setProperty(k,v);
+            }
+            });
         }
 
         for(Statement st:statements){

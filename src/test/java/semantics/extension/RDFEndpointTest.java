@@ -386,7 +386,7 @@ public class RDFEndpointTest {
             HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
                     HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement"
                             + "&excludeContext=true");
-            //TODO Make it better
+
             String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
                     "<rdf:RDF\txmlns:neovoc=\"neo4j://vocabulary#\"" +
                     "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">" +
@@ -408,6 +408,59 @@ public class RDFEndpointTest {
             expected = "<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .";
             assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
             assertEquals( 200, response.status() );
+        }
+    }
+
+
+    @Test
+    public void testNodeByUriAfterImportWithMultilang() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withProcedure(RDFImport.class)
+                .withExtension( "/rdf", RDFEndpoint.class )
+                .withFixture( new Function<GraphDatabaseService, Void>()
+                {
+                    @Override
+                    public Void apply( GraphDatabaseService graphDatabaseService ) throws RuntimeException
+                    {
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+
+                            tx.success();
+                        }catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                                    RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
+                                            .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})");
+
+                            tx.success();
+                        }catch (Exception e){
+                            fail(e.getMessage());
+                        }
+                        return null;
+                    }
+                } )
+                .newServer() )
+        {
+
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=http://example.org/vocab/show/218");
+
+            String expected = "@prefix show: <http://example.org/vocab/show/> .\n" +
+                    "show:218 show:localName \"That Seventies Show\"@en .                 # literal with a language tag\n" +
+                    "show:218 show:localName 'Cette Série des Années Soixante-dix'@fr . # literal delimited by single quote\n" +
+                    "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
+
+            assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+
         }
     }
 

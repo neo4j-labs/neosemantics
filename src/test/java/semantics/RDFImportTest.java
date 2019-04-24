@@ -19,6 +19,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.neo4j.driver.v1.Values.ofNode;
+import static org.neo4j.driver.v1.Values.ofString;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 
 /**
@@ -307,12 +308,35 @@ public class RDFImportTest {
                             .toURI() + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
             // no language filter means three triples are ingested
             assertEquals(3L, importResults1.next().get("triplesLoaded").asLong());
-            //but actually only the last one is kept as they overwrite each other
-            //TODO: Find a consistent solution for this problem
+            //default option is overwrite, so only the last value is kept
             assertEquals("Cette Série des Années Septante",
                     session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) RETURN t.voc"+ PREFIX_SEPARATOR +"localName AS name")
                             .next().get("name").asString());
 
+        }
+    }
+
+    @Test
+    public void testImportMultivalLangTag() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+            String importCypher = "CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
+                            .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})";
+            StatementResult importResults1 = session.run(importCypher);
+            Record next = importResults1.next();
+
+            assertEquals(3, next.get("triplesLoaded").asInt());
+
+
+            importResults1 = session.run("match (n:Resource) return n.ns0__localName as all, semantics.getLangValue('en',n.ns0__localName) as en_name, " +
+                    "semantics.getLangValue('fr',n.ns0__localName) as fr_name, semantics.getLangValue('fr-be',n.ns0__localName) as frbe_name");
+            next = importResults1.next();
+            assertEquals("That Seventies Show", next.get("en_name").asString());
+            assertEquals("Cette Série des Années Soixante-dix", next.get("fr_name").asString());
+            assertEquals("Cette Série des Années Septante", next.get("frbe_name").asString());
         }
     }
 
@@ -557,6 +581,13 @@ public class RDFImportTest {
             importResults1 = session.run("return semantics.getLangValue('es',[2, 45, 3]) as val");
             next = importResults1.next().asMap();
             assertEquals(null, next.get("val"));
+
+            session.run("create (n:Thing { prop: [\"That Seventies Show@en\", \"Cette Série des Années Soixante-dix@fr\", \"Cette Série des Années Septante@fr-be\"] })");
+            importResults1 = session.run("match (n:Thing) return semantics.getLangValue('en',n.prop) as en_name, semantics.getLangValue('fr',n.prop) as fr_name, semantics.getLangValue('fr-be',n.prop) as frbe_name");
+            next = importResults1.next().asMap();
+            assertEquals("Cette Série des Années Soixante-dix", next.get("fr_name"));
+            assertEquals("That Seventies Show", next.get("en_name"));
+            assertEquals("Cette Série des Années Septante", next.get("frbe_name"));
         }
     }
 

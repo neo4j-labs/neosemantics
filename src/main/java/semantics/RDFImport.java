@@ -250,13 +250,20 @@ public class RDFImport {
     public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
         Pattern p = Pattern.compile("^(.*)@([a-z,\\-]+)$");
         if (values instanceof List) {
-            for (Object val : (List<Object>) values) {
-                if(val instanceof String) {
-                    //if not a string lang makes no sense
-                    Matcher m = p.matcher((String)val);
+            if (((List)values).get(0) instanceof String) {
+                for (Object val : (List<String>) values) {
+                    Matcher m = p.matcher((String) val);
                     if (m.matches() && m.group(2).equals(lang)) {
                         return m.group(1);
                     }
+                }
+            }
+        } else if (values instanceof String[]) {
+            String[] valuesAsArray = (String[])values;
+            for (int i=0;i<valuesAsArray.length;i++) {
+                Matcher m = p.matcher(valuesAsArray[i]);
+                if (m.matches() && m.group(2).equals(lang)) {
+                    return m.group(1);
                 }
             }
         } else if (values instanceof String){

@@ -48,6 +48,7 @@ public class RDFEndpoint {
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
+    private final Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
 
     @POST
     @Path("/cypher")
@@ -501,7 +502,7 @@ public class RDFEndpoint {
     private Literal createTypedLiteral(SimpleValueFactory valueFactory, Object value) {
         Literal result = null;
         if (value instanceof String) {
-            result = valueFactory.createLiteral((String) value);
+            result = getLiteralWithTagIfPresent((String)value,valueFactory);
         } else if (value instanceof Integer) {
             result = valueFactory.createLiteral((Integer) value);
         } else if (value instanceof Long) {
@@ -513,11 +514,20 @@ public class RDFEndpoint {
         } else if (value instanceof Boolean) {
             result = valueFactory.createLiteral((Boolean) value);
         } else {
-            // default?
+            // default to string
             result = valueFactory.createLiteral("" + value);
         }
 
         return result;
+    }
+
+    private Literal getLiteralWithTagIfPresent(String value, ValueFactory vf) {
+        Matcher m = langTagPattern.matcher(value);
+        if(m.matches()){
+            return vf.createLiteral(m.group(1), m.group(2));
+        } else {
+            return vf.createLiteral(value);
+        }
     }
 
 
