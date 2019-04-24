@@ -62,6 +62,7 @@ public class LiteOntologyImporterTest {
         }
 
     }
+
     @Test
     public void liteOntoImportClassHierarchy() throws Exception{
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -73,6 +74,22 @@ public class LiteOntologyImporterTest {
                     "','RDF/XML')");
 
             assertEquals(1L, session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+                    " RETURN count(p) AS count").next().get("count").asLong());
+        }
+    }
+
+
+    @Test
+    public void liteOntoImportPropHierarchy() throws Exception{
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+
+            StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+                    LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
+                    "','RDF/XML')");
+
+            assertEquals(1L, session.run("MATCH p=(:Property{name:'prop1'})-[:SPO]->(:Property{name:'superprop'})" +
                     " RETURN count(p) AS count").next().get("count").asLong());
         }
     }

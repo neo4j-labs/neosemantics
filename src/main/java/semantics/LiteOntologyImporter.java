@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -39,7 +40,8 @@ public class LiteOntologyImporter {
 
 
     @Procedure(mode = Mode.WRITE)
-    public Stream<ImportResults> liteOntoImport(@Name("url") String url, @Name("format") String format) {
+    public Stream<ImportResults> liteOntoImport(@Name("url") String url, @Name("format") String format,
+                                                @Name(value="props",defaultValue = "{}") Map<String, Object> props) {
         ImportResults importResults = new ImportResults();
         URL documentUrl;
         int classesLoaded = 0;
@@ -47,12 +49,15 @@ public class LiteOntologyImporter {
         int objPropsLoaded = 0;
         int propsLoaded = 0;
         try {
-            documentUrl = new URL(url);
-            InputStream inputStream = documentUrl.openStream();
+            URLConnection urlConn = new URL(url).openConnection();
+            if (props.containsKey("headerParams")) {
+                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            }
+            InputStream inputStream = urlConn.getInputStream();
             RDFParser rdfParser = Rio.createParser(getFormat(format));
             Model model = new LinkedHashModel();
             rdfParser.setRDFHandler(new StatementCollector(model));
-            rdfParser.parse(inputStream, documentUrl.toString());
+            rdfParser.parse(inputStream, url);
             classesLoaded = extractClasses(model);
             objPropsLoaded = extractProps(model, OWL.OBJECTPROPERTY);
             datatypePropsLoaded = extractProps(model, OWL.DATATYPEPROPERTY);
@@ -91,6 +96,11 @@ public class LiteOntologyImporter {
                 db.execute(cypher, params);
                 propsLoaded++;
                 extractDomainAndRange(model, propResource, propType);
+            }
+        }
+
+        for ( Resource propResource : allDatatypeProps) {
+            if (!(propResource instanceof BNode)) {
                 extractPropertyHierarchy(model, propResource, propType);
             }
         }
