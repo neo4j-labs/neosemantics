@@ -560,6 +560,34 @@ public class RDFImportTest {
         }
     }
 
+    @Test
+    public void testReificationImport() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("reification.ttl")
+                            .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
+            assertEquals(25L, importResults1.next().get("triplesLoaded").asLong());
+            StatementResult dates = session.run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
+                    "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
+
+            assertEquals("2019-09-01", dates.next().get("fromDates").asString());
+            assertEquals("2016-09-01", dates.next().get("fromDates").asString());
+
+            StatementResult statements = session.run("MATCH (statement)\n" +
+                    "WHERE (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#subject`]->()\n" +
+                    "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate`]->()\n" +
+                    "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#object`]->()\n" +
+                    "RETURN statement.uri AS statement ORDER BY statement");
+
+            assertEquals("http://example.com/studyInformation1", statements.next().get("statement").asString());
+            assertEquals("http://example.com/studyInformation2", statements.next().get("statement").asString());
+        }
+    }
+
     private void createIndices(GraphDatabaseService db) {
         db.execute("CREATE INDEX ON :Resource(uri)");
     }
