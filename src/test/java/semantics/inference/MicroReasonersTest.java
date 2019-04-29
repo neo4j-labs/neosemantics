@@ -36,7 +36,7 @@ public class MicroReasonersTest {
     }
 
     @Test
-    public void testGetNodes() throws Exception {
+    public void testGetNodesDefault() throws Exception {
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
             Session session = driver.session();
@@ -56,15 +56,37 @@ public class MicroReasonersTest {
     }
 
     @Test
+    public void testGetNodesCustomHierarchy() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+
+            session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
+            session.run("CREATE (b:Class { cname: \"B\"}) CREATE (a:Class { cname: \"A\"})-[:SCO]->(b) ");
+            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B', { catLabelName: 'Class', catNamePropName: 'cname', subCatRelName: 'SCO'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            assertEquals(true, results.hasNext());
+            Record next = results.next();
+            Set<String> expectedNodeIds = new HashSet<String>();
+            expectedNodeIds.add("iama");
+            expectedNodeIds.add("iamb");
+            assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
+            assertEquals(2L, next.get("ct").asLong());
+            assertEquals(false, results.hasNext());
+        }
+    }
+
+    @Test
     public void testGetNodesLinkedTo() throws Exception {
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
             Session session = driver.session();
 
             session.run("CREATE (b:Thing {id:'iamb'}) CREATE (a:Thing {id: 'iama' }) ");
-            session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SCO]->(b) ");
-            session.run("MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
-            StatementResult results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SLO]->(b) ");
+            session.run("MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) " +
+                    "CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
+            StatementResult results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat) YIELD node " +
+                    "RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
@@ -89,7 +111,7 @@ public class MicroReasonersTest {
             assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
             assertEquals(2L, next.get("ct").asLong());
             assertEquals(false, results.hasNext());
-            session.run("MATCH (a)-[sco:SCO]->(b) CREATE (a)-[:SUBCAT_OF]->(b) DELETE sco");
+            session.run("MATCH (a)-[sco:SLO]->(b) CREATE (a)-[:SUBCAT_OF]->(b) DELETE sco");
 
             results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, { inCatRelName: 'TYPE', subCatRelName: 'SUBCAT_OF'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
@@ -130,7 +152,7 @@ public class MicroReasonersTest {
 
             session.run("CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
             session.run("CREATE (n:Relationship { name: 'REL1'})-[:SRO]->(:Relationship { name: 'GENERIC'})");
-            StatementResult results = session.run("MATCH (b:B) CALL semantics.inference.getRels(b,'GENERIC','>') YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+            StatementResult results = session.run("MATCH (b:B) CALL semantics.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             assertEquals("iamb", next.get("source").asString());
@@ -188,7 +210,7 @@ public class MicroReasonersTest {
             Session session = driver.session();
 
             session.run("CREATE (b:Thing {id:'iamb'}) CREATE (a:Thing {id: 'iama' }) ");
-            session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SCO]->(b) ");
+            session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SLO]->(b) ");
             session.run("MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
             StatementResult results = session.run("MATCH (bcat:Category)<-[:IN_CAT]-(b:Thing {id:'iamb'}) RETURN bcat.name as inCat");
             assertEquals(true, results.hasNext());
