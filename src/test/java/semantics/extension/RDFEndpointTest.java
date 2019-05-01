@@ -290,6 +290,62 @@ public class RDFEndpointTest {
     }
 
     @Test
+    public void testontoOnRDF() throws Exception
+    {
+        // Given
+        try ( ServerControls server = getServerBuilder()
+                .withExtension( "/rdf", RDFEndpoint.class )
+                .withFixture( new Function<GraphDatabaseService, Void>()
+                {
+                    @Override
+                    public Void apply( GraphDatabaseService graphDatabaseService ) throws RuntimeException
+                    {
+                        try ( Transaction tx = graphDatabaseService.beginTx() )
+                        {
+                            String nsDefCreation = "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n" +
+                                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+                            graphDatabaseService.execute(nsDefCreation);
+                            String dataInsertion = "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1" + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1" + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1" + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                                    "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
+                                    "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
+                            graphDatabaseService.execute(dataInsertion);
+                            tx.success();
+                        }
+                        return null;
+                    }
+                } )
+                .newServer() )
+        {
+
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
+                    HTTP.GET( server.httpURI().resolve( "rdf" ).toString() ).location() + "rdfonto");
+
+            String expected  = "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n" +
+                    "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
+                    "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#label> \"Likes\" .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Director> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#label> \"FriendOf\" .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .";
+            assertEquals( 200, response.status() );
+            assertEquals(true, ModelTestUtils.comparemodels(expected,RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+
+        }
+    }
+
+    @Test
     public void testNodeByUri() throws Exception
     {
         // Given
@@ -306,10 +362,10 @@ public class RDFEndpointTest {
                                     "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
                             graphDatabaseService.execute(nsDefCreation);
                             String dataInsertion = "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-                                    "CREATE (Carrie:Resource:ns0_Director {ns1" + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-                                    "CREATE (Laurence:Resource:ns0_Director {ns1" + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-                                    "CREATE (Hugo:Resource:ns0_Critic {ns1" + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-                                    "CREATE (AndyW:Resource:ns0_Actor {ns1" + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1" + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1" + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1" + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
                                     "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
                                     "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
                             graphDatabaseService.execute(dataInsertion);
@@ -321,7 +377,7 @@ public class RDFEndpointTest {
                 .newServer() )
         {
 
-            Result result = server.graph().execute( "MATCH (n:ns0_Critic) return id(n) as id " );
+            Result result = server.graph().execute( "MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) return id(n) as id " );
             //assertEquals( 1, count( result ) );
 
             Long id = (Long)result.next().get("id");

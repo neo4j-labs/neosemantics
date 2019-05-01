@@ -2,15 +2,13 @@ package semantics.extension;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
+import org.eclipse.rdf4j.model.*;
+import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.logging.Log;
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Literal;
-import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -246,7 +244,7 @@ public class RDFEndpoint {
                             Node node = (Node) row.get("x");
                             Iterable<Label> nodeLabels = node.getLabels();
                             for (Label label : nodeLabels) {
-                                //Exclude the URI, Resource and Bnode categories created by the importer to emulate RDF
+                                //Exclude the Resource category created by the importer to emulate RDF
                                 if (!label.name().equals("Resource")) {
 
                                     writer.handleStatement(
@@ -319,8 +317,6 @@ public class RDFEndpoint {
     }
 
     private String buildURI(String baseVocabNS, String name, Map<String, String> namespaces) {
-        //TODO
-        // if uri then return as is
         Pattern regex = Pattern.compile("^(\\w+)" + PREFIX_SEPARATOR + "(.*)$");
         Matcher matcher = regex.matcher(name);
         if (matcher.matches()) {
@@ -496,6 +492,69 @@ public class RDFEndpoint {
 
             }
         }).build();
+    }
+
+    @GET
+    @Path("/rdfonto")
+    @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig",
+            "application/ld+json"})
+    public Response exportRdfOnto(@Context GraphDatabaseService gds, @QueryParam("format") String format,
+                               @HeaderParam("accept") String acceptHeaderParam) {
+        return Response.ok().entity(new StreamingOutput() {
+            @Override
+            public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+
+                Map<String, String> namespaces = getNamespacesFromDB(gds);
+                String baseVocabNS = "neo4j://vocabulary#";
+
+                RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+                SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+                writer.startRDF();
+
+                Set<Statement> publishedStatements = new HashSet<>();
+                Result res = gds.execute("CALL db.schema() ");
+
+                Map<String, Object> next = res.next();
+                List<Node> nodeList = (List<Node>) next.get("nodes");
+                nodeList.forEach(node -> {
+                    String catName = node.getAllProperties().get("name").toString();
+                    if(!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+                        IRI subject = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
+                        publishStatement(publishedStatements, writer,valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+                        publishStatement(publishedStatements,writer,valueFactory.createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(subject.getLocalName())));
+                    }
+                });
+
+                List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+                for (Relationship r : relationshipList) {
+                    IRI relUri = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
+                    publishStatement(publishedStatements,writer,valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
+                    publishStatement(publishedStatements,writer,valueFactory.createStatement(relUri, RDFS.LABEL, valueFactory.createLiteral(relUri.getLocalName())));
+                    String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
+                    if(!domainClassStr.equals("Resource")) {
+                        IRI domainUri = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+                        publishStatement(publishedStatements,writer,valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
+                    }
+                    String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
+                    if(!rangeClassStr.equals("Resource")) {
+                        IRI rangeUri = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+                        publishStatement(publishedStatements,writer,valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+                    }
+                }
+
+                writer.endRDF();
+
+            }
+        }).build();
+    }
+
+    private void publishStatement(Set<Statement> publishedStatements, RDFWriter writer, Statement statement) {
+        // the call to db.schema generates all combinations of source-target for rels so we
+        // filter duplicate statements
+        if (!publishedStatements.contains(statement)){
+            publishedStatements.add(statement);
+            writer.handleStatement(statement);
+        }
     }
 
 

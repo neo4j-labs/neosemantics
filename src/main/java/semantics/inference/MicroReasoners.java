@@ -34,8 +34,8 @@ public class MicroReasoners {
     * semantics (cat:Cat { name: 'xyz'})-[:SCO]->(parent:Cat { name: ''}) */
 
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.getNodesWithLabel('virtLabel') - returns all nodes with label 'virtLabel' or its sublabels.")
-    public Stream<NodeResult> getNodesWithLabel(@Name("virtLabel") String virtLabel,
+    @Description("semantics.inference.nodesLabelled('virtLabel') - returns all nodes with label 'label' or its sublabels.")
+    public Stream<NodeResult> nodesLabelled(@Name("label") String virtLabel,
                                                 @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
 
         Map<String, Object> params = new HashMap<String, Object>();
@@ -63,8 +63,8 @@ public class MicroReasoners {
     /* in this case the node representing the category exist in the graph and is explicitly linked to the instances of the category
      *  hence the use of a node as param */
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.getNodesLinkedTo('catNode') - returns all nodes connected to Node 'catNode' or its subcategories.")
-    public Stream<NodeResult> getNodesLinkedTo(@Name("catNode") Node catNode,
+    @Description("semantics.inference.nodesInCategory('cat') - returns all nodes connected to Node 'catNode' or its subcategories.")
+    public Stream<NodeResult> nodesInCategory(@Name("cat") Node catNode,
                                                @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
 
         final String inCatRelName = (props.containsKey("inCatRelName")?(String)props.get("inCatRelName"):DEFAULT_IN_CAT_REL_NAME);

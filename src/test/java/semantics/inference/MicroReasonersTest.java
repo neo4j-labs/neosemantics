@@ -24,7 +24,7 @@ public class MicroReasonersTest {
             Session session = driver.session();
 
             session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
-            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            StatementResult results = session.run("CALL semantics.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
@@ -43,7 +43,7 @@ public class MicroReasonersTest {
 
             session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
             session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
-            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            StatementResult results = session.run("CALL semantics.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
@@ -63,7 +63,7 @@ public class MicroReasonersTest {
 
             session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
             session.run("CREATE (b:Class { cname: \"B\"}) CREATE (a:Class { cname: \"A\"})-[:SCO]->(b) ");
-            StatementResult results = session.run("CALL semantics.inference.getNodesWithLabel('B', { catLabelName: 'Class', catNamePropName: 'cname', subCatRelName: 'SCO'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            StatementResult results = session.run("CALL semantics.inference.nodesLabelled('B', { catLabelName: 'Class', catNamePropName: 'cname', subCatRelName: 'SCO'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
             Set<String> expectedNodeIds = new HashSet<String>();
@@ -85,7 +85,7 @@ public class MicroReasonersTest {
             session.run("CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SLO]->(b) ");
             session.run("MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) " +
                     "CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
-            StatementResult results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat) YIELD node " +
+            StatementResult results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.nodesInCategory(bcat) YIELD node " +
                     "RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             Record next = results.next();
@@ -97,12 +97,12 @@ public class MicroReasonersTest {
             assertEquals(false, results.hasNext());
 
             //Non-existent relationship
-            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, { inCatRelName: 'TYPE' } ) YIELD node RETURN node");
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.nodesInCategory(bcat, { inCatRelName: 'TYPE' } ) YIELD node RETURN node");
             assertEquals(false, results.hasNext());
 
             //Custom relationship
             session.run("MATCH (a)-[ic:IN_CAT]->(b) CREATE (a)-[:TYPE]->(b) DELETE ic");
-            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, { inCatRelName: 'TYPE'} ) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.nodesInCategory(bcat, { inCatRelName: 'TYPE'} ) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             next = results.next();
             expectedNodeIds = new HashSet<String>();
@@ -113,7 +113,7 @@ public class MicroReasonersTest {
             assertEquals(false, results.hasNext());
             session.run("MATCH (a)-[sco:SLO]->(b) CREATE (a)-[:SUBCAT_OF]->(b) DELETE sco");
 
-            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.getNodesLinkedTo(bcat, { inCatRelName: 'TYPE', subCatRelName: 'SUBCAT_OF'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+            results = session.run("MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.nodesInCategory(bcat, { inCatRelName: 'TYPE', subCatRelName: 'SUBCAT_OF'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
             assertEquals(true, results.hasNext());
             next = results.next();
             expectedNodeIds = new HashSet<String>();
