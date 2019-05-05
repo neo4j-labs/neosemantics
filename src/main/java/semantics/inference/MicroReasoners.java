@@ -17,7 +17,8 @@ public class MicroReasoners {
     private static final String sloInferenceFormatReturnClassNames = "RETURN $virtLabel as l UNION MATCH (:`%1$s` { `%2$s`: $virtLabel})<-[:`%3$s`*]-(sl:`%1$s`) RETURN distinct sl.`%2$s` as l";
     private static final String scoInferenceCypher = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE ID(cat) = $catId RETURN COLLECT(distinct ID(subcat)) as catIds";
     private static final String sroInferenceFormatReturnRelNames = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
-    private static final String DEFAULT_SCO_REL_NAME = "SLO";
+    private static final String DEFAULT_SLO_REL_NAME = "SLO";
+    private static final String DEFAULT_SCO_REL_NAME = "SCO";
     private static final String DEFAULT_IN_CAT_REL_NAME = "IN_CAT";
     private static final String DEFAULT_CAT_LABEL_NAME = "Label";
     private static final String DEFAULT_CAT_NAME_PROP_NAME = "name";
@@ -34,16 +35,16 @@ public class MicroReasoners {
     * semantics (cat:Cat { name: 'xyz'})-[:SCO]->(parent:Cat { name: ''}) */
 
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.nodesLabelled('virtLabel') - returns all nodes with label 'label' or its sublabels.")
+    @Description("semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.")
     public Stream<NodeResult> nodesLabelled(@Name("label") String virtLabel,
                                                 @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
 
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("virtLabel", virtLabel);
         Result results = db.execute(String.format(sloInferenceFormatReturnClassNames,
-                (props.containsKey("catLabelName")?(String)props.get("catLabelName"):DEFAULT_CAT_LABEL_NAME),
-                (props.containsKey("catNamePropName")?(String)props.get("catNamePropName"):DEFAULT_CAT_NAME_PROP_NAME),
-                (props.containsKey("subCatRelName")?(String)props.get("subCatRelName"):DEFAULT_SCO_REL_NAME)), params);
+                (props.containsKey("catLabel")?(String)props.get("catLabel"):DEFAULT_CAT_LABEL_NAME),
+                (props.containsKey("catNameProp")?(String)props.get("catNameProp"):DEFAULT_CAT_NAME_PROP_NAME),
+                (props.containsKey("subCatRel")?(String)props.get("subCatRel"):DEFAULT_SLO_REL_NAME)), params);
         StringBuilder sb = new StringBuilder();
         sb.append("cypher runtime=slotted ");
         boolean isFirstSubLabel = true;
@@ -63,12 +64,12 @@ public class MicroReasoners {
     /* in this case the node representing the category exist in the graph and is explicitly linked to the instances of the category
      *  hence the use of a node as param */
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.nodesInCategory('cat') - returns all nodes connected to Node 'catNode' or its subcategories.")
-    public Stream<NodeResult> nodesInCategory(@Name("cat") Node catNode,
+    @Description("semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories.")
+    public Stream<NodeResult> nodesInCategory(@Name("category") Node catNode,
                                                @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
 
-        final String inCatRelName = (props.containsKey("inCatRelName")?(String)props.get("inCatRelName"):DEFAULT_IN_CAT_REL_NAME);
-        final String subCatRelName = (props.containsKey("subCatRelName")?(String)props.get("subCatRelName"):DEFAULT_SCO_REL_NAME);
+        final String inCatRelName = (props.containsKey("inCatRel")?(String)props.get("inCatRel"):DEFAULT_IN_CAT_REL_NAME);
+        final String subCatRelName = (props.containsKey("subCatRel")?(String)props.get("subCatRel"):DEFAULT_SCO_REL_NAME);
 
         List<Long> subcatIds = getSubcatIds(catNode, subCatRelName);
         Map<String,Object> params =  new HashMap<>();
@@ -94,9 +95,9 @@ public class MicroReasoners {
     }
 
     @Procedure(mode = Mode.READ)
-    @Description("semantics.inference.getRels(node,'virtRel','>') - returns all outgoing relationships of type 'virtRel' " +
+    @Description("semantics.inference.getRels(node,'rel','>') - returns all outgoing relationships of type 'virtRel' " +
             "or its subtypes along with the target nodes.")
-    public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("virtRel") String virtRel,
+    public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("rel") String virtRel,
                                             @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
 
         String directionString = (props.containsKey("relDir")?(String)props.get("relDir"):"");
@@ -106,15 +107,13 @@ public class MicroReasoners {
         params.put("virtRel", virtRel);
 
         Result results = db.execute(String.format(sroInferenceFormatReturnRelNames,
-                (props.containsKey("relLabelName")?(String)props.get("relLabelName"):DEFAULT_REL_LABEL_NAME),
-                (props.containsKey("relNamePropName")?(String)props.get("relNamePropName"):DEFAULT_REL_NAME_PROP_NAME),
-                (props.containsKey("subRelRelName")?(String)props.get("subRelRelName"):DEFAULT_SRO_REL_NAME)), params);
+                (props.containsKey("relLabel")?(String)props.get("relLabel"):DEFAULT_REL_LABEL_NAME),
+                (props.containsKey("relNameProp")?(String)props.get("relNameProp"):DEFAULT_REL_NAME_PROP_NAME),
+                (props.containsKey("subRelRel")?(String)props.get("subRelRel"):DEFAULT_SRO_REL_NAME)), params);
         Set<RelationshipType> rts = new HashSet<RelationshipType>();
         while (results.hasNext()) {
             rts.add(withName((String)results.next().get("r")));
         }
-
-
 
         return StreamSupport.stream(node.getRelationships(direction, rts.toArray(new RelationshipType[0])).spliterator(),true)
                 .map(n -> new RelAndNodeResult(n,n.getOtherNode(node)));
@@ -123,16 +122,16 @@ public class MicroReasoners {
 
 
     @UserFunction
-    @Description("semantics.inference.hasLabel(individual,label) - checks whether node is explicitly or implicitly labeled as 'label'.")
+    @Description("semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'.")
     public boolean hasLabel(
-            @Name("individual") Node individual,
+            @Name("node") Node individual,
             @Name("label") String label, @Name(value = "props", defaultValue = "{}") Map<String, Object> props) {
         Map<String, Object> params = new HashMap<String, Object>();
         params.put("virtLabel", label);
         Result results = db.execute(String.format(sloInferenceFormatReturnClassNames,
-                (props.containsKey("catLabelName")?(String)props.get("catLabelName"):DEFAULT_CAT_LABEL_NAME),
-                (props.containsKey("catNamePropName")?(String)props.get("catNamePropName"):DEFAULT_CAT_NAME_PROP_NAME),
-                (props.containsKey("subCatRelName")?(String)props.get("subCatRelName"):DEFAULT_SCO_REL_NAME)), params);
+                (props.containsKey("catLabel")?(String)props.get("catLabel"):DEFAULT_CAT_LABEL_NAME),
+                (props.containsKey("catNameProp")?(String)props.get("catNameProp"):DEFAULT_CAT_NAME_PROP_NAME),
+                (props.containsKey("subCatRel")?(String)props.get("subCatRel"):DEFAULT_SLO_REL_NAME)), params);
 
         Set<String> sublabels = new HashSet<>();
         sublabels.add(label);
@@ -150,12 +149,12 @@ public class MicroReasoners {
 
 
     @UserFunction
-    @Description("semantics.inference.isNodeLinkedTo(individual, category, 'inCatRel','subCatRel') - checks whether node is explicitly or implicitly in a category.")
-    public boolean isNodeLinkedTo(
+    @Description("semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category.")
+    public boolean inCategory(
             @Name("node") Node individual, @Name("category") Node category, @Name(value = "props", defaultValue = "{}") Map<String, Object> props ) {
 
-        final String inCatRelName = (props.containsKey("inCatRelName")?(String)props.get("inCatRelName"):DEFAULT_IN_CAT_REL_NAME);
-        final String subCatRelName = (props.containsKey("subCatRelName")?(String)props.get("subCatRelName"):DEFAULT_SCO_REL_NAME);
+        final String inCatRelName = (props.containsKey("inCatRel")?(String)props.get("inCatRel"):DEFAULT_IN_CAT_REL_NAME);
+        final String subCatRelName = (props.containsKey("subCatRel")?(String)props.get("subCatRel"):DEFAULT_SCO_REL_NAME);
 
 
         List<Long> subLabels = getSubcatIds(category, subCatRelName);
