@@ -94,7 +94,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
 
 
-    String getPrefix(String namespace) {
+    protected String getPrefix(String namespace) {
         if (namespaces.containsKey(namespace)){
             return namespaces.get(namespace);
         } else{

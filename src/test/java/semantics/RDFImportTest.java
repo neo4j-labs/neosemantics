@@ -592,7 +592,7 @@ public class RDFImportTest {
     }
 
     @Test
-    public void testGetRelUriUDF() throws Exception {
+    public void testGetUriFromShortAndShortFromUri() throws Exception {
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
             Session session = driver.session();
@@ -604,7 +604,11 @@ public class RDFImportTest {
             assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
             assertEquals("http://xmlns.com/foaf/0.1/knows",
                     session.run("MATCH (n{ns0"+ PREFIX_SEPARATOR +"name : 'Markus Lanthaler'})-[r]-() " +
-                            " RETURN semantics.getRelUri(r) AS uri")
+                            " RETURN semantics.uriFromShort(type(r)) AS uri")
+                            .next().get("uri").asString());
+
+            assertEquals("ns0"+ PREFIX_SEPARATOR +"knows",
+                    session.run("RETURN semantics.shortFromUri('http://xmlns.com/foaf/0.1/knows') AS uri")
                             .next().get("uri").asString());
         }
 

@@ -1,5 +1,9 @@
 package semantics;
 
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleIRI;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexDefinition;
@@ -275,9 +279,9 @@ public class RDFImport {
     }
 
     @UserFunction
-    public String getRelUri(@Name("rel") Relationship rel) {
+    public String uriFromShort(@Name("short") String str) {
         Pattern p = Pattern.compile("^(\\w+)__(\\w+)$");
-        Matcher m = p.matcher(rel.getType().name());
+        Matcher m = p.matcher(str);
         if (m.matches()) {
             ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
             if (nspd.hasNext()){
@@ -291,8 +295,29 @@ public class RDFImport {
                 }
             }
         }
-        //default return property type
-        return rel.getType().name();
+        //default return original value
+        return str;
+    }
+
+    @UserFunction
+    public String shortFromUri(@Name("uri") String str) {
+        try{
+            IRI iri = SimpleValueFactory.getInstance().createIRI(str);
+            ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
+            if (nspd.hasNext()){
+                Map<String, Object> namespaces = nspd.next().getAllProperties();
+                Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
+                while(nsIterator.hasNext()) {
+                    Map.Entry<String, Object> kv = nsIterator.next();
+                    if (kv.getKey().equals(iri.getNamespace())){
+                        return kv.getValue() + PREFIX_SEPARATOR + iri.getLocalName();
+                    }
+                }
+            }
+            return str;
+        }catch (Exception e){
+            return str;
+        }
     }
 
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
