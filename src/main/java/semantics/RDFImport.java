@@ -1,10 +1,7 @@
 package semantics;
 
 import org.eclipse.rdf4j.model.util.URIUtil;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
@@ -23,6 +20,8 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+
+import static com.sun.tools.doclint.Entity.lang;
 
 /**
  * Created by jbarrasa on 21/03/2016.
@@ -273,6 +272,27 @@ public class RDFImport {
             }
         }
         return null;
+    }
+
+    @UserFunction
+    public String getRelUri(@Name("rel") Relationship rel) {
+        Pattern p = Pattern.compile("^(\\w+)__(\\w+)$");
+        Matcher m = p.matcher(rel.getType().name());
+        if (m.matches()) {
+            ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
+            if (nspd.hasNext()){
+                Map<String, Object> namespaces = nspd.next().getAllProperties();
+                Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
+                while(nsIterator.hasNext()){
+                    Map.Entry<String, Object> kv = nsIterator.next();
+                    if(m.group(1).equals(kv.getValue())){
+                        return kv.getKey() + m.group(2);
+                    }
+                }
+            }
+        }
+        //default return property type
+        return rel.getType().name();
     }
 
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {

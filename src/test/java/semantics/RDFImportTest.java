@@ -591,6 +591,25 @@ public class RDFImportTest {
         }
     }
 
+    @Test
+    public void testGetRelUriUDF() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+            Session session = driver.session();
+            createIndices(neo4j.getGraphDatabaseService());
+
+            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+                    RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD'," +
+                    "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
+            assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+            assertEquals("http://xmlns.com/foaf/0.1/knows",
+                    session.run("MATCH (n{ns0"+ PREFIX_SEPARATOR +"name : 'Markus Lanthaler'})-[r]-() " +
+                            " RETURN semantics.getRelUri(r) AS uri")
+                            .next().get("uri").asString());
+        }
+
+    }
+
     private void createIndices(GraphDatabaseService db) {
         db.execute("CREATE INDEX ON :Resource(uri)");
     }
