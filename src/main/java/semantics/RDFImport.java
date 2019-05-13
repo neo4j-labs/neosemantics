@@ -13,9 +13,8 @@ import org.eclipse.rdf4j.rio.*;
 import semantics.result.GraphResult;
 import semantics.result.StreamedStatement;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -78,18 +77,14 @@ public class RDFImport {
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
         ImportResults importResults = new ImportResults();
-        URLConnection urlConn;
+
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
                 nodeCacheSize, handleVocabUris, handleMultival, (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
                 (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)), typesToLabels, keepLangTag,
                 languageFilter, log);
         try {
             checkIndexesExist();
-            urlConn = new URL(url).openConnection();
-            if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
-            }
-            InputStream inputStream = urlConn.getInputStream();
+            InputStream inputStream = getInputStream(url, props);
             RDFParser rdfParser = Rio.createParser(getFormat(format));
             rdfParser.setRDFHandler(statementLoader);
             rdfParser.parse(inputStream, url);
@@ -103,6 +98,28 @@ public class RDFImport {
             importResults.setNamespaces(statementLoader.getNamespaces());
         }
         return Stream.of(importResults);
+    }
+
+    private InputStream getInputStream(@Name("url") String url, @Name("props") Map<String, Object> props) throws IOException {
+        URLConnection urlConn;
+        //This should be delegated to APOC to do handle different protocols, deal with redirection, etc.
+        urlConn = new URL(url).openConnection();
+        if (props.containsKey("headerParams")) {
+            Map<String, String> headerParams = (Map<String, String>) props.get("headerParams");
+            Object method = headerParams.get("method");
+            if (method != null && urlConn instanceof HttpURLConnection) {
+                HttpURLConnection http = (HttpURLConnection) urlConn;
+                http.setRequestMethod(method.toString());
+            }
+            headerParams.forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            if (props.containsKey("payload")){
+                urlConn.setDoOutput(true);
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(urlConn.getOutputStream(),"UTF-8"));
+                writer.write(props.get("payload").toString());
+                writer.close();
+            }
+        }
+        return urlConn.getInputStream();
     }
 
     private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
@@ -141,7 +158,6 @@ public class RDFImport {
         final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
         final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
 
-        URLConnection urlConn;
         Map<String,Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
@@ -150,11 +166,8 @@ public class RDFImport {
                 (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)),typesToLabels, virtualNodes,
                 virtualRels, keepLangTag, languageFilter, log);
         try {
-            urlConn = new URL(url).openConnection();
-            if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
-            }
-            InputStream inputStream = urlConn.getInputStream();
+
+            InputStream inputStream = getInputStream(url, props);
             RDFFormat rdfFormat = getFormat(format);
             log.info("Data set to be parsed as " + rdfFormat);
             RDFParser rdfParser = Rio.createParser(rdfFormat);
@@ -176,15 +189,10 @@ public class RDFImport {
     public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
                                                @Name("props") Map<String, Object> props) {
 
-        URLConnection urlConn;
-
         StatementStreamer statementStreamer = new StatementStreamer();
         try {
-            urlConn = new URL(url).openConnection();
-            if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
-            }
-            InputStream inputStream = urlConn.getInputStream();
+
+            InputStream inputStream = getInputStream(url, props);
             RDFFormat rdfFormat = getFormat(format);
             log.info("Data set to be parsed as " + rdfFormat);
             RDFParser rdfParser = Rio.createParser(rdfFormat);
