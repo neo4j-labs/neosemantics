@@ -25,9 +25,9 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
     private List<Relationship> vRels;
 
     public StatementPreviewer(GraphDatabaseService db, int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
-                              Set<String> predicateExclusionList, boolean typesToLabels, Map<String, Node> virtualNodes,
+                              boolean keepCustomDataTypes, Set<String> customDataTypesList, Set<String> predicateExclusionList, boolean typesToLabels, Map<String, Node> virtualNodes,
                               List<Relationship> virtualRels, boolean klt, String languageFilter, Log l) {
-        super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, predicateExclusionList, klt,
+        super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes, customDataTypesList, predicateExclusionList, klt,
                 typesToLabels, Integer.MAX_VALUE);
         vNodes = virtualNodes;
         vRels = virtualRels;
@@ -35,8 +35,8 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
     }
 
     public void endRDF() throws RDFHandlerException {
-        for(String uri:resourceLabels.keySet()){
-            vNodes.put(uri,new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),
+        for (String uri : resourceLabels.keySet()) {
+            vNodes.put(uri, new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),
                     getPropsPlusUri(uri), graphdb));
         }
 
@@ -46,9 +46,9 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
                         RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))));
     }
 
-    private Map<String,Object> getPropsPlusUri(String uri) {
+    private Map<String, Object> getPropsPlusUri(String uri) {
         Map<String, Object> props = resourceProps.get(uri);
-        props.put("uri",uri);
+        props.put("uri", uri);
         return props;
     }
 

@@ -1,15 +1,13 @@
 package semantics;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.ValueFactory;
-import org.eclipse.rdf4j.model.impl.SimpleIRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.rio.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
-import org.eclipse.rdf4j.rio.*;
 import semantics.result.GraphResult;
 import semantics.result.StreamedStatement;
 
@@ -25,8 +23,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.sun.tools.doclint.Entity.lang;
-
 /**
  * Created by jbarrasa on 21/03/2016.
  * <p>
@@ -38,9 +34,13 @@ import static com.sun.tools.doclint.Entity.lang;
 public class RDFImport {
     private static final boolean DEFAULT_SHORTEN_URLS = true;
     private static final boolean DEFAULT_TYPES_TO_LABELS = true;
+
+    private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
+
     private static final long DEFAULT_COMMIT_SIZE = 25000;
     private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
     public static final String PREFIX_SEPARATOR = "__";
+    public static final String CUSTOM_DATA_TYPE_PROP_SUFFIX = "^^";
     static final int URL_SHORTEN = 0;
     static final int URL_IGNORE = 1;
     static final int URL_MAP = 2;
@@ -53,6 +53,7 @@ public class RDFImport {
     static final int LABEL = 1;
     static final int PROPERTY = 2;
 
+
     @Context
     public GraphDatabaseService db;
     @Context
@@ -62,32 +63,33 @@ public class RDFImport {
             RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
 
-
     @Procedure(mode = Mode.WRITE)
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
                                            @Name("props") Map<String, Object> props) {
 
-        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
-        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
-        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
-        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
-        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
-        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
-        final long commitSize = (props.containsKey("commitSize")?(long)props.get("commitSize"):DEFAULT_COMMIT_SIZE);
-        final long nodeCacheSize = (props.containsKey("nodeCacheSize")?(long)props.get("nodeCacheSize"):DEFAULT_NODE_CACHE_SIZE);
-        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+        final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt((String) props.get("handleVocabUris")) : 0);
+        final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt((String) props.get("handleMultival")) : 0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList") ? (List<String>) props.get("multivalPropList") : null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList") ? (List<String>) props.get("predicateExclusionList") : null);
+        final List<String> customDataTypedPropList = (props.containsKey("customDataTypedPropList") ? (List<String>) props.get("customDataTypedPropList") : null);
+        final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props.get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
+        final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props.get("keepLangTag") : false);
+        final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props.get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
+        final long commitSize = (props.containsKey("commitSize") ? (long) props.get("commitSize") : DEFAULT_COMMIT_SIZE);
+        final long nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props.get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);
+        final String languageFilter = (props.containsKey("languageFilter") ? (String) props.get("languageFilter") : null);
 
         ImportResults importResults = new ImportResults();
         URLConnection urlConn;
         DirectStatementLoader statementLoader = new DirectStatementLoader(db, (commitSize > 0 ? commitSize : 5000),
-                nodeCacheSize, handleVocabUris, handleMultival, (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
-                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)), typesToLabels, keepLangTag,
+                nodeCacheSize, handleVocabUris, handleMultival, (multivalPropList == null ? null : new HashSet<String>(multivalPropList)), keepCustomDataTypes,
+                (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)), (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)), typesToLabels, keepLangTag,
                 languageFilter, log);
         try {
             checkIndexesExist();
             urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+                ((Map<String, String>) props.get("headerParams")).forEach((k, v) -> urlConn.setRequestProperty(k, v));
             }
             InputStream inputStream = urlConn.getInputStream();
             RDFParser rdfParser = Rio.createParser(getFormat(format));
@@ -106,11 +108,11 @@ public class RDFImport {
     }
 
     private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
-        if (handleVocUrisAsText.equals("SHORTEN")){
+        if (handleVocUrisAsText.equals("SHORTEN")) {
             return 0;
-        } else if(handleVocUrisAsText.equals("IGNORE")){
+        } else if (handleVocUrisAsText.equals("IGNORE")) {
             return 1;
-        } else if (handleVocUrisAsText.equals("MAP")){
+        } else if (handleVocUrisAsText.equals("MAP")) {
             return 2;
         } else { //KEEP
             return 3;
@@ -118,11 +120,11 @@ public class RDFImport {
     }
 
     private int getHandleMultivalAsInt(String ignoreUrlsAsText) {
-        if (ignoreUrlsAsText.equals("OVERWRITE")){
+        if (ignoreUrlsAsText.equals("OVERWRITE")) {
             return 0;
-        } else if(ignoreUrlsAsText.equals("ARRAY")){
+        } else if (ignoreUrlsAsText.equals("ARRAY")) {
             return 1;
-        } else if (ignoreUrlsAsText.equals("REIFY")){
+        } else if (ignoreUrlsAsText.equals("REIFY")) {
             return 2;
         } else { //HYBRID
             return 3;
@@ -133,26 +135,29 @@ public class RDFImport {
     public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
                                           @Name("props") Map<String, Object> props) {
 
-        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
-        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
-        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
-        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
-        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
-        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
-        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+        final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt((String) props.get("handleVocabUris")) : 0);
+        final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt((String) props.get("handleMultival")) : 0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList") ? (List<String>) props.get("multivalPropList") : null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList") ? (List<String>) props.get("predicateExclusionList") : null);
+        final List<String> customDataTypedPropList = (props.containsKey("customDataTypesList") ? (List<String>) props.get("customDataTypesList") : null);
+        final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props.get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
+        final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props.get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
+        final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props.get("keepLangTag") : false);
+        final String languageFilter = (props.containsKey("languageFilter") ? (String) props.get("languageFilter") : null);
 
         URLConnection urlConn;
-        Map<String,Node> virtualNodes = new HashMap<>();
+        Map<String, Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
         StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
-                (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
-                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)),typesToLabels, virtualNodes,
+                (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+                keepCustomDataTypes, (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
+                (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)), typesToLabels, virtualNodes,
                 virtualRels, keepLangTag, languageFilter, log);
         try {
             urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+                ((Map<String, String>) props.get("headerParams")).forEach((k, v) -> urlConn.setRequestProperty(k, v));
             }
             InputStream inputStream = urlConn.getInputStream();
             RDFFormat rdfFormat = getFormat(format);
@@ -182,7 +187,7 @@ public class RDFImport {
         try {
             urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
-                ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+                ((Map<String, String>) props.get("headerParams")).forEach((k, v) -> urlConn.setRequestProperty(k, v));
             }
             InputStream inputStream = urlConn.getInputStream();
             RDFFormat rdfFormat = getFormat(format);
@@ -205,23 +210,26 @@ public class RDFImport {
     public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
                                                  @Name("props") Map<String, Object> props) {
 
-        final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
-        final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
-        final List<String> multivalPropList = (props.containsKey("multivalPropList")?(List<String>)props.get("multivalPropList"):null);
-        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")?(List<String>)props.get("predicateExclusionList"):null);
-        final boolean typesToLabels = (props.containsKey("typesToLabels")?(boolean)props.get("typesToLabels"):DEFAULT_TYPES_TO_LABELS);
-        final boolean keepLangTag = (props.containsKey("keepLangTag")?(boolean)props.get("keepLangTag"):false);
-        final String languageFilter = (props.containsKey("languageFilter")?(String)props.get("languageFilter"):null);
+        final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt((String) props.get("handleVocabUris")) : 0);
+        final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt((String) props.get("handleMultival")) : 0);
+        final List<String> multivalPropList = (props.containsKey("multivalPropList") ? (List<String>) props.get("multivalPropList") : null);
+        final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList") ? (List<String>) props.get("predicateExclusionList") : null);
+        final List<String> customDataTypedPropList = (props.containsKey("customDataTypesList") ? (List<String>) props.get("customDataTypesList") : null);
+        final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props.get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
+        final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props.get("keepLangTag") : false);
+        final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props.get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
+        final String languageFilter = (props.containsKey("languageFilter") ? (String) props.get("languageFilter") : null);
 
-        Map<String,Node> virtualNodes = new HashMap<>();
+        Map<String, Node> virtualNodes = new HashMap<>();
         List<Relationship> virtualRels = new ArrayList<>();
 
         StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
-                (multivalPropList==null?null:new HashSet<String>(multivalPropList)),
-                (predicateExclusionList==null?null:new HashSet<String>(predicateExclusionList)),
+                (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+                keepCustomDataTypes, (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
+                (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
                 typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, log);
         try {
-            InputStream inputStream = new ByteArrayInputStream( rdfFragment.getBytes(Charset.defaultCharset()) ); //rdfFragment.openStream();
+            InputStream inputStream = new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())); //rdfFragment.openStream();
             RDFFormat rdfFormat = getFormat(format);
             log.info("Data set to be parsed as " + rdfFormat);
             RDFParser rdfParser = Rio.createParser(rdfFormat);
@@ -246,14 +254,14 @@ public class RDFImport {
 
     @UserFunction
     public String getIRINamespace(@Name("url") String url) {
-        return url.substring(0,URIUtil.getLocalNameIndex(url));
+        return url.substring(0, URIUtil.getLocalNameIndex(url));
     }
 
     @UserFunction
     public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
         Pattern p = Pattern.compile("^(.*)@([a-z,\\-]+)$");
         if (values instanceof List) {
-            if (((List)values).get(0) instanceof String) {
+            if (((List) values).get(0) instanceof String) {
                 for (Object val : (List<String>) values) {
                     Matcher m = p.matcher((String) val);
                     if (m.matches() && m.group(2).equals(lang)) {
@@ -262,15 +270,15 @@ public class RDFImport {
                 }
             }
         } else if (values instanceof String[]) {
-            String[] valuesAsArray = (String[])values;
-            for (int i=0;i<valuesAsArray.length;i++) {
+            String[] valuesAsArray = (String[]) values;
+            for (int i = 0; i < valuesAsArray.length; i++) {
                 Matcher m = p.matcher(valuesAsArray[i]);
                 if (m.matches() && m.group(2).equals(lang)) {
                     return m.group(1);
                 }
             }
-        } else if (values instanceof String){
-            Matcher m = p.matcher((String)values);
+        } else if (values instanceof String) {
+            Matcher m = p.matcher((String) values);
             if (m.matches() && m.group(2).equals(lang)) {
                 return m.group(1);
             }
@@ -284,12 +292,12 @@ public class RDFImport {
         Matcher m = p.matcher(str);
         if (m.matches()) {
             ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
-            if (nspd.hasNext()){
+            if (nspd.hasNext()) {
                 Map<String, Object> namespaces = nspd.next().getAllProperties();
                 Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-                while(nsIterator.hasNext()){
+                while (nsIterator.hasNext()) {
                     Map.Entry<String, Object> kv = nsIterator.next();
-                    if(m.group(1).equals(kv.getValue())){
+                    if (m.group(1).equals(kv.getValue())) {
                         return kv.getKey() + m.group(2);
                     }
                 }
@@ -301,36 +309,36 @@ public class RDFImport {
 
     @UserFunction
     public String shortFromUri(@Name("uri") String str) {
-        try{
+        try {
             IRI iri = SimpleValueFactory.getInstance().createIRI(str);
             ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
-            if (nspd.hasNext()){
+            if (nspd.hasNext()) {
                 Map<String, Object> namespaces = nspd.next().getAllProperties();
                 Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-                while(nsIterator.hasNext()) {
+                while (nsIterator.hasNext()) {
                     Map.Entry<String, Object> kv = nsIterator.next();
-                    if (kv.getKey().equals(iri.getNamespace())){
+                    if (kv.getKey().equals(iri.getNamespace())) {
                         return kv.getValue() + PREFIX_SEPARATOR + iri.getLocalName();
                     }
                 }
             }
             return str;
-        }catch (Exception e){
+        } catch (Exception e) {
             return str;
         }
     }
 
     private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
         Iterable<IndexDefinition> indexes = db.schema().getIndexes();
-        if(missing(indexes.iterator(),"Resource")){
+        if (missing(indexes.iterator(), "Resource")) {
             throw new RDFImportPreRequisitesNotMet("The required index on :Resource(uri) could not be found");
         }
     }
 
     private boolean missing(Iterator<IndexDefinition> iterator, String indexLabel) {
-        while (iterator.hasNext()){
+        while (iterator.hasNext()) {
             IndexDefinition indexDef = iterator.next();
-            if(indexDef.getLabel().name().equals(indexLabel) &&
+            if (indexDef.getLabel().name().equals(indexLabel) &&
                     indexDef.getPropertyKeys().iterator().next().equals("uri")) {
                 return false;
             }
@@ -349,12 +357,10 @@ public class RDFImport {
     }
 
 
-
-
     public static class ImportResults {
         public String terminationStatus = "OK";
         public long triplesLoaded = 0;
-        public Map<String,String> namespaces;
+        public Map<String, String> namespaces;
         public String extraInfo = "";
 
         public void setTriplesLoaded(long triplesLoaded) {

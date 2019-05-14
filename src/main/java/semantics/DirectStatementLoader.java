@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import static org.apache.commons.lang3.ArrayUtils.toArray;
 import static semantics.RDFImport.RELATIONSHIP;
 
 /**
@@ -28,11 +27,11 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     Cache<String, Node> nodeCache;
 
     public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-                                 int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
-                                 Set<String> predicateExclusionList, boolean typesToLabels, boolean klt,
+                                 int handleUrls, int handleMultivals, Set<String> multivalPropUriList, boolean keepCustomDataTypes,
+                                 Set<String> customDataTypedPropList, Set<String> predicateExclusionList, boolean typesToLabels, boolean klt,
                                  String languageFilter, Log l) {
 
-        super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, predicateExclusionList, klt,
+        super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes, customDataTypedPropList, predicateExclusionList, klt,
                 typesToLabels, batchSize);
         nodeCache = CacheBuilder.newBuilder()
                 .maximumSize(nodeCacheSize)
@@ -44,12 +43,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     public void endRDF() throws RDFHandlerException {
         Util.inTx(graphdb, this);
         totalTriplesMapped += mappedTripleCounter;
-        if (handleUris==0) {
+        if (handleUris == 0) {
             addNamespaceNode();
         }
 
         log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
-                "Total number of triples imported is " + totalTriplesMapped + " out of " +  totalTriplesParsed + " parsed.");
+                "Total number of triples imported is " + totalTriplesMapped + " out of " + totalTriplesParsed + " parsed.");
     }
 
     private void addNamespaceNode() {
@@ -58,7 +57,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
     }
 
-    public Map<String,String> getNamespaces() {
+    public Map<String, String> getNamespaces() {
 
         return namespaces;
     }
@@ -68,7 +67,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         if (value instanceof Iterable) {
             Iterable it = (Iterable) value;
             Object first = Iterables.firstOrNull(it);
-            if (first==null) return EMPTY_ARRAY;
+            if (first == null) return EMPTY_ARRAY;
             return Iterables.asArray(first.getClass(), it);
         }
         return value;
@@ -78,30 +77,31 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     public Integer call() throws Exception {
         int count = 0;
 
-        for(Map.Entry<String, Set<String>> entry:resourceLabels.entrySet()){
+        for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
             final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
                 @Override
                 public Node call() {
-                    Node node =  graphdb.findNode(RESOURCE, "uri", entry.getKey());
-                    if (node==null){
+                    Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+                    if (node == null) {
                         node = graphdb.createNode(RESOURCE);
-                        node.setProperty("uri",entry.getKey());
+                        node.setProperty("uri", entry.getKey());
                     }
                     return node;
                 }
             });
 
-            entry.getValue().forEach( l -> node.addLabel(Label.label(l)));
-            resourceProps.get(entry.getKey()).forEach( (k, v) -> { if (v instanceof List) {
-                node.setProperty(k,toPropertyValue(v));
-            } else {
-                node.setProperty(k,v);
-            }
+            entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
+            resourceProps.get(entry.getKey()).forEach((k, v) -> {
+                if (v instanceof List) {
+                    node.setProperty(k, toPropertyValue(v));
+                } else {
+                    node.setProperty(k, v);
+                }
             });
         }
 
-        for(Statement st:statements){
+        for (Statement st : statements) {
 
             final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
                 @Override
@@ -120,16 +120,16 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
             // check if the rel is already present. If so, don't recreate.
             // explore the node with the lowest degree
             boolean found = false;
-            if(fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.OUTGOING) <
-                    toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.INCOMING)) {
-                for (Relationship rel : fromNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.OUTGOING)) {
+            if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)), Direction.OUTGOING) <
+                    toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)), Direction.INCOMING)) {
+                for (Relationship rel : fromNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)), Direction.OUTGOING)) {
                     if (rel.getEndNode().equals(toNode)) {
                         found = true;
                         break;
                     }
                 }
-            }else {
-                for (Relationship rel : toNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)), Direction.INCOMING)) {
+            } else {
+                for (Relationship rel : toNode.getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)), Direction.INCOMING)) {
                     if (rel.getStartNode().equals(fromNode)) {
                         found = true;
                         break;
@@ -140,7 +140,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
             if (!found) {
                 fromNode.createRelationshipTo(
                         toNode,
-                        RelationshipType.withName(handleIRI(st.getPredicate(),RELATIONSHIP)));
+                        RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)));
             }
         }
 
@@ -158,7 +158,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         //get namespaces and persist them in the db
         Map<String, String> nsList = namespaceList();
         Map<String, Object> params = new HashMap();
-        params.put("namespaces",nsList);
+        params.put("namespaces", nsList);
         graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
         return nsList;
 
