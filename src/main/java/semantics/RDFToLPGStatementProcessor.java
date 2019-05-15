@@ -22,9 +22,6 @@ import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
     protected final Map<String, String> vocMappings;
-    protected GraphDatabaseService graphdb;
-    protected Log log;
-    protected Map<String, String> namespaces = new HashMap<>();
     protected final String langFilter;
     protected final int handleUris;
     protected final int handleMultival;
@@ -34,16 +31,21 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     protected final Set<String> multivalPropList;
     protected final Set<String> excludedPredicatesList;
     protected final Set<String> customDataTypedPropList;
+    protected final long commitFreq;
+    protected GraphDatabaseService graphdb;
+    protected Log log;
+    protected Map<String, String> namespaces = new HashMap<>();
     protected Set<Statement> statements = new HashSet<>();
     protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
     protected Map<String, Set<String>> resourceLabels = new HashMap<>();
     protected int totalTriplesParsed = 0;
     protected int totalTriplesMapped = 0;
     protected int mappedTripleCounter = 0;
-    protected final long commitFreq;
 
     protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls, int handleMultival,
-                                         Set<String> multivalPropUriList, boolean keepCustomDataTypes, Set<String> customDataTypedPropList, Set<String> predicateExclList, boolean klt,
+                                         Set<String> multivalPropUriList, boolean keepCustomDataTypes,
+                                         Set<String> customDataTypedPropList, Set<String> predicateExclList,
+                                         boolean klt,
                                          boolean labellise, long commitFreq) {
         this.graphdb = db;
         this.langFilter = langFilter;
@@ -115,8 +117,12 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
     protected Object getObjectValue(IRI propertyIRI, Literal object, boolean keepLangTag, boolean keepCustomDataTypes) {
         IRI datatype = object.getDatatype();
-        if (datatype.equals(XMLSchema.INT) ||
-                datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)) {
+        if (datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype.equals(XMLSchema.INT) ||
+                datatype.equals(XMLSchema.SHORT) || datatype.equals(XMLSchema.BYTE) ||
+                datatype.equals(XMLSchema.NON_NEGATIVE_INTEGER) || datatype.equals(XMLSchema.POSITIVE_INTEGER) ||
+                datatype.equals(XMLSchema.UNSIGNED_LONG) || datatype.equals(XMLSchema.UNSIGNED_INT) ||
+                datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
+                datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype.equals(XMLSchema.NEGATIVE_INTEGER)) {
             return object.longValue();
         } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
                 datatype.equals(XMLSchema.FLOAT)) {
@@ -124,9 +130,9 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         } else if (datatype.equals(XMLSchema.BOOLEAN)) {
             return object.booleanValue();
         } else if (object.getLanguage().isPresent()) {
-            //String or no datatype => String
             final Optional<String> language = object.getLanguage();
-            if (langFilter == null || !language.isPresent() || (language.isPresent() && langFilter.equals(language.get()))) {
+            if (langFilter == null || !language.isPresent() ||
+                    (language.isPresent() && langFilter.equals(language.get()))) {
                 return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get() : "");
             }
             return null;
@@ -138,6 +144,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
             }
             return value;
         } else {
+            //String or no datatype => String
             return object.stringValue();
         }
     }
@@ -232,7 +239,8 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
         String propName = handleIRI(propertyIRI, PROPERTY);
 
-        Object propValue = getObjectValue(propertyIRI, propValueRaw, keepLangTag, keepCustomDataTypes); //this will come from config var
+        Object propValue = getObjectValue(propertyIRI, propValueRaw, keepLangTag, keepCustomDataTypes); //this will
+        // come from config var
 
         if (propValue != null) {
             if (!resourceProps.containsKey(subjectUri)) {
