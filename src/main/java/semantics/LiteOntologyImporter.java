@@ -1,9 +1,7 @@
 package semantics;
 
-import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.Result;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
@@ -16,23 +14,32 @@ import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.*;
 import org.eclipse.rdf4j.rio.helpers.StatementCollector;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 /**
  * Created by jbarrasa on 21/03/2016.
  *
  * Importer of basic ontology (RDFS & OWL) elements:
+ * TODO: This whole class needs to be redone. It can be made a lot simpler and clearer!!
  *
  */
 public class LiteOntologyImporter {
+    private static final String DEFAULT_CLASS_LABEL_NAME = "Class";
+    private static final String DEFAULT_SCO_REL_NAME = "SCO";
+    private static final String DEFAULT_DATATYPEPROP_LABEL_NAME = "Property";
+    private static final String DEFAULT_OBJECTPROP_LABEL_NAME = "Relationship";
+    private static final String DEFAULT_SPO_REL_NAME = "SPO";
+    private static final String DEFAULT_DOMAIN_REL_NAME = "DOMAIN";
+    private static final String DEFAULT_RANGE_REL_NAME = "RANGE";
     @Context
     public GraphDatabaseService db;
     public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD, RDFFormat.TURTLE,
@@ -48,121 +55,169 @@ public class LiteOntologyImporter {
         int datatypePropsLoaded = 0;
         int objPropsLoaded = 0;
         int propsLoaded = 0;
+        String classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel") : DEFAULT_CLASS_LABEL_NAME;
+        String subClassOfRelName = props.containsKey("subClassOfRel") ? (String) props.get("subClassOfRel") : DEFAULT_SCO_REL_NAME;
+        String dataTypePropertyLabelName = props.containsKey("dataTypePropertyLabel") ? (String) props.get("dataTypePropertyLabel") : DEFAULT_DATATYPEPROP_LABEL_NAME;
+        String objectPropertyLabelName = props.containsKey("objectPropertyLabel") ? (String) props.get("objectPropertyLabel") : DEFAULT_OBJECTPROP_LABEL_NAME;
+        String subPropertyOfRelName = props.containsKey("subPropertyOfRel") ? (String) props.get("subPropertyOfRel") : DEFAULT_SPO_REL_NAME;
+        String domainRelName = props.containsKey("domainRel") ? (String) props.get("domainRel") : DEFAULT_DOMAIN_REL_NAME;
+        String rangeRelName = props.containsKey("rangeRel") ? (String) props.get("rangeRel") : DEFAULT_RANGE_REL_NAME;
         try {
             URLConnection urlConn = new URL(url).openConnection();
             if (props.containsKey("headerParams")) {
                 ((Map<String, String>) props.get("headerParams")).forEach( (k,v) -> urlConn.setRequestProperty(k,v));
             }
-            InputStream inputStream = urlConn.getInputStream();
+            InputStream inputStream = getInputStream(url, props);
             RDFParser rdfParser = Rio.createParser(getFormat(format));
             Model model = new LinkedHashModel();
             rdfParser.setRDFHandler(new StatementCollector(model));
             rdfParser.parse(inputStream, url);
-            classesLoaded = extractClasses(model);
-            objPropsLoaded = extractProps(model, OWL.OBJECTPROPERTY);
-            datatypePropsLoaded = extractProps(model, OWL.DATATYPEPROPERTY);
-            propsLoaded = extractProps(model, RDF.PROPERTY);
+            classesLoaded = extractClasses(model, classLabelName, subClassOfRelName);
+            objPropsLoaded = extractProps(model, OWL.OBJECTPROPERTY, objectPropertyLabelName, subPropertyOfRelName, domainRelName, rangeRelName);
+            datatypePropsLoaded = extractProps(model, OWL.DATATYPEPROPERTY, dataTypePropertyLabelName, subPropertyOfRelName, domainRelName, rangeRelName);
+            //an rdf:property can be either datatype or objecttype? I'll treat it as an object property
+            propsLoaded = extractProps(model, RDF.PROPERTY, objectPropertyLabelName, subPropertyOfRelName, domainRelName, rangeRelName);
 
         } catch (MalformedURLException e) {
             e.printStackTrace();
         } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
             importResults.setTerminationKO(e.getMessage());
         } finally {
-            importResults.setElementsLoaded(classesLoaded + datatypePropsLoaded + objPropsLoaded);
+            importResults.setElementsLoaded(classesLoaded + datatypePropsLoaded + objPropsLoaded + propsLoaded);
         }
         return Stream.of(importResults);
     }
 
-    private int extractProps(Model model, IRI propType) {
-        // loads properties
-        int propsLoaded = 0;
-        Set<Resource> allDatatypeProps = model.filter(null, RDF.TYPE, propType).subjects();
-        for ( Resource propResource : allDatatypeProps) {
-            if (!(propResource instanceof BNode)) {
-                String cypher = String.format("MERGE (p:%s { uri:'%s'}) SET p+={props}",
-                        getNeoEquivalentForProp(propType),
-                        propResource.stringValue());
-                Map<String, Object> props = new HashMap<>();
-                Set<Value> classeNames = model.filter(propResource, RDFS.LABEL, null).objects();
-                props.put("name",classeNames.isEmpty()?((IRI)propResource).getLocalName():
-                        classeNames.iterator().next().stringValue().replace("'", "\'"));
+    // this needs to be refactored. It's also in RDFImport!
+    private InputStream getInputStream(@Name("url") String url, @Name("props") Map<String, Object> props) throws IOException {
+        URLConnection urlConn;
+        //This should be delegated to APOC to do handle different protocols, deal with redirection, etc.
+        urlConn = new URL(url).openConnection();
+        if (props.containsKey("headerParams")) {
+            Map<String, String> headerParams = (Map<String, String>) props.get("headerParams");
+            Object method = headerParams.get("method");
+            if (method != null && urlConn instanceof HttpURLConnection) {
+                HttpURLConnection http = (HttpURLConnection) urlConn;
+                http.setRequestMethod(method.toString());
+            }
+            headerParams.forEach( (k,v) -> urlConn.setRequestProperty(k,v));
+            if (props.containsKey("payload")){
+                urlConn.setDoOutput(true);
+                BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(urlConn.getOutputStream(),"UTF-8"));
+                writer.write(props.get("payload").toString());
+                writer.close();
+            }
+        }
+        return urlConn.getInputStream();
+    }
 
-                Set<Value> comments = model.filter(propResource, RDFS.COMMENT, null).objects();
-                if (!comments.isEmpty()){
-                    props.put("comment", comments.iterator().next().stringValue().replace("'", "\'"));
-                }
+    private int extractProps(Model model, IRI propType, String propertyLabelName, String subPropertyOfRelName,
+                             String domainRelName, String rangeRelName ) {
+        int propsLoaded = 0;
+        Set<Resource> allProps = model.filter(null, RDF.TYPE, propType).subjects();
+        List<Map<String, Object>> allPropParams = new ArrayList<>();
+        List<Map<String, Object>> allDomainParams = new ArrayList<>();
+        List<Map<String, Object>> allRangeParams = new ArrayList<>();
+        for ( Resource propResource : allProps) {
+            if (!(propResource instanceof BNode)) {
                 Map<String, Object> params = new HashMap<>();
+                params.put("uri", propResource.stringValue());
+                Map<String, Object> props = new HashMap<>();
+                Set<Value> propNames = model.filter(propResource, RDFS.LABEL, null).objects();
+                props.put("name",propNames.isEmpty()?((IRI)propResource).getLocalName():
+                        propNames.iterator().next().stringValue());
+
+                Set<Value> propComments = model.filter(propResource, RDFS.COMMENT, null).objects();
+                if (!propComments.isEmpty()){
+                    props.put("comment", propComments.iterator().next().stringValue());
+                }
                 params.put("props", props);
-                db.execute(cypher, params);
+                allPropParams.add(params);
                 propsLoaded++;
-                extractDomainAndRange(model, propResource, propType);
+                allDomainParams.addAll(extractDomain(model, propResource, propType, propertyLabelName, domainRelName));
+                allRangeParams.addAll(extractRange(model, propResource, propType, propertyLabelName, rangeRelName));
             }
         }
 
-        for ( Resource propResource : allDatatypeProps) {
+        Map<String, Object> paramsForPropQuery = new HashMap<>();
+        paramsForPropQuery.put("paramList", allPropParams);
+        db.execute(String.format("UNWIND $paramList AS param MERGE (p:%s { uri: param.uri}) SET p+=param.props",
+                propertyLabelName), paramsForPropQuery);
+
+        Map<String, Object> paramsForDomainQuery = new HashMap<>();
+        paramsForDomainQuery.put("paramList", allDomainParams);
+        db.execute(String.format(
+                "UNWIND $paramList AS param MATCH (p:`%s` { uri: param.propUri}), (c { uri: param.domainUri}) MERGE (p)-[:`%s`]->(c)",
+                // c can be a class or an object property
+                propertyLabelName, domainRelName), paramsForDomainQuery);
+
+        Map<String, Object> paramsForRangeQuery = new HashMap<>();
+        paramsForRangeQuery.put("paramList", allRangeParams);
+        db.execute(String.format(
+                "UNWIND $paramList AS param MATCH (p:`%s` { uri: param.propUri}), (c { uri: param.rangeUri}) MERGE (p)-[:`%s`]->(c)",
+                propertyLabelName, rangeRelName), paramsForRangeQuery);
+
+
+        for ( Resource propResource : allProps) {
             if (!(propResource instanceof BNode)) {
-                extractPropertyHierarchy(model, propResource, propType);
+                extractPropertyHierarchy(model, propResource, propType, propertyLabelName, subPropertyOfRelName);
             }
         }
         return propsLoaded;
     }
 
-    private String getNeoEquivalentForProp(IRI propType) {
-        if(propType.equals(OWL.DATATYPEPROPERTY)){
-            return "Property";
-        } else if(propType.equals(OWL.OBJECTPROPERTY)) {
-            //It is an objectproperty
-            return "Relationship";
-        } else {
-            //it's an rdfs:Property
-            return "Property:Relationship";
-        }
-    }
 
-    private void extractDomainAndRange(Model model, Resource propResource, IRI propType) {
+    private List<Map<String, Object>> extractDomain(Model model, Resource propResource, IRI propType, String propertyLabelName,
+                                                    String domainRelName) {
+        List<Map<String, Object>> domainParamsList = new ArrayList<>();
         for (Value object: model.filter(propResource, RDFS.DOMAIN, null).objects()){
             if (object instanceof IRI && (model.contains((IRI)object,RDF.TYPE, OWL.CLASS) ||
                     model.contains((IRI)object,RDF.TYPE, RDFS.CLASS) ||
                     model.contains((IRI)object,RDF.TYPE, OWL.OBJECTPROPERTY))){
                 //This last bit picks up OWL definitions of attributes on properties.
                 // Totally non standard, but in case it's used to accommodate LPG style properties on rels definitions
-                db.execute(String.format(
-                        "MATCH (p:%s { uri:'%s'}), (c { uri:'%s'}) MERGE (p)-[:DOMAIN]->(c)",
-                        // c can be a class or an object property
-                        getNeoEquivalentForProp(propType), propResource.stringValue(), object.stringValue()));
+                Map<String, Object> params = new HashMap<>();
+                params.put("propUri", propResource.stringValue());
+                params.put("domainUri", object.stringValue());
+                domainParamsList.add(params);
             }
         }
+        return domainParamsList;
+    }
+
+    private List<Map<String, Object>> extractRange(Model model, Resource propResource, IRI propType, String propertyLabelName,
+                                                   String rangeRelName) {
+        List<Map<String, Object>> rangeParamsList = new ArrayList<>();
         for (Value object: model.filter(propResource, RDFS.RANGE, null).objects()){
             if (object instanceof IRI && (model.contains((IRI)object,RDF.TYPE, OWL.CLASS) ||
                     model.contains((IRI)object,RDF.TYPE, RDFS.CLASS))){
                 //only picks ranges that are classes, which means, only ObjectProperties
                 // (no XSD ranges for DatatypeProps)
-                db.execute(String.format(
-                        "MATCH (p:%s { uri:'%s'}), (c:Class { uri:'%s'}) MERGE (p)-[:RANGE]->(c)",
-                        getNeoEquivalentForProp(propType), propResource.stringValue(), object.stringValue()));
+                Map<String, Object> params = new HashMap<>();
+                params.put("propUri", propResource.stringValue());
+                params.put("rangeUri", object.stringValue());
+                rangeParamsList.add(params);
             }
         }
+        return rangeParamsList;
     }
 
-    private void extractPropertyHierarchy(Model model, Resource propResource, IRI propType) {
+    private void extractPropertyHierarchy(Model model, Resource propResource, IRI propType, String propertyLabelName, String subPropertyOfRelName) {
         for (Value object: model.filter(propResource, RDFS.SUBPROPERTYOF, null).objects()){
             if (object instanceof IRI && (model.contains((IRI)object,RDF.TYPE, OWL.OBJECTPROPERTY) ||
                     model.contains((IRI)object,RDF.TYPE, OWL.DATATYPEPROPERTY) ||
                     model.contains((IRI)object,RDF.TYPE, RDF.PROPERTY))){
+                Map<String, Object> params = new HashMap<>();
+                params.put("propUri", propResource.stringValue());
+                params.put("parentPropUri", object.stringValue());
                 db.execute(String.format(
-                        "MATCH (p:%s { uri:'%s'}), (c { uri:'%s'}) MERGE (p)-[:%s]->(c)",
-                        getNeoEquivalentForProp(propType), propResource.stringValue(), object.stringValue(),
-                        (propType.equals(OWL.DATATYPEPROPERTY)?"SPO":"SRO")));
+                        "MATCH (p:`%s` { uri:$propUri}), (c { uri:$parentPropUri}) MERGE (p)-[:`%s`]->(c)",
+                        propertyLabelName, subPropertyOfRelName), params);
             }
         }
     }
-    private boolean createClass(Resource classResource) {
-        String cypher = String.format("MERGE (p:Class { uri:'%s'})", classResource.stringValue());
-        Result execute = db.execute(cypher);
-        return execute.hasNext();
-    }
 
-    private int extractClasses(Model model) {
+    private int extractClasses(Model model, String classLabelName, String scoRelName) {
         // loads Simple Named Classes (https://www.w3.org/TR/2004/REC-owl-guide-20040210/#SimpleClasses)
         int classesLoaded = 0;
         Set<Resource> allClasses = model.filter(null, RDF.TYPE, OWL.CLASS).subjects();
@@ -170,15 +225,13 @@ public class LiteOntologyImporter {
         Model scoStatements = model.filter(null, RDFS.SUBCLASSOF, null);
         allClasses.addAll(scoStatements.subjects());
         scoStatements.objects().stream().filter(x -> x instanceof IRI).forEach( x -> allClasses.add((IRI)x));
+        List<Map<String,Object>> paramList = new ArrayList<>();
         for ( Resource classResource : allClasses) {
             if (!(classResource instanceof BNode)) {
-                createClass(classResource);
-                String cypher = String.format("MERGE (p:Class { uri:'%s'}) SET p+={props}", classResource.stringValue());
                 Map<String, Object> props = new HashMap<>();
-
                 Set<Value> classNames = model.filter(classResource, RDFS.LABEL, null).objects();
                 props.put("name",classNames.isEmpty()?((IRI)classResource).getLocalName():
-                        classNames.iterator().next().stringValue().replace("'", "\'"));
+                        classNames.iterator().next().stringValue());
 
                 for (Value classComment : model.filter(classResource, RDFS.COMMENT, null).objects()) {
                     props.put("comment", classComment.stringValue().replace("'", "\'"));
@@ -186,24 +239,36 @@ public class LiteOntologyImporter {
                 }
                 Map<String, Object> params = new HashMap<>();
                 params.put("props", props);
-                db.execute(cypher, params);
-                extractClassHierarchy(model,classResource);
+                params.put("uri",classResource.stringValue());
+                paramList.add(params);
                 classesLoaded++;
             }
         }
-        return classesLoaded;
-    }
 
-    private void extractClassHierarchy(Model model, Resource classResource) {
-        for (Value object: model.filter(classResource, RDFS.SUBCLASSOF, null).objects()){
-            if (object instanceof IRI){
-                createClass(classResource);
-                createClass((Resource) object);
-                db.execute(String.format(
-                        "MATCH (p:Class { uri:'%s'}), (c { uri:'%s'}) MERGE (p)-[:SCO]->(c)",
-                        classResource.stringValue(), object.stringValue()));
+        Map<String, Object> classParams = new HashMap<>();
+        classParams.put("paramList", paramList);
+        db.execute(String.format("UNWIND $paramList AS params MERGE (p:`%s` { uri:params.uri}) SET p+=params.props", classLabelName), classParams);
+
+        Set<Map<String,String>> scoPairs = new HashSet<>();
+        for (Statement st: scoStatements) {
+            Resource subject = st.getSubject();
+            Value object = st.getObject();
+            if ((subject instanceof IRI) && (object instanceof IRI)){
+                HashMap<String, String> scoPair = new HashMap<>();
+                scoPair.put("child", subject.stringValue());
+                scoPair.put("parent", object.stringValue());
+                scoPairs.add(scoPair);
             }
         }
+
+        Map<String, Object> scoParams = new HashMap<>();
+        scoParams.put("scoPairs", new ArrayList(scoPairs));
+        db.execute(String.format(
+                "UNWIND $scoPairs AS pair MATCH (p:`%s` { uri: pair.parent }), (c:`%s` { uri: pair.child }) " +
+                        "MERGE (p)<-[:`%s`]-(c)", classLabelName, classLabelName, scoRelName
+                ), scoParams);
+
+        return classesLoaded;
     }
 
     private RDFFormat getFormat(String format) {
@@ -231,4 +296,5 @@ public class LiteOntologyImporter {
         }
 
     }
+
 }
