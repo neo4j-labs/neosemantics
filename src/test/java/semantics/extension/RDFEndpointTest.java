@@ -27,8 +27,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 import static org.neo4j.helpers.collection.Iterators.count;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
@@ -599,6 +598,62 @@ public class RDFEndpointTest {
     }
 
     @Test
+    public void testNodeByUriAfterImportWithCustomDT() throws Exception {
+        // Given
+        try (ServerControls server = getServerBuilder()
+                .withProcedure(RDFImport.class)
+                .withExtension("/rdf", RDFEndpoint.class)
+                .withFixture(new Function<GraphDatabaseService, Void>() {
+                    @Override
+                    public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+                        try (Transaction tx = graphDatabaseService.beginTx()) {
+                            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+                            tx.success();
+                        } catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        try (Transaction tx = graphDatabaseService.beginTx()) {
+                            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                                    RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                                            .toURI() + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', " +
+                                    "keepCustomDataTypes: true, typesToLabels: true})");
+
+                            tx.success();
+                        } catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        return null;
+                    }
+                })
+                .newServer()) {
+
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri=http://example.org/Resource1");
+
+            String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+                    "\n" +
+                    "<http://example.org/Resource1>\n" +
+                    "                                a  <http://example.org/Resource>;\n" +
+                    "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n" +
+                    "  <http://example.org/Predicate2>  <http://example.org/Resource2>;\n" +
+                    "  <http://example.org/Predicate3>  \"4.75\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate4>  \"2\"^^xsd:long;\n" +
+                    "  <http://example.org/Predicate5>  true;\n" +
+                    "  <http://example.org/Predicate6>  \"2\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate7>  \"4\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate8>  \"52.63\"^^<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/USD>;\n" +
+                    "  <http://example.org/Predicate9>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+                    "  <http://example.org/Predicate10> \"-100\"^^xsd:negativeInteger.";
+
+            assertEquals(200, response.status());
+            System.out.println(response.rawContent());
+            assertTrue(ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+        }
+    }
+
+    @Test
     public void testNodeByUriAfterImportWithMultiCustomDT() throws Exception {
         // Given
         try (ServerControls server = getServerBuilder()
@@ -648,13 +703,13 @@ public class RDFEndpointTest {
                     "\tex:type \"Cabrio\" .";
 
             assertEquals(200, response.status());
-            assertEquals(true, ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            assertTrue(ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
         }
     }
 
     @Test
-    public void testCypherOnRDFAfterImportWithMultiCustomDTSerializeAsTurtle() throws Exception {
+    public void testCypherOnRDFAfterImportWithMultiCustomDTSerializeAsTurtle1() throws Exception {
         // Given
         try (ServerControls server = getServerBuilder()
                 .withProcedure(RDFImport.class)
@@ -707,7 +762,67 @@ public class RDFEndpointTest {
                     "\tex:type \"Cabrio\" .";
 
             assertEquals(200, response.status());
-            assertEquals(true, ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            assertTrue(ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+        }
+    }
+
+    @Test
+    public void testCypherOnRDFAfterImportWithMultiCustomDTSerializeAsTurtle2() throws Exception {
+        // Given
+        try (ServerControls server = getServerBuilder()
+                .withProcedure(RDFImport.class)
+                .withExtension("/rdf", RDFEndpoint.class)
+                .withFixture(new Function<GraphDatabaseService, Void>() {
+                    @Override
+                    public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+                        try (Transaction tx = graphDatabaseService.beginTx()) {
+                            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+                            tx.success();
+                        } catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        try (Transaction tx = graphDatabaseService.beginTx()) {
+                            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                                    RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                                            .toURI() + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', " +
+                                    "keepCustomDataTypes: true})");
+
+                            tx.success();
+                        } catch (Exception e) {
+                            fail(e.getMessage());
+                        }
+                        return null;
+                    }
+                })
+                .newServer()) {
+
+            Map<String, String> params = new HashMap<>();
+            params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
+                                 "OPTIONAL MATCH (n)-[]-(m) RETURN *");
+
+            HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+                    HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+            String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+                    "\n" +
+                    "<http://example.org/Resource1>\n" +
+                    "                                a  <http://example.org/Resource>;\n" +
+                    "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n" +
+                    "  <http://example.org/Predicate2>  <http://example.org/Resource2>;\n" +
+                    "  <http://example.org/Predicate3>  \"4.75\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate4>  \"2\"^^xsd:long;\n" +
+                    "  <http://example.org/Predicate5>  true;\n" +
+                    "  <http://example.org/Predicate6>  \"2\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate7>  \"4\"^^xsd:double;\n" +
+                    "  <http://example.org/Predicate8>  \"52.63\"^^<http://www4.wiwiss.fu-berlin.de/bizer/bsbm/v01/vocabulary/USD>;\n" +
+                    "  <http://example.org/Predicate9>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+                    "  <http://example.org/Predicate10> \"-100\"^^xsd:negativeInteger.";
+
+            assertEquals(200, response.status());
+            System.out.println(response.rawContent());
+            assertTrue(ModelTestUtils.comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
         }
     }
