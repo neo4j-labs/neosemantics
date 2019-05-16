@@ -48,7 +48,7 @@ public class LiteOntologyImporter {
 
     @Procedure(mode = Mode.WRITE)
     public Stream<ImportResults> liteOntoImport(@Name("url") String url, @Name("format") String format,
-                                                @Name(value="props",defaultValue = "{}") Map<String, Object> props) {
+                                                @Name(value="params",defaultValue = "{}") Map<String, Object> props) {
         ImportResults importResults = new ImportResults();
         URL documentUrl;
         int classesLoaded = 0;

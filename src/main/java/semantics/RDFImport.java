@@ -64,7 +64,7 @@ public class RDFImport {
 
     @Procedure(mode = Mode.WRITE)
     public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
-                                           @Name("props") Map<String, Object> props) {
+                                           @Name(value="params",defaultValue = "{}") Map<String, Object> props) {
 
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
@@ -100,7 +100,7 @@ public class RDFImport {
         return Stream.of(importResults);
     }
 
-    private InputStream getInputStream(@Name("url") String url, @Name("props") Map<String, Object> props) throws IOException {
+    private InputStream getInputStream(String url, Map<String, Object> props) throws IOException {
         URLConnection urlConn;
         //This should be delegated to APOC to do handle different protocols, deal with redirection, etc.
         urlConn = new URL(url).openConnection();
@@ -148,7 +148,7 @@ public class RDFImport {
 
     @Procedure(mode = Mode.READ)
     public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
-                                          @Name("props") Map<String, Object> props) {
+                                          @Name(value="params",defaultValue = "{}") Map<String, Object> props) {
 
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
@@ -187,7 +187,7 @@ public class RDFImport {
 
     @Procedure(mode = Mode.READ)
     public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
-                                               @Name("props") Map<String, Object> props) {
+                                               @Name(value="params",defaultValue = "{}") Map<String, Object> props) {
 
         StatementStreamer statementStreamer = new StatementStreamer();
         try {
@@ -211,7 +211,7 @@ public class RDFImport {
 
     @Procedure(mode = Mode.READ)
     public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment, @Name("format") String format,
-                                                 @Name("props") Map<String, Object> props) {
+                                                 @Name(value="params",defaultValue = "{}") Map<String, Object> props) {
 
         final int handleVocabUris = (props.containsKey("handleVocabUris")?getHandleVocabUrisAsInt((String)props.get("handleVocabUris")):0);
         final int handleMultival = (props.containsKey("handleMultival")?getHandleMultivalAsInt((String)props.get("handleMultival")):0);
