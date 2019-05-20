@@ -52,10 +52,10 @@ public class RDFEndpointTest {
           @Override
           public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
             try (Transaction tx = graphDatabaseService.beginTx()) {
-              String ontoCreation = "MERGE (p:Category {catName: \"Person\"})\n" +
-                  "MERGE (a:Category {catName: \"Actor\"})\n" +
-                  "MERGE (d:Category {catName: \"Director\"})\n" +
-                  "MERGE (c:Category {catName: \"Critic\"})\n" +
+              String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                  "MERGE (a:Category {catName: 'Actor'})\n" +
+                  "MERGE (d:Category {catName: 'Director'})\n" +
+                  "MERGE (c:Category {catName: 'Critic'})\n" +
                   "CREATE (a)-[:SCO]->(p)\n" +
                   "CREATE (d)-[:SCO]->(p)\n" +
                   "CREATE (c)-[:SCO]->(p)\n" +
@@ -76,7 +76,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
       // When
-      Result result = server.graph().execute("MATCH (n:Critic) return id(n) as id ");
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       Long id = (Long) result.next().get("id");
       assertEquals(new Long(7), id);
 
@@ -172,10 +172,10 @@ public class RDFEndpointTest {
           @Override
           public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
             try (Transaction tx = graphDatabaseService.beginTx()) {
-              String ontoCreation = "MERGE (p:Category {catName: \"Person\"})\n" +
-                  "MERGE (a:Category {catName: \"Actor\"})\n" +
-                  "MERGE (d:Category {catName: \"Director\"})\n" +
-                  "MERGE (c:Category {catName: \"Critic\"})\n" +
+              String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
+                  "MERGE (a:Category {catName: 'Actor'})\n" +
+                  "MERGE (d:Category {catName: 'Director'})\n" +
+                  "MERGE (c:Category {catName: 'Critic'})\n" +
                   "CREATE (a)-[:SCO]->(p)\n" +
                   "CREATE (d)-[:SCO]->(p)\n" +
                   "CREATE (c)-[:SCO]->(p)\n" +
@@ -194,7 +194,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      Result result = server.graph().execute("MATCH (n:Critic) return id(n) as id ");
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
 
       Map<String, String> map = new HashMap<>();
@@ -250,7 +250,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      Result result = server.graph().execute("MATCH (n:Critic) return id(n) as id ");
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
@@ -418,7 +418,7 @@ public class RDFEndpointTest {
         .newServer()) {
 
       Result result = server.graph()
-          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) return id(n) as id ");
+          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) RETURN id(n) AS id ");
       //assertEquals( 1, count( result ) );
 
       Long id = (Long) result.next().get("id");
@@ -603,7 +603,7 @@ public class RDFEndpointTest {
         .newServer()) {
 
       Result result = server.graph()
-          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) return id(n) as id ");
+          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) RETURN id(n) AS id ");
       //assertEquals( 1, count( result ) );
 
       Long id = (Long) result.next().get("id");
@@ -673,7 +673,7 @@ public class RDFEndpointTest {
       ValueFactory factory = SimpleValueFactory.getInstance();
 
       Result result = server.graph()
-          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) return id(n) as id ");
+          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) RETURN id(n) AS id ");
 
       Long id = (Long) result.next().get("id");
 

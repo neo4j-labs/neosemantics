@@ -161,7 +161,7 @@ public class RDFImportTest {
               .run("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
               .next().get("count").asLong());
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
           session.run(
               "MATCH (x:Resource) WHERE x.`http://www.w3.org/2000/01/rdf-schema#label` = 'harvest_dataset_url'"
                   +
@@ -191,11 +191,11 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
           session.run(
               "MATCH (x:Resource) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'"
-                  +
-                  "\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
+
+                  +"\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
               .get("datasetUrl").asString());
 
       assertEquals("ns0",
@@ -235,7 +235,7 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
           session
               .run("MATCH (x) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
                   "\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
@@ -397,6 +397,71 @@ public class RDFImportTest {
       assertEquals("That Seventies Show", next.get("en_name").asString());
       assertEquals("Cette Série des Années Soixante-dix", next.get("fr_name").asString());
       assertEquals("Cette Série des Années Septante", next.get("frbe_name").asString());
+    }
+  }
+
+  @Test
+  public void testImportMultivalWithMultivalList() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+      String importCypher = "CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("multival.ttl")
+              .toURI()
+          + "','Turtle',{ handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] })";
+      StatementResult importResults1 = session.run(importCypher);
+      Record next = importResults1.next();
+
+      assertEquals(9, next.get("triplesLoaded").asInt());
+
+      importResults1 = session.run(
+          "match (n:Resource) return n.ns0__localName as all, n.ns0__availableInLang as ail, n.ns0__showId as sid, n.ns0__producer as prod ");
+      next = importResults1.next();
+      List<String> localNames = new ArrayList<String>();
+      localNames.add("That Seventies Show");
+      localNames.add("Cette Série des Années Soixante-dix");
+      localNames.add("Cette Série des Années Septante");
+      assertEquals(localNames, next.get("all").asList());
+      List<String> availableInLang = new ArrayList<String>();
+      availableInLang.add("EN");
+      availableInLang.add("FR");
+      availableInLang.add("ES");
+      assertEquals(availableInLang, next.get("ail").asList());
+      assertEquals(218, next.get("sid").asLong());
+      assertEquals("Joanna Smith", next.get("prod").asString());
+    }
+  }
+
+  @Test
+  public void testImportMultivalWithExclusionList() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+      String importCypher = "CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("multival.ttl")
+              .toURI()
+          + "','Turtle',{ handleMultival: 'ARRAY', predicateExclusionList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] })";
+      StatementResult importResults1 = session.run(importCypher);
+      Record next = importResults1.next();
+
+      assertEquals(3, next.get("triplesLoaded").asInt());
+
+      importResults1 = session.run(
+          "match (n:Resource) return n.ns0__localName as all, n.ns0__availableInLang as ail, n.ns0__showId as sid, n.ns0__producer as prod ");
+      next = importResults1.next();
+      assertTrue(next.get("all").isNull());
+      assertTrue(next.get("ail").isNull());
+      List<Long> sids = new ArrayList<Long>();
+      sids.add(218L);
+      assertEquals(sids, next.get("sid").asList());
+      List<String> prod = new ArrayList<String>();
+      prod.add("John Smith");
+      prod.add("Joanna Smith");
+      assertEquals(prod, next.get("prod").asList());
     }
   }
 
@@ -585,6 +650,69 @@ public class RDFImportTest {
       Record next = mediaNames.next();
       assertEquals("The Financial Times", next.get("nm").asString());
       assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
+
+    StatementResult personNames = session.run("MATCH (m { PersonName : 'JC'}) " +
+          "\nRETURN m.LivesIn AS li, m.uri AS uri");
+
+      next = personNames.next();
+      assertEquals("Chesham", next.get("li").asString());
+      assertEquals("http://neo4j.com/invividual/JC", next.get("uri").asString());}
+  }
+
+  @Test
+  public void testImportFromFileIgnoreNs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
+              .toURI() + "','RDF/XML',{ handleVocabUris: 'IGNORE'})");
+      assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+      StatementResult mediaNames = session.run("MATCH (m:Publication) " +
+          "\nRETURN m.name AS nm, m.uri AS uri");
+
+      Record next = mediaNames.next();
+      assertEquals("The Financial Times", next.get("nm").asString());
+      assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
+
+      StatementResult rels = session.run(
+          "MATCH ({ PersonName: 'JC'})-[r:reads]-(:Publication { name: 'The Financial Times'}) " +
+              "\nRETURN count(r) as ct");
+
+      next = rels.next();
+      assertEquals(1L, next.get("ct").asLong());
+
+    }
+  }
+
+  @Test
+  public void testImportFromFileIgnoreNsApplyNeoNaming() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
+              .toURI() + "','RDF/XML',{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true })");
+      assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+      StatementResult mediaNames = session.run("MATCH (m:Publication) " +
+          "\nRETURN m.name AS nm, m.uri AS uri");
+
+      Record next = mediaNames.next();
+      assertEquals("The Financial Times", next.get("nm").asString());
+      assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
+
+      StatementResult rels = session.run(
+          "MATCH ({ personName: 'JC'})-[r:READS]-(:Publication { name: 'The Financial Times'}) " +
+              "\nRETURN count(r) as ct");
+
+      next = rels.next();
+      assertEquals(1L, next.get("ct").asLong());
 
     }
   }
@@ -908,9 +1036,9 @@ public class RDFImportTest {
         }
     }
 
-    private void createIndices(GraphDatabaseService db) {
-        db.execute("CREATE INDEX ON :Resource(uri)");
-    }
+  private void createIndices(GraphDatabaseService db) {
+    db.execute("CREATE INDEX ON :Resource(uri)");
+  }
 
   private static URI file(String path) {
     try {

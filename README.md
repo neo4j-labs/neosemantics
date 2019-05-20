@@ -87,3 +87,14 @@ If `shortenUrls : true`, you'll have prefixes used to shorten property and relat
 | /rdf/describe/uri      | <ul><li><b>nodeuri:</b>the uri of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri. This property is the one used by this extension to lookup a node. [NOTE: URIs should be urlencoded. It's normally not a problem unless there are **hash signs in it** (escape them in the Neo4j browser with %23)] <br> **Example:**<br>:GET /rdf/describe/uri?nodeuri=http://dataset.com#id_1234  |
 | /rdf/cypher      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li><li><b>showOnlyMapped:</b>(optional, default is false) if present output will exclude unmapped elements (labels,attributes, relationships)</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query.<br> **Example:**<br>:POST /rdf/cypher { "cypher" : "MATCH (n:Person { name : 'Keanu Reeves'})-[r]-(m:Movie) RETURN n,r,m " , "showOnlyMapped" : true }  |
 | /rdf/cypheronrdf      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri.<br> **Example:**<br>:POST /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b) RETURN a, r, b"}  |
+
+
+## Contributing
+
+neosemantics code formatting follows the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
+
+In order to contribute to this project, it is advisable to install the code formatting configuration in your preferred IDE:
+* [Eclipse settings file](https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml)
+* [IntelliJ IDEA settings file](https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml)
+
+Please, make sure you format your code before commiting changes. Thanks!

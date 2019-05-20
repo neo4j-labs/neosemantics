@@ -42,6 +42,7 @@ import org.neo4j.logging.Log;
 abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected final Map<String, String> vocMappings;
+  private final boolean neo4jNamingOnIgnoreNs;
   protected final String langFilter;
   protected final int handleUris;
   protected final int handleMultival;
@@ -67,7 +68,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       Set<String> multivalPropUriList, boolean keepCustomDataTypes,
       Set<String> customDataTypedPropList, Set<String> predicateExclList,
       boolean klt,
-      boolean labellise, long commitFreq) {
+      boolean labellise, boolean applyNeo4jNaming, long commitFreq) {
     this.graphdb = db;
     this.langFilter = langFilter;
     this.handleUris = handleUrls;
@@ -92,6 +93,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     this.excludedPredicatesList = predicateExclList;
     this.keepLangTag = klt;
     this.keepCustomDataTypes = keepCustomDataTypes;
+    this.neo4jNamingOnIgnoreNs = applyNeo4jNaming;
   }
 
 
@@ -119,7 +121,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
-    return ns;
+    ns.put("http://www.w3.org/ns/shacl#", "sh");return ns;
   }
 
 
@@ -170,7 +172,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       if (langFilter == null || !language.isPresent() ||
           (language.isPresent() && langFilter.equals(language.get()))) {
         return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
-            : "");
+      : "");
       }
       return null;
     } else if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)
@@ -207,7 +209,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       String prefix = getPrefix(iri.getNamespace());
       return prefix + PREFIX_SEPARATOR + localName;
     } else if (handleUris == URL_IGNORE) {
-      return neo4jCapitalisation(iri.getLocalName(), elementType);
+      return applyCapitalisation(iri.getLocalName(), elementType);
     } else if (handleUris == URL_MAP) {
       return mapElement(iri, elementType, null);
     } else { //if (handleUris  ==  URL_KEEP){
@@ -215,12 +217,21 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
   }
 
-  private String neo4jCapitalisation(String name, int element) {
+  private String applyCapitalisation(String name, int element) {
+    if (neo4jNamingOnIgnoreNs) {
+      //apply Neo4j naming recommendations
     if (element == RELATIONSHIP) {
       return name.toUpperCase();
     } else if (element == LABEL) {
       return name.substring(0, 1).toUpperCase() + name.substring(1);
+    } else if (element == PROPERTY) {
+        return name.substring(0, 1).toLowerCase() + name.substring(1);
+      } else {
+        //should not happen
+        return name;
+      }
     } else {
+      //keep capitalisation as is
       return name;
     }
   }
@@ -233,7 +244,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       return this.vocMappings.get(iri.stringValue());
     } else {
       //if no mapping defined, default to 'IGNORE'
-      return neo4jCapitalisation(iri.getLocalName(), elementType);
+      return applyCapitalisation(iri.getLocalName(), elementType);
     }
   }
 

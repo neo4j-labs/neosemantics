@@ -1,8 +1,11 @@
 package semantics;
 
+import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
@@ -41,15 +44,14 @@ import semantics.result.GraphResult;
 import semantics.result.StreamedStatement;
 
 /**
- * Created by jbarrasa on 21/03/2016.
- * <p>
- * RDF importer based on: 1. DatatypeProperties become node attributes 2. rdf:type relationships are
- * transformed into labels on the subject node 3. rdf:type relationships generate :Class nodes on
- * the object
+ * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instancdes of DatatypeProperties
+ * become node attributes 2. rdf:type relationships are transformed either into labels or
+ * relationships to nodes representing the class 3. Instances of ObjectProperties become
+ * relationships ( See https://jbarrasa.com/2016/06/07/importing-rdf-data-into-neo4j/ )
  */
 public class RDFImport {
 
-  private static final boolean DEFAULT_SHORTEN_URLS = true;
+
   private static final boolean DEFAULT_TYPES_TO_LABELS = true;
 
   private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
@@ -71,7 +73,6 @@ public class RDFImport {
   static final int PROPERTY = 2;
   static final int DATATYPE = 3;
 
-
   @Context
   public GraphDatabaseService db;
   @Context
@@ -84,10 +85,12 @@ public class RDFImport {
 
   @Procedure(mode = Mode.WRITE)
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
-      @Name("props") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
     final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt(
         (String) props.get("handleVocabUris")) : 0);
+    final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
+        .get("applyNeo4jNaming") : false);
     final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     final List<String> multivalPropList = (props.containsKey("multivalPropList")
@@ -110,7 +113,7 @@ public class RDFImport {
         .get("languageFilter") : null);
 
     ImportResults importResults = new ImportResults();
-    URLConnection urlConn;
+
     DirectStatementLoader statementLoader = new DirectStatementLoader(db,
         (commitSize > 0 ? commitSize : 5000),
         nodeCacheSize, handleVocabUris, handleMultival,
@@ -119,15 +122,11 @@ public class RDFImport {
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, keepLangTag,
-        languageFilter, log);
+        languageFilter, applyNeo4jNaming,log);
     try {
       checkIndexesExist();
-      urlConn = new URL(url).openConnection();
-      if (props.containsKey("headerParams")) {
-        ((Map<String, String>) props.get("headerParams"))
-            .forEach((k, v) -> urlConn.setRequestProperty(k, v));
-      }
-      InputStream inputStream = urlConn.getInputStream();
+
+      InputStream inputStream = getInputStream(url, props);
       RDFParser rdfParser = Rio.createParser(getFormat(format));
       rdfParser.setRDFHandler(statementLoader);
       rdfParser.parse(inputStream, url);
@@ -143,7 +142,28 @@ public class RDFImport {
     return Stream.of(importResults);
   }
 
-  private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
+  private InputStream getInputStream(String url, Map<String, Object> props) throws IOException {
+    URLConnection urlConn;
+    //This should be delegated to APOC to do handle different protocols, deal with redirection, etc.
+    urlConn = new URL(url).openConnection();
+    if (props.containsKey("headerParams")) {
+      Map<String, String> headerParams = (Map<String, String>) props.get("headerParams");
+      Object method = headerParams.get("method");
+      if (method != null && urlConn instanceof HttpURLConnection) {
+        HttpURLConnection http = (HttpURLConnection) urlConn;
+        http.setRequestMethod(method.toString());
+      }
+      headerParams.forEach((k, v) -> urlConn.setRequestProperty(k, v));
+      if (props.containsKey("payload")) {
+        urlConn.setDoOutput(true);
+        BufferedWriter writer = new BufferedWriter(
+            new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
+        writer.write(props.get("payload").toString());
+        writer.close();
+      }
+    }
+    return urlConn.getInputStream();
+  }private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
     if (handleVocUrisAsText.equals("SHORTEN")) {
       return 0;
     } else if (handleVocUrisAsText.equals("IGNORE")) {
@@ -169,11 +189,13 @@ public class RDFImport {
 
   @Procedure(mode = Mode.READ)
   public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
-      @Name("props") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
     final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt(
         (String) props.get("handleVocabUris")) : 0);
-    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
+    final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
+        .get("applyNeo4jNaming") : false);
+    finalint handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     final List<String> multivalPropList = (props.containsKey("multivalPropList")
         ? (List<String>) props.get("multivalPropList") : null);
@@ -190,7 +212,7 @@ public class RDFImport {
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
 
-    URLConnection urlConn;
+
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
@@ -200,14 +222,10 @@ public class RDFImport {
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, virtualNodes,
-        virtualRels, keepLangTag, languageFilter, log);
+        virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,log);
     try {
-      urlConn = new URL(url).openConnection();
-      if (props.containsKey("headerParams")) {
-        ((Map<String, String>) props.get("headerParams"))
-            .forEach((k, v) -> urlConn.setRequestProperty(k, v));
-      }
-      InputStream inputStream = urlConn.getInputStream();
+
+      InputStream inputStream = getInputStream(url, props);
       RDFFormat rdfFormat = getFormat(format);
       log.info("Data set to be parsed as " + rdfFormat);
       RDFParser rdfParser = Rio.createParser(rdfFormat);
@@ -227,18 +245,14 @@ public class RDFImport {
 
   @Procedure(mode = Mode.READ)
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
-      @Name("props") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-    URLConnection urlConn;
+
 
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
-      urlConn = new URL(url).openConnection();
-      if (props.containsKey("headerParams")) {
-        ((Map<String, String>) props.get("headerParams"))
-            .forEach((k, v) -> urlConn.setRequestProperty(k, v));
-      }
-      InputStream inputStream = urlConn.getInputStream();
+
+      InputStream inputStream = getInputStream(url, props);
       RDFFormat rdfFormat = getFormat(format);
       log.info("Data set to be parsed as " + rdfFormat);
       RDFParser rdfParser = Rio.createParser(rdfFormat);
@@ -258,11 +272,13 @@ public class RDFImport {
   @Procedure(mode = Mode.READ)
   public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
-      @Name("props") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
     final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt(
         (String) props.get("handleVocabUris")) : 0);
-    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
+    final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
+        .get("applyNeo4jNaming") : false);
+    finalint handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     final List<String> multivalPropList = (props.containsKey("multivalPropList")
         ? (List<String>) props.get("multivalPropList") : null);
@@ -287,7 +303,7 @@ public class RDFImport {
         keepCustomDataTypes,
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
-        typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, log);
+        typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,log);
     try {
       InputStream inputStream = new ByteArrayInputStream(
           rdfFragment.getBytes(Charset.defaultCharset())); //rdfFragment.openStream();

@@ -35,11 +35,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       boolean keepCustomDataTypes,
       Set<String> customDataTypedPropList, Set<String> predicateExclusionList,
       boolean typesToLabels, boolean klt,
-      String languageFilter, Log l) {
+      String languageFilter, boolean applyNeo4jNaming, Log l) {
+
 
     super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
         customDataTypedPropList, predicateExclusionList, klt,
-        typesToLabels, batchSize);
+        typesToLabels, applyNeo4jNaming, batchSize);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(nodeCacheSize)
         .build();
