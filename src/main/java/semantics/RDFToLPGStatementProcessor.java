@@ -161,7 +161,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
         datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
         .equals(XMLSchema.NEGATIVE_INTEGER)) {
-      return object.longValue();
+      return Long.parseLong(object.stringValue().replaceAll("[^0-9+-]", ""));
     } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
         datatype.equals(XMLSchema.FLOAT)) {
       return object.doubleValue();

@@ -122,7 +122,7 @@ public class RDFImport {
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, keepLangTag,
-        languageFilter, applyNeo4jNaming,log);
+        languageFilter, applyNeo4jNaming, log);
     try {
       checkIndexesExist();
 
@@ -195,7 +195,7 @@ public class RDFImport {
         (String) props.get("handleVocabUris")) : 0);
     final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
         .get("applyNeo4jNaming") : false);
-    finalint handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
+    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     final List<String> multivalPropList = (props.containsKey("multivalPropList")
         ? (List<String>) props.get("multivalPropList") : null);
@@ -278,7 +278,7 @@ public class RDFImport {
         (String) props.get("handleVocabUris")) : 0);
     final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
         .get("applyNeo4jNaming") : false);
-    finalint handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
+    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     final List<String> multivalPropList = (props.containsKey("multivalPropList")
         ? (List<String>) props.get("multivalPropList") : null);
