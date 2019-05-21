@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
@@ -163,7 +164,9 @@ public class RDFImport {
       }
     }
     return urlConn.getInputStream();
-  }private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
+  }
+
+  private int getHandleVocabUrisAsInt(String handleVocUrisAsText) {
     if (handleVocUrisAsText.equals("SHORTEN")) {
       return 0;
     } else if (handleVocUrisAsText.equals("IGNORE")) {
@@ -212,7 +215,6 @@ public class RDFImport {
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
 
-
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
@@ -222,7 +224,7 @@ public class RDFImport {
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, virtualNodes,
-        virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,log);
+        virtualRels, keepLangTag, languageFilter, applyNeo4jNaming, log);
     try {
 
       InputStream inputStream = getInputStream(url, props);
@@ -246,8 +248,6 @@ public class RDFImport {
   @Procedure(mode = Mode.READ)
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-
-
 
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
@@ -303,7 +303,8 @@ public class RDFImport {
         keepCustomDataTypes,
         (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
-        typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,log);
+        typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,
+        log);
     try {
       InputStream inputStream = new ByteArrayInputStream(
           rdfFragment.getBytes(Charset.defaultCharset())); //rdfFragment.openStream();
@@ -325,30 +326,41 @@ public class RDFImport {
   }
 
   @UserFunction
-  public String getCustomDTLocalName(@Name("literal") String literal) {
+  public String getDataType(@Name("literal") Object literal) {
     Pattern patternShortened = Pattern.compile(
-        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(\\w+)" + Pattern
-            .quote(PREFIX_SEPARATOR) + "(.+)$");
+        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" + Pattern
+            .quote(PREFIX_SEPARATOR) + "(.+))$");
     Pattern patternRegular = Pattern.compile(
-        "(.+)\\^\\^http(s)?://(www\\.)?[(\\w)-]+.([(\\w)-]+.)*?(\\w+)/([\\w-._~:?#\\[\\]()*+/]+/)*([\\w\\-._~:?#\\[\\]!$&'()*+/]*)");
-    Matcher matcherShortened = patternShortened.matcher(literal);
-    Matcher matcherRegular = patternRegular.matcher(literal);
+        "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
     String result = "";
-    if (matcherShortened.matches()) {
-      result = matcherShortened.group(3);
-    } else if (matcherRegular.matches()) {
-      result = matcherRegular.group(matcherRegular.groupCount());
+    if (literal instanceof String) {
+      Matcher matcherShortened = patternShortened.matcher((String) literal);
+      Matcher matcherRegular = patternRegular.matcher((String) literal);
+      if (matcherShortened.matches()) {
+        result = matcherShortened.group(2);
+      } else if (matcherRegular.matches()) {
+        result = matcherRegular.group(2);
+      } else {
+        result = XMLSchema.STRING.stringValue();
+      }
+    } else if (literal instanceof Long){
+      result = XMLSchema.LONG.stringValue();
+    } else if (literal instanceof Double){
+      result = XMLSchema.DOUBLE.stringValue();
+    } else if (literal instanceof Boolean){
+      result = XMLSchema.BOOLEAN.stringValue();
     }
     return result;
   }
 
   @UserFunction
-  public String getPropValueWihoutCustomDT(@Name("literal") String literal) {
+  public String getPropValue(@Name("literal") String literal) {
     Pattern patternShortened = Pattern.compile(
-        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(\\w+)" + Pattern
-            .quote(PREFIX_SEPARATOR) + "(.+)$");
+        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" + Pattern
+            .quote(PREFIX_SEPARATOR) + "(.+))$");
     Pattern patternRegular = Pattern.compile(
-        "(.+)\\^\\^http(s)?://(www\\.)?[(\\w)-]+.([(\\w)-]+.)*?(\\w+)/([\\w-._~:?#\\[\\]()*+/]+/)*([\\w\\-._~:?#\\[\\]!$&'()*+/]*)");
+        "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
+
     Matcher matcherShortened = patternShortened.matcher(literal);
     Matcher matcherRegular = patternRegular.matcher(literal);
     String result = literal;
