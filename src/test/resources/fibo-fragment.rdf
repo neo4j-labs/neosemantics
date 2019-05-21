@@ -1,427 +1,274 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE rdf:RDF [
-  <!ENTITY afn "http://jena.apache.org/ARQ/function#">
-  <!ENTITY dc "http://purl.org/dc/elements/1.1/">
-  <!ENTITY dct "http://purl.org/dc/terms/">
-  <!ENTITY fibo-be-corp-corp "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/">
-  <!ENTITY fibo-be-le-cb "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/">
-  <!ENTITY fibo-be-le-fbo "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/">
-  <!ENTITY fibo-be-le-lp "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/">
-  <!ENTITY fibo-fnd-aap-agt "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/Agents/">
-  <!ENTITY fibo-fnd-acc-cur "https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/">
-  <!ENTITY fibo-fnd-dt-fd "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/">
-  <!ENTITY fibo-fnd-law-jur "https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/">
-  <!ENTITY fibo-fnd-org-fm "https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/FormalOrganizations/">
-  <!ENTITY fibo-fnd-rel-rel "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/">
-  <!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
-  <!ENTITY grddl "http://www.w3.org/2003/g/data-view#">
-  <!ENTITY owl "http://www.w3.org/2002/07/owl#">
-  <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
-  <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
-  <!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
-  <!ENTITY sm "http://www.omg.org/techprocess/ab/SpecificationMetadata/">
-  <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
-  ]>
+        <!ENTITY afn "http://jena.apache.org/ARQ/function#">
+        <!ENTITY dc "http://purl.org/dc/elements/1.1/">
+        <!ENTITY dct "http://purl.org/dc/terms/">
+        <!ENTITY fibo-be-corp-corp "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/">
+        <!ENTITY fibo-be-le-cb "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/">
+        <!ENTITY fibo-be-le-fbo "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/">
+        <!ENTITY fibo-be-le-lp "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/">
+        <!ENTITY fibo-fnd-aap-agt "https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/Agents/">
+        <!ENTITY fibo-fnd-acc-cur "https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/">
+        <!ENTITY fibo-fnd-dt-fd "https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/">
+        <!ENTITY fibo-fnd-law-jur "https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/">
+        <!ENTITY fibo-fnd-org-fm "https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/FormalOrganizations/">
+        <!ENTITY fibo-fnd-rel-rel "https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/">
+        <!ENTITY fibo-fnd-utl-av "https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/">
+        <!ENTITY grddl "http://www.w3.org/2003/g/data-view#">
+        <!ENTITY owl "http://www.w3.org/2002/07/owl#">
+        <!ENTITY rdf "http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+        <!ENTITY rdfs "http://www.w3.org/2000/01/rdf-schema#">
+        <!ENTITY skos "http://www.w3.org/2004/02/skos/core#">
+        <!ENTITY sm "http://www.omg.org/techprocess/ab/SpecificationMetadata/">
+        <!ENTITY xsd "http://www.w3.org/2001/XMLSchema#">
+        ]>
 <rdf:RDF xml:base="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"
-  xmlns:dct="http://purl.org/dc/terms/"
-  xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
-  xmlns:owl="http://www.w3.org/2002/07/owl#"
-  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-  xmlns:skos="http://www.w3.org/2004/02/skos/core#"
-  xmlns:sm="http://www.omg.org/techprocess/ab/SpecificationMetadata/"
->
+         xmlns:afn="http://jena.apache.org/ARQ/function#"
+         xmlns:dc="http://purl.org/dc/elements/1.1/"
+         xmlns:dct="http://purl.org/dc/terms/"
+         xmlns:fibo-be-corp-corp="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"
+         xmlns:fibo-be-le-cb="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/"
+         xmlns:fibo-be-le-fbo="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/"
+         xmlns:fibo-be-le-lp="https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/"
+         xmlns:fibo-fnd-aap-agt="https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/Agents/"
+         xmlns:fibo-fnd-acc-cur="https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/"
+         xmlns:fibo-fnd-dt-fd="https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/"
+         xmlns:fibo-fnd-law-jur="https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/"
+         xmlns:fibo-fnd-org-fm="https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/FormalOrganizations/"
+         xmlns:fibo-fnd-rel-rel="https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/"
+         xmlns:fibo-fnd-utl-av="https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"
+         xmlns:grddl="http://www.w3.org/2003/g/data-view#"
+         xmlns:owl="http://www.w3.org/2002/07/owl#"
+         xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
+         xmlns:skos="http://www.w3.org/2004/02/skos/core#"
+         xmlns:sm="http://www.omg.org/techprocess/ab/SpecificationMetadata/"
+         xmlns:xsd="http://www.w3.org/2001/XMLSchema#">
 
-  <owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/">
-    <rdfs:label>Corporations Ontology</rdfs:label>
-    <dct:abstract>This ontology defines the fundamental concepts for companies incorporated by the
-      issuance of
-      shares. Terms defined in this ontology are those which are applicable to all such entities.
-      Many of these
-      concepts form the basis of the relationships of ownership and control which obtain between
-      entities of this
-      type.
-    </dct:abstract>
-    <dct:license rdf:datatype="&xsd;anyURI">http://opensource.org/licenses/MIT</dct:license>
-    <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.omg.org/spec/ODM/</sm:contentLanguage>
-    <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.w3.org/standards/techs/owl#w3c_all
-    </sm:contentLanguage>
-    <sm:linkToResourceAddedForTestingPurposesByJB rdf:resource="&skos;TestyMcTestFace"/>
-    <sm:copyright>Copyright (c) 2013-2017 EDM Council, Inc.
-      Copyright (c) 2013-2017 Object Management Group, Inc.
-    </sm:copyright>
-    <sm:dependsOn rdf:datatype="&xsd;anyURI">
-      https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/
-    </sm:dependsOn>
-    <sm:dependsOn rdf:datatype="&xsd;anyURI">
-      https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/
-    </sm:dependsOn>
-    <sm:dependsOn rdf:datatype="&xsd;anyURI">
-      https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/
-    </sm:dependsOn>
-    <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/FND/
-    </sm:dependsOn>
-    <sm:fileAbbreviation>fibo-be-corp-corp</sm:fileAbbreviation>
-    <sm:filename>Corporations.rdf</sm:filename>
-    <rdfs:seeAlso
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/AboutTheEDMC-FIBOFamily/"/>
-    <rdfs:seeAlso rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/AboutBE/"/>
-    <rdfs:seeAlso
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/AboutCorporations/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/CorporateBodies/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/FormalBusinessOrganizations/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/LegalPersons/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Accounting/CurrencyAmount/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/AgentsAndPeople/Agents/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/DatesAndTimes/FinancialDates/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Law/Jurisdiction/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Organizations/FormalOrganizations/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Relations/Relations/"/>
-    <owl:imports
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Utilities/AnnotationVocabulary/"/>
-    <owl:versionIRI
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/Corporations/Corporations/"/>
-    <skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations.rdf
-      version of this
-      ontology was modified per the issue resolutions identified in the FIBO BE 1.0 FTF report.
-    </skos:changeNote>
-    <skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations.rdf
-      version of this
-      ontology was modified per the issue resolutions identified in the FIBO BE 1.2 FTF report.
-    </skos:changeNote>
-    <fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
-  </owl:Ontology>
+    <owl:Ontology rdf:about="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/">
+        <rdfs:label>Corporations Ontology</rdfs:label>
+        <dct:abstract>This ontology defines the fundamental concepts for companies incorporated by the issuance of shares. Terms defined in this ontology are those which are applicable to all such entities. Many of these concepts form the basis of the relationships of ownership and control which obtain between entities of this type.</dct:abstract>
+        <dct:license rdf:datatype="&xsd;anyURI">http://opensource.org/licenses/MIT</dct:license>
+        <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.omg.org/spec/ODM/</sm:contentLanguage>
+        <sm:contentLanguage rdf:datatype="&xsd;anyURI">http://www.w3.org/standards/techs/owl#w3c_all</sm:contentLanguage>
+        <sm:linkToResourceAddedForTestingPurposesByJB rdf:resource="&skos;TestyMcTestFace"/>
+        <sm:copyright>Copyright (c) 2013-2017 EDM Council, Inc.
+            Copyright (c) 2013-2017 Object Management Group, Inc.</sm:copyright>
+        <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/</sm:dependsOn>
+        <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/</sm:dependsOn>
+        <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/</sm:dependsOn>
+        <sm:dependsOn rdf:datatype="&xsd;anyURI">https://spec.edmcouncil.org/fibo/ontology/FND/</sm:dependsOn>
+        <sm:fileAbbreviation>fibo-be-corp-corp</sm:fileAbbreviation>
+        <sm:filename>Corporations.rdf</sm:filename>
+        <rdfs:seeAlso rdf:resource="https://spec.edmcouncil.org/fibo/ontology/AboutTheEDMC-FIBOFamily/"/>
+        <rdfs:seeAlso rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/AboutBE/"/>
+        <rdfs:seeAlso rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/AboutCorporations/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/CorporateBodies/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/FormalBusinessOrganizations/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/LegalEntities/LegalPersons/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Accounting/CurrencyAmount/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/AgentsAndPeople/Agents/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/DatesAndTimes/FinancialDates/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Law/Jurisdiction/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Organizations/FormalOrganizations/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Relations/Relations/"/>
+        <owl:imports rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/FND/Utilities/AnnotationVocabulary/"/>
+        <owl:versionIRI rdf:resource="https://spec.edmcouncil.org/fibo/ontology/master/2018Q2/BE/Corporations/Corporations/"/>
+        <skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations.rdf version of this ontology was modified per the issue resolutions identified in the FIBO BE 1.0 FTF report.</skos:changeNote>
+        <skos:changeNote>The https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations.rdf version of this ontology was modified per the issue resolutions identified in the FIBO BE 1.2 FTF report.</skos:changeNote>
+        <fibo-fnd-utl-av:hasMaturityLevel rdf:resource="&fibo-fnd-utl-av;Release"/>
+    </owl:Ontology>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;BoardAgreement">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationCoveringAgreement"/>
-    <rdfs:label>board agreement</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>a formal, legally binding agreement between members of the Board of Directors of the organization</skos:definition>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;BoardAgreement">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationCoveringAgreement"/>
+        <rdfs:label>board agreement</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>a formal, legally binding agreement between members of the Board of Directors of the organization</skos:definition>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;JointStockCompany">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
-    <rdfs:label>joint stock company</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>1. In the UK, the original (17th century) name for a corporation in which the
-      liability of the
-      owners is limited to the nominal value of the stock (shares) held by them.
-      2. In the US, a corporation with unlimited liability for the shareholders. Investors in a US
-      joint stock
-      company receive stock (shares) which can be transferred, and can elect a board of directors,
-      but are
-      jointly-and-severally liable for companys debts and obligations. A US joint stock company
-      cannot hold title
-      to a real property.
-    </skos:definition>
-    <skos:editorialNote>There are two kinds of joint stock company. The private company kind and the
-      open market.
-      The shares are usually only held by the directors and Company Secretary.
-    </skos:editorialNote>
-    <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">
-      http://www.businessdictionary.com/definition/joint-stock-company.html
-    </fibo-fnd-utl-av:definitionOrigin>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;JointStockCompany">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
+        <rdfs:label>joint stock company</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>1. In the UK, the original (17th century) name for a corporation in which the liability of the owners is limited to the nominal value of the stock (shares) held by them.
+            2. In the US, a corporation with unlimited liability for the shareholders. Investors in a US joint stock company receive stock (shares) which can be transferred, and can elect a board of directors, but are jointly-and-severally liable for companys debts and obligations. A US joint stock company cannot hold title to a real property.</skos:definition>
+        <skos:editorialNote>There are two kinds of joint stock company. The private company kind and the open market. The shares are usually only held by the directors and Company Secretary.</skos:editorialNote>
+        <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">http://www.businessdictionary.com/definition/joint-stock-company.html</fibo-fnd-utl-av:definitionOrigin>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;PrivatelyHeldCompany">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
-    <rdfs:label>privately held company</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>A firm whose issued shares are all held by a family or a small group of
-      investors and,
-      therefore, cannot be bought by the public.
-    </skos:definition>
-    <skos:editorialNote>Wikipedia: definition for British or Commonwealth version: A private company
-      limited by
-      shares is a type of company incorporated under the laws of England and Wales, Scotland, that
-      of certain
-      Commonwealth countries and the Republic of Ireland. It has shareholders with limited liability
-      and its
-      shares may not be offered to the general public, unlike those of public limited companies.
-      Additional notes
-      from Wikipedia: Limited by shares means that the company has shareholders, and that the
-      liability of the
-      shareholders to creditors of the company is limited to the capital originally invested, i.e.
-      the nominal
-      value of the shares and any premium paid in return for the issue of the shares by the company.
-      A
-      shareholders personal assets are thereby protected in the event of the companys insolvency,
-      but money
-      invested in the company will be lost. A limited company may be private or public. A private
-      limited companys
-      disclosure requirements are lighter, but for this reason its shares may not be offered to the
-      general public
-      (and therefore cannot be traded on a public stock exchange). This is the major distinguishing
-      feature
-      between a private limited company and a public limited company. Most companies, particularly
-      small
-      companies, are private. Private companies limited by shares are required to have the suffix
-      Limited (often
-      written Ltd or Ltd.) or Incorporated (Inc.) as part of their name, though the latter cannot be
-      used in the
-      UK or the Republic of Ireland. In the Republic of Ireland, Teoranta (Teo.) may be used
-      instead, largely by
-      Gaeltacht companies. Cyfyngedig (Cyf.) may be used by Welsh companies in a similar fashion.
-    </skos:editorialNote>
-    <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">
-      http://www.businessdictionary.com/definition/closed-corporation.html
-    </fibo-fnd-utl-av:definitionOrigin>
-    <fibo-fnd-utl-av:synonym>closed corporation</fibo-fnd-utl-av:synonym>
-    <fibo-fnd-utl-av:synonym>privately held corporation</fibo-fnd-utl-av:synonym>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;PrivatelyHeldCompany">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
+        <rdfs:label>privately held company</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>A firm whose issued shares are all held by a family or a small group of investors and, therefore, cannot be bought by the public.</skos:definition>
+        <skos:editorialNote>Wikipedia: definition for British or Commonwealth version: A private company limited by shares is a type of company incorporated under the laws of England and Wales, Scotland, that of certain Commonwealth countries and the Republic of Ireland. It has shareholders with limited liability and its shares may not be offered to the general public, unlike those of public limited companies. Additional notes from Wikipedia: Limited by shares means that the company has shareholders, and that the liability of the shareholders to creditors of the company is limited to the capital originally invested, i.e. the nominal value of the shares and any premium paid in return for the issue of the shares by the company. A shareholders personal assets are thereby protected in the event of the companys insolvency, but money invested in the company will be lost. A limited company may be private or public. A private limited companys disclosure requirements are lighter, but for this reason its shares may not be offered to the general public (and therefore cannot be traded on a public stock exchange). This is the major distinguishing feature between a private limited company and a public limited company. Most companies, particularly small companies, are private. Private companies limited by shares are required to have the suffix Limited (often written Ltd or Ltd.) or Incorporated (Inc.) as part of their name, though the latter cannot be used in the UK or the Republic of Ireland. In the Republic of Ireland, Teoranta (Teo.) may be used instead, largely by Gaeltacht companies. Cyfyngedig (Cyf.) may be used by Welsh companies in a similar fashion.</skos:editorialNote>
+        <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">http://www.businessdictionary.com/definition/closed-corporation.html</fibo-fnd-utl-av:definitionOrigin>
+        <fibo-fnd-utl-av:synonym>closed corporation</fibo-fnd-utl-av:synonym>
+        <fibo-fnd-utl-av:synonym>privately held corporation</fibo-fnd-utl-av:synonym>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;PubliclyHeldCompany">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
-    <rdfs:label>publicly held company</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>a company whose shares are traded and held publicly</skos:definition>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;PubliclyHeldCompany">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;StockCorporation"/>
+        <rdfs:label>publicly held company</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>a company whose shares are traded and held publicly</skos:definition>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;RegistrationIdentifier">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationIdentifier"/>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isGovernedBy"/>
-        <owl:onClass rdf:resource="&fibo-fnd-law-jur;Jurisdiction"/>
-        <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0
-        </owl:minQualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-fnd-aap-agt;identifies"/>
-        <owl:onClass>
-          <owl:Class>
-            <owl:unionOf rdf:parseType="Collection">
-              <rdf:Description rdf:about="&fibo-fnd-org-fm;FormalOrganization">
-              </rdf:Description>
-              <rdf:Description rdf:about="&fibo-be-le-lp;LegalPerson">
-              </rdf:Description>
-            </owl:unionOf>
-          </owl:Class>
-        </owl:onClass>
-        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1
-        </owl:qualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;hasDefinition"/>
-        <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;RegistrationIdentifierScheme"/>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:label>registration identifier</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>an identifier that is officially allocated to an organization at the time of
-      registration,
-      typically in a jurisdiction in which said organization is organized or registered and used in
-      that
-      jurisdiction to identify the organization
-    </skos:definition>
-    <skos:scopeNote>In some jurisdictions, such as the State of California, registration identifiers
-      are issued to
-      corporations, including non-profit corporations, limited liability companies, certain
-      partnerships, and
-      foreign corporations doing business in California. The same or a very similar process is used
-      for
-      registration of corporations across the US. See
-      http://www.business.ca.gov/StartaBusiness/DefiningaBusiness/Corporation.aspx for additional
-      details.
-    </skos:scopeNote>
-    <fibo-fnd-utl-av:explanatoryNote>A registration identifier may be required for official
-      communications and is
-      publicly available. The relationship to the jurisdiction in which the organization is
-      organized or
-      registered is typically required, but is optional here to cover cases where jurisdictions may
-      overlap or are
-      not as clearly defined.
-    </fibo-fnd-utl-av:explanatoryNote>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;RegistrationIdentifier">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationIdentifier"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isGovernedBy"/>
+                <owl:onClass rdf:resource="&fibo-fnd-law-jur;Jurisdiction"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-fnd-aap-agt;identifies"/>
+                <owl:onClass>
+                    <owl:Class>
+                        <owl:unionOf rdf:parseType="Collection">
+                            <rdf:Description rdf:about="&fibo-fnd-org-fm;FormalOrganization">
+                            </rdf:Description>
+                            <rdf:Description rdf:about="&fibo-be-le-lp;LegalPerson">
+                            </rdf:Description>
+                        </owl:unionOf>
+                    </owl:Class>
+                </owl:onClass>
+                <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;hasDefinition"/>
+                <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;RegistrationIdentifierScheme"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>registration identifier</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>an identifier that is officially allocated to an organization at the time of registration, typically in a jurisdiction in which said organization is organized or registered and used in that jurisdiction to identify the organization</skos:definition>
+        <skos:scopeNote>In some jurisdictions, such as the State of California, registration identifiers are issued to corporations, including non-profit corporations, limited liability companies, certain partnerships, and foreign corporations doing business in California.  The same or a very similar process is used for registration of corporations across the US.  See http://www.business.ca.gov/StartaBusiness/DefiningaBusiness/Corporation.aspx for additional details.</skos:scopeNote>
+        <fibo-fnd-utl-av:explanatoryNote>A registration identifier may be required for official communications and is publicly available.  The relationship to the jurisdiction in which the organization is organized or registered is typically required, but is optional here to cover cases where jurisdictions may overlap or are not as clearly defined.</fibo-fnd-utl-av:explanatoryNote>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;RegistrationIdentifierScheme">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationIdentificationScheme"/>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;defines"/>
-        <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;RegistrationIdentifier"/>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:label>registration identifier scheme</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>the scheme that defines the registration identifier per the issuing
-      registration authority
-    </skos:definition>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;RegistrationIdentifierScheme">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-fbo;OrganizationIdentificationScheme"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;defines"/>
+                <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;RegistrationIdentifier"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>registration identifier scheme</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>the scheme that defines the registration identifier per the issuing registration authority</skos:definition>
+    </owl:Class>
 
-  <owl:Class rdf:about="&fibo-be-corp-corp;ReligiousCorporation">
-    <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;NotForProfitCorporation"/>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-le-lp;hasObjective"/>
-        <owl:someValuesFrom rdf:resource="&fibo-be-le-lp;ReligiousObjective"/>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:label>religious corporation</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <skos:definition>a not for profit organization whose objective is specific to some fundamental
-      set of beliefs
-      and practices generally agreed upon by a number of people, and that is incorporated under the
-      law
-    </skos:definition>
-    <fibo-fnd-utl-av:adaptedFrom rdf:datatype="&xsd;anyURI">
-      https://en.wikipedia.org/wiki/Religious_corporation
-    </fibo-fnd-utl-av:adaptedFrom>
-    <fibo-fnd-utl-av:explanatoryNote>Often religious corporations are recognized under the law on a
-      sub-national
-      level, for instance by a state or provincial government. The government agency responsible for
-      regulating
-      such corporations is usually the official holder of records, for instance a state department
-      of
-      corporations.
-    </fibo-fnd-utl-av:explanatoryNote>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-corp-corp;ReligiousCorporation">
+        <rdfs:subClassOf rdf:resource="&fibo-be-le-cb;NotForProfitCorporation"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-le-lp;hasObjective"/>
+                <owl:someValuesFrom rdf:resource="&fibo-be-le-lp;ReligiousObjective"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:label>religious corporation</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <skos:definition>a not for profit organization whose objective is specific to some fundamental set of beliefs and practices generally agreed upon by a number of people, and that is incorporated under the law</skos:definition>
+        <fibo-fnd-utl-av:adaptedFrom rdf:datatype="&xsd;anyURI">https://en.wikipedia.org/wiki/Religious_corporation</fibo-fnd-utl-av:adaptedFrom>
+        <fibo-fnd-utl-av:explanatoryNote>Often religious corporations are recognized under the law on a sub-national level, for instance by a state or provincial government. The government agency responsible for regulating such corporations is usually the official holder of records, for instance a state department of corporations.</fibo-fnd-utl-av:explanatoryNote>
+    </owl:Class>
 
-  <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasDateOfIncorporation">
-    <rdfs:subPropertyOf rdf:resource="&fibo-fnd-dt-fd;hasDate"/>
-    <rdfs:label>has date of incorporation</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <rdfs:range rdf:resource="&fibo-fnd-dt-fd;Date"/>
-    <skos:definition>the formal date of incorporation as stated in filing documents
-    </skos:definition>
-  </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasDateOfIncorporation">
+        <rdfs:subPropertyOf rdf:resource="&fibo-fnd-dt-fd;hasDate"/>
+        <rdfs:label>has date of incorporation</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <rdfs:range rdf:resource="&fibo-fnd-dt-fd;Date"/>
+        <skos:definition>the formal date of incorporation as stated in filing documents</skos:definition>
+    </owl:ObjectProperty>
 
-  <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasDateOfRegistration">
-    <rdfs:subPropertyOf rdf:resource="&fibo-fnd-dt-fd;hasDate"/>
-    <rdfs:label>has date of registration</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <rdfs:range rdf:resource="&fibo-fnd-dt-fd;Date"/>
-    <skos:definition>a date on which the corporation has registered in some jurisdiction for
-      regulatory and / or for
-      tax purposes
-    </skos:definition>
-  </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasDateOfRegistration">
+        <rdfs:subPropertyOf rdf:resource="&fibo-fnd-dt-fd;hasDate"/>
+        <rdfs:label>has date of registration</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <rdfs:range rdf:resource="&fibo-fnd-dt-fd;Date"/>
+        <skos:definition>a date on which the corporation has registered in some jurisdiction for regulatory and / or for tax purposes</skos:definition>
+    </owl:ObjectProperty>
 
-  <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasIssuedCapital">
-    <rdfs:subPropertyOf rdf:resource="&fibo-be-corp-corp;hasNominalCapital"/>
-    <rdfs:label>has issued capital</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <rdfs:range rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
-    <skos:definition>The total of a corporation&apos;s shares that are held by shareholders. A
-      corporation can, at
-      any time, issue new shares up to the full amount of authorized share capital.
-    </skos:definition>
-    <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">
-      http://www.businessdictionary.com/definition/issued-share-capital.html
-    </fibo-fnd-utl-av:definitionOrigin>
-    <fibo-fnd-utl-av:synonym>has subscribed capital</fibo-fnd-utl-av:synonym>
-    <fibo-fnd-utl-av:synonym>has subscribed share capital</fibo-fnd-utl-av:synonym>
-  </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasIssuedCapital">
+        <rdfs:subPropertyOf rdf:resource="&fibo-be-corp-corp;hasNominalCapital"/>
+        <rdfs:label>has issued capital</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <rdfs:range rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
+        <skos:definition>The total of a corporation&apos;s shares that are held by shareholders. A corporation can, at any time, issue new shares up to the full amount of authorized share capital.</skos:definition>
+        <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">http://www.businessdictionary.com/definition/issued-share-capital.html</fibo-fnd-utl-av:definitionOrigin>
+        <fibo-fnd-utl-av:synonym>has subscribed capital</fibo-fnd-utl-av:synonym>
+        <fibo-fnd-utl-av:synonym>has subscribed share capital</fibo-fnd-utl-av:synonym>
+    </owl:ObjectProperty>
 
-  <owl:DatatypeProperty rdf:about="&fibo-be-corp-corp;hasLegalFormAbbreviation">
-    <rdfs:label>has legal form abbreviation</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <rdfs:range rdf:resource="&xsd;string"/>
-    <skos:definition>The precise form of the incorporated company abbreviation as defined in the
-      jurisdiction in
-      which it is registered, for example LLC, LLP, Ltd, PLC, Corp.
-    </skos:definition>
-  </owl:DatatypeProperty>
+    <owl:DatatypeProperty rdf:about="&fibo-be-corp-corp;hasLegalFormAbbreviation">
+        <rdfs:label>has legal form abbreviation</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <rdfs:range rdf:resource="&xsd;string"/>
+        <skos:definition>The precise form of the incorporated company abbreviation as defined in the jurisdiction in which it is registered, for example LLC, LLP, Ltd, PLC, Corp.</skos:definition>
+    </owl:DatatypeProperty>
 
-  <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasNominalCapital">
-    <rdfs:subPropertyOf rdf:resource="&fibo-fnd-rel-rel;has"/>
-    <rdfs:label>has nominal capital</rdfs:label>
-    <rdfs:isDefinedBy
-      rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
-    <rdfs:range rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
-    <skos:definition>Nominal capital is an alternate term for authorized share capital. The maximum
-      value of
-      securities that a company can legally issue. This number is specified in the memorandum of
-      association (or
-      articles of incorporation in the US) when a company is incorporated, but can be changed later
-      with
-      shareholders approval. Authorized share capital may be divided into (1) Issued capital - par
-      value of the
-      shares actually issued, (2) Paid up capital - money received from the shareholders in exchange
-      for shares,
-      and (3) Uncalled capital - money remaining unpaid by the shareholders for the shares they have
-      bought.
-    </skos:definition>
-    <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">
-      http://www.businessdictionary.com/definition/authorized-share-capital.html
-    </fibo-fnd-utl-av:definitionOrigin>
-    <fibo-fnd-utl-av:synonym>has authorized capital</fibo-fnd-utl-av:synonym>
-    <fibo-fnd-utl-av:synonym>has authorized stock</fibo-fnd-utl-av:synonym>
-    <fibo-fnd-utl-av:synonym>has nominal share capital</fibo-fnd-utl-av:synonym>
-    <fibo-fnd-utl-av:synonym>has registered capital</fibo-fnd-utl-av:synonym>
-  </owl:ObjectProperty>
+    <owl:ObjectProperty rdf:about="&fibo-be-corp-corp;hasNominalCapital">
+        <rdfs:subPropertyOf rdf:resource="&fibo-fnd-rel-rel;has"/>
+        <rdfs:label>has nominal capital</rdfs:label>
+        <rdfs:isDefinedBy rdf:resource="https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/"/>
+        <rdfs:range rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
+        <skos:definition>Nominal capital is an alternate term for authorized share capital. The maximum value of securities that a company can legally issue. This number is specified in the memorandum of association (or articles of incorporation in the US) when a company is incorporated, but can be changed later with shareholders approval.  Authorized share capital may be divided into (1) Issued capital - par value of the shares actually issued, (2) Paid up capital - money received from the shareholders in exchange for shares, and (3) Uncalled capital - money remaining unpaid by the shareholders for the shares they have bought.</skos:definition>
+        <fibo-fnd-utl-av:definitionOrigin rdf:datatype="&xsd;anyURI">http://www.businessdictionary.com/definition/authorized-share-capital.html</fibo-fnd-utl-av:definitionOrigin>
+        <fibo-fnd-utl-av:synonym>has authorized capital</fibo-fnd-utl-av:synonym>
+        <fibo-fnd-utl-av:synonym>has authorized stock</fibo-fnd-utl-av:synonym>
+        <fibo-fnd-utl-av:synonym>has nominal share capital</fibo-fnd-utl-av:synonym>
+        <fibo-fnd-utl-av:synonym>has registered capital</fibo-fnd-utl-av:synonym>
+    </owl:ObjectProperty>
 
-  <owl:Class rdf:about="&fibo-be-le-cb;StockCorporation">
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasDateOfRegistration"/>
-        <owl:onClass rdf:resource="&fibo-fnd-dt-fd;Date"/>
-        <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0
-        </owl:minQualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasLegalFormAbbreviation"/>
-        <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0
-        </owl:minQualifiedCardinality>
-        <owl:onDataRange rdf:resource="&xsd;string"/>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasIssuedCapital"/>
-        <owl:onClass rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
-        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1
-        </owl:qualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasNominalCapital"/>
-        <owl:onClass rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
-        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1
-        </owl:qualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasDateOfIncorporation"/>
-        <owl:onClass rdf:resource="&fibo-fnd-dt-fd;Date"/>
-        <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1
-        </owl:qualifiedCardinality>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-    <rdfs:subClassOf>
-      <owl:Restriction>
-        <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isGovernedBy"/>
-        <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;BoardAgreement"/>
-      </owl:Restriction>
-    </rdfs:subClassOf>
-  </owl:Class>
+    <owl:Class rdf:about="&fibo-be-le-cb;StockCorporation">
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasDateOfRegistration"/>
+                <owl:onClass rdf:resource="&fibo-fnd-dt-fd;Date"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasLegalFormAbbreviation"/>
+                <owl:minQualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">0</owl:minQualifiedCardinality>
+                <owl:onDataRange rdf:resource="&xsd;string"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasIssuedCapital"/>
+                <owl:onClass rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
+                <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasNominalCapital"/>
+                <owl:onClass rdf:resource="&fibo-fnd-acc-cur;MonetaryAmount"/>
+                <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-be-corp-corp;hasDateOfIncorporation"/>
+                <owl:onClass rdf:resource="&fibo-fnd-dt-fd;Date"/>
+                <owl:qualifiedCardinality rdf:datatype="&xsd;nonNegativeInteger">1</owl:qualifiedCardinality>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="&fibo-fnd-rel-rel;isGovernedBy"/>
+                <owl:someValuesFrom rdf:resource="&fibo-be-corp-corp;BoardAgreement"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
 
 </rdf:RDF>

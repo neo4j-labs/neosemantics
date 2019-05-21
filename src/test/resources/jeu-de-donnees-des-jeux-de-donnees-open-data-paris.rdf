@@ -1,75 +1,67 @@
-<rdf:RDF xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:owl="http://www.w3.org/2002/07/owl#"
-  xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
-  xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-  xmlns:dcat="http://www.w3.org/ns/dcat#" xmlns:dct="http://purl.org/dc/terms/">
-  <dcat:Dataset
-    rdf:about="https://publicdata.eu/dataset/jeu-de-donnees-des-jeux-de-donnees-open-data-paris">
+<rdf:RDF xmlns:foaf="http://xmlns.com/foaf/0.1/" xmlns:owl="http://www.w3.org/2002/07/owl#" xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:dcat="http://www.w3.org/ns/dcat#" xmlns:dct="http://purl.org/dc/terms/">
+  <dcat:Dataset rdf:about="https://publicdata.eu/dataset/jeu-de-donnees-des-jeux-de-donnees-open-data-paris">
     <owl:sameAs rdf:resource="urn:uuid:2e12c126432e3c40254614eca166c1bec031303b"></owl:sameAs>
-    <dct:description>Ce jeu de données recense et détaille tous les jeux de données publiés sur Open
-      Data Paris.
-    </dct:description>
-    <dcat:keyword>dataset</dcat:keyword>
-    <dcat:keyword>jeu-de-donnees</dcat:keyword>
-    <dcat:keyword>open</dcat:keyword>
-    <dcat:keyword>opendata</dcat:keyword>
-    <foaf:homepage
-      rdf:resource="https://publicdata.eu/dataset/jeu-de-donnees-des-jeux-de-donnees-open-data-paris"></foaf:homepage>
+    <dct:description>Ce jeu de données recense et détaille tous les jeux de données publiés sur Open Data Paris.</dct:description>
+        <dcat:keyword>dataset</dcat:keyword>
+        <dcat:keyword>jeu-de-donnees</dcat:keyword>
+        <dcat:keyword>open</dcat:keyword>
+        <dcat:keyword>opendata</dcat:keyword>
+    <foaf:homepage rdf:resource="https://publicdata.eu/dataset/jeu-de-donnees-des-jeux-de-donnees-open-data-paris"></foaf:homepage>
     <rdfs:label>jeu-de-donnees-des-jeux-de-donnees-open-data-paris</rdfs:label>
     <dct:identifier>jeu-de-donnees-des-jeux-de-donnees-open-data-paris</dct:identifier>
     <dct:title>Jeu de données des jeux de données Open Data Paris</dct:title>
-    <dcat:distribution>
-      <dcat:Distribution>
-        <dcat:accessURL
-          rdf:resource="http://opendata.paris.fr/opendata/document?id=109&amp;id_attribute=64"></dcat:accessURL>
-      </dcat:Distribution>
-    </dcat:distribution>
+        <dcat:distribution>
+            <dcat:Distribution>
+                <dcat:accessURL rdf:resource="http://opendata.paris.fr/opendata/document?id=109&amp;id_attribute=64"></dcat:accessURL>
+            </dcat:Distribution>
+        </dcat:distribution>
     <dct:creator>
       <rdf:Description>
         <foaf:name>L'Equipe Lutece</foaf:name>
       </rdf:Description>
     </dct:creator>
     <dct:rights rdf:resource="http://www.opendefinition.org/licenses/odc-odbl"></dct:rights>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>categories</rdfs:label>
-        <rdf:value>Citoyens</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>eu_country</rdfs:label>
-        <rdf:value>FR</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>eu_nuts3</rdfs:label>
-        <rdf:value>FR101</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>harvest_catalogue_name</rdfs:label>
-        <rdf:value>ParisData</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>harvest_catalogue_url</rdfs:label>
-        <rdf:value>http://opendata.paris.fr</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>harvest_dataset_url</rdfs:label>
-        <rdf:value>http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109</rdf:value>
-      </rdf:Description>
-    </dct:relation>
-    <dct:relation>
-      <rdf:Description>
-        <rdfs:label>temporal_granularity</rdfs:label>
-        <rdf:value>non précisée</rdf:value>
-      </rdf:Description>
-    </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>categories</rdfs:label>
+            <rdf:value>Citoyens</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>eu_country</rdfs:label>
+            <rdf:value>FR</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>eu_nuts3</rdfs:label>
+            <rdf:value>FR101</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>harvest_catalogue_name</rdfs:label>
+            <rdf:value>ParisData</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>harvest_catalogue_url</rdfs:label>
+            <rdf:value>http://opendata.paris.fr</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>harvest_dataset_url</rdfs:label>
+            <rdf:value>http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&amp;portlet_id=106</rdf:value>
+          </rdf:Description>
+        </dct:relation>
+        <dct:relation>
+          <rdf:Description>
+            <rdfs:label>temporal_granularity</rdfs:label>
+            <rdf:value>non précisée</rdf:value>
+          </rdf:Description>
+        </dct:relation>
   </dcat:Dataset>
 </rdf:RDF>
