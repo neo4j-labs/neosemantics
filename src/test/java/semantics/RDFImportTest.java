@@ -1,6 +1,5 @@
 package semantics;
 
-import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -14,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.internal.value.FloatValue;
+import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
@@ -654,7 +653,7 @@ public class RDFImportTest {
       assertEquals("The Financial Times", next.get("nm").asString());
       assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
 
-    StatementResult personNames = session.run("MATCH (m { PersonName : 'JC'}) " +
+      StatementResult personNames = session.run("MATCH (m { PersonName : 'JC'}) " +
           "\nRETURN m.LivesIn AS li, m.uri AS uri");
 
       next = personNames.next();
@@ -993,7 +992,7 @@ public class RDFImportTest {
       StatementResult queryResults = session
           .run("MATCH (n:Resource) RETURN n.`http://example.com/price` AS price");
       Object imports = queryResults.next().get("price");
-      assertEquals(FloatValue.class, imports.getClass());
+      assertEquals(IntegerValue.class, imports.getClass());
 
       importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
