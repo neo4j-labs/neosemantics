@@ -1,5 +1,6 @@
 package semantics;
 
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -163,7 +164,7 @@ public class RDFImportTest {
               .run("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
               .next().get("count").asLong());
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session.run(
               "MATCH (x:Resource) WHERE x.`http://www.w3.org/2000/01/rdf-schema#label` = 'harvest_dataset_url'"
                   +
@@ -193,7 +194,7 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session.run(
               "MATCH (x:Resource) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'"
 
@@ -237,7 +238,7 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session
               .run("MATCH (x) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
                   "\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
