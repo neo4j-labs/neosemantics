@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.internal.value.FloatValue;
+import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
@@ -163,7 +163,7 @@ public class RDFImportTest {
               .run("MATCH ()-[r:`http://purl.org/dc/terms/relation`]->(b) RETURN count(b) as count")
               .next().get("count").asLong());
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session.run(
               "MATCH (x:Resource) WHERE x.`http://www.w3.org/2000/01/rdf-schema#label` = 'harvest_dataset_url'"
                   +
@@ -193,7 +193,7 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session.run(
               "MATCH (x:Resource) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'"
 
@@ -237,7 +237,7 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals(
-          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109",
+          "http://opendata.paris.fr/opendata/jsp/site/Portal.jsp?document_id=109&portlet_id=106",
           session
               .run("MATCH (x) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'" +
                   "\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
@@ -1004,7 +1004,7 @@ public class RDFImportTest {
       StatementResult queryResults = session
           .run("MATCH (n:Resource) RETURN n.`http://example.com/price` AS price");
       Object imports = queryResults.next().get("price");
-      assertEquals(FloatValue.class, imports.getClass());
+      assertEquals(IntegerValue.class, imports.getClass());
 
       importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
