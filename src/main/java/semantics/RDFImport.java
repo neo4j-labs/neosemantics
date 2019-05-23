@@ -52,7 +52,6 @@ import semantics.result.StreamedStatement;
  */
 public class RDFImport {
 
-
   private static final boolean DEFAULT_TYPES_TO_LABELS = true;
 
   private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
@@ -74,6 +73,19 @@ public class RDFImport {
   static final int PROPERTY = 2;
   static final int DATATYPE = 3;
 
+
+  private static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
+          "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
+                  Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
+  private static final Pattern DATATYPE_REGULAR_PATTERN = Pattern.compile(
+          "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
+
+  private static final Pattern SHORTENED_URI_PATTERN =
+          Pattern.compile("^(\\w+)__(\\w+)$");
+
+  private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
+          Pattern.compile("^(.*)@([a-z,\\-]+)$");
+
   @Context
   public GraphDatabaseService db;
   @Context
@@ -82,7 +94,6 @@ public class RDFImport {
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
-
 
   @Procedure(mode = Mode.WRITE)
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
@@ -327,15 +338,11 @@ public class RDFImport {
 
   @UserFunction
   public String getDataType(@Name("literal") Object literal) {
-    Pattern patternShortened = Pattern.compile(
-        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" + Pattern
-            .quote(PREFIX_SEPARATOR) + "(.+))$");
-    Pattern patternRegular = Pattern.compile(
-        "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
+
     String result = "";
     if (literal instanceof String) {
-      Matcher matcherShortened = patternShortened.matcher((String) literal);
-      Matcher matcherRegular = patternRegular.matcher((String) literal);
+      Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher((String) literal);
+      Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher((String) literal);
       if (matcherShortened.matches()) {
         result = matcherShortened.group(2);
       } else if (matcherRegular.matches()) {
@@ -355,14 +362,9 @@ public class RDFImport {
 
   @UserFunction
   public String getPropValue(@Name("literal") String literal) {
-    Pattern patternShortened = Pattern.compile(
-        "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" + Pattern
-            .quote(PREFIX_SEPARATOR) + "(.+))$");
-    Pattern patternRegular = Pattern.compile(
-        "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
 
-    Matcher matcherShortened = patternShortened.matcher(literal);
-    Matcher matcherRegular = patternRegular.matcher(literal);
+    Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
+    Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher(literal);
     String result = literal;
     if (matcherShortened.matches()) {
       result = matcherShortened.group(1);
@@ -384,11 +386,11 @@ public class RDFImport {
 
   @UserFunction
   public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
-    Pattern p = Pattern.compile("^(.*)@([a-z,\\-]+)$");
+
     if (values instanceof List) {
       if (((List) values).get(0) instanceof String) {
         for (Object val : (List<String>) values) {
-          Matcher m = p.matcher((String) val);
+          Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) val);
           if (m.matches() && m.group(2).equals(lang)) {
             return m.group(1);
           }
@@ -397,13 +399,13 @@ public class RDFImport {
     } else if (values instanceof String[]) {
       String[] valuesAsArray = (String[]) values;
       for (int i = 0; i < valuesAsArray.length; i++) {
-        Matcher m = p.matcher(valuesAsArray[i]);
+        Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(valuesAsArray[i]);
         if (m.matches() && m.group(2).equals(lang)) {
           return m.group(1);
         }
       }
     } else if (values instanceof String) {
-      Matcher m = p.matcher((String) values);
+      Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) values);
       if (m.matches() && m.group(2).equals(lang)) {
         return m.group(1);
       }
@@ -413,8 +415,8 @@ public class RDFImport {
 
   @UserFunction
   public String uriFromShort(@Name("short") String str) {
-    Pattern p = Pattern.compile("^(\\w+)__(\\w+)$");
-    Matcher m = p.matcher(str);
+
+    Matcher m = SHORTENED_URI_PATTERN.matcher(str);
     if (m.matches()) {
       ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
