@@ -27,6 +27,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -101,6 +102,8 @@ public class RDFImport {
         .get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
+    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
+            .get("verifyUriSyntax") : true);
 
     ImportResults importResults = new ImportResults();
 
@@ -115,6 +118,7 @@ public class RDFImport {
       checkIndexesExist();
       InputStream inputStream = getInputStream(url, props);
       RDFParser rdfParser = Rio.createParser(getFormat(format));
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
       rdfParser.setRDFHandler(statementLoader);
       rdfParser.parse(inputStream, url);
     } catch (MalformedURLException e) {
@@ -196,6 +200,8 @@ public class RDFImport {
         .get("keepLangTag") : false);
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
+    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
+            .get("verifyUriSyntax") : true);
 
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
@@ -211,6 +217,7 @@ public class RDFImport {
       RDFFormat rdfFormat = getFormat(format);
       log.info("Data set to be parsed as " + rdfFormat);
       RDFParser rdfParser = Rio.createParser(rdfFormat);
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
       rdfParser.setRDFHandler(statementViewer);
       rdfParser.parse(inputStream, "http://neo4j.com/base/");
     } catch (MalformedURLException e) {
@@ -228,6 +235,8 @@ public class RDFImport {
   @Procedure(mode = Mode.READ)
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
+            .get("verifyUriSyntax") : true);
 
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
@@ -236,6 +245,7 @@ public class RDFImport {
       RDFFormat rdfFormat = getFormat(format);
       log.info("Data set to be parsed as " + rdfFormat);
       RDFParser rdfParser = Rio.createParser(rdfFormat);
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
       rdfParser.setRDFHandler(statementStreamer);
       rdfParser.parse(inputStream, "http://neo4j.com/base/");
     } catch (MalformedURLException e) {
@@ -270,6 +280,8 @@ public class RDFImport {
         .get("keepLangTag") : false);
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
+    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
+            .get("verifyUriSyntax") : true);
 
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
@@ -285,6 +297,7 @@ public class RDFImport {
       RDFFormat rdfFormat = getFormat(format);
       log.info("Data set to be parsed as " + rdfFormat);
       RDFParser rdfParser = Rio.createParser(rdfFormat);
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
       rdfParser.setRDFHandler(statementViewer);
       rdfParser.parse(inputStream, "http://neo4j.com/base/");
     } catch (MalformedURLException e) {
