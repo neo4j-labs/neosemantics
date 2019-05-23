@@ -339,7 +339,8 @@ public class RDFImport {
   @UserFunction
   public String getDataType(@Name("literal") Object literal) {
 
-    String result = "";
+    String result;
+
     if (literal instanceof String) {
       Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher((String) literal);
       Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher((String) literal);
@@ -356,7 +357,10 @@ public class RDFImport {
       result = XMLSchema.DOUBLE.stringValue();
     } else if (literal instanceof Boolean){
       result = XMLSchema.BOOLEAN.stringValue();
+    } else {
+      result = null;
     }
+
     return result;
   }
 
