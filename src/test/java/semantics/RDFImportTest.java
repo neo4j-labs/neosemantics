@@ -848,7 +848,7 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testGetCustomDTLocalName() throws Exception {
+  public void testGetDataType() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
@@ -856,24 +856,36 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults = session
-          .run("return semantics.getCustomDTLocalName('2008-04-17^^ns1__date') AS val");
+          .run("return semantics.getDataType('2008-04-17^^ns1__date') AS val");
       Map<String, Object> next = importResults.next().asMap();
-      assertEquals("date", next.get("val"));
+      assertEquals("ns1__date", next.get("val"));
 
       importResults = session
-          .run("return semantics.getCustomDTLocalName('10000^^http://example.org/USD') AS val");
+          .run("return semantics.getDataType('10000^^http://example.org/USD') AS val");
       next = importResults.next().asMap();
-      assertEquals("USD", next.get("val"));
+      assertEquals("http://example.org/USD", next.get("val"));
 
-      importResults = session.run("return semantics.getCustomDTLocalName('10000') AS val");
+      importResults = session.run("return semantics.getDataType('10000') AS val");
       next = importResults.next().asMap();
-      assertEquals("", next.get("val"));
+      assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("val"));
+
+      importResults = session.run("return semantics.getDataType(10000) AS val");
+      next = importResults.next().asMap();
+      assertEquals("http://www.w3.org/2001/XMLSchema#long", next.get("val"));
+
+      importResults = session.run("return semantics.getDataType(10000.0) AS val");
+      next = importResults.next().asMap();
+      assertEquals("http://www.w3.org/2001/XMLSchema#double", next.get("val"));
+
+      importResults = session.run("return semantics.getDataType(true) AS val");
+      next = importResults.next().asMap();
+      assertEquals("http://www.w3.org/2001/XMLSchema#boolean", next.get("val"));
 
     }
   }
 
   @Test
-  public void testGetPropValueWihoutCustomDT() throws Exception {
+  public void testGetPropValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
@@ -881,16 +893,16 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults = session
-          .run("return semantics.getPropValueWihoutCustomDT('2008-04-17^^ns1__date') AS val");
+          .run("return semantics.getPropValue('2008-04-17^^ns1__date') AS val");
       Map<String, Object> next = importResults.next().asMap();
       assertEquals("2008-04-17", next.get("val"));
 
       importResults = session.run(
-          "return semantics.getPropValueWihoutCustomDT('10000^^http://example.org/USD') AS val");
+          "return semantics.getPropValue('10000^^http://example.org/USD') AS val");
       next = importResults.next().asMap();
       assertEquals("10000", next.get("val"));
 
-      importResults = session.run("return semantics.getPropValueWihoutCustomDT('10000') AS val");
+      importResults = session.run("return semantics.getPropValue('10000') AS val");
       next = importResults.next().asMap();
       assertEquals("10000", next.get("val"));
 
@@ -1010,33 +1022,33 @@ public class RDFImportTest {
     }
   }
 
-    @Test
-    public void testReificationImport() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+  @Test
+  public void testReificationImport() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-            Session session = driver.session();
-            createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
 
-            StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-                    RDFImportTest.class.getClassLoader().getResource("reification.ttl")
-                            .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
-            assertEquals(25L, importResults1.next().get("triplesLoaded").asLong());
-            StatementResult dates = session.run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
-                    "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("reification.ttl")
+              .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
+      assertEquals(25L, importResults1.next().get("triplesLoaded").asLong());
+      StatementResult dates = session.run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
+          "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
 
-            assertEquals("2019-09-01", dates.next().get("fromDates").asString());
-            assertEquals("2016-09-01", dates.next().get("fromDates").asString());
+      assertEquals("2019-09-01", dates.next().get("fromDates").asString());
+      assertEquals("2016-09-01", dates.next().get("fromDates").asString());
 
-            StatementResult statements = session.run("MATCH (statement)\n" +
-                    "WHERE (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#subject`]->()\n" +
-                    "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate`]->()\n" +
-                    "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#object`]->()\n" +
-                    "RETURN statement.uri AS statement ORDER BY statement");
+      StatementResult statements = session.run("MATCH (statement)\n" +
+          "WHERE (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#subject`]->()\n" +
+          "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate`]->()\n" +
+          "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#object`]->()\n" +
+          "RETURN statement.uri AS statement ORDER BY statement");
 
-            assertEquals("http://example.com/studyInformation1", statements.next().get("statement").asString());
-            assertEquals("http://example.com/studyInformation2", statements.next().get("statement").asString());
-        }
+      assertEquals("http://example.com/studyInformation1", statements.next().get("statement").asString());
+      assertEquals("http://example.com/studyInformation2", statements.next().get("statement").asString());
     }
+  }
 
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");

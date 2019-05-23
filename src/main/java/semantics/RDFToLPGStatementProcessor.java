@@ -161,7 +161,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
         datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
         .equals(XMLSchema.NEGATIVE_INTEGER)) {
-      return Long.parseLong(object.stringValue().replaceAll("[^0-9+-]", ""));
+      return object.longValue();
     } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
         datatype.equals(XMLSchema.FLOAT)) {
       return object.doubleValue();
@@ -172,7 +172,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       if (langFilter == null || !language.isPresent() ||
           (language.isPresent() && langFilter.equals(language.get()))) {
         return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
-      : "");
+            : "");
       }
       return null;
     } else if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)
@@ -220,11 +220,11 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   private String applyCapitalisation(String name, int element) {
     if (neo4jNamingOnIgnoreNs) {
       //apply Neo4j naming recommendations
-    if (element == RELATIONSHIP) {
-      return name.toUpperCase();
-    } else if (element == LABEL) {
-      return name.substring(0, 1).toUpperCase() + name.substring(1);
-    } else if (element == PROPERTY) {
+      if (element == RELATIONSHIP) {
+        return name.toUpperCase();
+      } else if (element == LABEL) {
+        return name.substring(0, 1).toUpperCase() + name.substring(1);
+      } else if (element == PROPERTY) {
         return name.substring(0, 1).toLowerCase() + name.substring(1);
       } else {
         //should not happen
