@@ -1,6 +1,7 @@
 package semantics.extension;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterators.count;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
@@ -30,6 +31,7 @@ import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.server.HTTP;
 import semantics.ModelTestUtils;
 import semantics.RDFImport;
+import semantics.RDFImportTest;
 
 /**
  * Created by jbarrasa on 14/09/2016.
@@ -709,6 +711,504 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriAfterImportWithCustomDTKeepUris() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
+                  +
+                  "keepCustomDataTypes: true, typesToLabels: true})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri?nodeuri=http://example.org/Resource1");
+
+      String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "<http://example.org/Resource1>\n" +
+          "                                a  <http://example.org/Resource>;\n" +
+          "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+          +
+          "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+          "  <http://example.org/Predicate4>  true;\n" +
+          "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+          +
+          "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+          +
+          "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriAfterImportWithCustomDTShortenURIs() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+                  +
+                  "keepCustomDataTypes: true, typesToLabels: true})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri?nodeuri=http://example.org/Resource1");
+
+      String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "<http://example.org/Resource1>\n" +
+          "                                a  <http://example.org/Resource>;\n" +
+          "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+          +
+          "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+          "  <http://example.org/Predicate4>  true;\n" +
+          "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+          +
+          "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+          +
+          "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+    }
+  }
+
+  @Test
+  public void testNodeByUriAfterImportWithMultiCustomDTKeepUris() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+                  +
+                  "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
+                  +
+                  "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri?nodeuri=http://example.com/Mercedes");
+
+      String expected = "@prefix ex: <http://example.com/> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "ex:Mercedes \n" +
+          "\trdf:type ex:Car ;\n" +
+          "\tex:price \"10000\"^^ex:EUR ;\n" +
+          "\tex:price \"11000\"^^ex:USD ;\n" +
+          "\tex:power \"300\" ;\n" +
+          "\tex:power \"223,71\" ;\n" +
+          "\tex:color \"red\"^^ex:Color ;\n" +
+          "\tex:class \"A-Class\"@en ;\n" +
+          "\tex:released \"2019\"^^xsd:long ;\n" +
+          "\tex:type \"Cabrio\" .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriAfterImportWithMultiCustomDTShortenUris() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+                  +
+                  "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
+                  +
+                  "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri?nodeuri=http://example.com/Mercedes");
+
+      String expected = "@prefix ex: <http://example.com/> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "ex:Mercedes \n" +
+          "\trdf:type ex:Car ;\n" +
+          "\tex:price \"10000\"^^ex:EUR ;\n" +
+          "\tex:price \"11000\"^^ex:USD ;\n" +
+          "\tex:power \"300\" ;\n" +
+          "\tex:power \"223,71\" ;\n" +
+          "\tex:color \"red\"^^ex:Color ;\n" +
+          "\tex:class \"A-Class\"@en ;\n" +
+          "\tex:released \"2019\"^^xsd:long ;\n" +
+          "\tex:type \"Cabrio\" .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterImportWithCustomDTKeepURIsSerializeAsTurtle() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
+                  +
+                  "keepCustomDataTypes: true})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
+          "OPTIONAL MATCH (n)-[]-(m) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "<http://example.org/Resource1>\n" +
+          "                                a  <http://example.org/Resource>;\n" +
+          "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+          +
+          "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+          "  <http://example.org/Predicate4>  true;\n" +
+          "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+          +
+          "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+          +
+          "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
+      throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+                  +
+                  "keepCustomDataTypes: true})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
+          "OPTIONAL MATCH (n)-[]-(m) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "<http://example.org/Resource1>\n" +
+          "                                a  <http://example.org/Resource>;\n" +
+          "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+          +
+          "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+          "  <http://example.org/Predicate4>  true;\n" +
+          "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+          "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+          +
+          "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+          +
+          "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterImportWithMultiCustomDTKeepURIsSerializeAsTurtle()
+      throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+                  +
+                  "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+                  +
+                  "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:`http://example.com/Car`) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "@prefix ex: <http://example.com/> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "ex:Mercedes \n" +
+          "\trdf:type ex:Car ;\n" +
+          "\tex:price \"10000\"^^ex:EUR ;\n" +
+          "\tex:price \"11000\"^^ex:USD ;\n" +
+          "\tex:power \"300\" ;\n" +
+          "\tex:power \"223,71\" ;\n" +
+          "\tex:color \"red\"^^ex:Color ;\n" +
+          "\tex:class \"A-Klasse\"@de ;\n" +
+          "\tex:class \"A-Class\"@en ;\n" +
+          "\tex:released \"2019\"^^xsd:long ;\n" +
+          "\tex:type \"Cabrio\" .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterImportWithMultiCustomDTShortenURIsSerializeAsTurtle()
+      throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+                  +
+                  "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+                  +
+                  "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:ns0__Car) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "@prefix ex: <http://example.com/> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "\n" +
+          "ex:Mercedes \n" +
+          "\trdf:type ex:Car ;\n" +
+          "\tex:price \"10000\"^^ex:EUR ;\n" +
+          "\tex:price \"11000\"^^ex:USD ;\n" +
+          "\tex:power \"300\" ;\n" +
+          "\tex:power \"223,71\" ;\n" +
+          "\tex:color \"red\"^^ex:Color ;\n" +
+          "\tex:class \"A-Klasse\"@de ;\n" +
+          "\tex:class \"A-Class\"@en ;\n" +
+          "\tex:released \"2019\"^^xsd:long ;\n" +
+          "\tex:type \"Cabrio\" .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }

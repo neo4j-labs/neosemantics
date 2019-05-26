@@ -1,0 +1,7 @@
+@prefix ex: <http://example.com/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Mercedes
+	ex:price 10000 ;
+	ex:price 11000 ;
+	ex:price 12000 .

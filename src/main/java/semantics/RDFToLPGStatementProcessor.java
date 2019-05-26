@@ -1,5 +1,7 @@
 package semantics;
 
+import static semantics.RDFImport.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 import static semantics.RDFImport.PROPERTY;
@@ -41,27 +43,31 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected final Map<String, String> vocMappings;
   private final boolean neo4jNamingOnIgnoreNs;
-  protected GraphDatabaseService graphdb;
-  protected Log log;
-  protected Map<String, String> namespaces = new HashMap<>();
   protected final String langFilter;
   protected final int handleUris;
   protected final int handleMultival;
   protected final boolean labellise;
   protected final boolean keepLangTag;
+  protected final boolean keepCustomDataTypes;
   protected final Set<String> multivalPropList;
   protected final Set<String> excludedPredicatesList;
+  protected final Set<String> customDataTypedPropList;
+  protected final long commitFreq;
+  protected GraphDatabaseService graphdb;
+  protected Log log;
+  protected Map<String, String> namespaces = new HashMap<>();
   protected Set<Statement> statements = new HashSet<>();
   protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
   protected Map<String, Set<String>> resourceLabels = new HashMap<>();
   protected int totalTriplesParsed = 0;
   protected int totalTriplesMapped = 0;
   protected int mappedTripleCounter = 0;
-  protected final long commitFreq;
 
   protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls,
       int handleMultival,
-      Set<String> multivalPropUriList, Set<String> predicateExclList, boolean klt,
+      Set<String> multivalPropUriList, boolean keepCustomDataTypes,
+      Set<String> customDataTypedPropList, Set<String> predicateExclList,
+      boolean klt,
       boolean labellise, boolean applyNeo4jNaming, long commitFreq) {
     this.graphdb = db;
     this.langFilter = langFilter;
@@ -83,8 +89,10 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     this.labellise = labellise;
     this.commitFreq = commitFreq;
     this.multivalPropList = multivalPropUriList;
+    this.customDataTypedPropList = customDataTypedPropList;
     this.excludedPredicatesList = predicateExclList;
     this.keepLangTag = klt;
+    this.keepCustomDataTypes = keepCustomDataTypes;
     this.neo4jNamingOnIgnoreNs = applyNeo4jNaming;
   }
 
@@ -113,8 +121,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
-    ns.put("http://www.w3.org/ns/shacl#", "sh");
-    return ns;
+    ns.put("http://www.w3.org/ns/shacl#", "sh");return ns;
   }
 
 
@@ -132,25 +139,60 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
   }
 
-  protected Object getObjectValue(Literal object, boolean keepLangTag) {
+  /**
+   * Processing for literals as follows
+   * Mapping according to this figure: https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+   * Each sub-category of integer -> long
+   * decimal, float, and double -> double
+   * boolean -> boolean
+   * Custom data type -> String (value + CUSTOM_DATA_TYPE_SEPERATOR + custom DT IRI)
+   * String -> String
+   * @return processed literal
+   */
+  protected Object getObjectValue(IRI propertyIRI, Literal object, boolean keepLangTag,
+      boolean keepCustomDataTypes, int handleUris) {
     IRI datatype = object.getDatatype();
-    if (datatype.equals(XMLSchema.INT) ||
-        datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG)) {
+    if (datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
+        .equals(XMLSchema.INT) ||
+        datatype.equals(XMLSchema.SHORT) || datatype.equals(XMLSchema.BYTE) ||
+        datatype.equals(XMLSchema.NON_NEGATIVE_INTEGER) || datatype
+        .equals(XMLSchema.POSITIVE_INTEGER) ||
+        datatype.equals(XMLSchema.UNSIGNED_LONG) || datatype.equals(XMLSchema.UNSIGNED_INT) ||
+        datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
+        datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
+        .equals(XMLSchema.NEGATIVE_INTEGER)) {
       return object.longValue();
     } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
         datatype.equals(XMLSchema.FLOAT)) {
       return object.doubleValue();
     } else if (datatype.equals(XMLSchema.BOOLEAN)) {
       return object.booleanValue();
-    } else {
-      //String or no datatype => String
+    } else if (object.getLanguage().isPresent()) {
       final Optional<String> language = object.getLanguage();
-      if (langFilter == null || !language.isPresent() || (language.isPresent() && langFilter
-          .equals(language.get()))) {
+      if (langFilter == null || !language.isPresent() ||
+          (language.isPresent() && langFilter.equals(language.get()))) {
         return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
             : "");
       }
       return null;
+    } else if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)
+        && !datatype.equals(XMLSchema.STRING)) {
+      //Custom Datatype
+      String value = object.stringValue();
+      if (customDataTypedPropList == null || customDataTypedPropList
+          .contains(propertyIRI.stringValue())) {
+        String datatypeString;
+        if (handleUris == URL_SHORTEN) {
+          datatypeString = handleIRI(datatype, DATATYPE);
+        } else {
+          datatypeString = datatype.stringValue();
+        }
+        value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
+      }
+      return value;
+    } else {
+      //String or no datatype => String
+      return object.stringValue();
     }
   }
 
@@ -253,7 +295,9 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
     String propName = handleIRI(propertyIRI, PROPERTY);
 
-    Object propValue = getObjectValue(propValueRaw, keepLangTag); //this will come from config var
+    Object propValue = getObjectValue(propertyIRI, propValueRaw, keepLangTag, keepCustomDataTypes,
+        handleUris); //this will
+    // come from config var
 
     if (propValue != null) {
       if (!resourceProps.containsKey(subjectUri)) {
@@ -262,20 +306,22 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       } else {
         props = resourceProps.get(subjectUri);
       }
-
       if (handleMultival == PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
       } else if (handleMultival == PROP_ARRAY) {
-        if (multivalPropList == null || (multivalPropList != null && multivalPropList
-            .contains(propertyIRI.stringValue()))) {
+        if (multivalPropList == null || multivalPropList.contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             // TODO We're assuming it's an array. If we run this load on a pre-existing dataset
             // potentially with data that's not an array, we'd have to check datatypes
             // and deal with it.
             List<Object> propVals = (List<Object>) props.get(propName);
             propVals.add(propValue);
+
+            // If multiple datatypes are tried to be stored in the same List, a java.lang
+            // .ArrayStoreException arises
+            // TODO: wrap the exception to provide a better (from user perspective more informative) error message
           } else {
             List<Object> propVals = new ArrayList<>();
             propVals.add(propValue);

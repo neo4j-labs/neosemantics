@@ -25,12 +25,12 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
 
   public StatementPreviewer(GraphDatabaseService db, int handleUrls, int handleMultivals,
       Set<String> multivalPropUriList,
+      boolean keepCustomDataTypes, Set<String> customDataTypesList,
       Set<String> predicateExclusionList, boolean typesToLabels, Map<String, Node> virtualNodes,
-      List<Relationship> virtualRels, boolean klt, String languageFilter, boolean applyNeo4jNaming,
-      Log l) {
-    super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList,
-        predicateExclusionList, klt,
-        typesToLabels, applyNeo4jNaming, Integer.MAX_VALUE);
+      List<Relationship> virtualRels, boolean klt, String languageFilter, boolean applyNeo4jNaming,Log l) {
+    super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
+        customDataTypesList, predicateExclusionList, klt,
+        typesToLabels, applyNeo4jNaming,Integer.MAX_VALUE);
     vNodes = virtualNodes;
     vRels = virtualRels;
     log = l;

@@ -1,0 +1,38 @@
+@prefix ex: <http://example.com/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+ex:Max 
+	rdf:type ex:Person ;
+	ex:firstName "Max" ;
+	ex:lastName "Mustermann" .
+ex:Study1
+	rdf:type ex:Study ;
+	ex:degreeType "Bachelor" ;
+	ex:atUniversity ex:UniLeipzig .
+ex:Study2
+	rdf:type ex:Study ;
+	ex:degreeType "Master" ;
+	ex:atUniversity ex:UniLeipzig .
+ex:UniLeipzig 
+	rdf:type ex:University ;
+	ex:aka "UniLeipzig" ;
+	ex:label "Universtiy of Leipzig"@en ;
+	ex:label "Universität Leipzig"@de .
+
+ex:studyInformation1
+	rdf:type rdf:Statement ;
+	rdf:subject ex:Max ;
+	rdf:predicate ex:doesDegree ;
+	rdf:object ex:Study1 ;
+	ex:from "2016-09-01"^^xsd:date ;
+	ex:to "2019-08-31"^^xsd:date ;
+	ex:price "1800"^^ex:EUR .
+
+ex:studyInformation2
+	rdf:type rdf:Statement ;
+	rdf:subject ex:Max ;
+	rdf:predicate ex:doesDegree ;
+	rdf:object ex:Study2 ;
+	ex:from "2019-09-01"^^xsd:date .

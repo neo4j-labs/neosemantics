@@ -1,0 +1,13 @@
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://example.org/Resource1>
+                                a  <http://example.org/Resource>;
+  <http://example.org/Predicate1>  "2008-04-17"^^<http://www.w3.org/2001/XMLSchema#date>;
+  <http://example.org/Predicate2>  "4.75"^^xsd:decimal;
+  <http://example.org/Predicate3>  "2"^^xsd:integer;
+  <http://example.org/Predicate4>  true;
+  <http://example.org/Predicate5>  "2"^^xsd:double;
+  <http://example.org/Predicate6>  "4"^^xsd:float;
+  <http://example.org/Predicate7>  "52.63"^^<http://example.org/USD>;
+  <http://example.org/Predicate8>  "2008-03-22T00:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime>;
+  <http://example.org/Predicate9> "-100"^^xsd:negativeInteger.

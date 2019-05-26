@@ -22,6 +22,7 @@ import java.util.stream.Stream;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
@@ -52,9 +53,13 @@ import semantics.result.StreamedStatement;
 public class RDFImport {
 
   private static final boolean DEFAULT_TYPES_TO_LABELS = true;
+
+  private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
+
   private static final long DEFAULT_COMMIT_SIZE = 25000;
   private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
   public static final String PREFIX_SEPARATOR = "__";
+  public static final String CUSTOM_DATA_TYPE_SEPERATOR = "^^";
   static final int URL_SHORTEN = 0;
   static final int URL_IGNORE = 1;
   static final int URL_MAP = 2;
@@ -66,6 +71,20 @@ public class RDFImport {
   static final int RELATIONSHIP = 0;
   static final int LABEL = 1;
   static final int PROPERTY = 2;
+  static final int DATATYPE = 3;
+
+
+  private static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
+          "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
+                  Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
+  private static final Pattern DATATYPE_REGULAR_PATTERN = Pattern.compile(
+          "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
+
+  private static final Pattern SHORTENED_URI_PATTERN =
+          Pattern.compile("^(\\w+)__(\\w+)$");
+
+  private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
+          Pattern.compile("^(.*)@([a-z,\\-]+)$");
 
   @Context
   public GraphDatabaseService db;
@@ -75,7 +94,6 @@ public class RDFImport {
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
-
 
   @Procedure(mode = Mode.WRITE)
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
@@ -91,10 +109,14 @@ public class RDFImport {
         ? (List<String>) props.get("multivalPropList") : null);
     final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")
         ? (List<String>) props.get("predicateExclusionList") : null);
+    final List<String> customDataTypedPropList = (props.containsKey("customDataTypedPropList")
+        ? (List<String>) props.get("customDataTypedPropList") : null);
     final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
         .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
     final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
         .get("keepLangTag") : false);
+    final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
+        .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
     final long commitSize = (props.containsKey("commitSize") ? (long) props.get("commitSize")
         : DEFAULT_COMMIT_SIZE);
     final long nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props
@@ -108,11 +130,14 @@ public class RDFImport {
         (commitSize > 0 ? commitSize : 5000),
         nodeCacheSize, handleVocabUris, handleMultival,
         (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+        keepCustomDataTypes,
+        (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, keepLangTag,
         languageFilter, applyNeo4jNaming, log);
     try {
       checkIndexesExist();
+
       InputStream inputStream = getInputStream(url, props);
       RDFParser rdfParser = Rio.createParser(getFormat(format));
       rdfParser.setRDFHandler(statementLoader);
@@ -190,8 +215,12 @@ public class RDFImport {
         ? (List<String>) props.get("multivalPropList") : null);
     final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")
         ? (List<String>) props.get("predicateExclusionList") : null);
+    final List<String> customDataTypedPropList = (props.containsKey("customDataTypesList")
+        ? (List<String>) props.get("customDataTypesList") : null);
     final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
         .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
+    final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
+        .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
     final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
         .get("keepLangTag") : false);
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
@@ -202,6 +231,8 @@ public class RDFImport {
 
     StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
         (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+        keepCustomDataTypes,
+        (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, virtualNodes,
         virtualRels, keepLangTag, languageFilter, applyNeo4jNaming, log);
@@ -264,10 +295,14 @@ public class RDFImport {
         ? (List<String>) props.get("multivalPropList") : null);
     final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")
         ? (List<String>) props.get("predicateExclusionList") : null);
+    final List<String> customDataTypedPropList = (props.containsKey("customDataTypesList")
+        ? (List<String>) props.get("customDataTypesList") : null);
     final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
         .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
     final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
         .get("keepLangTag") : false);
+    final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
+        .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
 
@@ -276,6 +311,8 @@ public class RDFImport {
 
     StatementPreviewer statementViewer = new StatementPreviewer(db, handleVocabUris, handleMultival,
         (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+        keepCustomDataTypes,
+        (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
         (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
         typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,
         log);
@@ -300,6 +337,48 @@ public class RDFImport {
   }
 
   @UserFunction
+  public String getDataType(@Name("literal") Object literal) {
+
+    String result;
+
+    if (literal instanceof String) {
+      Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher((String) literal);
+      Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher((String) literal);
+      if (matcherShortened.matches()) {
+        result = matcherShortened.group(2);
+      } else if (matcherRegular.matches()) {
+        result = matcherRegular.group(2);
+      } else {
+        result = XMLSchema.STRING.stringValue();
+      }
+    } else if (literal instanceof Long){
+      result = XMLSchema.LONG.stringValue();
+    } else if (literal instanceof Double){
+      result = XMLSchema.DOUBLE.stringValue();
+    } else if (literal instanceof Boolean){
+      result = XMLSchema.BOOLEAN.stringValue();
+    } else {
+      result = null;
+    }
+
+    return result;
+  }
+
+  @UserFunction
+  public String getPropValue(@Name("literal") String literal) {
+
+    Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
+    Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher(literal);
+    String result = literal;
+    if (matcherShortened.matches()) {
+      result = matcherShortened.group(1);
+    } else if (matcherRegular.matches()) {
+      result = matcherRegular.group(1);
+    }
+    return result;
+  }
+
+  @UserFunction
   public String getIRILocalName(@Name("url") String url) {
     return url.substring(URIUtil.getLocalNameIndex(url));
   }
@@ -311,11 +390,11 @@ public class RDFImport {
 
   @UserFunction
   public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
-    Pattern p = Pattern.compile("^(.*)@([a-z,\\-]+)$");
+
     if (values instanceof List) {
       if (((List) values).get(0) instanceof String) {
         for (Object val : (List<String>) values) {
-          Matcher m = p.matcher((String) val);
+          Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) val);
           if (m.matches() && m.group(2).equals(lang)) {
             return m.group(1);
           }
@@ -324,13 +403,13 @@ public class RDFImport {
     } else if (values instanceof String[]) {
       String[] valuesAsArray = (String[]) values;
       for (int i = 0; i < valuesAsArray.length; i++) {
-        Matcher m = p.matcher(valuesAsArray[i]);
+        Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(valuesAsArray[i]);
         if (m.matches() && m.group(2).equals(lang)) {
           return m.group(1);
         }
       }
     } else if (values instanceof String) {
-      Matcher m = p.matcher((String) values);
+      Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) values);
       if (m.matches() && m.group(2).equals(lang)) {
         return m.group(1);
       }
@@ -340,8 +419,8 @@ public class RDFImport {
 
   @UserFunction
   public String uriFromShort(@Name("short") String str) {
-    Pattern p = Pattern.compile("^(\\w+)__(\\w+)$");
-    Matcher m = p.matcher(str);
+
+    Matcher m = SHORTENED_URI_PATTERN.matcher(str);
     if (m.matches()) {
       ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {

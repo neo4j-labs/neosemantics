@@ -7,6 +7,7 @@ import org.eclipse.rdf4j.model.impl.LinkedHashModel;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.helpers.StatementCollector;
 
 public class ModelTestUtils {
@@ -28,6 +29,7 @@ public class ModelTestUtils {
 
   private static Model createModel(String expected, RDFFormat formatExpected) throws IOException {
     RDFParser rdfParser = Rio.createParser(formatExpected);
+    rdfParser.getParserConfig().set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, true);
     Model model = new LinkedHashModel();
     rdfParser.setRDFHandler(new StatementCollector(model));
     rdfParser.parse(new ByteArrayInputStream(expected.getBytes()), "");

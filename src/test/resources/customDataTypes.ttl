@@ -1,0 +1,14 @@
+@prefix ex: <http://example.com/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Mercedes 
+	rdf:type ex:Car ;
+	ex:price "10000"^^ex:EUR ;
+	ex:price "11000"^^ex:USD ;
+	ex:power "300"^^ex:HP ;
+	ex:power "223,71"^^ex:kW ;
+	ex:color "red"^^ex:Color ;
+	ex:class "A-Klasse"@de ;
+	ex:class "A-Class"@en ;
+	ex:released "2019"^^xsd:integer ;
+	ex:type "Cabrio" .
