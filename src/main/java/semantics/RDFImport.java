@@ -42,6 +42,8 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.result.GraphResult;
+import semantics.result.NamespacePrefixesResult;
+import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
 
 /**
@@ -365,7 +367,7 @@ public class RDFImport {
   }
 
   @UserFunction
-  public String getPropValue(@Name("literal") String literal) {
+  public String getValue(@Name("literal") String literal) {
 
     Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
     Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher(literal);
@@ -457,6 +459,29 @@ public class RDFImport {
     } catch (Exception e) {
       return str;
     }
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix, @Name("ns") String ns) {
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("prefix",prefix);
+
+    return db
+        .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
+            + "WITH n UNWIND keys(n) as ns\n"
+            + "RETURN n[ns] as prefix, ns as namespace",ns), params).stream().map(n -> new NamespacePrefixesResult((String)n.get("prefix"), (String)n.get("namespace")));
+
+  }
+
+  @Procedure(mode = Mode.READ)
+  public Stream<NamespacePrefixesResult> listNamespacePrefixes() {
+
+    return db
+        .execute("MATCH (n:NamespacePrefixDefinition) \n" +
+            "UNWIND keys(n) AS namespace\n" +
+            "RETURN namespace, n[namespace] AS prefix").stream().map(n -> new NamespacePrefixesResult((String)n.get("prefix"), (String)n.get("namespace")));
+
   }
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {

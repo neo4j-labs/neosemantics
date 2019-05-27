@@ -218,7 +218,7 @@ public class RDFEndpoint {
     }
     Map<String, Object> allProperties = node.getAllProperties();
     for (String key : allProperties.keySet()) {
-      if (!key.equals("uri") && !key.contains(CUSTOM_DATA_TYPE_SEPERATOR)) {
+      if (!key.equals("uri")) {
         Resource subject = buildSubject(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);

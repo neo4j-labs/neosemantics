@@ -1,6 +1,7 @@
 package semantics;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.driver.v1.Values.ofNode;
@@ -9,8 +10,10 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
@@ -21,6 +24,7 @@ import org.neo4j.driver.v1.GraphDatabase;
 import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.Value;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -848,6 +852,47 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testAddNamespacePrefixInitial() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      StatementResult res = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
+      assertTrue(res.hasNext());
+      Record next = res.next();
+      assertEquals("abc", next.get("prefix").asString());
+      assertEquals("http://myvoc#", next.get("namespace").asString());
+      assertFalse(res.hasNext());
+    }
+  }
+
+  @Test
+  public void testAddNamespacePrefixExisting() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+      StatementResult res1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD')");
+      assertTrue(res1.hasNext());
+      Map<String, Object> preAddition = res1.next().get("namespaces").asMap();
+      StatementResult res2 = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
+      assertTrue(res2.hasNext());
+      StatementResult res3 = session.run("MATCH (n:NamespacePrefixDefinition) RETURN n");
+      assertTrue(res3.hasNext());
+      Map<String, Object> postAddition = res3.next().get("n").asNode().asMap();
+      assertFalse(res3.hasNext());
+      Set<String> keys = new HashSet<>(postAddition.keySet());
+      keys.removeAll(preAddition.keySet());
+      assertTrue(keys.size()==1);
+      assertEquals("http://myvoc#",keys.iterator().next());
+    }
+  }
+
+  @Test
   public void testGetDataType() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -893,16 +938,16 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults = session
-          .run("return semantics.getPropValue('2008-04-17^^ns1__date') AS val");
+          .run("return semantics.getValue('2008-04-17^^ns1__date') AS val");
       Map<String, Object> next = importResults.next().asMap();
       assertEquals("2008-04-17", next.get("val"));
 
       importResults = session.run(
-          "return semantics.getPropValue('10000^^http://example.org/USD') AS val");
+          "return semantics.getValue('10000^^http://example.org/USD') AS val");
       next = importResults.next().asMap();
       assertEquals("10000", next.get("val"));
 
-      importResults = session.run("return semantics.getPropValue('10000') AS val");
+      importResults = session.run("return semantics.getValue('10000') AS val");
       next = importResults.next().asMap();
       assertEquals("10000", next.get("val"));
 

@@ -149,10 +149,51 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
    * String -> String
    * @return processed literal
    */
-  protected Object getObjectValue(IRI propertyIRI, Literal object, boolean keepLangTag,
-      boolean keepCustomDataTypes, int handleUris) {
+  protected Object getObjectValue(IRI propertyIRI, Literal object) {
     IRI datatype = object.getDatatype();
-    if (datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
+    if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
+      final Optional<String> language = object.getLanguage();
+      if (langFilter == null || !language.isPresent() || langFilter.equals(language.get())) {
+        return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
+            : "");
+      } else {
+        //filtered by lang
+        return null;
+      }
+    } else if (typeMapsToLongType(datatype)) {
+      return object.longValue();
+    } else if (typeMapsToDouble(datatype)) {
+      return object.doubleValue();
+    } else if (datatype.equals(XMLSchema.BOOLEAN)) {
+      return object.booleanValue();
+    } else {
+      //it's a custom data type
+      if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)) {
+        //keep custom type
+        String value = object.stringValue();
+        if (customDataTypedPropList == null || customDataTypedPropList
+            .contains(propertyIRI.stringValue())) {
+          String datatypeString;
+          if (handleUris == URL_SHORTEN) {
+            datatypeString = handleIRI(datatype, DATATYPE);
+          } else {
+            datatypeString = datatype.stringValue();
+          }
+          value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
+        }
+        return value;
+      }
+    }
+    return object.stringValue();
+  }
+
+  private boolean typeMapsToDouble(IRI datatype) {
+    return datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
+        datatype.equals(XMLSchema.FLOAT) ;
+  }
+
+  private boolean typeMapsToLongType(IRI datatype) {
+    return datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
         .equals(XMLSchema.INT) ||
         datatype.equals(XMLSchema.SHORT) || datatype.equals(XMLSchema.BYTE) ||
         datatype.equals(XMLSchema.NON_NEGATIVE_INTEGER) || datatype
@@ -160,40 +201,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         datatype.equals(XMLSchema.UNSIGNED_LONG) || datatype.equals(XMLSchema.UNSIGNED_INT) ||
         datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
         datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
-        .equals(XMLSchema.NEGATIVE_INTEGER)) {
-      return object.longValue();
-    } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-        datatype.equals(XMLSchema.FLOAT)) {
-      return object.doubleValue();
-    } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-      return object.booleanValue();
-    } else if (object.getLanguage().isPresent()) {
-      final Optional<String> language = object.getLanguage();
-      if (langFilter == null || !language.isPresent() ||
-          (language.isPresent() && langFilter.equals(language.get()))) {
-        return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
-            : "");
-      }
-      return null;
-    } else if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)
-        && !datatype.equals(XMLSchema.STRING)) {
-      //Custom Datatype
-      String value = object.stringValue();
-      if (customDataTypedPropList == null || customDataTypedPropList
-          .contains(propertyIRI.stringValue())) {
-        String datatypeString;
-        if (handleUris == URL_SHORTEN) {
-          datatypeString = handleIRI(datatype, DATATYPE);
-        } else {
-          datatypeString = datatype.stringValue();
-        }
-        value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
-      }
-      return value;
-    } else {
-      //String or no datatype => String
-      return object.stringValue();
-    }
+        .equals(XMLSchema.NEGATIVE_INTEGER) ;
   }
 
   @Override
@@ -295,9 +303,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
     String propName = handleIRI(propertyIRI, PROPERTY);
 
-    Object propValue = getObjectValue(propertyIRI, propValueRaw, keepLangTag, keepCustomDataTypes,
-        handleUris); //this will
-    // come from config var
+    Object propValue = getObjectValue(propertyIRI, propValueRaw);
 
     if (propValue != null) {
       if (!resourceProps.containsKey(subjectUri)) {
