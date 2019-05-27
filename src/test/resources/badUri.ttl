@@ -1,0 +1,4 @@
+@prefix pr: <http://example.org/vocab/show/> .
+pr:ent
+      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4> ;
+      pr:name "test name" .

@@ -67,6 +67,11 @@ public class RDFImportTest {
       "show:218 show:localName \"Cette Série des Années Soixante-dix\"@fr . \n" +
       "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
 
+  String wrongUriTtl = "@prefix pr: <http://example.org/vocab/show/> .\n" +
+          "pr:ent" +
+          "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4ten%2f003+studierende+nach+universit%u00e4ten.xml&toolbar=true> ;\n" +
+          "      pr:P813 \"2017-10-11T00:00:00Z\"^^xsd:dateTime .\n";
+
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
@@ -285,6 +290,56 @@ public class RDFImportTest {
               "RETURN n.`http://neo4j.com/voc/` as prefix")
               .next().get("prefix").asString());
 
+    }
+  }
+
+  @Test
+  public void testImportBadUrisTtl() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
+              "MERGE (n:NamespacePrefixDefinition)\n" +
+              "SET n+=nslist " +
+              "RETURN n ");
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+              RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
+                      .toURI()
+              + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, verifyUriSyntax: false})");
+      assertEquals(2L, importResults1.next().get("triplesLoaded").asLong());
+      assertEquals("test name",
+              session.run("MATCH (jb {uri: 'http://example.org/vocab/show/ent'}) RETURN jb.pr"
+                      + PREFIX_SEPARATOR + "name AS name")
+                      .next().get("name").asString());
+    }
+  }
+
+  @Test
+  public void testImportTtlBadUrisException() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
+              "MERGE (n:NamespacePrefixDefinition)\n" +
+              "SET n+=nslist " +
+              "RETURN n ");
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+              RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
+                      .toURI()
+              + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
+      assertEquals(0, importResults1.next().get("triplesLoaded").asLong());
+      assertEquals(false,
+              session.run("MATCH (jb {uri: 'http://example.org/vocab/show/ent'}) RETURN jb.pr"
+                      + PREFIX_SEPARATOR + "name AS name")
+                      .hasNext());
     }
   }
 
@@ -531,6 +586,44 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testPreviewFromSnippetPassWrongUri() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session
+              .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
+                      + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, verifyUriSyntax: false})");
+      Map<String, Object> next = importResults1.next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(2, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(1, rels.size());
+    }
+  }
+
+  @Test
+  public void testPreviewFromSnippetFailWrongUri() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session
+              .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
+                      + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false})");
+      Map<String, Object> next = importResults1.next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(0, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(0, rels.size());
+    }
+  }
+
+  @Test
   public void testPreviewFromSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -592,6 +685,46 @@ public class RDFImportTest {
       assertEquals(15, nodes.size());
       final List<Relationship> rels = (List<Relationship>) next.get("relationships");
       assertEquals(15, rels.size());
+    }
+  }
+
+  @Test
+  public void testPreviewFromBadUriFile() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
+              RDFImportTest.class.getClassLoader()
+                      .getResource("badUri.ttl")
+                      .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, verifyUriSyntax: false})");
+      Map<String, Object> next = importResults1.next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(2, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(1, rels.size());
+    }
+  }
+
+  @Test
+  public void testPreviewFromBadUriFileFail() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.previewRDF('" +
+              RDFImportTest.class.getClassLoader()
+                      .getResource("badUri.ttl")
+                      .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false})");
+      Map<String, Object> next = importResults1.next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(0, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(0, rels.size());
     }
   }
 
@@ -783,6 +916,40 @@ public class RDFImportTest {
       assertEquals(true, next.get("isLiteral"));
       assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("literalType"));
       assertNull(next.get("literalLang"));
+    }
+  }
+
+  @Test
+  public void testStreamFromBadUriFile() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.streamRDF('" +
+              RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
+                      .toURI() + "','Turtle',{verifyUriSyntax: false})");
+      Map<String, Object> next = importResults1.next().asMap();
+      assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
+      assertEquals("http://example.org/vocab/show/P854", next.get("predicate"));
+      assertEquals("https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%25u00e4", next.get("object"));
+      assertEquals(false, next.get("isLiteral"));
+    }
+  }
+
+  @Test
+  public void testStreamFromBadUriFileFail() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.streamRDF('" +
+              RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
+                      .toURI() + "','Turtle',{})");
+      assertEquals(false, importResults1.hasNext());
     }
   }
 
