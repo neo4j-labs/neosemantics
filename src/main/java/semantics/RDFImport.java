@@ -148,7 +148,8 @@ public class RDFImport {
     return Stream.of(importResults);
   }
 
-  private void parseRDF(InputStream inputStream, @Name("url") String url, @Name("format") String format,
+  private void parseRDF(InputStream inputStream, @Name("url") String url,
+      @Name("format") String format,
       boolean verifyUriSyntax, RDFHandler statementLoader)
       throws IOException, RDFImportPreRequisitesNotMet {
     RDFParser rdfParser = Rio.createParser(getFormat(format));
@@ -315,7 +316,8 @@ public class RDFImport {
         log);
     try {
       parseRDF(new ByteArrayInputStream(
-          rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format, verifyUriSyntax, statementViewer);
+              rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format,
+          verifyUriSyntax, statementViewer);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
