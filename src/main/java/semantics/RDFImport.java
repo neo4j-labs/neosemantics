@@ -24,6 +24,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
@@ -54,12 +55,6 @@ import semantics.result.StreamedStatement;
  */
 public class RDFImport {
 
-  private static final boolean DEFAULT_TYPES_TO_LABELS = true;
-
-  private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
-
-  private static final long DEFAULT_COMMIT_SIZE = 25000;
-  private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
   public static final String PREFIX_SEPARATOR = "__";
   public static final String CUSTOM_DATA_TYPE_SEPERATOR = "^^";
   static final int URL_SHORTEN = 0;
@@ -69,13 +64,14 @@ public class RDFImport {
   static final int PROP_OVERWRITE = 0;
   static final int PROP_ARRAY = 1;
   static final int PROP_REIFY = 2;
-
   static final int RELATIONSHIP = 0;
   static final int LABEL = 1;
   static final int PROPERTY = 2;
   static final int DATATYPE = 3;
-
-
+  private static final boolean DEFAULT_TYPES_TO_LABELS = true;
+  private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
+  private static final long DEFAULT_COMMIT_SIZE = 25000;
+  private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
   private static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
       "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
           Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
@@ -87,15 +83,13 @@ public class RDFImport {
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
       Pattern.compile("^(.*)@([a-z,\\-]+)$");
-
+  public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
+      RDFFormat.TURTLE,
+      RDFFormat.NTRIPLES, RDFFormat.TRIG};
   @Context
   public GraphDatabaseService db;
   @Context
   public Log log;
-
-  public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
-      RDFFormat.TURTLE,
-      RDFFormat.NTRIPLES, RDFFormat.TRIG};
 
   @Procedure(mode = Mode.WRITE)
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
@@ -141,12 +135,7 @@ public class RDFImport {
         languageFilter, applyNeo4jNaming, log);
     try {
       checkIndexesExist();
-
-      InputStream inputStream = getInputStream(url, props);
-      RDFParser rdfParser = Rio.createParser(getFormat(format));
-      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
-      rdfParser.setRDFHandler(statementLoader);
-      rdfParser.parse(inputStream, url);
+      parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementLoader);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -157,6 +146,15 @@ public class RDFImport {
       importResults.setNamespaces(statementLoader.getNamespaces());
     }
     return Stream.of(importResults);
+  }
+
+  private void parseRDF(InputStream inputStream, @Name("url") String url, @Name("format") String format,
+      boolean verifyUriSyntax, RDFHandler statementLoader)
+      throws IOException, RDFImportPreRequisitesNotMet {
+    RDFParser rdfParser = Rio.createParser(getFormat(format));
+    rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
+    rdfParser.setRDFHandler(statementLoader);
+    rdfParser.parse(inputStream, url);
   }
 
   private InputStream getInputStream(String url, Map<String, Object> props) throws IOException {
@@ -244,14 +242,7 @@ public class RDFImport {
         typesToLabels, virtualNodes,
         virtualRels, keepLangTag, languageFilter, applyNeo4jNaming, log);
     try {
-
-      InputStream inputStream = getInputStream(url, props);
-      RDFFormat rdfFormat = getFormat(format);
-      log.info("Data set to be parsed as " + rdfFormat);
-      RDFParser rdfParser = Rio.createParser(rdfFormat);
-      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
-      rdfParser.setRDFHandler(statementViewer);
-      rdfParser.parse(inputStream, "http://neo4j.com/base/");
+      parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementViewer);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -272,14 +263,7 @@ public class RDFImport {
 
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
-
-      InputStream inputStream = getInputStream(url, props);
-      RDFFormat rdfFormat = getFormat(format);
-      log.info("Data set to be parsed as " + rdfFormat);
-      RDFParser rdfParser = Rio.createParser(rdfFormat);
-      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
-      rdfParser.setRDFHandler(statementStreamer);
-      rdfParser.parse(inputStream, "http://neo4j.com/base/");
+      parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementStreamer);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -330,14 +314,8 @@ public class RDFImport {
         typesToLabels, virtualNodes, virtualRels, keepLangTag, languageFilter, applyNeo4jNaming,
         log);
     try {
-      InputStream inputStream = new ByteArrayInputStream(
-          rdfFragment.getBytes(Charset.defaultCharset())); //rdfFragment.openStream();
-      RDFFormat rdfFormat = getFormat(format);
-      log.info("Data set to be parsed as " + rdfFormat);
-      RDFParser rdfParser = Rio.createParser(rdfFormat);
-      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
-      rdfParser.setRDFHandler(statementViewer);
-      rdfParser.parse(inputStream, "http://neo4j.com/base/");
+      parseRDF(new ByteArrayInputStream(
+          rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format, verifyUriSyntax, statementViewer);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
