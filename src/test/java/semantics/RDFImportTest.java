@@ -1291,7 +1291,58 @@ public class RDFImportTest {
     }
   }
 
-  //need to add more tests for completion
+  @Test
+  public void testIncrementalLoadArrayOnPreviouslyAtomicValue() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("incremental/step1.ttl")
+              .toURI() + "','Turtle')");
+      assertEquals(2L, importResults1.next().get("triplesLoaded").asLong());
+      importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("incremental/step2.ttl")
+              .toURI() + "','Turtle',{ handleMultival: 'ARRAY' })");
+      assertEquals(2L, importResults1.next().get("triplesLoaded").asLong());
+
+      StatementResult result = session.run("MATCH (n:ns0__Thing) " +
+          "\nRETURN n.ns0__prop as multival ");
+
+      List<String> vals = new ArrayList<String>();
+      vals.add("one");
+      vals.add("two");
+      assertEquals(vals, result.next().get("multival").asList());
+
+
+    }
+  }
+
+  @Test
+  public void testIncrementalLoadAtomicValueOnPreviouslyArray() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("incremental/step1.ttl")
+              .toURI() + "','Turtle',{ handleMultival: 'ARRAY' })");
+      assertEquals(2L, importResults1.next().get("triplesLoaded").asLong());
+      importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("incremental/step3.ttl")
+              .toURI() + "','Turtle')");
+      assertEquals(2L, importResults1.next().get("triplesLoaded").asLong());
+
+      StatementResult result = session.run("MATCH (n:ns0__Thing) " +
+          "\nRETURN n.ns0__prop as singleVal ");
+
+      assertEquals(230L, result.next().get("singleVal").asLong());
+
+
+    }
+  }
 
 
   private void createIndices(GraphDatabaseService db) {
