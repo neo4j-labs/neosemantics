@@ -4,11 +4,14 @@ import static semantics.RDFImport.RELATIONSHIP;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.Direction;
@@ -73,15 +76,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
   // Stolen from APOC :)
   private Object toPropertyValue(Object value) {
-    if (value instanceof Iterable) {
       Iterable it = (Iterable) value;
       Object first = Iterables.firstOrNull(it);
       if (first == null) {
         return EMPTY_ARRAY;
       }
       return Iterables.asArray(first.getClass(), it);
-    }
-    return value;
   }
 
   @Override
@@ -105,7 +105,23 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
-          node.setProperty(k, toPropertyValue(v));
+          Object currentValue = node.getProperty(k, null);
+          if (currentValue == null){
+            node.setProperty(k, toPropertyValue(v));
+          }
+          else {
+            if(currentValue.getClass().isArray()){
+              Object[] properties = (Object[])currentValue;
+              for (int i=0; i<properties.length; i++){
+                ((List) v).add(properties[i]);
+                //here an exception can be raised if types are conflicting
+              }
+            } else{
+              ((List) v).add(node.getProperty(k));
+            }
+            //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+            node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+          }
         } else {
           node.setProperty(k, v);
         }
