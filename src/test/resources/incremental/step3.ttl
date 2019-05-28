@@ -1,0 +1,6 @@
+@prefix voc: <http://example.org/vocab/> .
+@prefix ind: <http://example.org/ind/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ind:218 a voc:Thing .
+ind:218 voc:prop "230"^^xsd:integer .
