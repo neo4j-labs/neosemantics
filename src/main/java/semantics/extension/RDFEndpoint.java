@@ -82,14 +82,14 @@ public class RDFEndpoint {
         try (Transaction tx = gds.beginTx()) {
           Map<String, String> jsonMap = objectMapper
               .readValue(body,
-              new TypeReference<Map<String, String>>() {
-              });
+                  new TypeReference<Map<String, String>>() {
+                  });
           final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<Long> serializedNodes = new HashSet<Long>();
           RDFWriter writer = Rio
               .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
-              outputStream);
+                  outputStream);
           SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
           handleNamespaces(writer, gds);
           writer.startRDF();
@@ -109,7 +109,7 @@ public class RDFEndpoint {
                 });
                 path.relationships()
                     .forEach(
-                    r -> processRelOnLPG(writer, valueFactory, mappings, r, onlyMapped));
+                        r -> processRelOnLPG(writer, valueFactory, mappings, r, onlyMapped));
               } else if (o instanceof Node) {
                 Node node = (Node) o;
                 if (!serializedNodes.contains(node.getId())) {
@@ -144,14 +144,14 @@ public class RDFEndpoint {
         try (Transaction tx = gds.beginTx()) {
           Map<String, String> jsonMap = objectMapper
               .readValue(body,
-              new TypeReference<Map<String, String>>() {
-              });
+                  new TypeReference<Map<String, String>>() {
+                  });
           final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<String> serializedNodes = new HashSet<String>();
           RDFWriter writer = Rio
               .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
-              outputStream);
+                  outputStream);
           SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
           String baseVocabNS = "neo4j://vocabulary#";
           writer.handleNamespace("neovoc", baseVocabNS);
@@ -388,7 +388,7 @@ public class RDFEndpoint {
                   valueFactory);
               IRI predicate = valueFactory
                   .createIRI(
-                  buildURI(baseVocabNS, rel.getType().name(), namespaces));
+                      buildURI(baseVocabNS, rel.getType().name(), namespaces));
               IRI object = valueFactory.createIRI(rel.getEndNode().getProperty("uri").toString());
               writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
             }
@@ -523,7 +523,7 @@ public class RDFEndpoint {
             valueFactory.createIRI(
                 mappings.get(rel.getType().name()) != null ? mappings.get(rel.getType().name())
                     :
-                    BASE_VOCAB_NS + rel.getType().name()),
+                        BASE_VOCAB_NS + rel.getType().name()),
             valueFactory.createIRI(BASE_INDIV_NS, String.valueOf(rel.getEndNode().getId()))));
       }
     });
@@ -538,7 +538,7 @@ public class RDFEndpoint {
           valueFactory.createIRI(
               mappings.get(rel.getType().name()) != null ? mappings.get(rel.getType().name())
                   :
-                  BASE_VOCAB_NS + rel.getType().name()),
+                      BASE_VOCAB_NS + rel.getType().name()),
           valueFactory.createIRI(BASE_INDIV_NS, String.valueOf(rel.getEndNode().getId()))));
     }
   }
@@ -555,9 +555,9 @@ public class RDFEndpoint {
                 RDF.TYPE,
                 valueFactory
                     .createIRI(
-                    mappings.get(label.name()) != null ? mappings.get(label.name())
-                        :
-                        BASE_VOCAB_NS + label.name())));
+                        mappings.get(label.name()) != null ? mappings.get(label.name())
+                            :
+                                BASE_VOCAB_NS + label.name())));
       }
     }
     Map<String, Object> allProperties = node.getAllProperties();
@@ -565,7 +565,7 @@ public class RDFEndpoint {
       if (!onlyMappedInfo || mappings.containsKey(key)) {
         IRI predicate = valueFactory
             .createIRI(
-            mappings.get(key) != null ? mappings.get(key) : BASE_VOCAB_NS + key);
+                mappings.get(key) != null ? mappings.get(key) : BASE_VOCAB_NS + key);
         Object propertyValueObject = allProperties.get(key);
         if (propertyValueObject instanceof Object[]) {
           for (Object o : (Object[]) propertyValueObject) {
@@ -634,11 +634,11 @@ public class RDFEndpoint {
               .handleStatement(valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
           IRI domainUri = valueFactory
               .createIRI(BASE_VOCAB_NS,
-              r.getStartNode().getLabels().iterator().next().name());
+                  r.getStartNode().getLabels().iterator().next().name());
           writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
           IRI rangeUri = valueFactory
               .createIRI(BASE_VOCAB_NS,
-              r.getEndNode().getLabels().iterator().next().name());
+                  r.getEndNode().getLabels().iterator().next().name());
           writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
         }
 

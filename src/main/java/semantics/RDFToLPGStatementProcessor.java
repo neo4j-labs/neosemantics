@@ -121,7 +121,8 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
-    ns.put("http://www.w3.org/ns/shacl#", "sh");return ns;
+    ns.put("http://www.w3.org/ns/shacl#", "sh");
+    return ns;
   }
 
 
@@ -140,13 +141,14 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   }
 
   /**
-   * Processing for literals as follows
-   * Mapping according to this figure: https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+   * Processing for literals as follows Mapping according to this figure:
+   * https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+   * String -> String
    * Each sub-category of integer -> long
    * decimal, float, and double -> double
    * boolean -> boolean
    * Custom data type -> String (value + CUSTOM_DATA_TYPE_SEPERATOR + custom DT IRI)
-   * String -> String
+   *
    * @return processed literal
    */
   protected Object getObjectValue(IRI propertyIRI, Literal object) {
@@ -189,7 +191,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   private boolean typeMapsToDouble(IRI datatype) {
     return datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-        datatype.equals(XMLSchema.FLOAT) ;
+        datatype.equals(XMLSchema.FLOAT);
   }
 
   private boolean typeMapsToLongType(IRI datatype) {
@@ -201,7 +203,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         datatype.equals(XMLSchema.UNSIGNED_LONG) || datatype.equals(XMLSchema.UNSIGNED_INT) ||
         datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
         datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
-        .equals(XMLSchema.NEGATIVE_INTEGER) ;
+        .equals(XMLSchema.NEGATIVE_INTEGER);
   }
 
   @Override
@@ -319,15 +321,11 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       } else if (handleMultival == PROP_ARRAY) {
         if (multivalPropList == null || multivalPropList.contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
-            // TODO We're assuming it's an array. If we run this load on a pre-existing dataset
-            // potentially with data that's not an array, we'd have to check datatypes
-            // and deal with it.
             List<Object> propVals = (List<Object>) props.get(propName);
             propVals.add(propValue);
 
             // If multiple datatypes are tried to be stored in the same List, a java.lang
             // .ArrayStoreException arises
-            // TODO: wrap the exception to provide a better (from user perspective more informative) error message
           } else {
             List<Object> propVals = new ArrayList<>();
             propVals.add(propValue);
@@ -338,7 +336,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
           props.put(propName, propValue);
         }
       }
-      //  An option to reify multivalued property vals (literal nodes?)
+      //  For future? An option to reify multivalued property vals (literal nodes?)
       //  else if (handleMultival == PROP_REIFY) {
       //      //do reify
       //  }

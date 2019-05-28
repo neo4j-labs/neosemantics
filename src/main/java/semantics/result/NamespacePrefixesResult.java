@@ -1,6 +1,7 @@
 package semantics.result;
 
 public class NamespacePrefixesResult {
+
   public final String prefix;
   public final String namespace;
 

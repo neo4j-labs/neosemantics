@@ -44,7 +44,6 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.result.GraphResult;
 import semantics.result.NamespacePrefixesResult;
-import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
 
 /**
@@ -78,16 +77,16 @@ public class RDFImport {
 
 
   private static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
-          "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
-                  Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
+      "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
+          Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
   private static final Pattern DATATYPE_REGULAR_PATTERN = Pattern.compile(
-          "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
+      "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
 
   private static final Pattern SHORTENED_URI_PATTERN =
-          Pattern.compile("^(\\w+)__(\\w+)$");
+      Pattern.compile("^(\\w+)__(\\w+)$");
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
-          Pattern.compile("^(.*)@([a-z,\\-]+)$");
+      Pattern.compile("^(.*)@([a-z,\\-]+)$");
 
   @Context
   public GraphDatabaseService db;
@@ -127,7 +126,7 @@ public class RDFImport {
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-            .get("verifyUriSyntax") : true);
+        .get("verifyUriSyntax") : true);
 
     ImportResults importResults = new ImportResults();
 
@@ -232,7 +231,7 @@ public class RDFImport {
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-            .get("verifyUriSyntax") : true);
+        .get("verifyUriSyntax") : true);
 
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
@@ -269,7 +268,7 @@ public class RDFImport {
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-            .get("verifyUriSyntax") : true);
+        .get("verifyUriSyntax") : true);
 
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
@@ -318,7 +317,7 @@ public class RDFImport {
     final String languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-            .get("verifyUriSyntax") : true);
+        .get("verifyUriSyntax") : true);
 
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
@@ -366,11 +365,11 @@ public class RDFImport {
       } else {
         result = XMLSchema.STRING.stringValue();
       }
-    } else if (literal instanceof Long){
+    } else if (literal instanceof Long) {
       result = XMLSchema.LONG.stringValue();
-    } else if (literal instanceof Double){
+    } else if (literal instanceof Double) {
       result = XMLSchema.DOUBLE.stringValue();
-    } else if (literal instanceof Boolean){
+    } else if (literal instanceof Boolean) {
       result = XMLSchema.BOOLEAN.stringValue();
     } else {
       result = null;
@@ -475,15 +474,18 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix, @Name("ns") String ns) {
+  public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix,
+      @Name("ns") String ns) {
 
     Map<String, Object> params = new HashMap<>();
-    params.put("prefix",prefix);
+    params.put("prefix", prefix);
 
     return db
         .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
             + "WITH n UNWIND keys(n) as ns\n"
-            + "RETURN n[ns] as prefix, ns as namespace",ns), params).stream().map(n -> new NamespacePrefixesResult((String)n.get("prefix"), (String)n.get("namespace")));
+            + "RETURN n[ns] as prefix, ns as namespace", ns), params).stream().map(
+            n -> new NamespacePrefixesResult((String) n.get("prefix"),
+                (String) n.get("namespace")));
 
   }
 
@@ -493,7 +495,9 @@ public class RDFImport {
     return db
         .execute("MATCH (n:NamespacePrefixDefinition) \n" +
             "UNWIND keys(n) AS namespace\n" +
-            "RETURN namespace, n[namespace] AS prefix").stream().map(n -> new NamespacePrefixesResult((String)n.get("prefix"), (String)n.get("namespace")));
+            "RETURN namespace, n[namespace] AS prefix").stream().map(
+            n -> new NamespacePrefixesResult((String) n.get("prefix"),
+                (String) n.get("namespace")));
 
   }
 

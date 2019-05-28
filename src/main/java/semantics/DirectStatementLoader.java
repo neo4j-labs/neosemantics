@@ -4,8 +4,6 @@ import static semantics.RDFImport.RELATIONSHIP;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -39,7 +37,6 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       Set<String> customDataTypedPropList, Set<String> predicateExclusionList,
       boolean typesToLabels, boolean klt,
       String languageFilter, boolean applyNeo4jNaming, Log l) {
-
 
     super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
         customDataTypedPropList, predicateExclusionList, klt,
@@ -76,12 +73,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
   // Stolen from APOC :)
   private Object toPropertyValue(Object value) {
-      Iterable it = (Iterable) value;
-      Object first = Iterables.firstOrNull(it);
-      if (first == null) {
-        return EMPTY_ARRAY;
-      }
-      return Iterables.asArray(first.getClass(), it);
+    Iterable it = (Iterable) value;
+    Object first = Iterables.firstOrNull(it);
+    if (first == null) {
+      return EMPTY_ARRAY;
+    }
+    return Iterables.asArray(first.getClass(), it);
   }
 
   @Override
@@ -106,17 +103,16 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
           Object currentValue = node.getProperty(k, null);
-          if (currentValue == null){
+          if (currentValue == null) {
             node.setProperty(k, toPropertyValue(v));
-          }
-          else {
-            if(currentValue.getClass().isArray()){
-              Object[] properties = (Object[])currentValue;
-              for (int i=0; i<properties.length; i++){
+          } else {
+            if (currentValue.getClass().isArray()) {
+              Object[] properties = (Object[]) currentValue;
+              for (int i = 0; i < properties.length; i++) {
                 ((List) v).add(properties[i]);
                 //here an exception can be raised if types are conflicting
               }
-            } else{
+            } else {
               ((List) v).add(node.getProperty(k));
             }
             //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
