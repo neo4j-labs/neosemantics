@@ -1,6 +1,7 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
+import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -31,18 +32,11 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public static final String[] EMPTY_ARRAY = new String[0];
   Cache<String, Node> nodeCache;
 
-  public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-      int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
-      boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList, Set<String> predicateExclusionList,
-      boolean typesToLabels, boolean klt,
-      String languageFilter, boolean applyNeo4jNaming, Log l) {
+  public DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-    super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
-        customDataTypedPropList, predicateExclusionList, klt,
-        typesToLabels, applyNeo4jNaming, batchSize);
+    super(db, conf);
     nodeCache = CacheBuilder.newBuilder()
-        .maximumSize(nodeCacheSize)
+        .maximumSize(conf.getNodeCacheSize())
         .build();
     log = l;
   }
@@ -51,7 +45,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (handleUris == 0) {
+    if (this.parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       addNamespaceNode();
     }
 

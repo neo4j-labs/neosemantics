@@ -5,12 +5,12 @@ import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 import static semantics.RDFImport.PROPERTY;
-import static semantics.RDFImport.PROP_ARRAY;
-import static semantics.RDFImport.PROP_OVERWRITE;
+import static semantics.RDFParserConfig.PROP_ARRAY;
+import static semantics.RDFParserConfig.PROP_OVERWRITE;
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFImport.URL_IGNORE;
-import static semantics.RDFImport.URL_MAP;
-import static semantics.RDFImport.URL_SHORTEN;
+import static semantics.RDFParserConfig.URL_IGNORE;
+import static semantics.RDFParserConfig.URL_MAP;
+import static semantics.RDFParserConfig.URL_SHORTEN;
 import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
 import java.util.ArrayList;
@@ -42,17 +42,7 @@ import org.neo4j.logging.Log;
 abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected final Map<String, String> vocMappings;
-  private final boolean neo4jNamingOnIgnoreNs;
-  protected final String langFilter;
-  protected final int handleUris;
-  protected final int handleMultival;
-  protected final boolean labellise;
-  protected final boolean keepLangTag;
-  protected final boolean keepCustomDataTypes;
-  protected final Set<String> multivalPropList;
-  protected final Set<String> excludedPredicatesList;
-  protected final Set<String> customDataTypedPropList;
-  protected final long commitFreq;
+  protected final RDFParserConfig parserConfig;
   protected GraphDatabaseService graphdb;
   protected Log log;
   protected Map<String, String> namespaces = new HashMap<>();
@@ -63,16 +53,10 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   protected int totalTriplesMapped = 0;
   protected int mappedTripleCounter = 0;
 
-  protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls,
-      int handleMultival,
-      Set<String> multivalPropUriList, boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList, Set<String> predicateExclList,
-      boolean klt,
-      boolean labellise, boolean applyNeo4jNaming, long commitFreq) {
+  protected RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf) {
     this.graphdb = db;
-    this.langFilter = langFilter;
-    this.handleUris = handleUrls;
-    if (this.handleUris == URL_MAP) {
+    this.parserConfig = conf;
+    if (this.parserConfig.getHandleVocabUris() == URL_MAP) {
       Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {
         //a mapping on RDF.TYPE is illegal
@@ -85,15 +69,6 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       this.vocMappings = null;
     }
     ;
-    this.handleMultival = handleMultival;
-    this.labellise = labellise;
-    this.commitFreq = commitFreq;
-    this.multivalPropList = multivalPropUriList;
-    this.customDataTypedPropList = customDataTypedPropList;
-    this.excludedPredicatesList = predicateExclList;
-    this.keepLangTag = klt;
-    this.keepCustomDataTypes = keepCustomDataTypes;
-    this.neo4jNamingOnIgnoreNs = applyNeo4jNaming;
   }
 
 
@@ -155,8 +130,8 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     IRI datatype = object.getDatatype();
     if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
       final Optional<String> language = object.getLanguage();
-      if (langFilter == null || !language.isPresent() || langFilter.equals(language.get())) {
-        return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
+      if (parserConfig.getLanguageFilter() == null || !language.isPresent() || parserConfig.getLanguageFilter().equals(language.get())) {
+        return object.stringValue() + (parserConfig.isKeepLangTag() && language.isPresent() ? "@" + language.get()
             : "");
       } else {
         //filtered by lang
@@ -170,13 +145,13 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       return object.booleanValue();
     } else {
       //it's a custom data type
-      if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)) {
+      if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getHandleVocabUris() == URL_IGNORE || parserConfig.getHandleVocabUris() == URL_MAP)) {
         //keep custom type
         String value = object.stringValue();
-        if (customDataTypedPropList == null || customDataTypedPropList
+        if (parserConfig.getCustomDataTypedPropList() == null || parserConfig.getCustomDataTypedPropList()
             .contains(propertyIRI.stringValue())) {
           String datatypeString;
-          if (handleUris == URL_SHORTEN) {
+          if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
             datatypeString = handleIRI(datatype, DATATYPE);
           } else {
             datatypeString = datatype.stringValue();
@@ -214,13 +189,13 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected String handleIRI(IRI iri, int elementType) {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
-    if (handleUris == URL_SHORTEN) {
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       String localName = iri.getLocalName();
       String prefix = getPrefix(iri.getNamespace());
       return prefix + PREFIX_SEPARATOR + localName;
-    } else if (handleUris == URL_IGNORE) {
+    } else if (parserConfig.getHandleVocabUris() == URL_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
-    } else if (handleUris == URL_MAP) {
+    } else if (parserConfig.getHandleVocabUris() == URL_MAP) {
       return mapElement(iri, elementType, null);
     } else { //if (handleUris  ==  URL_KEEP){
       return iri.stringValue();
@@ -228,7 +203,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   }
 
   private String applyCapitalisation(String name, int element) {
-    if (neo4jNamingOnIgnoreNs) {
+    if (parserConfig.isApplyNeo4jNaming()) {
       //apply Neo4j naming recommendations
       if (element == RELATIONSHIP) {
         return name.toUpperCase();
@@ -261,7 +236,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   @Override
   public void startRDF() throws RDFHandlerException {
-    if (handleUris != URL_IGNORE) {
+    if (parserConfig.getHandleVocabUris() != URL_IGNORE) {
       //differentiate between map/shorten and keep_long urls?
       getExistingNamespaces();
       log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
@@ -314,12 +289,12 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       } else {
         props = resourceProps.get(subjectUri);
       }
-      if (handleMultival == PROP_OVERWRITE) {
+      if (parserConfig.getHandleMultival() == PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
-      } else if (handleMultival == PROP_ARRAY) {
-        if (multivalPropList == null || multivalPropList.contains(propertyIRI.stringValue())) {
+      } else if (parserConfig.getHandleMultival() == PROP_ARRAY) {
+        if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList().contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);
             propVals.add(propValue);
@@ -370,14 +345,14 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     Resource subject = st.getSubject();
     Value object = st.getObject();
 
-    if (excludedPredicatesList == null || !excludedPredicatesList
+    if (parserConfig.getPredicateExclusionList() == null || !parserConfig.getPredicateExclusionList()
         .contains(predicate.stringValue())) {
       if (object instanceof Literal) {
         if (setProp(subject.stringValue(), predicate, (Literal) object)) {
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
+      } else if (parserConfig.isTypesToLabels() && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
         mappedTripleCounter++;
       } else {
@@ -389,7 +364,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
     totalTriplesParsed++;
 
-    if (commitFreq != Integer.MAX_VALUE && mappedTripleCounter % commitFreq == 0) {
+    if (parserConfig.getCommitSize() != Integer.MAX_VALUE && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }
   }
