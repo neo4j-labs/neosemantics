@@ -71,7 +71,7 @@ public class RDFImport {
       Pattern.compile("^(\\w+)__(\\w+)$");
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
-      Pattern.compile("^(.*)@([a-z,\\-]+)$");
+      Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};

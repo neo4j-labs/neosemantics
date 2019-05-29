@@ -995,6 +995,16 @@ public class RDFImportTest {
       assertEquals("Cette Série des Années Soixante-dix", next.get("fr_name"));
       assertEquals("That Seventies Show", next.get("en_name"));
       assertEquals("Cette Série des Années Septante", next.get("frbe_name"));
+
+      session.run("match (x:Thing) delete x");
+      session.run(
+          "create (n:Thing { prop: [\"That Seventies Show@en-US\", \"Cette Série des Années Soixante-dix@fr-custom-tag\", \"你好@zh-Hans-CN\"] })");
+      importResults1 = session.run(
+          "match (n:Thing) return semantics.getLangValue('en-US',n.prop) as enus_name, semantics.getLangValue('fr-custom-tag',n.prop) as frcust_name, semantics.getLangValue('zh-Hans-CN',n.prop) as cn_name");
+      next = importResults1.next().asMap();
+      assertEquals("Cette Série des Années Soixante-dix", next.get("frcust_name"));
+      assertEquals("That Seventies Show", next.get("enus_name"));
+      assertEquals("你好", next.get("cn_name"));
     }
   }
 
