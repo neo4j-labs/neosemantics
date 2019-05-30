@@ -30,7 +30,9 @@ public class RDFParserConfig {
 
   private static final boolean DEFAULT_TYPES_TO_LABELS = true;
   private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
+  //numbre of statements parsed between partial commits
   private static final long DEFAULT_COMMIT_SIZE = 25000;
+  //nodes kept in the cache when writing to disk
   private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
 
 

@@ -514,6 +514,62 @@ public class RDFEndpointTest {
 
 
   @Test
+  public void testNodeByUriMissingNamespaceDefinition() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              //set a prefix that we can remove afterwards
+              graphDatabaseService.execute("CREATE (n:NamespacePrefixDefinition) "
+                  + "SET n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/` = 'fiboanno'");
+
+              graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                      .toURI() + "','RDF/XML',{})");
+
+              //we remove the namespace now
+              graphDatabaseService.execute("MATCH (n:NamespacePrefixDefinition) "
+                  + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
+      System.out.println(response.rawContent());
+      assertEquals(200, response.status());
+      String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+          + "<rdf:RDF\n"
+          + "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n"
+          + "<!-- RDF Serialization ERROR: Prefix fiboanno in use but not defined in the 'NamespacePrefixDefinition' node -->\n"
+          + "\n"
+          + "</rdf:RDF>";
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+      assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno in use "
+          + "but not defined in the 'NamespacePrefixDefinition' node"));
+    }
+  }
+
+  @Test
   public void testNodeByUriAfterImportWithMultilang() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()

@@ -10,6 +10,7 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -1314,6 +1315,85 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testIncrementalLoadNamespaces() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("event.json")
+              .toURI() + "','JSON-LD')");
+      assertEquals(28L, importResults1.next().get("triplesLoaded").asLong());
+      StatementResult nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+          + "RETURN properties(n) as defs");
+      assertTrue(nsDefResult.hasNext());
+      Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
+      assertFalse(nsDefResult.hasNext());
+      importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+              .toURI() + "','RDF/XML')");
+      assertEquals(171L, importResults1.next().get("triplesLoaded").asLong());
+      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+          + "RETURN properties(n) as defs");
+      assertTrue(nsDefResult.hasNext());
+      Map<String, Object> defsPost = nsDefResult.next().get("defs").asMap();
+      assertFalse(nsDefResult.hasNext());
+      assertTrue(getPrePostDelta(defsPre, defsPost).isEmpty());
+      importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
+              .toURI() + "','RDF/XML')");
+      assertEquals(1L, importResults1.next().get("triplesLoaded").asLong());
+      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+          + "RETURN properties(n) as defs");
+      assertTrue(nsDefResult.hasNext());
+      Map<String, Object> defsPost2 = nsDefResult.next().get("defs").asMap();
+      assertFalse(nsDefResult.hasNext());
+      assertTrue(getPrePostDelta(defsPost, defsPost2).isEmpty());
+
+    }
+  }
+
+  @Test
+  public void testLoadNamespacesWithCustomPredefined() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CREATE (:NamespacePrefixDefinition {\n"
+          + "  `http://www.w3.org/2000/01/rdf-schema#`: 'myschema',\n"
+          + "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'myrdf'})");
+      StatementResult nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+          + "RETURN properties(n) as defs");
+      assertTrue(nsDefResult.hasNext());
+      Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
+      assertFalse(nsDefResult.hasNext());
+      importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+              .toURI() + "','RDF/XML')");
+      assertEquals(171L, importResults1.next().get("triplesLoaded").asLong());
+      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+          + "RETURN properties(n) as defs");
+      assertTrue(nsDefResult.hasNext());
+      Map<String, Object> defsPost = nsDefResult.next().get("defs").asMap();
+      assertFalse(nsDefResult.hasNext());
+    }
+  }
+
+  private Map<String, Object> getPrePostDelta(Map<String, Object> defsPre,
+      Map<String, Object> defsPost) {
+    Map<String, Object> delta = new HashMap<>();
+    defsPre.forEach((k, v) -> {
+      if (!defsPost.containsKey(k) || !defsPost.get(k).equals(v))
+        delta.put(k,v);
+    });
+    return delta;
+  }
+
+  @Test
   public void testIncrementalLoadArrayOnPreviouslyAtomicValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -1366,6 +1446,22 @@ public class RDFImportTest {
 
 
     }
+  }
+
+  @Test
+  public void testLargerFileManyTransactions() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("100k.nt").toURI() + "','N-Triples',"
+          + "{ commitSize: 5 , predicateExclusionList: ['http://www.w3.org/2004/02/skos/core#prefLabel']})");
+      assertEquals(92712L, importResults1.next().get("triplesLoaded").asLong());
+    }
+
   }
 
 

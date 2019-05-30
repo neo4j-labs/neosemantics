@@ -45,8 +45,10 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (this.parserConfig.getHandleVocabUris() == URL_SHORTEN) {
-      addNamespaceNode();
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+      // This is only done at the end of the data load. This makes importRDF not thread safe
+      // when using url shortening. TODO: fix this.
+      persistNamespaceNode();
     }
 
     log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
@@ -54,7 +56,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         + totalTriplesParsed + " parsed.");
   }
 
-  private void addNamespaceNode() {
+  private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
@@ -177,22 +179,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
 
   @Override
-  protected Map<String, String> getPopularNamespaces() {
-    //get namespaces and persist them in the db
-    Map<String, String> nsList = namespaceList();
-    Map<String, Object> params = new HashMap();
-    params.put("namespaces", nsList);
-    graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
-    return nsList;
-
-  }
-
-  @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
         totalTriplesMapped + " triples ingested so far...");
     mappedTripleCounter = 0;
+    persistNamespaceNode();
   }
 }

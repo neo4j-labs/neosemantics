@@ -15,6 +15,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
+import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -35,6 +36,7 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -78,12 +80,11 @@ public class RDFEndpoint {
     return Response.ok().entity(new StreamingOutput() {
       @Override
       public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-
+        Map<String, String> jsonMap = objectMapper
+            .readValue(body,
+                new TypeReference<Map<String, String>>() {
+                });
         try (Transaction tx = gds.beginTx()) {
-          Map<String, String> jsonMap = objectMapper
-              .readValue(body,
-                  new TypeReference<Map<String, String>>() {
-                  });
           final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<Long> serializedNodes = new HashSet<Long>();
@@ -123,6 +124,8 @@ public class RDFEndpoint {
           }
           writer.endRDF();
           result.close();
+        }catch (Exception e){
+          handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
       }
     }).build();
@@ -140,12 +143,11 @@ public class RDFEndpoint {
       public void write(OutputStream outputStream) throws IOException, WebApplicationException {
 
         Map<String, String> namespaces = getNamespacesFromDB(gds);
-
+        Map<String, String> jsonMap = objectMapper
+            .readValue(body,
+                new TypeReference<Map<String, String>>() {
+                });
         try (Transaction tx = gds.beginTx()) {
-          Map<String, String> jsonMap = objectMapper
-              .readValue(body,
-                  new TypeReference<Map<String, String>>() {
-                  });
           final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<String> serializedNodes = new HashSet<String>();
@@ -186,6 +188,8 @@ public class RDFEndpoint {
           }
           writer.endRDF();
           result.close();
+        } catch (Exception e){
+          handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
 
       }
@@ -396,11 +400,21 @@ public class RDFEndpoint {
           writer.endRDF();
           result.close();
         } catch (Exception e) {
-          System.out.println(e.getMessage());
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
 
       }
     }).build();
+  }
+
+  private void handleSerialisationError(OutputStream outputStream, Exception e,
+      @HeaderParam("accept") String acceptHeaderParam, @QueryParam("format") String format) {
+    //output the error message using the right serialisation
+    //TODO: maybe seiralise all that can be serialised and just comment the offending triples?
+    RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+    writer.startRDF();
+    writer.handleComment(e.getMessage());
+    writer.endRDF();
   }
 
   private Resource getResource(String s, ValueFactory vf) {
@@ -433,9 +447,6 @@ public class RDFEndpoint {
     if (matcher.matches()) {
       String prefix = matcher.group(1);
       String uriPrefix = getKeyFromValue(prefix, namespaces);
-      // if namespace but does not exist, then ??? Default to default.
-      // this can also be when a property name folows the name structure of pseudonamespace.
-
       String localName = matcher.group(2);
       return uriPrefix + localName;
     } else if (name.startsWith("http")) {
@@ -466,7 +477,7 @@ public class RDFEndpoint {
         return key;
       }
     }
-    return null;
+    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix).concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
   private String getPrefix(String namespace, Map<String, String> namespaces) {
@@ -504,7 +515,9 @@ public class RDFEndpoint {
           }
           writer.endRDF();
         } catch (NotFoundException e) {
-          writer.endRDF();
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        } catch (Exception e){
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
       }
 
@@ -613,37 +626,41 @@ public class RDFEndpoint {
         RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
         writer.startRDF();
+        try (Transaction tx = gds.beginTx()) {
+          Result res = gds.execute("CALL db.schema() ");
 
-        Result res = gds.execute("CALL db.schema() ");
+          Map<String, Object> next = res.next();
+          List<Node> nodeList = (List<Node>) next.get("nodes");
+          nodeList.forEach(node -> {
+            String catName = node.getAllProperties().get("name").toString();
+            IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
+            writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+            writer.handleStatement(
+                valueFactory
+                    .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
+          });
 
-        Map<String, Object> next = res.next();
-        List<Node> nodeList = (List<Node>) next.get("nodes");
-        nodeList.forEach(node -> {
-          String catName = node.getAllProperties().get("name").toString();
-          IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
-          writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
-          writer.handleStatement(
-              valueFactory
-                  .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
-        });
+          List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+          for (Relationship r : relationshipList) {
+            IRI relUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getType().name());
+            writer
+                .handleStatement(
+                    valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
+            IRI domainUri = valueFactory
+                .createIRI(BASE_VOCAB_NS,
+                    r.getStartNode().getLabels().iterator().next().name());
+            writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
+            IRI rangeUri = valueFactory
+                .createIRI(BASE_VOCAB_NS,
+                    r.getEndNode().getLabels().iterator().next().name());
+            writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+          }
 
-        List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
-        for (Relationship r : relationshipList) {
-          IRI relUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getType().name());
-          writer
-              .handleStatement(valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
-          IRI domainUri = valueFactory
-              .createIRI(BASE_VOCAB_NS,
-                  r.getStartNode().getLabels().iterator().next().name());
-          writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
-          IRI rangeUri = valueFactory
-              .createIRI(BASE_VOCAB_NS,
-                  r.getEndNode().getLabels().iterator().next().name());
-          writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
-        }
+          writer.endRDF();
 
-        writer.endRDF();
-
+        }catch (Exception e){
+            handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+          }
       }
     }).build();
   }
@@ -667,6 +684,7 @@ public class RDFEndpoint {
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
         writer.startRDF();
 
+        try (Transaction tx = gds.beginTx()) {
         Set<Statement> publishedStatements = new HashSet<>();
         Result res = gds.execute("CALL db.schema() ");
 
@@ -710,7 +728,9 @@ public class RDFEndpoint {
         }
 
         writer.endRDF();
-
+        }catch (Exception e){
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
       }
     }).build();
   }
@@ -786,5 +806,13 @@ public class RDFEndpoint {
 
     return RDFFormat.TURTLE;
 
+  }
+
+  private class MissingNamespacePrefixDefinition extends RDFHandlerException {
+
+    public MissingNamespacePrefixDefinition(
+        String msg) {
+      super("RDF Serialization ERROR: ".concat(msg));
+    }
   }
 }

@@ -72,22 +72,28 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   }
 
 
-  protected void getExistingNamespaces() {
+  protected void loadNamespaces() {
     Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
         "UNWIND keys(n) AS namespace\n" +
         "RETURN namespace, n[namespace] AS prefix");
     if (!nslist.hasNext()) {
-      namespaces.putAll(getPopularNamespaces());
+      //no namespace definition, initialise with popular ones
+      namespaces.putAll(popularNamespaceList());
+    } else {
+      while (nslist.hasNext()) {
+        Map<String, Object> ns = nslist.next();
+        namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
+      }
+      popularNamespaceList().forEach((k,v) -> {
+        if (!namespaces.containsKey(k)){
+          namespaces.put(k,v);
+        }
+      });
     }
-    while (nslist.hasNext()) {
-      Map<String, Object> ns = nslist.next();
-      namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
-    }
+
   }
 
-  protected abstract Map<String, String> getPopularNamespaces();
-
-  protected Map<String, String> namespaceList() {
+  protected Map<String, String> popularNamespaceList() {
     Map<String, String> ns = new HashMap<>();
     ns.put("http://schema.org/", "sch");
     ns.put("http://purl.org/dc/elements/1.1/", "dc");
@@ -236,9 +242,9 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   @Override
   public void startRDF() throws RDFHandlerException {
-    if (parserConfig.getHandleVocabUris() != URL_IGNORE) {
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       //differentiate between map/shorten and keep_long urls?
-      getExistingNamespaces();
+      loadNamespaces();
       log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
     } else {
       log.info("URIs will be ignored. Only local names will be kept.");
@@ -364,7 +370,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
     totalTriplesParsed++;
 
-    if (parserConfig.getCommitSize() != Integer.MAX_VALUE && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
+    if (parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }
   }

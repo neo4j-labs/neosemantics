@@ -50,11 +50,6 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
   }
 
   @Override
-  protected Map<String, String> getPopularNamespaces() {
-    return namespaceList();
-  }
-
-  @Override
   protected void periodicOperation() {
     //not needed for preview
   }
