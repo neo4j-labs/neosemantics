@@ -46,14 +46,13 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
-      // This is only done at the end of the data load. This makes importRDF not thread safe
-      // when using url shortening. TODO: fix this.
+      // Namespaces are only persisted at the end of each periodic commit.
+      // This makes importRDF not thread safe when using url shortening. TODO: fix this.
       persistNamespaceNode();
     }
 
-    log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
-        "Total number of triples imported is " + totalTriplesMapped + " out of "
-        + totalTriplesParsed + " parsed.");
+    log.info("Import complete: " + totalTriplesMapped + "  triples ingested out of "
+        + totalTriplesParsed + " parsed");
   }
 
   private void persistNamespaceNode() {
@@ -182,8 +181,6 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
-        totalTriplesMapped + " triples ingested so far...");
     mappedTripleCounter = 0;
     persistNamespaceNode();
   }
