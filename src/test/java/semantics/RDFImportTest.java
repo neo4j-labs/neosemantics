@@ -1,8 +1,11 @@
 package semantics;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.neo4j.driver.v1.Values.NULL;
 import static org.neo4j.driver.v1.Values.ofNode;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 
@@ -197,7 +200,7 @@ public class RDFImportTest {
           session.run(
               "MATCH (x:Resource) WHERE x.rdfs" + PREFIX_SEPARATOR + "label = 'harvest_dataset_url'"
 
-                  +"\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
+                  + "\nRETURN x.rdf" + PREFIX_SEPARATOR + "value AS datasetUrl").next()
               .get("datasetUrl").asString());
 
       assertEquals("ns0",
@@ -658,7 +661,8 @@ public class RDFImportTest {
 
       next = personNames.next();
       assertEquals("Chesham", next.get("li").asString());
-      assertEquals("http://neo4j.com/invividual/JC", next.get("uri").asString());}
+      assertEquals("http://neo4j.com/invividual/JC", next.get("uri").asString());
+    }
   }
 
   @Test
@@ -1024,17 +1028,20 @@ public class RDFImportTest {
 
   @Test
   public void testReificationImport() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(), Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
       Session session = driver.session();
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("reification.ttl")
-              .toURI() + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
       assertEquals(25L, importResults1.next().get("triplesLoaded").asLong());
-      StatementResult dates = session.run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
-          "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
+      StatementResult dates = session
+          .run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
+              "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
 
       assertEquals("2019-09-01", dates.next().get("fromDates").asString());
       assertEquals("2016-09-01", dates.next().get("fromDates").asString());
@@ -1045,8 +1052,319 @@ public class RDFImportTest {
           "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#object`]->()\n" +
           "RETURN statement.uri AS statement ORDER BY statement");
 
-      assertEquals("http://example.com/studyInformation1", statements.next().get("statement").asString());
-      assertEquals("http://example.com/studyInformation2", statements.next().get("statement").asString());
+      assertEquals("http://example.com/studyInformation1",
+          statements.next().get("statement").asString());
+      assertEquals("http://example.com/studyInformation2",
+          statements.next().get("statement").asString());
+    }
+  }
+
+  @Test
+  public void testDeleteRelationshipKeepURIs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      Record record = result.next();
+      assertEquals("http://example.org/Predicate3", record.get("type").asString());
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_1.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      record = result.next();
+      assertEquals(NULL, record.get("type"));
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+    }
+  }
+
+  @Test
+  public void testDeleteRelationshipShortenURIs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      Record record = result.next();
+      assertEquals("ns0__Predicate3", record.get("type").asString());
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_1.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      record = result.next();
+      assertEquals(NULL, record.get("type"));
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+    }
+  }
+
+  @Test
+  public void testDeleteLiteralKeepURIs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.`http://example.org/Predicate2` AS nP2");
+
+      Record record = result.next();
+      assertEquals(1, record.get("nP2").asList().size());
+      assertTrue(record.get("nP2").asList().contains("test"));
+
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_2.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.`http://example.org/Predicate2` AS nP2");
+      record = result.next();
+      assertEquals(NULL, record.get("nP2"));
+
+    }
+  }
+
+  @Test
+  public void testDeleteLiteralShortenURIs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.ns0__Predicate2 AS nP2");
+
+      Record record = result.next();
+      assertEquals(1, record.get("nP2").asList().size());
+      assertTrue(record.get("nP2").asList().contains("test"));
+
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_2.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.ns0__Predicate2 AS nP2");
+      record = result.next();
+      assertEquals(NULL, record.get("nP2"));
+
+    }
+  }
+
+
+  @Test
+  public void testDeleteTypeFromResource() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(3, result.list().size());
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource2'})"
+          + "RETURN labels(n) AS labels");
+      Record record = result.next();
+      assertEquals(2, record.get("labels").asList().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_3.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(1L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource2'})"
+          + "RETURN labels(n) AS labels");
+      record = result.next();
+      assertEquals(1, record.get("labels").asList().size());
+
+    }
+  }
+
+  @Test
+  public void testDeleteAllTriplesRelatedToResource() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(3, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_4.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(8L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(1, result.list().size());
+
+    }
+  }
+
+  @Test
+  public void testDeleteMultiLiteral() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}), "
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "RETURN n.`http://example.org/Predicate4` AS nP4, "
+          + "m.`http://example.org/Predicate3` AS mP3, "
+          + "m.`http://example.org/Predicate4` AS mP4");
+
+      Record record = result.next();
+      assertArrayEquals(new String[]{"val1", "val2", "val3", "val4"},
+          record.get("nP4").asList().toArray());
+      assertTrue(record.get("mP3").asList().contains(100L));
+      assertTrue(record.get("mP3").asList().contains(200L));
+      assertTrue(record.get("mP4").asList().contains(300.0));
+      assertTrue(record.get("mP4").asList().contains(400.0));
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_5.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(3L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.`http://example.org/Predicate4` AS nP4");
+      record = result.next();
+      assertArrayEquals(new String[]{"val2"}, record.get("nP4").asList().toArray());
+
+      deleteResult = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_6.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(2L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource2'})"
+          + "RETURN n.`http://example.org/Predicate3` AS nP3, n.`http://example.org/Predicate4` AS nP4");
+      record = result.next();
+      assertFalse(record.get("nP3").asList().contains(100L));
+      assertFalse(record.get("nP4").asList().contains(400.0));
+
+    }
+  }
+
+  @Test
+  public void testDeleteSubjectNode() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset.ttl")
+              .toURI()
+          + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(3, result.list().size());
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource3'})"
+          + "RETURN n.uri");
+      Record record = result.next();
+      assertEquals("http://example.org/Resource3", record.get("n.uri").asString());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("deleteRDF/delete_7.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(1L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource3'})"
+          + "RETURN n.uri");
+      assertFalse(result.hasNext());
+
     }
   }
 

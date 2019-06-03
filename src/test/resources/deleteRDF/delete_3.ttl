@@ -1,0 +1,5 @@
+@prefix ex: <http://example.org/> .
+
+ex:Resource2
+  a ex:TestResource .
+
