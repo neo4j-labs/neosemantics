@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
+import org.eclipse.rdf4j.model.util.Models;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
@@ -17,14 +18,8 @@ public class ModelTestUtils {
 
     Model expectedModel = createModel(expected, formatExpected);
     Model actualModel = createModel(actual, formatActual);
-
-    return included(expectedModel, actualModel) && included(actualModel, expectedModel);
-  }
-
-  private static Boolean included(Model expectedModel, Model actualModel) {
-    return actualModel.filter(null, null, null).stream()
-        .map(x -> expectedModel.contains(x.getSubject(), x.getPredicate(), x.getObject()))
-        .reduce(true, (a, b) -> a && b);
+    
+    return Models.isomorphic(expectedModel, actualModel);
   }
 
   private static Model createModel(String expected, RDFFormat formatExpected) throws IOException {
