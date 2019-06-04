@@ -4,12 +4,14 @@ import static semantics.RDFImport.RELATIONSHIP;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.Direction;
@@ -30,6 +32,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   public static final Label RESOURCE = Label.label("Resource");
   public static final String[] EMPTY_ARRAY = new String[0];
   Cache<String, Node> nodeCache;
+  private String bNodeInfo;
+  private int notDeletedStatementCount;
 
   public DirectStatementDeleter(GraphDatabaseService db, long batchSize, long nodeCacheSize,
       int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
@@ -45,6 +49,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         .maximumSize(nodeCacheSize)
         .build();
     log = l;
+    bNodeInfo = "";
+    notDeletedStatementCount = 0;
   }
 
   @Override
@@ -86,28 +92,47 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   @Override
   public Integer call() throws Exception {
     int count = 0;
-
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
-
-      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-        @Override
-        public Node call() {
-          Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-          if (node != null) {
-            return node;
-          } else {
-            return node;
+      if (entry.getKey().startsWith("genid")) {
+        notDeletedStatementCount++;
+        continue;
+      }
+      Node tempNode = null;
+      final Node node;
+      try {
+        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
+          @Override
+          public Node call() {
+            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+            if (node != null) {
+              return node;
+            } else {
+              return node;
+            }
           }
-        }
-      });
+        });
+      } catch (InvalidCacheLoadException icle) {
+        System.err.println(icle.getMessage());
+      }
+      node = tempNode;
       //Can't delete node if it doesn't exist
       if (node == null) {
-        return 0;
+        notDeletedStatementCount++;
       }
-      entry.getValue().forEach(l -> node.removeLabel(Label.label(l)));
+      entry.getValue().forEach(l -> {
+        if (node != null && node.hasLabel(Label.label(l))) {
+          node.removeLabel(Label.label(l));
+        } else {
+          notDeletedStatementCount++;
+        }
+      });
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
           List valuesToDelete = (List) v;
+          if (node == null) {
+            notDeletedStatementCount += valuesToDelete.size();
+            return;
+          }
           ArrayList<Object> newProps = new ArrayList<>();
           Object prop = node.getProperty(k);
           if (prop instanceof long[]) {
@@ -144,27 +169,48 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
             node.setProperty(k, toPropertyValue(newProps));
           }
         } else {
+          if (node == null) {
+            notDeletedStatementCount++;
+            return;
+          }
           node.removeProperty(k);
         }
       });
     }
 
     for (Statement st : statements) {
-
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        }
-      });
-
-      final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        }
-      });
-
+      if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+        notDeletedStatementCount++;
+        continue;
+      }
+      Node fromNode = null;
+      try {
+        fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          }
+        });
+      } catch (InvalidCacheLoadException icle) {
+        System.err.println(icle.getMessage());
+      }
+      if (fromNode == null) {
+        continue;
+      }
+      Node toNode = null;
+      try {
+        toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          }
+        });
+      } catch (InvalidCacheLoadException icle) {
+        System.err.println(icle.getMessage());
+      }
+      if (toNode == null) {
+        continue;
+      }
       // find relationship if it exists
       if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
           Direction.OUTGOING) <
@@ -204,11 +250,26 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    if (notDeletedStatementCount > 0) {
+      setbNodeInfo(notDeletedStatementCount
+          + " of the statements could not be deleted, due to containing a blank node.");
+    }
 
     //TODO what to return here? number of nodes and rels?
     return 0;
   }
 
+  public String getbNodeInfo() {
+    return bNodeInfo;
+  }
+
+  public void setbNodeInfo(String bNodeInfo) {
+    this.bNodeInfo = bNodeInfo;
+  }
+
+  public int getNotDeletedStatementCount() {
+    return notDeletedStatementCount;
+  }
 
   @Override
   protected Map<String, String> getPopularNamespaces() {

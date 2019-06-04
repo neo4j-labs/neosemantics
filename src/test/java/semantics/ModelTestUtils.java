@@ -18,7 +18,7 @@ public class ModelTestUtils {
 
     Model expectedModel = createModel(expected, formatExpected);
     Model actualModel = createModel(actual, formatActual);
-    
+
     return Models.isomorphic(expectedModel, actualModel);
   }
 

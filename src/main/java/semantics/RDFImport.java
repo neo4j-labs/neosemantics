@@ -389,7 +389,9 @@ public class RDFImport {
       deleteResults.setTerminationKO(e.getMessage());
       e.printStackTrace();
     } finally {
-      deleteResults.setTriplesDeleted(statementDeleter.totalTriplesMapped);
+      deleteResults.setTriplesDeleted(
+          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
       deleteResults.setNamespaces(statementDeleter.getNamespaces());
     }
     return Stream.of(deleteResults);
@@ -580,6 +582,10 @@ public class RDFImport {
 
     public void setTriplesDeleted(long triplesDeleted) {
       this.triplesDeleted = triplesDeleted;
+    }
+
+    public void setExtraInfo(String extraInfo) {
+      this.extraInfo = extraInfo;
     }
 
     public void setNamespaces(Map<String, String> namespaces) {
