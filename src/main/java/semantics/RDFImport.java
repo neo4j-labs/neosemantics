@@ -12,7 +12,6 @@ import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -72,7 +71,7 @@ public class RDFImport {
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
-  
+
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
@@ -92,8 +91,9 @@ public class RDFImport {
     DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format,  (props.containsKey("verifyUriSyntax") ? (Boolean) props
-          .get("verifyUriSyntax") : true), statementLoader);
+      parseRDF(getInputStream(url, props), url, format,
+          (props.containsKey("verifyUriSyntax") ? (Boolean) props
+              .get("verifyUriSyntax") : true), statementLoader);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -149,10 +149,12 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels, log);
+    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+        log);
     try {
-      parseRDF(getInputStream(url, props), url, format, (props.containsKey("verifyUriSyntax") ? (Boolean) props
-          .get("verifyUriSyntax") : true), statementViewer);
+      parseRDF(getInputStream(url, props), url, format,
+          (props.containsKey("verifyUriSyntax") ? (Boolean) props
+              .get("verifyUriSyntax") : true), statementViewer);
     } catch (MalformedURLException e) {
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
@@ -196,7 +198,8 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels, log);
+    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+        log);
     try {
       parseRDF(new ByteArrayInputStream(
               rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format,
@@ -218,42 +221,12 @@ public class RDFImport {
   public Stream<DeleteResults> deleteRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-    final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt(
-        (String) props.get("handleVocabUris")) : 0);
-    final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
-        .get("applyNeo4jNaming") : false);
-    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
-        (String) props.get("handleMultival")) : 0);
-    final List<String> multivalPropList = (props.containsKey("multivalPropList")
-        ? (List<String>) props.get("multivalPropList") : null);
-    final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")
-        ? (List<String>) props.get("predicateExclusionList") : null);
-    final List<String> customDataTypedPropList = (props.containsKey("customDataTypedPropList")
-        ? (List<String>) props.get("customDataTypedPropList") : null);
-    final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
-        .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
-    final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
-        .get("keepLangTag") : false);
-    final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
-        .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
-    final long commitSize = (props.containsKey("commitSize") ? (long) props.get("commitSize")
-        : DEFAULT_COMMIT_SIZE);
-    final long nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props
-        .get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);
-    final String languageFilter = (props.containsKey("languageFilter") ? (String) props
-        .get("languageFilter") : null);
+    RDFParserConfig conf = new RDFParserConfig(props);
+    conf.setCommitSize(Long.MAX_VALUE);
 
     DeleteResults deleteResults = new DeleteResults();
 
-    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db,
-        (commitSize > 0 ? commitSize : 5000),
-        nodeCacheSize, handleVocabUris, handleMultival,
-        (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
-        keepCustomDataTypes,
-        (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
-        (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
-        typesToLabels, keepLangTag,
-        languageFilter, applyNeo4jNaming, log);
+    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, conf, log);
     try {
       checkIndexesExist();
 

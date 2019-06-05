@@ -1,6 +1,7 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
+import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -40,27 +41,11 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private long bNodeCount;
   private String bNodeInfo;
 
-  DirectStatementDeleter(
-      GraphDatabaseService db,
-      long batchSize,
-      long nodeCacheSize,
-      int handleUrls,
-      int handleMultivals,
-      Set<String> multivalPropUriList,
-      boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList,
-      Set<String> predicateExclusionList,
-      boolean typesToLabels,
-      boolean klt,
-      String languageFilter,
-      boolean applyNeo4jNaming,
-      Log l) {
+  public DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-    super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
-        customDataTypedPropList, predicateExclusionList, klt,
-        typesToLabels, applyNeo4jNaming, batchSize);
+    super(db, conf);
     nodeCache = CacheBuilder.newBuilder()
-        .maximumSize(nodeCacheSize)
+        .maximumSize(conf.getNodeCacheSize())
         .build();
     log = l;
     bNodeInfo = "";
@@ -72,7 +57,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (handleUris == 0) {
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       addNamespaceNode();
     }
 
@@ -254,17 +239,6 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   }
 
   @Override
-  protected Map<String, String> getPopularNamespaces() {
-    //get namespaces and persist them in the db
-    Map<String, String> nsList = namespaceList();
-    Map<String, Object> params = new HashMap<>();
-    params.put("namespaces", nsList);
-    graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
-    return nsList;
-
-  }
-
-  @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
@@ -295,14 +269,11 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
-  // Stolen from APOC :)
+  // Adapted from APOC :)
   private Object toPropertyValue(Object value) {
     if (value instanceof Iterable) {
       Iterable it = (Iterable) value;
       Object first = Iterables.firstOrNull(it);
-      if (first == null) {
-        return new String[0];
-      }
       return Iterables.asArray(first.getClass(), it);
     }
     return value;
