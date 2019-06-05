@@ -1,0 +1,30 @@
+[[Reference]]
+== NSMNTX Reference 
+
+...work in progress...
+
+### Stored Procedures
+
+|===
+| Stored Proc Name        | params           | Description and example usage  
+| semantics.mapping.addSchema      | <ul><li>URL of the schema/vocabulary/ontology</li><li>prefix to be used in serialisations</li></ul> | Creates a reference to a vocabulary. Needed to define mappings. <br>**Examples:**<br>call semantics.mapping.addSchema("http://schema.org/","sch") 
+| semantics.mapping.dropSchema      | <ul><li>URL of the schema/vocabulary/ontology</li>| Deletes a vocabulary reference and all associated mappings. <br>**Examples:**<br>call semantics.mapping.dropSchema("http://schema.org/") 
+| semantics.mapping.listSchemas      | <ul><li>[optional] search string to list only schemas containing the search string in their uri or in the associated prefix</li></ul> | Returns all vocabulary references. <br>**Examples:**<br>call semantics.mapping.listSchemas() <br> call semantics.mapping.listSchemas('schema') <br> Combining list and drop to delet a set of schemas by name: <br> CALL semantics.mapping.listSchemas("fibo") YIELD node AS schemaDef WITH schemaDef, schemaDef._ns AS schname CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schname, output 
+| semantics.mapping.addCommonSchemas      | | Creates a references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc. <br>**Examples:**<br>call semantics.mapping.addCommonSchemas() 
+| semantics.mapping.addMappingToSchema      | <ul><li>The mapping reference node (can be retrieved by addSchema or listSchemas)</li><li>Neo4j DB schema element. It can be either a Label, property key or relationship type </li><li>Local name of the element in the selected schema (Class name, DataTypeProperty name or ObjectProperty name)</li></ul> | Creates a mapping for an element in the Neo4j DB schema to a vocabulary element. <br>**Examples:**<br> Getting a schema reference using listSchemas and creating a mapping for it: <br>call semantics.mapping.listSchemas("http://schema.org") yield node as sch <br> call semantics.mapping.addMappingToSchema(sch,"Movie","Movie") yield node as mapping return mapping 
+| semantics.mapping.dropMapping      | <ul><li>mapped DB element name to remove the mapping for</li></ul> | Returns an output text message indicating success/failure of the deletion. <br>**Examples:**<br>call semantics.mapping.dropMapping("Person") 
+| semantics.mapping.listMappings      | <ul><li>[optional]search string to list only mappings containing the search string in the DB element name</li></ul> | Returns a list with all the mappings. <br>**Examples:**<br>call semantics.mapping.listMappings() 
+|===
+
+### Functions
+
+
+### Extensions (HTTP endpoints)
+
+|===
+| Extension        | params           | Description and example usage  
+| /rdf/describe/id      | <ul><li><b>nodeid:</b>the id of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. The format will be determined by the **accept** parameter in the header. Default is JSON-LD <br> **Example:**<br>:GET /rdf/describe/id?nodeid=0&excludeContext 
+| /rdf/describe/uri      | <ul><li><b>nodeuri:</b>the uri of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri. This property is the one used by this extension to lookup a node. [NOTE: URIs should be urlencoded. It's normally not a problem unless there are **hash signs in it** (escape them in the Neo4j browser with %23)] <br> **Example:**<br>:GET /rdf/describe/uri?nodeuri=http://dataset.com#id_1234  
+| /rdf/cypher      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li><li><b>showOnlyMapped:</b>(optional, default is false) if present output will exclude unmapped elements (labels,attributes, relationships)</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query.<br> **Example:**<br>:POST /rdf/cypher { "cypher" : "MATCH (n:Person { name : 'Keanu Reeves'})-[r]-(m:Movie) RETURN n,r,m " , "showOnlyMapped" : true }  
+| /rdf/cypheronrdf      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri.<br> **Example:**<br>:POST /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b) RETURN a, r, b"}  
+|===

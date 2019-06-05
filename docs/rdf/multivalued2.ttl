@@ -1,0 +1,9 @@
+@prefix og: <http://ogp.me/ns#> .
+@prefix nyt: <http://nyt.com/voc/> .
+
+<nyt://article/a17a9514-73e7-51be-8ade-283e84a6cd87>
+  a og:article ;
+  og:title "Bengal Tigers May Not Survive Climate Change" ;
+  og:url "https://www.nytimes.com/2019/05/06/science/tigers-climate-change-sundarbans.html" ;
+  og:description "The tigers of the Bangladesh Sundarbans may be gone in fifty years, according to a new study" ;
+  nyt:keyword "Climate Change", "Endangered Species", "Global Warming", "India", "Poaching" .

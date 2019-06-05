@@ -1,0 +1,8 @@
+@prefix show: <http://example.org/vocab/show/> .
+@prefix ind: <http://example.org/ind/> .
+
+ind:218 a show:TVSeries .
+ind:218 show:name "That Seventies Show" .
+ind:218 show:localName "That Seventies Show"@en .                 
+ind:218 show:localName 'Cette Série des Années Soixante-dix'@fr . 
+ind:218 show:localName "Cette Série des Années Septante"@fr-be . 

@@ -1,0 +1,19 @@
+@prefix neo4voc: <http://neo4j.org/vocab/sw#> .
+@prefix neo4ind: <http://neo4j.org/ind#> .
+@prefix sch: <http://schema.org/> .
+@prefix og: <http://ogp.me/ns#> .
+@prefix article: <http://ogp.me//article#> .
+
+# Instance data
+
+neo4ind:MarinaHyde a neo4voc:Columnist ;
+			   neo4voc:authorProfile "https://www.theguardian.com/profile/marinahyde" ;
+			   sch:givenName "Marina" ;
+			   sch:familyName "Hyde" .
+
+neo4ind:mhyde-2019-03-13 a neo4voc:OpinionArticle;
+			   og:title "With Theresa’s ‘turd’ deal flushed away, pray for an EU invasion" ;
+			   sch:datePublished "2019-03-13";
+			   og:description "We need competency, and quick. Not this bunch of MPs who are finding out in real time the consequences of their actions";
+			   article:author neo4ind:MarinaHyde .
+

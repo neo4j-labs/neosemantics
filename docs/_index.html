@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<!--[if IE]><meta http-equiv="X-UA-Compatible" content="IE=edge"><![endif]-->
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="generator" content="Asciidoctor 1.5.6.1">
+<title>NSMNTX User Guide</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
+<style>
+/* Asciidoctor default stylesheet | MIT License | http://asciidoctor.org */
+/* Remove comment around @import statement below when using as a custom stylesheet */
+/*@import "https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700";*/
+article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,summary{display:block}
+audio,canvas,video{display:inline-block}
+audio:not([controls]){display:none;height:0}
+[hidden],template{display:none}
+script{display:none!important}
+html{font-family:sans-serif;-ms-text-size-adjust:100%;-webkit-text-size-adjust:100%}
+a{background:transparent}
+a:focus{outline:thin dotted}
+a:active,a:hover{outline:0}
+h1{font-size:2em;margin:.67em 0}
+abbr[title]{border-bottom:1px dotted}
+b,strong{font-weight:bold}
+dfn{font-style:italic}
+hr{-moz-box-sizing:content-box;box-sizing:content-box;height:0}
+mark{background:#ff0;color:#000}
+code,kbd,pre,samp{font-family:monospace;font-size:1em}
+pre{white-space:pre-wrap}
+q{quotes:"\201C" "\201D" "\2018" "\2019"}
+small{font-size:80%}
+sub,sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+sup{top:-.5em}
+sub{bottom:-.25em}
+img{border:0}
+svg:not(:root){overflow:hidden}
+figure{margin:0}
+fieldset{border:1px solid silver;margin:0 2px;padding:.35em .625em .75em}
+legend{border:0;padding:0}
+button,input,select,textarea{font-family:inherit;font-size:100%;margin:0}
+button,input{line-height:normal}
+button,select{text-transform:none}
+button,html input[type="button"],input[type="reset"],input[type="submit"]{-webkit-appearance:button;cursor:pointer}
+button[disabled],html input[disabled]{cursor:default}
+input[type="checkbox"],input[type="radio"]{box-sizing:border-box;padding:0}
+input[type="search"]{-webkit-appearance:textfield;-moz-box-sizing:content-box;-webkit-box-sizing:content-box;box-sizing:content-box}
+input[type="search"]::-webkit-search-cancel-button,input[type="search"]::-webkit-search-decoration{-webkit-appearance:none}
+button::-moz-focus-inner,input::-moz-focus-inner{border:0;padding:0}
+textarea{overflow:auto;vertical-align:top}
+table{border-collapse:collapse;border-spacing:0}
+*,*:before,*:after{-moz-box-sizing:border-box;-webkit-box-sizing:border-box;box-sizing:border-box}
+html,body{font-size:100%}
+body{background:#fff;color:rgba(0,0,0,.8);padding:0;margin:0;font-family:"Noto Serif","DejaVu Serif",serif;font-weight:400;font-style:normal;line-height:1;position:relative;cursor:auto;tab-size:4;-moz-osx-font-smoothing:grayscale;-webkit-font-smoothing:antialiased}
+a:hover{cursor:pointer}
+img,object,embed{max-width:100%;height:auto}
+object,embed{height:100%}
+img{-ms-interpolation-mode:bicubic}
+.left{float:left!important}
+.right{float:right!important}
+.text-left{text-align:left!important}
+.text-right{text-align:right!important}
+.text-center{text-align:center!important}
+.text-justify{text-align:justify!important}
+.hide{display:none}
+img,object,svg{display:inline-block;vertical-align:middle}
+textarea{height:auto;min-height:50px}
+select{width:100%}
+.center{margin-left:auto;margin-right:auto}
+.spread{width:100%}
+p.lead,.paragraph.lead>p,#preamble>.sectionbody>.paragraph:first-of-type p{font-size:1.21875em;line-height:1.6}
+.subheader,.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{line-height:1.45;color:#7a2518;font-weight:400;margin-top:0;margin-bottom:.25em}
+div,dl,dt,dd,ul,ol,li,h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6,pre,form,p,blockquote,th,td{margin:0;padding:0;direction:ltr}
+a{color:#2156a5;text-decoration:underline;line-height:inherit}
+a:hover,a:focus{color:#1d4b8f}
+a img{border:none}
+p{font-family:inherit;font-weight:400;font-size:1em;line-height:1.6;margin-bottom:1.25em;text-rendering:optimizeLegibility}
+p aside{font-size:.875em;line-height:1.35;font-style:italic}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{font-family:"Open Sans","DejaVu Sans",sans-serif;font-weight:300;font-style:normal;color:#ba3925;text-rendering:optimizeLegibility;margin-top:1em;margin-bottom:.5em;line-height:1.0125em}
+h1 small,h2 small,h3 small,#toctitle small,.sidebarblock>.content>.title small,h4 small,h5 small,h6 small{font-size:60%;color:#e99b8f;line-height:0}
+h1{font-size:2.125em}
+h2{font-size:1.6875em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.375em}
+h4,h5{font-size:1.125em}
+h6{font-size:1em}
+hr{border:solid #ddddd8;border-width:1px 0 0;clear:both;margin:1.25em 0 1.1875em;height:0}
+em,i{font-style:italic;line-height:inherit}
+strong,b{font-weight:bold;line-height:inherit}
+small{font-size:60%;line-height:inherit}
+code{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;color:rgba(0,0,0,.9)}
+ul,ol,dl{font-size:1em;line-height:1.6;margin-bottom:1.25em;list-style-position:outside;font-family:inherit}
+ul,ol{margin-left:1.5em}
+ul li ul,ul li ol{margin-left:1.25em;margin-bottom:0;font-size:1em}
+ul.square li ul,ul.circle li ul,ul.disc li ul{list-style:inherit}
+ul.square{list-style-type:square}
+ul.circle{list-style-type:circle}
+ul.disc{list-style-type:disc}
+ol li ul,ol li ol{margin-left:1.25em;margin-bottom:0}
+dl dt{margin-bottom:.3125em;font-weight:bold}
+dl dd{margin-bottom:1.25em}
+abbr,acronym{text-transform:uppercase;font-size:90%;color:rgba(0,0,0,.8);border-bottom:1px dotted #ddd;cursor:help}
+abbr{text-transform:none}
+blockquote{margin:0 0 1.25em;padding:.5625em 1.25em 0 1.1875em;border-left:1px solid #ddd}
+blockquote cite{display:block;font-size:.9375em;color:rgba(0,0,0,.6)}
+blockquote cite:before{content:"\2014 \0020"}
+blockquote cite a,blockquote cite a:visited{color:rgba(0,0,0,.6)}
+blockquote,blockquote p{line-height:1.6;color:rgba(0,0,0,.85)}
+@media only screen and (min-width:768px){h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2}
+h1{font-size:2.75em}
+h2{font-size:2.3125em}
+h3,#toctitle,.sidebarblock>.content>.title{font-size:1.6875em}
+h4{font-size:1.4375em}}
+table{background:#fff;margin-bottom:1.25em;border:solid 1px #dedede}
+table thead,table tfoot{background:#f7f8f7;font-weight:bold}
+table thead tr th,table thead tr td,table tfoot tr th,table tfoot tr td{padding:.5em .625em .625em;font-size:inherit;color:rgba(0,0,0,.8);text-align:left}
+table tr th,table tr td{padding:.5625em .625em;font-size:inherit;color:rgba(0,0,0,.8)}
+table tr.even,table tr.alt,table tr:nth-of-type(even){background:#f8f8f7}
+table thead tr th,table tfoot tr th,table tbody tr td,table tr td,table tfoot tr td{display:table-cell;line-height:1.6}
+h1,h2,h3,#toctitle,.sidebarblock>.content>.title,h4,h5,h6{line-height:1.2;word-spacing:-.05em}
+h1 strong,h2 strong,h3 strong,#toctitle strong,.sidebarblock>.content>.title strong,h4 strong,h5 strong,h6 strong{font-weight:400}
+.clearfix:before,.clearfix:after,.float-group:before,.float-group:after{content:" ";display:table}
+.clearfix:after,.float-group:after{clear:both}
+*:not(pre)>code{font-size:.9375em;font-style:normal!important;letter-spacing:0;padding:.1em .5ex;word-spacing:-.15em;background-color:#f7f7f8;-webkit-border-radius:4px;border-radius:4px;line-height:1.45;text-rendering:optimizeSpeed;word-wrap:break-word}
+*:not(pre)>code.nobreak{word-wrap:normal}
+*:not(pre)>code.nowrap{white-space:nowrap}
+pre,pre>code{line-height:1.45;color:rgba(0,0,0,.9);font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;font-weight:400;text-rendering:optimizeSpeed}
+em em{font-style:normal}
+strong strong{font-weight:400}
+.keyseq{color:rgba(51,51,51,.8)}
+kbd{font-family:"Droid Sans Mono","DejaVu Sans Mono",monospace;display:inline-block;color:rgba(0,0,0,.8);font-size:.65em;line-height:1.45;background-color:#f7f7f7;border:1px solid #ccc;-webkit-border-radius:3px;border-radius:3px;-webkit-box-shadow:0 1px 0 rgba(0,0,0,.2),0 0 0 .1em white inset;box-shadow:0 1px 0 rgba(0,0,0,.2),0 0 0 .1em #fff inset;margin:0 .15em;padding:.2em .5em;vertical-align:middle;position:relative;top:-.1em;white-space:nowrap}
+.keyseq kbd:first-child{margin-left:0}
+.keyseq kbd:last-child{margin-right:0}
+.menuseq,.menuref{color:#000}
+.menuseq b:not(.caret),.menuref{font-weight:inherit}
+.menuseq{word-spacing:-.02em}
+.menuseq b.caret{font-size:1.25em;line-height:.8}
+.menuseq i.caret{font-weight:bold;text-align:center;width:.45em}
+b.button:before,b.button:after{position:relative;top:-1px;font-weight:400}
+b.button:before{content:"[";padding:0 3px 0 2px}
+b.button:after{content:"]";padding:0 2px 0 3px}
+p a>code:hover{color:rgba(0,0,0,.9)}
+#header,#content,#footnotes,#footer{width:100%;margin-left:auto;margin-right:auto;margin-top:0;margin-bottom:0;max-width:62.5em;*zoom:1;position:relative;padding-left:.9375em;padding-right:.9375em}
+#header:before,#header:after,#content:before,#content:after,#footnotes:before,#footnotes:after,#footer:before,#footer:after{content:" ";display:table}
+#header:after,#content:after,#footnotes:after,#footer:after{clear:both}
+#content{margin-top:1.25em}
+#content:before{content:none}
+#header>h1:first-child{color:rgba(0,0,0,.85);margin-top:2.25rem;margin-bottom:0}
+#header>h1:first-child+#toc{margin-top:8px;border-top:1px solid #ddddd8}
+#header>h1:only-child,body.toc2 #header>h1:nth-last-child(2){border-bottom:1px solid #ddddd8;padding-bottom:8px}
+#header .details{border-bottom:1px solid #ddddd8;line-height:1.45;padding-top:.25em;padding-bottom:.25em;padding-left:.25em;color:rgba(0,0,0,.6);display:-ms-flexbox;display:-webkit-flex;display:flex;-ms-flex-flow:row wrap;-webkit-flex-flow:row wrap;flex-flow:row wrap}
+#header .details span:first-child{margin-left:-.125em}
+#header .details span.email a{color:rgba(0,0,0,.85)}
+#header .details br{display:none}
+#header .details br+span:before{content:"\00a0\2013\00a0"}
+#header .details br+span.author:before{content:"\00a0\22c5\00a0";color:rgba(0,0,0,.85)}
+#header .details br+span#revremark:before{content:"\00a0|\00a0"}
+#header #revnumber{text-transform:capitalize}
+#header #revnumber:after{content:"\00a0"}
+#content>h1:first-child:not([class]){color:rgba(0,0,0,.85);border-bottom:1px solid #ddddd8;padding-bottom:8px;margin-top:0;padding-top:1rem;margin-bottom:1.25rem}
+#toc{border-bottom:1px solid #efefed;padding-bottom:.5em}
+#toc>ul{margin-left:.125em}
+#toc ul.sectlevel0>li>a{font-style:italic}
+#toc ul.sectlevel0 ul.sectlevel1{margin:.5em 0}
+#toc ul{font-family:"Open Sans","DejaVu Sans",sans-serif;list-style-type:none}
+#toc li{line-height:1.3334;margin-top:.3334em}
+#toc a{text-decoration:none}
+#toc a:active{text-decoration:underline}
+#toctitle{color:#7a2518;font-size:1.2em}
+@media only screen and (min-width:768px){#toctitle{font-size:1.375em}
+body.toc2{padding-left:15em;padding-right:0}
+#toc.toc2{margin-top:0!important;background-color:#f8f8f7;position:fixed;width:15em;left:0;top:0;border-right:1px solid #efefed;border-top-width:0!important;border-bottom-width:0!important;z-index:1000;padding:1.25em 1em;height:100%;overflow:auto}
+#toc.toc2 #toctitle{margin-top:0;margin-bottom:.8rem;font-size:1.2em}
+#toc.toc2>ul{font-size:.9em;margin-bottom:0}
+#toc.toc2 ul ul{margin-left:0;padding-left:1em}
+#toc.toc2 ul.sectlevel0 ul.sectlevel1{padding-left:0;margin-top:.5em;margin-bottom:.5em}
+body.toc2.toc-right{padding-left:0;padding-right:15em}
+body.toc2.toc-right #toc.toc2{border-right-width:0;border-left:1px solid #efefed;left:auto;right:0}}
+@media only screen and (min-width:1280px){body.toc2{padding-left:20em;padding-right:0}
+#toc.toc2{width:20em}
+#toc.toc2 #toctitle{font-size:1.375em}
+#toc.toc2>ul{font-size:.95em}
+#toc.toc2 ul ul{padding-left:1.25em}
+body.toc2.toc-right{padding-left:0;padding-right:20em}}
+#content #toc{border-style:solid;border-width:1px;border-color:#e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;-webkit-border-radius:4px;border-radius:4px}
+#content #toc>:first-child{margin-top:0}
+#content #toc>:last-child{margin-bottom:0}
+#footer{max-width:100%;background-color:rgba(0,0,0,.8);padding:1.25em}
+#footer-text{color:rgba(255,255,255,.8);line-height:1.44}
+.sect1{padding-bottom:.625em}
+@media only screen and (min-width:768px){.sect1{padding-bottom:1.25em}}
+.sect1+.sect1{border-top:1px solid #efefed}
+#content h1>a.anchor,h2>a.anchor,h3>a.anchor,#toctitle>a.anchor,.sidebarblock>.content>.title>a.anchor,h4>a.anchor,h5>a.anchor,h6>a.anchor{position:absolute;z-index:1001;width:1.5ex;margin-left:-1.5ex;display:block;text-decoration:none!important;visibility:hidden;text-align:center;font-weight:400}
+#content h1>a.anchor:before,h2>a.anchor:before,h3>a.anchor:before,#toctitle>a.anchor:before,.sidebarblock>.content>.title>a.anchor:before,h4>a.anchor:before,h5>a.anchor:before,h6>a.anchor:before{content:"\00A7";font-size:.85em;display:block;padding-top:.1em}
+#content h1:hover>a.anchor,#content h1>a.anchor:hover,h2:hover>a.anchor,h2>a.anchor:hover,h3:hover>a.anchor,#toctitle:hover>a.anchor,.sidebarblock>.content>.title:hover>a.anchor,h3>a.anchor:hover,#toctitle>a.anchor:hover,.sidebarblock>.content>.title>a.anchor:hover,h4:hover>a.anchor,h4>a.anchor:hover,h5:hover>a.anchor,h5>a.anchor:hover,h6:hover>a.anchor,h6>a.anchor:hover{visibility:visible}
+#content h1>a.link,h2>a.link,h3>a.link,#toctitle>a.link,.sidebarblock>.content>.title>a.link,h4>a.link,h5>a.link,h6>a.link{color:#ba3925;text-decoration:none}
+#content h1>a.link:hover,h2>a.link:hover,h3>a.link:hover,#toctitle>a.link:hover,.sidebarblock>.content>.title>a.link:hover,h4>a.link:hover,h5>a.link:hover,h6>a.link:hover{color:#a53221}
+.audioblock,.imageblock,.literalblock,.listingblock,.stemblock,.videoblock{margin-bottom:1.25em}
+.admonitionblock td.content>.title,.audioblock>.title,.exampleblock>.title,.imageblock>.title,.listingblock>.title,.literalblock>.title,.stemblock>.title,.openblock>.title,.paragraph>.title,.quoteblock>.title,table.tableblock>.title,.verseblock>.title,.videoblock>.title,.dlist>.title,.olist>.title,.ulist>.title,.qlist>.title,.hdlist>.title{text-rendering:optimizeLegibility;text-align:left;font-family:"Noto Serif","DejaVu Serif",serif;font-size:1rem;font-style:italic}
+table.tableblock>caption.title{white-space:nowrap;overflow:visible;max-width:0}
+.paragraph.lead>p,#preamble>.sectionbody>.paragraph:first-of-type p{color:rgba(0,0,0,.85)}
+table.tableblock #preamble>.sectionbody>.paragraph:first-of-type p{font-size:inherit}
+.admonitionblock>table{border-collapse:separate;border:0;background:none;width:100%}
+.admonitionblock>table td.icon{text-align:center;width:80px}
+.admonitionblock>table td.icon img{max-width:initial}
+.admonitionblock>table td.icon .title{font-weight:bold;font-family:"Open Sans","DejaVu Sans",sans-serif;text-transform:uppercase}
+.admonitionblock>table td.content{padding-left:1.125em;padding-right:1.25em;border-left:1px solid #ddddd8;color:rgba(0,0,0,.6)}
+.admonitionblock>table td.content>:last-child>:last-child{margin-bottom:0}
+.exampleblock>.content{border-style:solid;border-width:1px;border-color:#e6e6e6;margin-bottom:1.25em;padding:1.25em;background:#fff;-webkit-border-radius:4px;border-radius:4px}
+.exampleblock>.content>:first-child{margin-top:0}
+.exampleblock>.content>:last-child{margin-bottom:0}
+.sidebarblock{border-style:solid;border-width:1px;border-color:#e0e0dc;margin-bottom:1.25em;padding:1.25em;background:#f8f8f7;-webkit-border-radius:4px;border-radius:4px}
+.sidebarblock>:first-child{margin-top:0}
+.sidebarblock>:last-child{margin-bottom:0}
+.sidebarblock>.content>.title{color:#7a2518;margin-top:0;text-align:center}
+.exampleblock>.content>:last-child>:last-child,.exampleblock>.content .olist>ol>li:last-child>:last-child,.exampleblock>.content .ulist>ul>li:last-child>:last-child,.exampleblock>.content .qlist>ol>li:last-child>:last-child,.sidebarblock>.content>:last-child>:last-child,.sidebarblock>.content .olist>ol>li:last-child>:last-child,.sidebarblock>.content .ulist>ul>li:last-child>:last-child,.sidebarblock>.content .qlist>ol>li:last-child>:last-child{margin-bottom:0}
+.literalblock pre,.listingblock pre:not(.highlight),.listingblock pre[class="highlight"],.listingblock pre[class^="highlight "],.listingblock pre.CodeRay,.listingblock pre.prettyprint{background:#f7f7f8}
+.sidebarblock .literalblock pre,.sidebarblock .listingblock pre:not(.highlight),.sidebarblock .listingblock pre[class="highlight"],.sidebarblock .listingblock pre[class^="highlight "],.sidebarblock .listingblock pre.CodeRay,.sidebarblock .listingblock pre.prettyprint{background:#f2f1f1}
+.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{-webkit-border-radius:4px;border-radius:4px;word-wrap:break-word;padding:1em;font-size:.8125em}
+.literalblock pre.nowrap,.literalblock pre[class].nowrap,.listingblock pre.nowrap,.listingblock pre[class].nowrap{overflow-x:auto;white-space:pre;word-wrap:normal}
+@media only screen and (min-width:768px){.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{font-size:.90625em}}
+@media only screen and (min-width:1280px){.literalblock pre,.literalblock pre[class],.listingblock pre,.listingblock pre[class]{font-size:1em}}
+.literalblock.output pre{color:#f7f7f8;background-color:rgba(0,0,0,.9)}
+.listingblock pre.highlightjs{padding:0}
+.listingblock pre.highlightjs>code{padding:1em;-webkit-border-radius:4px;border-radius:4px}
+.listingblock pre.prettyprint{border-width:0}
+.listingblock>.content{position:relative}
+.listingblock code[data-lang]:before{display:none;content:attr(data-lang);position:absolute;font-size:.75em;top:.425rem;right:.5rem;line-height:1;text-transform:uppercase;color:#999}
+.listingblock:hover code[data-lang]:before{display:block}
+.listingblock.terminal pre .command:before{content:attr(data-prompt);padding-right:.5em;color:#999}
+.listingblock.terminal pre .command:not([data-prompt]):before{content:"$"}
+table.pyhltable{border-collapse:separate;border:0;margin-bottom:0;background:none}
+table.pyhltable td{vertical-align:top;padding-top:0;padding-bottom:0;line-height:1.45}
+table.pyhltable td.code{padding-left:.75em;padding-right:0}
+pre.pygments .lineno,table.pyhltable td:not(.code){color:#999;padding-left:0;padding-right:.5em;border-right:1px solid #ddddd8}
+pre.pygments .lineno{display:inline-block;margin-right:.25em}
+table.pyhltable .linenodiv{background:none!important;padding-right:0!important}
+.quoteblock{margin:0 1em 1.25em 1.5em;display:table}
+.quoteblock>.title{margin-left:-1.5em;margin-bottom:.75em}
+.quoteblock blockquote,.quoteblock blockquote p{color:rgba(0,0,0,.85);font-size:1.15rem;line-height:1.75;word-spacing:.1em;letter-spacing:0;font-style:italic;text-align:justify}
+.quoteblock blockquote{margin:0;padding:0;border:0}
+.quoteblock blockquote:before{content:"\201c";float:left;font-size:2.75em;font-weight:bold;line-height:.6em;margin-left:-.6em;color:#7a2518;text-shadow:0 1px 2px rgba(0,0,0,.1)}
+.quoteblock blockquote>.paragraph:last-child p{margin-bottom:0}
+.quoteblock .attribution{margin-top:.5em;margin-right:.5ex;text-align:right}
+.quoteblock .quoteblock{margin-left:0;margin-right:0;padding:.5em 0;border-left:3px solid rgba(0,0,0,.6)}
+.quoteblock .quoteblock blockquote{padding:0 0 0 .75em}
+.quoteblock .quoteblock blockquote:before{display:none}
+.verseblock{margin:0 1em 1.25em 1em}
+.verseblock pre{font-family:"Open Sans","DejaVu Sans",sans;font-size:1.15rem;color:rgba(0,0,0,.85);font-weight:300;text-rendering:optimizeLegibility}
+.verseblock pre strong{font-weight:400}
+.verseblock .attribution{margin-top:1.25rem;margin-left:.5ex}
+.quoteblock .attribution,.verseblock .attribution{font-size:.9375em;line-height:1.45;font-style:italic}
+.quoteblock .attribution br,.verseblock .attribution br{display:none}
+.quoteblock .attribution cite,.verseblock .attribution cite{display:block;letter-spacing:-.025em;color:rgba(0,0,0,.6)}
+.quoteblock.abstract{margin:0 0 1.25em 0;display:block}
+.quoteblock.abstract blockquote,.quoteblock.abstract blockquote p{text-align:left;word-spacing:0}
+.quoteblock.abstract blockquote:before,.quoteblock.abstract blockquote p:first-of-type:before{display:none}
+table.tableblock{max-width:100%;border-collapse:separate}
+table.tableblock td>.paragraph:last-child p>p:last-child,table.tableblock th>p:last-child,table.tableblock td>p:last-child{margin-bottom:0}
+table.tableblock,th.tableblock,td.tableblock{border:0 solid #dedede}
+table.grid-all>thead>tr>.tableblock,table.grid-all>tbody>tr>.tableblock{border-width:0 1px 1px 0}
+table.grid-all>tfoot>tr>.tableblock{border-width:1px 1px 0 0}
+table.grid-cols>*>tr>.tableblock{border-width:0 1px 0 0}
+table.grid-rows>thead>tr>.tableblock,table.grid-rows>tbody>tr>.tableblock{border-width:0 0 1px 0}
+table.grid-rows>tfoot>tr>.tableblock{border-width:1px 0 0 0}
+table.grid-all>*>tr>.tableblock:last-child,table.grid-cols>*>tr>.tableblock:last-child{border-right-width:0}
+table.grid-all>tbody>tr:last-child>.tableblock,table.grid-all>thead:last-child>tr>.tableblock,table.grid-rows>tbody>tr:last-child>.tableblock,table.grid-rows>thead:last-child>tr>.tableblock{border-bottom-width:0}
+table.frame-all{border-width:1px}
+table.frame-sides{border-width:0 1px}
+table.frame-topbot{border-width:1px 0}
+th.halign-left,td.halign-left{text-align:left}
+th.halign-right,td.halign-right{text-align:right}
+th.halign-center,td.halign-center{text-align:center}
+th.valign-top,td.valign-top{vertical-align:top}
+th.valign-bottom,td.valign-bottom{vertical-align:bottom}
+th.valign-middle,td.valign-middle{vertical-align:middle}
+table thead th,table tfoot th{font-weight:bold}
+tbody tr th{display:table-cell;line-height:1.6;background:#f7f8f7}
+tbody tr th,tbody tr th p,tfoot tr th,tfoot tr th p{color:rgba(0,0,0,.8);font-weight:bold}
+p.tableblock>code:only-child{background:none;padding:0}
+p.tableblock{font-size:1em}
+td>div.verse{white-space:pre}
+ol{margin-left:1.75em}
+ul li ol{margin-left:1.5em}
+dl dd{margin-left:1.125em}
+dl dd:last-child,dl dd:last-child>:last-child{margin-bottom:0}
+ol>li p,ul>li p,ul dd,ol dd,.olist .olist,.ulist .ulist,.ulist .olist,.olist .ulist{margin-bottom:.625em}
+ul.checklist,ul.none,ol.none,ul.no-bullet,ol.no-bullet,ol.unnumbered,ul.unstyled,ol.unstyled{list-style-type:none}
+ul.no-bullet,ol.no-bullet,ol.unnumbered{margin-left:.625em}
+ul.unstyled,ol.unstyled{margin-left:0}
+ul.checklist{margin-left:.625em}
+ul.checklist li>p:first-child>.fa-square-o:first-child,ul.checklist li>p:first-child>.fa-check-square-o:first-child{width:1.25em;font-size:.8em;position:relative;bottom:.125em}
+ul.checklist li>p:first-child>input[type="checkbox"]:first-child{margin-right:.25em}
+ul.inline{margin:0 auto .625em auto;margin-left:-1.375em;margin-right:0;padding:0;list-style:none;overflow:hidden}
+ul.inline>li{list-style:none;float:left;margin-left:1.375em;display:block}
+ul.inline>li>*{display:block}
+.unstyled dl dt{font-weight:400;font-style:normal}
+ol.arabic{list-style-type:decimal}
+ol.decimal{list-style-type:decimal-leading-zero}
+ol.loweralpha{list-style-type:lower-alpha}
+ol.upperalpha{list-style-type:upper-alpha}
+ol.lowerroman{list-style-type:lower-roman}
+ol.upperroman{list-style-type:upper-roman}
+ol.lowergreek{list-style-type:lower-greek}
+.hdlist>table,.colist>table{border:0;background:none}
+.hdlist>table>tbody>tr,.colist>table>tbody>tr{background:none}
+td.hdlist1,td.hdlist2{vertical-align:top;padding:0 .625em}
+td.hdlist1{font-weight:bold;padding-bottom:1.25em}
+.literalblock+.colist,.listingblock+.colist{margin-top:-.5em}
+.colist>table tr>td:first-of-type{padding:.4em .75em 0 .75em;line-height:1;vertical-align:top}
+.colist>table tr>td:first-of-type img{max-width:initial}
+.colist>table tr>td:last-of-type{padding:.25em 0}
+.thumb,.th{line-height:0;display:inline-block;border:solid 4px #fff;-webkit-box-shadow:0 0 0 1px #ddd;box-shadow:0 0 0 1px #ddd}
+.imageblock.left,.imageblock[style*="float: left"]{margin:.25em .625em 1.25em 0}
+.imageblock.right,.imageblock[style*="float: right"]{margin:.25em 0 1.25em .625em}
+.imageblock>.title{margin-bottom:0}
+.imageblock.thumb,.imageblock.th{border-width:6px}
+.imageblock.thumb>.title,.imageblock.th>.title{padding:0 .125em}
+.image.left,.image.right{margin-top:.25em;margin-bottom:.25em;display:inline-block;line-height:0}
+.image.left{margin-right:.625em}
+.image.right{margin-left:.625em}
+a.image{text-decoration:none;display:inline-block}
+a.image object{pointer-events:none}
+sup.footnote,sup.footnoteref{font-size:.875em;position:static;vertical-align:super}
+sup.footnote a,sup.footnoteref a{text-decoration:none}
+sup.footnote a:active,sup.footnoteref a:active{text-decoration:underline}
+#footnotes{padding-top:.75em;padding-bottom:.75em;margin-bottom:.625em}
+#footnotes hr{width:20%;min-width:6.25em;margin:-.25em 0 .75em 0;border-width:1px 0 0 0}
+#footnotes .footnote{padding:0 .375em 0 .225em;line-height:1.3334;font-size:.875em;margin-left:1.2em;text-indent:-1.05em;margin-bottom:.2em}
+#footnotes .footnote a:first-of-type{font-weight:bold;text-decoration:none}
+#footnotes .footnote:last-of-type{margin-bottom:0}
+#content #footnotes{margin-top:-.625em;margin-bottom:0;padding:.75em 0}
+.gist .file-data>table{border:0;background:#fff;width:100%;margin-bottom:0}
+.gist .file-data>table td.line-data{width:99%}
+div.unbreakable{page-break-inside:avoid}
+.big{font-size:larger}
+.small{font-size:smaller}
+.underline{text-decoration:underline}
+.overline{text-decoration:overline}
+.line-through{text-decoration:line-through}
+.aqua{color:#00bfbf}
+.aqua-background{background-color:#00fafa}
+.black{color:#000}
+.black-background{background-color:#000}
+.blue{color:#0000bf}
+.blue-background{background-color:#0000fa}
+.fuchsia{color:#bf00bf}
+.fuchsia-background{background-color:#fa00fa}
+.gray{color:#606060}
+.gray-background{background-color:#7d7d7d}
+.green{color:#006000}
+.green-background{background-color:#007d00}
+.lime{color:#00bf00}
+.lime-background{background-color:#00fa00}
+.maroon{color:#600000}
+.maroon-background{background-color:#7d0000}
+.navy{color:#000060}
+.navy-background{background-color:#00007d}
+.olive{color:#606000}
+.olive-background{background-color:#7d7d00}
+.purple{color:#600060}
+.purple-background{background-color:#7d007d}
+.red{color:#bf0000}
+.red-background{background-color:#fa0000}
+.silver{color:#909090}
+.silver-background{background-color:#bcbcbc}
+.teal{color:#006060}
+.teal-background{background-color:#007d7d}
+.white{color:#bfbfbf}
+.white-background{background-color:#fafafa}
+.yellow{color:#bfbf00}
+.yellow-background{background-color:#fafa00}
+span.icon>.fa{cursor:default}
+a span.icon>.fa{cursor:inherit}
+.admonitionblock td.icon [class^="fa icon-"]{font-size:2.5em;text-shadow:1px 1px 2px rgba(0,0,0,.5);cursor:default}
+.admonitionblock td.icon .icon-note:before{content:"\f05a";color:#19407c}
+.admonitionblock td.icon .icon-tip:before{content:"\f0eb";text-shadow:1px 1px 2px rgba(155,155,0,.8);color:#111}
+.admonitionblock td.icon .icon-warning:before{content:"\f071";color:#bf6900}
+.admonitionblock td.icon .icon-caution:before{content:"\f06d";color:#bf3400}
+.admonitionblock td.icon .icon-important:before{content:"\f06a";color:#bf0000}
+.conum[data-value]{display:inline-block;color:#fff!important;background-color:rgba(0,0,0,.8);-webkit-border-radius:100px;border-radius:100px;text-align:center;font-size:.75em;width:1.67em;height:1.67em;line-height:1.67em;font-family:"Open Sans","DejaVu Sans",sans-serif;font-style:normal;font-weight:bold}
+.conum[data-value] *{color:#fff!important}
+.conum[data-value]+b{display:none}
+.conum[data-value]:after{content:attr(data-value)}
+pre .conum[data-value]{position:relative;top:-.125em}
+b.conum *{color:inherit!important}
+.conum:not([data-value]):empty{display:none}
+dt,th.tableblock,td.content,div.footnote{text-rendering:optimizeLegibility}
+h1,h2,p,td.content,span.alt{letter-spacing:-.01em}
+p strong,td.content strong,div.footnote strong{letter-spacing:-.005em}
+p,blockquote,dt,td.content,span.alt{font-size:1.0625rem}
+p{margin-bottom:1.25rem}
+.sidebarblock p,.sidebarblock dt,.sidebarblock td.content,p.tableblock{font-size:1em}
+.exampleblock>.content{background-color:#fffef7;border-color:#e0e0dc;-webkit-box-shadow:0 1px 4px #e0e0dc;box-shadow:0 1px 4px #e0e0dc}
+.print-only{display:none!important}
+@media print{@page{margin:1.25cm .75cm}
+*{-webkit-box-shadow:none!important;box-shadow:none!important;text-shadow:none!important}
+a{color:inherit!important;text-decoration:underline!important}
+a.bare,a[href^="#"],a[href^="mailto:"]{text-decoration:none!important}
+a[href^="http:"]:not(.bare):after,a[href^="https:"]:not(.bare):after{content:"(" attr(href) ")";display:inline-block;font-size:.875em;padding-left:.25em}
+abbr[title]:after{content:" (" attr(title) ")"}
+pre,blockquote,tr,img,object,svg{page-break-inside:avoid}
+thead{display:table-header-group}
+svg{max-width:100%}
+p,blockquote,dt,td.content{font-size:1em;orphans:3;widows:3}
+h2,h3,#toctitle,.sidebarblock>.content>.title{page-break-after:avoid}
+#toc,.sidebarblock,.exampleblock>.content{background:none!important}
+#toc{border-bottom:1px solid #ddddd8!important;padding-bottom:0!important}
+.sect1{padding-bottom:0!important}
+.sect1+.sect1{border:0!important}
+#header>h1:first-child{margin-top:1.25rem}
+body.book #header{text-align:center}
+body.book #header>h1:first-child{border:0!important;margin:2.5em 0 1em 0}
+body.book #header .details{border:0!important;display:block;padding:0!important}
+body.book #header .details span:first-child{margin-left:0!important}
+body.book #header .details br{display:block}
+body.book #header .details br+span:before{content:none!important}
+body.book #toc{border:0!important;text-align:left!important;padding:0!important;margin:0!important}
+body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-break-before:always}
+.listingblock code[data-lang]:before{display:block}
+#footer{background:none!important;padding:0 .9375em}
+#footer-text{color:rgba(0,0,0,.6)!important;font-size:.9em}
+.hide-on-print{display:none!important}
+.print-only{display:block!important}
+.hide-for-print{display:none!important}
+.show-for-print{display:inherit!important}}
+</style>
+</head>
+<body class="article toc2 toc-left">
+<div id="header">
+<h1>NSMNTX User Guide</h1>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#Install">Installation</a></li>
+<li><a href="#Import">Importing RDF data</a>
+<ul class="sectlevel4">
+<li><a href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></li>
+<li><a href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></li>
+<li><a href="#_handling_multivalued_properties">Handling multivalued properties</a></li>
+<li><a href="#_handling_language_tags">Handling language tags</a></li>
+<li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
+<li><a href="#_setting_http_request_parameters_for_fetching_rdf_data">Setting HTTP request parameters for fetching RDF data</a></li>
+<li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
+</ul>
+</li>
+<li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
+<li><a href="#Export">Exporting RDF data</a></li>
+<li><a href="#Mapping">Mapping graph models</a></li>
+<li><a href="#Inference">Inferencing/Reasoning</a></li>
+<li><a href="#Examples">Examples of use</a></li>
+<li><a href="#Reference">NSMNTX Reference</a>
+<ul class="sectlevel2">
+<li><a href="#_stored_procedures">Stored Procedures</a></li>
+<li><a href="#_functions">Functions</a></li>
+<li><a href="#_extensions_http_endpoints">Extensions (HTTP endpoints)</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+<div id="content">
+<div class="sect1">
+<h2 id="introduction"><a class="link" href="#introduction">Introduction</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>NSMNTX is an extension that enables the use of <strong>RDF as a data exchange format</strong> for graph data stored in Neo4j. It makes it also possible to <strong>store RDF data in Neo4j</strong> in a lossless manner (the imported RDF can be exported without losing a single triple in the process). Other features in NSMNTX include <strong>model mapping</strong> and <strong>inferencing</strong> on graph data stored in Neo4j.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Install"><a class="link" href="#Install">Installation</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>You can either download a prebuilt jar from the <a href="https://github.com/jbarrasa/neosemantics/releases">releases area</a> or build it from the source. If you prefer to build, check the note below.</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Copy the  the jar(s) in the &lt;NEO_HOME&gt;/plugins directory of your Neo4j instance. (<strong>note:</strong> If you&#8217;re going to use the JSON-LD serialisation format for RDF, you&#8217;ll need to include also <a href="https://neo4j-contrib.github.io/neo4j-apoc-procedures/">APOC</a>)</p>
+</li>
+<li>
+<p>Add the following line to your &lt;NEO_HOME&gt;/conf/neo4j.conf</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">dbms.unmanaged_extension_classes=semantics.extension=/rdf</code></pre>
+</div>
+</div>
+</li>
+<li>
+<p>Restart the server.</p>
+</li>
+<li>
+<p>Check that the installation went well by running</p>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call dbms.procedures()</code></pre>
+</div>
+</div>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>The list of procedures should include the ones documented below.
+You can check that the extension is mounted by running</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">:GET /rdf/ping</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Note on build</strong></p>
+</div>
+<div class="paragraph">
+<p>When you run</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">  mvn clean package</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>it will produce two jars</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>A neosemantics-[&#8230;&#8203;].jar This jar bundles all the dependencies.</p>
+</li>
+<li>
+<p>An original-neosemantics-[&#8230;&#8203;].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add all third party dependencies (look at the pom.xml).</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Import"><a class="link" href="#Import">Importing RDF data</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The main method for importing RDF is <code>semantics.importRDF</code>. It imports and persists into Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically. More on how to parameterise the access to web services in section x[link].</p>
+</div>
+<div class="paragraph">
+<p>All import procedures take the following three parameters:</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">url</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL of the dataset</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">format</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Map</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set of parameters (see description in table below)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>ssemantics.import</code> procedure will remind you with an error messsage.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CREATE INDEX ON :Resource(uri)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In its most basic form the <code>semantics.importRDF</code> method just takes the url string to access the RDF data and the serialisation format. Let&#8217;s say you&#8217;re trying to load the following set of triples into Neo4j.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neo4voc: &lt;http://neo4j.org/vocab/sw#&gt; .
+@prefix neo4ind: &lt;http://neo4j.org/ind#&gt; .
+
+neo4ind:nsmntx3502 neo4voc:name "NSMNTX" ;
+         a neo4voc:Neo4jPlugin ;
+         neo4voc:version "3.5.0.2" ;
+         neo4voc:releaseDate "03-06-2019" ;
+         neo4voc:runsOn neo4ind:neo4j355 .
+
+neo4ind:apoc3502 neo4voc:name "APOC" ;
+         a neo4voc:Neo4jPlugin ;
+         neo4voc:version "3.5.0.4" ;
+         neo4voc:releaseDate "05-31-2019" ;
+         neo4voc:runsOn neo4ind:neo4j355 .
+
+neo4ind:graphql3502 neo4voc:name "Neo4j-GraphQL" ;
+         a neo4voc:Neo4jPlugin ;
+         neo4voc:version "3.5.0.3" ;
+         neo4voc:releaseDate "05/05/19" ;
+         neo4voc:runsOn neo4ind:neo4j355 .
+
+neo4ind:neo4j355 neo4voc:name "neo4j" ;
+         a neo4voc:GraphPlatform , neo4voc:AwesomePlatform ;
+         neo4voc:version "3.5.5" .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can save them to your local drive or access them directly <a href="https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/src/docs/rdf/nsmntx.ttl">here</a>. All you&#8217;ll need to provide to NSMNTX is the location (<code>file://</code> or <code>http://</code>) and the serialisation used, <code>Turtle</code> in this case.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/src/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>NSMNTX will import the RDF data and persist it into your Neo4j graph as the following structure</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/nsmntx-annotated.png" alt="RDF data imported in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>The first thing you&#8217;ll notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That&#8217;s pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in <a href="https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/">this post</a>.
+You will also notice a terminology/vocabulary transformation applied by default. The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher.</p>
+</div>
+<div class="paragraph">
+<p>In our example, <code><a href="http://neo4j.org/vocab/sw#name" class="bare">http://neo4j.org/vocab/sw#name</a></code> has been shortened to <code>ns0<em>__name</code> (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, <code><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" class="bare">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a></code> would be shortened to <code>rdf</em>__type</code> and so on&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>Prefixes for custom namespaces are assigned sequentially (<code>ns0</code>, <code>ns1</code>, etc) as they appear in the imported RDF. This is the default behavior but we&#8217;ll see later on that it is possible to control that, and use custom prefixes. More details in section <a href="#custom_ns">Defining custom prefixes for namespaces</a>.</p>
+</div>
+<div class="paragraph">
+<p>Keeping namespaces can be important if you care about being able to regenerate the imported RDF as we will see in section <a href="#Export">Exporting RDF data</a>. If you don&#8217;t care about that, you can ignore the namespaces by setting the <code>handleVocabUris</code> parameter to <code>'IGNORE'</code> and namespaces will be lost on import. If you run the import with this setting only the local names of URIs will be kept. Here&#8217;s what that would look like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The imported graph will look something like the following one, in which the names for labels, properties and relationships are more of the kind you&#8217;re use to work with in Neo4j:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/nsmntx-ignore-annotated.png" alt="RDF data imported in Neo4j ignoring namespaces">
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+The first great thing about getting your RDF data into Neo4j is that now you can query it with Cypher
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example that showcases the difference: Let&#8217;s say you want to produce a <em>list of plugins that run on Neo4j and what&#8217;s the latest versions of each</em>.</p>
+</div>
+<div class="paragraph">
+<p>If your RDF data is stored in a triple store, you would need to use the SPARQL query on the left to answer the question. To the right you can see the same thing expressed with Cypher in Neo4j.</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 50%;">
+<col style="width: 50%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">SPARQL</th>
+<th class="tableblock halign-left valign-top">Cypher</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><div><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-sparql" data-lang="sparql">@prefix neovoc: &lt;http://neo4j.org/voc/sw#&gt; .
+@prefix neoind: &lt;http://neo4j.org/ind#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+
+SELECT ?nm as pluginName,
+       (MAX(?ver) as ?version)
+WHERE {
+
+	?plugin rdf:type neovoc:Neo4jPlugin ;
+		    neovoc:runsOn ?neosrv ;
+		    neovoc:name ?nm ;
+		    neovoc:version ?ver .
+
+	?neosrv rdf:type neovoc:GraphPlatform ;
+			neovoc:name "neo4j"
+}
+GROUP BY ?plugin</code></pre>
+</div>
+</div></div></td>
+<td class="tableblock halign-left valign-top"><div><div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:Neo4jPlugin)-[:runsOn]-&gt;(p:GraphPlatform)
+WHERE p.name = "neo4j"
+RETURN n.name, MAX(n.version)</code></pre>
+</div>
+</div></div></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>We&#8217;ve seen how to shorten RDF uris into more readable names using namespace prefixes, and we&#8217;ve also seen how to ignore them completely. There is a third option: You can keep the complete uris in property names, labels and relationships in the graph by setting the <code>handleVocabUris</code> property to <code>"KEEP"</code>. The result will not be pretty and your cypher queries will be horrible, but hey, the option is there. Here&#8217;s an example on the same RDF file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "KEEP" })</code></pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/nsmntx-keep-annotated.png" alt="RDF data imported in Neo4j keeping namespaces">
+</div>
+</div>
+<div class="paragraph">
+<p>The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.</p>
+</div>
+<div class="sect4">
+<h5 id="_storing_categories_classess_as_nodes_instead_of_labels"><a class="link" href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></h5>
+<div class="paragraph">
+<p>The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you&#8217;ll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes.
+If you want <code>rdf:type</code> statements (triples) to be imported in this way, all you have to do is set the <code>typesToLabels</code> parameter to <code>false</code>.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example: Let&#8217;s say we want to load an ontology (notice that it&#8217;s actually a small fragment of several ontologies, but it will work for our example). For what it&#8217;s worth, it&#8217;s an RDF file, so we load it the usual way, with all default settings</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/minionto.png" alt="Ontology imported in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming <code>rdf:type</code> statements into Property Graph labels. We can achieve this by setting the <code>typesToLabels</code> to <code>false</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere&#8217;s nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/miniontoandinstances.png" alt="Connected ontology and instance data imported in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>More on the usefulness of representing the ontology in the neo4j graph in section <a href="#Inference">Inferencing/Reasoning</a>.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_filtering_triples_by_predicate"><a class="link" href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></h4>
+<div class="paragraph">
+<p>Another thing you can do when your import RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to you. The exclusion is done by predicate type <em>"I don&#8217;t need to load the version property, or the release date"</em>, all you&#8217;ll need to do is provide the list of URIs of the predicates you want excluded in parameter <code>predicateExclList</code>. Note that the list needs to contain full URIs.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_handling_multivalued_properties"><a class="link" href="#_handling_multivalued_properties">Handling multivalued properties</a></h4>
+<div class="paragraph">
+<p>In RDF multiple values for the same property are just multiple triples. For example, you can have multiple alternative names for an individual like in the next RDF fragment:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;neo4j://individual/JB&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;http://neo4j.org/voc#Person&gt; .
+&lt;neo4j://individual/JB&gt; &lt;http://neo4j.org/voc#name&gt; "J. Barrasa" .
+&lt;neo4j://individual/JB&gt; &lt;http://neo4j.org/voc#altName&gt; "JB" .
+&lt;neo4j://individual/JB&gt; &lt;http://neo4j.org/voc#altName&gt; "Jesús" .
+&lt;neo4j://individual/JB&gt; &lt;http://neo4j.org/voc#altName&gt; "Dr J" .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>NSMNTX default behavior is to keep only one value for literal properties and it will be the last one read in the triples parsed. So if you run a straight import on that data like this</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Only the last value for the multivalued <code>altName</code> property will be kept. This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here&#8217;s where the config parameter <code>handleMultival</code> will help.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s take for example this Turtle RDF fragment with the description of a news article. The article has a number of keykeywords associated with it.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix og: &lt;http://ogp.me/ns#&gt; .
+@prefix nyt: &lt;http://nyt.com/voc/&gt; .
+
+&lt;nyt://article/a17a9514-73e7-51be-8ade-283e84a6cd87&gt;
+  a og:article ;
+  og:title "Bengal Tigers May Not Survive Climate Change" ;
+  og:url "https://www.nytimes.com/2019/05/06/science/tigers-climate-change-sundarbans.html" ;
+  og:description "The tigers of the Sundarbans may be gone in fifty years, according to study" ;
+  nyt:keyword "Climate Change", "Endangered Species", "Global Warming", "India", "Poaching" .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We want to make sure we keep all values for the <code>nyt:keyword</code> property. The natural way to do this in Neo4j is storing them in an array, so we&#8217;ll instruct NSMNTX to do that by setting the <code>handleMultival</code> to <code>'ARRAY'</code> and the <code>multivalPropList</code> to the list of property types that are multivalued and we want stored as arrays of values. In the example the list will only contain <code>'http://nyt.com/voc/keyword'</code>.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s teh import command that we need. Note that I&#8217;m combining the multivalued property config setting with the <code>handleVocabUris</code> set to false (the interested reader can try to drop this config and get URIS shortened with prefixes instead):</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/backup/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And here&#8217;s what the result of the import would look like:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="img/multivalued1.png" alt="Multivalued properties loaded as arrays in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>When we analyse the result in the Neo4j browser we realise that we had nine triples but there&#8217;s only one node(!). Yes, keep in mind that all triples in our RDF example are datatype properties, which are stored as node properties in neo4j. All the statements are there, no data is lost, it&#8217;s just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image.</p>
+</div>
+<div class="paragraph">
+<p>Note that only the properties listed in the <code>multivalPropList</code> config parameter are stored as arrays, the rest are atomic values.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+Keep in mind that if we set <code>handleMultival</code> to <code>'ARRAY'</code> but we don&#8217;t provide a list of property URIs as <code>multivalPropList</code> ALL literal properties will be stored as arrays.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>And here&#8217;s an example of how to query the multiple values of the keyword property:  <em>Give me articles tagged with the "Global Warming" keyword</em>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (a:article)
+WHERE "Global Warming" IN a.keyword
+RETURN a.title as title</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════════════════════════════════════╕
+│"title"                                       │
+╞══════════════════════════════════════════════╡
+│"Bengal Tigers May Not Survive Climate Change"│
+└──────────────────────────────────────────────┘</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_handling_language_tags"><a class="link" href="#_handling_language_tags">Handling language tags</a></h4>
+<div class="paragraph">
+<p>Literal values in RDF can be tagged with language information. This can be used in any context but it&#8217;s common to find it used in combination with multivalued properties to create multilingual descriptions for items in a dataset. In the following example we have a description of a TV series with a multivalued property <code>show:localName</code> where each of the values is annotated with the language.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix show: &lt;http://example.org/vocab/show/&gt; .
+@prefix indiv: &lt;http://example.org/ind/&gt; .
+
+ind:218 a show:TVSeries
+ind:218 show:name "That Seventies Show" .
+ind:218 show:localName "That Seventies Show"@en .
+ind:218 show:localName 'Cette Série des Années Soixante-dix'@fr .
+ind:218 show:localName "Cette Série des Années Septante"@fr-be .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By default, NSMNTX will strip out the language tags but if you want to keep them you&#8217;ll need to set the <code>keepLangTag</code> to <code>true</code>. If we uset it in combination with the setting required to keep all values of a property stored in an array, the import invocation would look something like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>When you import literal values keeping the language annotation, you&#8217;ll see that string values have a suffix like <code>@fr</code> for French language, <code>@zn</code> for Chinese traditional, and so on.
+The function <code>getLangValue</code> can be used to get the value for a particular language tag. It returns null when there is not a value for the selected language tag.
+The following Cypher fragment returns the french version of a property and when not found, defaults to the english version.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:Resource) RETURN coalesce(semantics.getLangValue("fr",n.ns0__localName), semantics.getLangValue("en",n.ns0__localName))</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_filtering_triples_by_language_tag"><a class="link" href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></h4>
+<div class="paragraph">
+<p>Language tags can also be used as a filter criteria. If we are only interested in a particular language when loading a multilingual dataset, we can set a filter so only literal values with a given language tag (or untagged ones) are imported into Neo4j. The configuration parameter that does it is <code>languageFilter</code> and you&#8217;ll need to set it to the relevant tag, for instance 'es' for literals in Spanish language. Here&#8217;s what such a configuration would look like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_setting_http_request_parameters_for_fetching_rdf_data"><a class="link" href="#_setting_http_request_parameters_for_fetching_rdf_data">Setting HTTP request parameters for fetching RDF data</a></h4>
+<div class="paragraph">
+<p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.</p>
+</div>
+<div class="paragraph">
+<p>-&#8594; HERE</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="custom_ns"><a class="link" href="#custom_ns">Defining custom prefixes for namespaces</a></h4>
+<div class="paragraph">
+<p>When applying url shortening on RDF ingestion (either explicitly or implicitly), we have the option of letting neosemantics automatically assign prefixes to namespaces as they appear in the imported RDF. But before doing that, a few popular ones will be set with familiar prefixes. These include <code>"http://www.w3.org/1999/02/22-rdf-syntax-ns#"</code> prefixed as <code>rdf</code> and <code>"http://www.w3.org/2004/02/skos/core#"</code> prefixed as <code>skos</code>.</p>
+</div>
+<div class="paragraph">
+<p>At any point you can check the prefixes in use by running the <code>listNamespacePrefixes</code> procedure.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.listNamespacePrefixes()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Before running your first import this method should return no results but after your first run, it should return a list containing at least the following entries.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒════════╤═════════════════════════════════════════════╕
+│"prefix"│"namespace"                                  │
+╞════════╪═════════════════════════════════════════════╡
+│"skos"  │"http://www.w3.org/2004/02/skos/core#"       │
+├────────┼─────────────────────────────────────────────┤
+│"sch"   │"http://schema.org/"                         │
+├────────┼─────────────────────────────────────────────┤
+│"sh"    │"http://www.w3.org/ns/shacl#"                │
+├────────┼─────────────────────────────────────────────┤
+│"rdfs"  │"http://www.w3.org/2000/01/rdf-schema#"      │
+├────────┼─────────────────────────────────────────────┤
+│"dc"    │"http://purl.org/dc/elements/1.1/"           │
+├────────┼─────────────────────────────────────────────┤
+│"dct"   │"http://purl.org/dc/terms/"                  │
+├────────┼─────────────────────────────────────────────┤
+│"rdf"   │"http://www.w3.org/1999/02/22-rdf-syntax-ns#"│
+├────────┼─────────────────────────────────────────────┤
+│"owl"   │"http://www.w3.org/2002/07/owl#"             │
+└────────┴─────────────────────────────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s say the RDF dataset that you are going to import uses the namespace <code><a href="http://neo4j.org/voc/sw#" class="bare">http://neo4j.org/voc/sw#</a></code> and you want it to be prefixed as <code>neo</code> instead of <code>ns0</code> (or <code>ns7</code>) as would happen if the prefix was assigned automatically by neosemantics.
+You can do this by calling the <code>addNamespacePrefix</code> procedure as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.addNamespacePrefix("neo","http://neo4j.org/vocab/sw#")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This will return:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒════════╤════════════════════════════╕
+│"prefix"│"namespace"                 │
+╞════════╪════════════════════════════╡
+│"neo"   │"http://neo4j.org/vocab/sw#"│
+└────────┴────────────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And then when the namespace is detected during the ingestion of the RDF data, the <code>neo</code> prefix will be used.</p>
+</div>
+<div class="paragraph">
+<p>Make sure you know what you&#8217;re doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Sometimes before we go ahead and import RDF data in our Neo4j graph we want to see what it looks like or we may even want to take full control on what to do with each parsed triple. For these purpose NSMNTX provides the following procedures:</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stored Proc Name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description and example usage</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Imports into Neo4j all the triples in the data set according to the structural mapping defined in [this post](<a href="https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/" class="bare">https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/</a>). &lt;br&gt; <strong>Note</strong> that before running the import procedure an index needs to be created on property uri of Resource nodes. Just run <code>CREATE INDEX ON :Resource(uri)</code> on your Neo4j DB. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;CALL semantics.importRDF("file:///&#8230;&#8203;/myfile.ttl","Turtle", { shortenUrls: false, typesToLabels: true, commitSize: 9000 }) &lt;br&gt; CALL semantics.importRDF("http:///&#8230;&#8203;/donnees.rdf","RDF/XML", { languageFilter: 'fr', commitSize: 5000 , nodeCacheSize: 250000})</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.&lt;br&gt; Notice that this is adequate for a preliminary visual analysis of a <strong>SMALL dataset</strong>. Think how many nodes you want rendered in your browser.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>, {})</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.streamRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and streams the triples as records of the form subject, predicate, object plus three additional fields: &lt;ul&gt;&lt;li&gt;a boolean indicating whether the object of the statement is a literal: <code>isLiteral</code>&lt;/li&gt;&lt;li&gt;The datatype of the literal value if available <code>literalType</code>&lt;/li&gt;&lt;li&gt;The language if available <code>literalLang</code>&lt;/li&gt;&lt;/ul&gt; This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.streamRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>, {})</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDFSnippet</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;An RDF snippet&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Identical to previewRDF but takes an RDF snippet instead of the url of the dataset.&lt;br&gt; Again, adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser :)&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDFSnippet('[{"@id": "http://indiv#9132", "@type": &#8230;&#8203; }]', "JSON-LD", { languageFilter: 'en'})</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.liteOntoImport</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization(*)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Imports the basic elements of an OWL or RDFS ontology, i.e. Classes, Properties, Domains, Ranges. Extended description [here](<a href="https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/" class="bare">https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/</a>) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;CALL semantics.liteOntoImport("http://&#8230;&#8203;/myonto.trig","TriG")</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRILocalName</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the local part of the IRI (stripping out the namespace) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRILocalName('http://schema.org/Person')</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRINamespace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the namespace part of the IRI (stripping out the local part) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRINamespace('http://schema.org/Person')</p></td>
+</tr>
+</tbody>
+</table>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Param</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">values(default)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">shortenUrls</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">typesToLabels</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, rdf:type statements are imported as node labels in Neo4j</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">languageFilter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">['en','fr','es',&#8230;&#8203;]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set, only literal properties with this language tag (or untagged ones) are imported</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">headerParams</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">map {}</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">parameters to be passed in the HTTP GET request. &lt;br&gt; Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">commitSize</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer (25000)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">commit a partial transaction every n triples</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">nodeCacheSize</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer (10000)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">keep n nodes in cache to minimize reads from DB</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+Graph Algorithms (similarity, centrality and clustering) in APOC are deprecated and about to be removed.
+Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algorithms</a> instead.
+</td>
+</tr>
+</table>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Export"><a class="link" href="#Export">Exporting RDF data</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Mapping"><a class="link" href="#Mapping">Mapping graph models</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Inference"><a class="link" href="#Inference">Inferencing/Reasoning</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Examples"><a class="link" href="#Examples">Examples of use</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Reference"><a class="link" href="#Reference">NSMNTX Reference</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+<div class="sect2">
+<h3 id="_stored_procedures"><a class="link" href="#_stored_procedures">Stored Procedures</a></h3>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stored Proc Name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description and example usage</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the schema/vocabulary/ontology&lt;/li&gt;&lt;li&gt;prefix to be used in serialisations&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Creates a reference to a vocabulary. Needed to define mappings. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.addSchema("http://schema.org/","sch")</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.dropSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the schema/vocabulary/ontology&lt;/li&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deletes a vocabulary reference and all associated mappings. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.dropSchema("http://schema.org/")</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.listSchemas</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;[optional] search string to list only schemas containing the search string in their uri or in the associated prefix&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns all vocabulary references. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.listSchemas() &lt;br&gt; call semantics.mapping.listSchemas('schema') &lt;br&gt; Combining list and drop to delet a set of schemas by name: &lt;br&gt; CALL semantics.mapping.listSchemas("fibo") YIELD node AS schemaDef WITH schemaDef, schemaDef._ns AS schname CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schname, output</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addCommonSchemas</p></td>
+<td class="tableblock halign-left valign-top"></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Creates a references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.addCommonSchemas()</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addMappingToSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;The mapping reference node (can be retrieved by addSchema or listSchemas)&lt;/li&gt;&lt;li&gt;Neo4j DB schema element. It can be either a Label, property key or relationship type &lt;/li&gt;&lt;li&gt;Local name of the element in the selected schema (Class name, DataTypeProperty name or ObjectProperty name)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Creates a mapping for an element in the Neo4j DB schema to a vocabulary element. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt; Getting a schema reference using listSchemas and creating a mapping for it: &lt;br&gt;call semantics.mapping.listSchemas("http://schema.org") yield node as sch &lt;br&gt; call semantics.mapping.addMappingToSchema(sch,"Movie","Movie") yield node as mapping return mapping</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.dropMapping</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;mapped DB element name to remove the mapping for&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns an output text message indicating success/failure of the deletion. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.dropMapping("Person")</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.listMappings</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;[optional]search string to list only mappings containing the search string in the DB element name&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns a list with all the mappings. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;call semantics.mapping.listMappings()</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_functions"><a class="link" href="#_functions">Functions</a></h3>
+
+</div>
+<div class="sect2">
+<h3 id="_extensions_http_endpoints"><a class="link" href="#_extensions_http_endpoints">Extensions (HTTP endpoints)</a></h3>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Extension</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description and example usage</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">/rdf/describe/id</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;&lt;b&gt;nodeid:&lt;/b&gt;the id of a node&lt;/li&gt;&lt;li&gt;&lt;b&gt;excludeContext:&lt;/b&gt;(optional) if present output will not include connected nodes, just selected one.&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Produces an RDF serialization of the selected node. The format will be determined by the <strong>accept</strong> parameter in the header. Default is JSON-LD &lt;br&gt; <strong>Example:</strong>&lt;br&gt;:GET /rdf/describe/id?nodeid=0&amp;excludeContext</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">/rdf/describe/uri</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;&lt;b&gt;nodeuri:&lt;/b&gt;the uri of a node&lt;/li&gt;&lt;li&gt;&lt;b&gt;excludeContext:&lt;/b&gt;(optional) if present output will not include connected nodes, just selected one.&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset via <strong>semantics.importRDF</strong> or built in a way that nodes are labeled as :Resource and have an uri. This property is the one used by this extension to lookup a node. [NOTE: URIs should be urlencoded. It&#8217;s normally not a problem unless there are <strong>hash signs in it</strong> (escape them in the Neo4j browser with %23)] &lt;br&gt; <strong>Example:</strong>&lt;br&gt;:GET /rdf/describe/uri?nodeuri=http://dataset.com#id_1234</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">/rdf/cypher</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON map with the following keys: &lt;ul&gt;&lt;li&gt;&lt;b&gt;cypher:&lt;/b&gt;the cypher query to run&lt;/li&gt;&lt;li&gt;&lt;b&gt;showOnlyMapped:&lt;/b&gt;(optional, default is false) if present output will exclude unmapped elements (labels,attributes, relationships)&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Produces an RDF serialization of the nodes and relationships returned by the query.&lt;br&gt; <strong>Example:</strong>&lt;br&gt;:POST /rdf/cypher { "cypher" : "MATCH (n:Person { name : 'Keanu Reeves'})-[r]-(m:Movie) RETURN n,r,m " , "showOnlyMapped" : true }</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">/rdf/cypheronrdf</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">JSON map with the following keys: &lt;ul&gt;&lt;li&gt;&lt;b&gt;cypher:&lt;/b&gt;the cypher query to run&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Produces an RDF serialization of the nodes and relationships returned by the query. It works on a model either imported from an RDF dataset via <strong>semantics.importRDF</strong> or built in a way that nodes are labeled as :Resource and have an uri.&lt;br&gt; <strong>Example:</strong>&lt;br&gt;:POST /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b) RETURN a, r, b"}</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+<div id="footer">
+<div id="footer-text">
+Last updated 2019-06-05 12:43:49 BST
+</div>
+</div>
+</body>
+</html>

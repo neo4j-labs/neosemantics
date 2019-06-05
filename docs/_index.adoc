@@ -1,0 +1,32 @@
+= NSMNTX User Guide 
+:toc: left
+:experimental:
+:sectid:
+:sectlinks:
+:toclevels: 2
+
+[[introduction]]
+== Introduction
+
+NSMNTX is an extension that enables the use of *RDF as a data exchange format* for graph data stored in Neo4j. It makes it also possible to *store RDF data in Neo4j* in a lossless manner (the imported RDF can be exported without losing a single triple in the process). Other features in NSMNTX include *model mapping* and *inferencing* on graph data stored in Neo4j.
+
+////
+=== Documentation Overview
+
+.Main Sections Here
+* <<Install>>
+* <<Import>>
+* <<Export>>
+* <<Mapping>>
+* <<Inference>>
+* <<Examples>>
+* <<Reference>>
+////
+
+include::_install.adoc[]
+include::_import.adoc[]
+include::_export.adoc[]
+include::_mapping.adoc[]
+include::_inference.adoc[]
+include::_examples.adoc[]
+include::_reference.adoc[]
