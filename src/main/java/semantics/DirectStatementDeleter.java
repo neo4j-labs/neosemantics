@@ -24,7 +24,7 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * TODO: add class description.
+ * This class implements an RDF handler to statement-wise delete imported data
  *
  * Created on 03/06/2019.
  *
@@ -36,7 +36,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
   private final Cache<String, Node> nodeCache;
 
-  private int notDeletedStatementCount;
+  private long notDeletedStatementCount;
+  private long bNodeCount;
   private String bNodeInfo;
 
   DirectStatementDeleter(
@@ -64,6 +65,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     log = l;
     bNodeInfo = "";
     notDeletedStatementCount = 0;
+    bNodeCount = 0;
   }
 
   @Override
@@ -84,6 +86,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().startsWith("genid")) {
+        bNodeCount++;
         notDeletedStatementCount++;
         continue;
       }
@@ -102,7 +105,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
           }
         });
       } catch (InvalidCacheLoadException icle) {
-        System.err.println(icle.getMessage());
+        icle.printStackTrace();
       }
       node = tempNode;
       //Can't delete node if it doesn't exist
@@ -170,6 +173,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
     for (Statement st : statements) {
       if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+        bNodeCount++;
         notDeletedStatementCount++;
         continue;
       }
@@ -182,7 +186,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
           }
         });
       } catch (InvalidCacheLoadException icle) {
-        System.err.println(icle.getMessage());
+        icle.printStackTrace();
       }
       if (fromNode == null) {
         continue;
@@ -196,7 +200,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
           }
         });
       } catch (InvalidCacheLoadException icle) {
-        System.err.println(icle.getMessage());
+        icle.printStackTrace();
       }
       if (toNode == null) {
         continue;
@@ -241,7 +245,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     resourceLabels.clear();
     resourceProps.clear();
     if (notDeletedStatementCount > 0) {
-      setbNodeInfo(notDeletedStatementCount
+      setbNodeInfo(bNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
 
@@ -265,7 +269,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
-        totalTriplesMapped + " triples deleted so far...");
+        (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
     mappedTripleCounter = 0;
   }
 
@@ -273,7 +277,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     return namespaces;
   }
 
-  int getNotDeletedStatementCount() {
+  long getNotDeletedStatementCount() {
     return notDeletedStatementCount;
   }
 
