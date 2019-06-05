@@ -72,6 +72,7 @@ public class RDFImport {
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
+  
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
@@ -211,6 +212,70 @@ public class RDFImport {
     return Stream.of(graphResult);
 
 
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<DeleteResults> deleteRDF(@Name("url") String url, @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+    final int handleVocabUris = (props.containsKey("handleVocabUris") ? getHandleVocabUrisAsInt(
+        (String) props.get("handleVocabUris")) : 0);
+    final boolean applyNeo4jNaming = (props.containsKey("applyNeo4jNaming") ? (boolean) props
+        .get("applyNeo4jNaming") : false);
+    final int handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
+        (String) props.get("handleMultival")) : 0);
+    final List<String> multivalPropList = (props.containsKey("multivalPropList")
+        ? (List<String>) props.get("multivalPropList") : null);
+    final List<String> predicateExclusionList = (props.containsKey("predicateExclusionList")
+        ? (List<String>) props.get("predicateExclusionList") : null);
+    final List<String> customDataTypedPropList = (props.containsKey("customDataTypedPropList")
+        ? (List<String>) props.get("customDataTypedPropList") : null);
+    final boolean typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
+        .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
+    final boolean keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
+        .get("keepLangTag") : false);
+    final boolean keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
+        .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
+    final long commitSize = (props.containsKey("commitSize") ? (long) props.get("commitSize")
+        : DEFAULT_COMMIT_SIZE);
+    final long nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props
+        .get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);
+    final String languageFilter = (props.containsKey("languageFilter") ? (String) props
+        .get("languageFilter") : null);
+
+    DeleteResults deleteResults = new DeleteResults();
+
+    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db,
+        (commitSize > 0 ? commitSize : 5000),
+        nodeCacheSize, handleVocabUris, handleMultival,
+        (multivalPropList == null ? null : new HashSet<String>(multivalPropList)),
+        keepCustomDataTypes,
+        (customDataTypedPropList == null ? null : new HashSet<String>(customDataTypedPropList)),
+        (predicateExclusionList == null ? null : new HashSet<String>(predicateExclusionList)),
+        typesToLabels, keepLangTag,
+        languageFilter, applyNeo4jNaming, log);
+    try {
+      checkIndexesExist();
+
+      InputStream inputStream = getInputStream(url, props);
+      RDFParser rdfParser = Rio.createParser(getFormat(format));
+      rdfParser.setRDFHandler(statementDeleter);
+      rdfParser.parse(inputStream, url);
+    } catch (MalformedURLException e) {
+      // This seems to be wrong (the exception should be processed as the other ones)
+      // but was left this way for consistency.
+      // FIXME: fix for all methods if this is not the intended behaviour
+      e.printStackTrace();
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      deleteResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      deleteResults.setTriplesDeleted(
+          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+    }
+    return Stream.of(deleteResults);
   }
 
   @UserFunction
@@ -404,6 +469,32 @@ public class RDFImport {
 
     public void setTriplesLoaded(long triplesLoaded) {
       this.triplesLoaded = triplesLoaded;
+    }
+
+    public void setNamespaces(Map<String, String> namespaces) {
+      this.namespaces = namespaces;
+    }
+
+    public void setTerminationKO(String message) {
+      this.terminationStatus = "KO";
+      this.extraInfo = message;
+    }
+
+  }
+
+  public static class DeleteResults {
+
+    public String terminationStatus = "OK";
+    public long triplesDeleted = 0;
+    public Map<String, String> namespaces;
+    public String extraInfo = "";
+
+    public void setTriplesDeleted(long triplesDeleted) {
+      this.triplesDeleted = triplesDeleted;
+    }
+
+    public void setExtraInfo(String extraInfo) {
+      this.extraInfo = extraInfo;
     }
 
     public void setNamespaces(Map<String, String> namespaces) {
