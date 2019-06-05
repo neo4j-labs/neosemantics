@@ -24,23 +24,36 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * Created by jbarrasa on 09/11/2016.
+ * TODO: add class description.
+ *
+ * Created on 03/06/2019.
+ *
+ * @author Emre Arkan
  */
-
 class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
-  public static final Label RESOURCE = Label.label("Resource");
-  public static final String[] EMPTY_ARRAY = new String[0];
-  Cache<String, Node> nodeCache;
-  private String bNodeInfo;
-  private int notDeletedStatementCount;
+  private static final Label RESOURCE = Label.label("Resource");
 
-  public DirectStatementDeleter(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-      int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
+  private final Cache<String, Node> nodeCache;
+
+  private int notDeletedStatementCount;
+  private String bNodeInfo;
+
+  DirectStatementDeleter(
+      GraphDatabaseService db,
+      long batchSize,
+      long nodeCacheSize,
+      int handleUrls,
+      int handleMultivals,
+      Set<String> multivalPropUriList,
       boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList, Set<String> predicateExclusionList,
-      boolean typesToLabels, boolean klt,
-      String languageFilter, boolean applyNeo4jNaming, Log l) {
+      Set<String> customDataTypedPropList,
+      Set<String> predicateExclusionList,
+      boolean typesToLabels,
+      boolean klt,
+      String languageFilter,
+      boolean applyNeo4jNaming,
+      Log l) {
 
     super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
         customDataTypedPropList, predicateExclusionList, klt,
@@ -66,32 +79,9 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         + totalTriplesParsed + " parsed.");
   }
 
-  private void addNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
-  }
-
-  public Map<String, String> getNamespaces() {
-    return namespaces;
-  }
-
-  // Stolen from APOC :)
-  private Object toPropertyValue(Object value) {
-    if (value instanceof Iterable) {
-      Iterable it = (Iterable) value;
-      Object first = Iterables.firstOrNull(it);
-      if (first == null) {
-        return EMPTY_ARRAY;
-      }
-      return Iterables.asArray(first.getClass(), it);
-    }
-    return value;
-  }
-
   @Override
   public Integer call() throws Exception {
-    int count = 0;
+
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().startsWith("genid")) {
         notDeletedStatementCount++;
@@ -259,23 +249,11 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     return 0;
   }
 
-  public String getbNodeInfo() {
-    return bNodeInfo;
-  }
-
-  public void setbNodeInfo(String bNodeInfo) {
-    this.bNodeInfo = bNodeInfo;
-  }
-
-  public int getNotDeletedStatementCount() {
-    return notDeletedStatementCount;
-  }
-
   @Override
   protected Map<String, String> getPopularNamespaces() {
     //get namespaces and persist them in the db
     Map<String, String> nsList = namespaceList();
-    Map<String, Object> params = new HashMap();
+    Map<String, Object> params = new HashMap<>();
     params.put("namespaces", nsList);
     graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
     return nsList;
@@ -289,5 +267,40 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
         totalTriplesMapped + " triples deleted so far...");
     mappedTripleCounter = 0;
+  }
+
+  Map<String, String> getNamespaces() {
+    return namespaces;
+  }
+
+  int getNotDeletedStatementCount() {
+    return notDeletedStatementCount;
+  }
+
+  String getbNodeInfo() {
+    return bNodeInfo;
+  }
+
+  private void setbNodeInfo(String bNodeInfo) {
+    this.bNodeInfo = bNodeInfo;
+  }
+
+  private void addNamespaceNode() {
+    Map<String, Object> params = new HashMap<>();
+    params.put("props", namespaces);
+    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
+  }
+
+  // Stolen from APOC :)
+  private Object toPropertyValue(Object value) {
+    if (value instanceof Iterable) {
+      Iterable it = (Iterable) value;
+      Object first = Iterables.firstOrNull(it);
+      if (first == null) {
+        return new String[0];
+      }
+      return Iterables.asArray(first.getClass(), it);
+    }
+    return value;
   }
 }

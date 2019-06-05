@@ -10,7 +10,7 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import java.io.File;
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import org.apache.commons.io.FileUtils;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -1256,12 +1255,13 @@ public class RDFEndpointTest {
           + "OPTIONAL MATCH (a)-[r]->()"
           + "RETURN DISTINCT *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
-          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "text/turtle")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
 
-      File file = new File(
-          "/Users/emrearkan/IdeaProjects/neosemantics/src/test/resources/deleteRDF/bNodesPostDeletion.ttl");
-      String expected = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+      String expected = Resources.toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"), StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
