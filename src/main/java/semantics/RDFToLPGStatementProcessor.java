@@ -5,12 +5,12 @@ import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 import static semantics.RDFImport.PROPERTY;
-import static semantics.RDFImport.PROP_ARRAY;
-import static semantics.RDFImport.PROP_OVERWRITE;
+import static semantics.RDFParserConfig.PROP_ARRAY;
+import static semantics.RDFParserConfig.PROP_OVERWRITE;
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFImport.URL_IGNORE;
-import static semantics.RDFImport.URL_MAP;
-import static semantics.RDFImport.URL_SHORTEN;
+import static semantics.RDFParserConfig.URL_IGNORE;
+import static semantics.RDFParserConfig.URL_MAP;
+import static semantics.RDFParserConfig.URL_SHORTEN;
 import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
 import java.util.ArrayList;
@@ -42,17 +42,7 @@ import org.neo4j.logging.Log;
 abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected final Map<String, String> vocMappings;
-  private final boolean neo4jNamingOnIgnoreNs;
-  protected final String langFilter;
-  protected final int handleUris;
-  protected final int handleMultival;
-  protected final boolean labellise;
-  protected final boolean keepLangTag;
-  protected final boolean keepCustomDataTypes;
-  protected final Set<String> multivalPropList;
-  protected final Set<String> excludedPredicatesList;
-  protected final Set<String> customDataTypedPropList;
-  protected final long commitFreq;
+  protected final RDFParserConfig parserConfig;
   protected GraphDatabaseService graphdb;
   protected Log log;
   protected Map<String, String> namespaces = new HashMap<>();
@@ -63,16 +53,10 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   protected int totalTriplesMapped = 0;
   protected int mappedTripleCounter = 0;
 
-  protected RDFToLPGStatementProcessor(GraphDatabaseService db, String langFilter, int handleUrls,
-      int handleMultival,
-      Set<String> multivalPropUriList, boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList, Set<String> predicateExclList,
-      boolean klt,
-      boolean labellise, boolean applyNeo4jNaming, long commitFreq) {
+  protected RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf) {
     this.graphdb = db;
-    this.langFilter = langFilter;
-    this.handleUris = handleUrls;
-    if (this.handleUris == URL_MAP) {
+    this.parserConfig = conf;
+    if (this.parserConfig.getHandleVocabUris() == URL_MAP) {
       Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {
         //a mapping on RDF.TYPE is illegal
@@ -85,34 +69,31 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       this.vocMappings = null;
     }
     ;
-    this.handleMultival = handleMultival;
-    this.labellise = labellise;
-    this.commitFreq = commitFreq;
-    this.multivalPropList = multivalPropUriList;
-    this.customDataTypedPropList = customDataTypedPropList;
-    this.excludedPredicatesList = predicateExclList;
-    this.keepLangTag = klt;
-    this.keepCustomDataTypes = keepCustomDataTypes;
-    this.neo4jNamingOnIgnoreNs = applyNeo4jNaming;
   }
 
 
-  protected void getExistingNamespaces() {
+  protected void loadNamespaces() {
     Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
         "UNWIND keys(n) AS namespace\n" +
         "RETURN namespace, n[namespace] AS prefix");
     if (!nslist.hasNext()) {
-      namespaces.putAll(getPopularNamespaces());
+      //no namespace definition, initialise with popular ones
+      namespaces.putAll(popularNamespaceList());
+    } else {
+      while (nslist.hasNext()) {
+        Map<String, Object> ns = nslist.next();
+        namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
+      }
+      popularNamespaceList().forEach((k,v) -> {
+        if (!namespaces.containsKey(k)){
+          namespaces.put(k,v);
+        }
+      });
     }
-    while (nslist.hasNext()) {
-      Map<String, Object> ns = nslist.next();
-      namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
-    }
+
   }
 
-  protected abstract Map<String, String> getPopularNamespaces();
-
-  protected Map<String, String> namespaceList() {
+  protected Map<String, String> popularNamespaceList() {
     Map<String, String> ns = new HashMap<>();
     ns.put("http://schema.org/", "sch");
     ns.put("http://purl.org/dc/elements/1.1/", "dc");
@@ -121,7 +102,8 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
-    ns.put("http://www.w3.org/ns/shacl#", "sh");return ns;
+    ns.put("http://www.w3.org/ns/shacl#", "sh");
+    return ns;
   }
 
 
@@ -140,19 +122,61 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   }
 
   /**
-   * Processing for literals as follows
-   * Mapping according to this figure: https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+   * Processing for literals as follows Mapping according to this figure:
+   * https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
+   * String -> String
    * Each sub-category of integer -> long
    * decimal, float, and double -> double
    * boolean -> boolean
    * Custom data type -> String (value + CUSTOM_DATA_TYPE_SEPERATOR + custom DT IRI)
-   * String -> String
+   *
    * @return processed literal
    */
-  protected Object getObjectValue(IRI propertyIRI, Literal object, boolean keepLangTag,
-      boolean keepCustomDataTypes, int handleUris) {
+  protected Object getObjectValue(IRI propertyIRI, Literal object) {
     IRI datatype = object.getDatatype();
-    if (datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
+    if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
+      final Optional<String> language = object.getLanguage();
+      if (parserConfig.getLanguageFilter() == null || !language.isPresent() || parserConfig.getLanguageFilter().equals(language.get())) {
+        return object.stringValue() + (parserConfig.isKeepLangTag() && language.isPresent() ? "@" + language.get()
+            : "");
+      } else {
+        //filtered by lang
+        return null;
+      }
+    } else if (typeMapsToLongType(datatype)) {
+      return object.longValue();
+    } else if (typeMapsToDouble(datatype)) {
+      return object.doubleValue();
+    } else if (datatype.equals(XMLSchema.BOOLEAN)) {
+      return object.booleanValue();
+    } else {
+      //it's a custom data type
+      if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getHandleVocabUris() == URL_IGNORE || parserConfig.getHandleVocabUris() == URL_MAP)) {
+        //keep custom type
+        String value = object.stringValue();
+        if (parserConfig.getCustomDataTypedPropList() == null || parserConfig.getCustomDataTypedPropList()
+            .contains(propertyIRI.stringValue())) {
+          String datatypeString;
+          if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+            datatypeString = handleIRI(datatype, DATATYPE);
+          } else {
+            datatypeString = datatype.stringValue();
+          }
+          value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
+        }
+        return value;
+      }
+    }
+    return object.stringValue();
+  }
+
+  private boolean typeMapsToDouble(IRI datatype) {
+    return datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
+        datatype.equals(XMLSchema.FLOAT);
+  }
+
+  private boolean typeMapsToLongType(IRI datatype) {
+    return datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
         .equals(XMLSchema.INT) ||
         datatype.equals(XMLSchema.SHORT) || datatype.equals(XMLSchema.BYTE) ||
         datatype.equals(XMLSchema.NON_NEGATIVE_INTEGER) || datatype
@@ -160,40 +184,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         datatype.equals(XMLSchema.UNSIGNED_LONG) || datatype.equals(XMLSchema.UNSIGNED_INT) ||
         datatype.equals(XMLSchema.UNSIGNED_SHORT) || datatype.equals(XMLSchema.UNSIGNED_BYTE) ||
         datatype.equals(XMLSchema.NON_POSITIVE_INTEGER) || datatype
-        .equals(XMLSchema.NEGATIVE_INTEGER)) {
-      return object.longValue();
-    } else if (datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
-        datatype.equals(XMLSchema.FLOAT)) {
-      return object.doubleValue();
-    } else if (datatype.equals(XMLSchema.BOOLEAN)) {
-      return object.booleanValue();
-    } else if (object.getLanguage().isPresent()) {
-      final Optional<String> language = object.getLanguage();
-      if (langFilter == null || !language.isPresent() ||
-          (language.isPresent() && langFilter.equals(language.get()))) {
-        return object.stringValue() + (keepLangTag && language.isPresent() ? "@" + language.get()
-            : "");
-      }
-      return null;
-    } else if (keepCustomDataTypes && !(handleUris == URL_IGNORE || handleUris == URL_MAP)
-        && !datatype.equals(XMLSchema.STRING)) {
-      //Custom Datatype
-      String value = object.stringValue();
-      if (customDataTypedPropList == null || customDataTypedPropList
-          .contains(propertyIRI.stringValue())) {
-        String datatypeString;
-        if (handleUris == URL_SHORTEN) {
-          datatypeString = handleIRI(datatype, DATATYPE);
-        } else {
-          datatypeString = datatype.stringValue();
-        }
-        value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
-      }
-      return value;
-    } else {
-      //String or no datatype => String
-      return object.stringValue();
-    }
+        .equals(XMLSchema.NEGATIVE_INTEGER);
   }
 
   @Override
@@ -204,13 +195,13 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   protected String handleIRI(IRI iri, int elementType) {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
-    if (handleUris == URL_SHORTEN) {
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       String localName = iri.getLocalName();
       String prefix = getPrefix(iri.getNamespace());
       return prefix + PREFIX_SEPARATOR + localName;
-    } else if (handleUris == URL_IGNORE) {
+    } else if (parserConfig.getHandleVocabUris() == URL_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
-    } else if (handleUris == URL_MAP) {
+    } else if (parserConfig.getHandleVocabUris() == URL_MAP) {
       return mapElement(iri, elementType, null);
     } else { //if (handleUris  ==  URL_KEEP){
       return iri.stringValue();
@@ -218,7 +209,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
   }
 
   private String applyCapitalisation(String name, int element) {
-    if (neo4jNamingOnIgnoreNs) {
+    if (parserConfig.isApplyNeo4jNaming()) {
       //apply Neo4j naming recommendations
       if (element == RELATIONSHIP) {
         return name.toUpperCase();
@@ -251,9 +242,9 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
   @Override
   public void startRDF() throws RDFHandlerException {
-    if (handleUris != URL_IGNORE) {
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       //differentiate between map/shorten and keep_long urls?
-      getExistingNamespaces();
+      loadNamespaces();
       log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
     } else {
       log.info("URIs will be ignored. Only local names will be kept.");
@@ -295,9 +286,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
 
     String propName = handleIRI(propertyIRI, PROPERTY);
 
-    Object propValue = getObjectValue(propertyIRI, propValueRaw, keepLangTag, keepCustomDataTypes,
-        handleUris); //this will
-    // come from config var
+    Object propValue = getObjectValue(propertyIRI, propValueRaw);
 
     if (propValue != null) {
       if (!resourceProps.containsKey(subjectUri)) {
@@ -306,22 +295,18 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
       } else {
         props = resourceProps.get(subjectUri);
       }
-      if (handleMultival == PROP_OVERWRITE) {
+      if (parserConfig.getHandleMultival() == PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
-      } else if (handleMultival == PROP_ARRAY) {
-        if (multivalPropList == null || multivalPropList.contains(propertyIRI.stringValue())) {
+      } else if (parserConfig.getHandleMultival() == PROP_ARRAY) {
+        if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList().contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
-            // TODO We're assuming it's an array. If we run this load on a pre-existing dataset
-            // potentially with data that's not an array, we'd have to check datatypes
-            // and deal with it.
             List<Object> propVals = (List<Object>) props.get(propName);
             propVals.add(propValue);
 
             // If multiple datatypes are tried to be stored in the same List, a java.lang
             // .ArrayStoreException arises
-            // TODO: wrap the exception to provide a better (from user perspective more informative) error message
           } else {
             List<Object> propVals = new ArrayList<>();
             propVals.add(propValue);
@@ -332,7 +317,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
           props.put(propName, propValue);
         }
       }
-      //  An option to reify multivalued property vals (literal nodes?)
+      //  For future? An option to reify multivalued property vals (literal nodes?)
       //  else if (handleMultival == PROP_REIFY) {
       //      //do reify
       //  }
@@ -366,14 +351,14 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     Resource subject = st.getSubject();
     Value object = st.getObject();
 
-    if (excludedPredicatesList == null || !excludedPredicatesList
+    if (parserConfig.getPredicateExclusionList() == null || !parserConfig.getPredicateExclusionList()
         .contains(predicate.stringValue())) {
       if (object instanceof Literal) {
         if (setProp(subject.stringValue(), predicate, (Literal) object)) {
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (labellise && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
+      } else if (parserConfig.isTypesToLabels() && predicate.equals(RDF.TYPE) && !(object instanceof BNode)) {
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
         mappedTripleCounter++;
       } else {
@@ -385,7 +370,7 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
     }
     totalTriplesParsed++;
 
-    if (commitFreq != Integer.MAX_VALUE && mappedTripleCounter % commitFreq == 0) {
+    if (parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }
   }

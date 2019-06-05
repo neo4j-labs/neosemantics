@@ -1,6 +1,7 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
+import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -9,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.Direction;
@@ -30,19 +32,11 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public static final String[] EMPTY_ARRAY = new String[0];
   Cache<String, Node> nodeCache;
 
-  public DirectStatementLoader(GraphDatabaseService db, long batchSize, long nodeCacheSize,
-      int handleUrls, int handleMultivals, Set<String> multivalPropUriList,
-      boolean keepCustomDataTypes,
-      Set<String> customDataTypedPropList, Set<String> predicateExclusionList,
-      boolean typesToLabels, boolean klt,
-      String languageFilter, boolean applyNeo4jNaming, Log l) {
+  public DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-
-    super(db, languageFilter, handleUrls, handleMultivals, multivalPropUriList, keepCustomDataTypes,
-        customDataTypedPropList, predicateExclusionList, klt,
-        typesToLabels, applyNeo4jNaming, batchSize);
+    super(db, conf);
     nodeCache = CacheBuilder.newBuilder()
-        .maximumSize(nodeCacheSize)
+        .maximumSize(conf.getNodeCacheSize())
         .build();
     log = l;
   }
@@ -51,16 +45,17 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (handleUris == 0) {
-      addNamespaceNode();
+    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+      // Namespaces are only persisted at the end of each periodic commit.
+      // This makes importRDF not thread safe when using url shortening. TODO: fix this.
+      persistNamespaceNode();
     }
 
-    log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
-        "Total number of triples imported is " + totalTriplesMapped + " out of "
-        + totalTriplesParsed + " parsed.");
+    log.info("Import complete: " + totalTriplesMapped + "  triples ingested out of "
+        + totalTriplesParsed + " parsed");
   }
 
-  private void addNamespaceNode() {
+  private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
@@ -73,15 +68,12 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
   // Stolen from APOC :)
   private Object toPropertyValue(Object value) {
-    if (value instanceof Iterable) {
-      Iterable it = (Iterable) value;
-      Object first = Iterables.firstOrNull(it);
-      if (first == null) {
-        return EMPTY_ARRAY;
-      }
-      return Iterables.asArray(first.getClass(), it);
+    Iterable it = (Iterable) value;
+    Object first = Iterables.firstOrNull(it);
+    if (first == null) {
+      return EMPTY_ARRAY;
     }
-    return value;
+    return Iterables.asArray(first.getClass(), it);
   }
 
   @Override
@@ -105,7 +97,22 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
-          node.setProperty(k, toPropertyValue(v));
+          Object currentValue = node.getProperty(k, null);
+          if (currentValue == null) {
+            node.setProperty(k, toPropertyValue(v));
+          } else {
+            if (currentValue.getClass().isArray()) {
+              Object[] properties = (Object[]) currentValue;
+              for (int i = 0; i < properties.length; i++) {
+                ((List) v).add(properties[i]);
+                //here an exception can be raised if types are conflicting
+              }
+            } else {
+              ((List) v).add(node.getProperty(k));
+            }
+            //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+            node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+          }
         } else {
           node.setProperty(k, v);
         }
@@ -171,22 +178,10 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
 
   @Override
-  protected Map<String, String> getPopularNamespaces() {
-    //get namespaces and persist them in the db
-    Map<String, String> nsList = namespaceList();
-    Map<String, Object> params = new HashMap();
-    params.put("namespaces", nsList);
-    graphdb.execute(" CREATE (ns:NamespacePrefixDefinition) SET ns = $namespaces ", params);
-    return nsList;
-
-  }
-
-  @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
-        totalTriplesMapped + " triples ingested so far...");
     mappedTripleCounter = 0;
+    persistNamespaceNode();
   }
 }

@@ -1,0 +1,5 @@
+@prefix voc: <http://example.org/vocab/> .
+@prefix ind: <http://example.org/ind/> .
+
+ind:218 a voc:Thing .
+ind:218 voc:prop 'one' .
