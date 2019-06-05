@@ -384,6 +384,9 @@ public class RDFImport {
       rdfParser.setRDFHandler(statementDeleter);
       rdfParser.parse(inputStream, url);
     } catch (MalformedURLException e) {
+      // This seems to be wrong (the exception should be processed as the other ones)
+      // but was left this way for consistency.
+      // FIXME: fix for all methods if this is not the intended behaviour
       e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       deleteResults.setTerminationKO(e.getMessage());
