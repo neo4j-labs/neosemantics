@@ -70,7 +70,7 @@ file:///d:/datasets/myfile.ttl
 
 NSMNTX will import the RDF data and persist it into your Neo4j graph as the following structure
 
-image::img/nsmntx-annotated.png[RDF data imported in Neo4j]
+image::nsmntx-annotated.png[RDF data imported in Neo4j]
 
 
 The first thing you'll notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
@@ -89,7 +89,7 @@ CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "I
 
 The imported graph will look something like the following one, in which the names for labels, properties and relationships are more of the kind you're use to work with in Neo4j:
 
-image::img/nsmntx-ignore-annotated.png[RDF data imported in Neo4j ignoring namespaces]
+image::nsmntx-ignore-annotated.png[RDF data imported in Neo4j ignoring namespaces]
 
 
 [IMPORTANT]
@@ -140,7 +140,7 @@ We've seen how to shorten RDF uris into more readable names using namespace pref
 CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "KEEP" })
 ----
 
-image::img/nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces]
+image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces]
 
 The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.
 
@@ -159,7 +159,7 @@ call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/doc
 
 We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
 
-image::img/minionto.png[Ontology imported in Neo4j]
+image::minionto.png[Ontology imported in Neo4j]
 
 Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming `rdf:type` statements into Property Graph labels. We can achieve this by setting the `typesToLabels` to `false`.
 
@@ -170,7 +170,7 @@ call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/doc
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
 
-image::img/miniontoandinstances.png[Connected ontology and instance data imported in Neo4j]
+image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j]
 
 More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
 
@@ -233,7 +233,7 @@ CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/backup/docs/rdf/
 
 And here's what the result of the import would look like:
 
-image::img/multivalued1.png[Multivalued properties loaded as arrays in Neo4j]
+image::multivalued1.png[Multivalued properties loaded as arrays in Neo4j]
 
 When we analyse the result in the Neo4j browser we realise that we had nine triples but there's only one node(!). Yes, keep in mind that all triples in our RDF example are datatype properties, which are stored as node properties in neo4j. All the statements are there, no data is lost, it's just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image. 
 

@@ -1,4 +1,6 @@
 = NSMNTX User Guide 
+:imagesdir: docs/img
+
 :toc: left
 :experimental:
 :sectid:
