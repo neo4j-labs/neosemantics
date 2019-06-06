@@ -425,9 +425,39 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 .show-for-print{display:inherit!important}}
 </style>
 </head>
-<body class="article">
+<body class="article toc2 toc-left">
 <div id="header">
 <h1>NSMNTX User Guide</h1>
+<div id="toc" class="toc2">
+<div id="toctitle">Table of Contents</div>
+<ul class="sectlevel1">
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#Install">Installation</a></li>
+<li><a href="#Import">Importing RDF data</a>
+<ul class="sectlevel4">
+<li><a href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></li>
+<li><a href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></li>
+<li><a href="#_handling_multivalued_properties">Handling multivalued properties</a></li>
+<li><a href="#_handling_language_tags">Handling language tags</a></li>
+<li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
+<li><a href="#_setting_http_request_parameters_for_fetching_rdf_data">Setting HTTP request parameters for fetching RDF data</a></li>
+<li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
+</ul>
+</li>
+<li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
+<li><a href="#Export">Exporting RDF data</a></li>
+<li><a href="#Mapping">Mapping graph models</a></li>
+<li><a href="#Inference">Inferencing/Reasoning</a></li>
+<li><a href="#Examples">Examples of use</a></li>
+<li><a href="#Reference">NSMNTX Reference</a>
+<ul class="sectlevel2">
+<li><a href="#_stored_procedures">Stored Procedures</a></li>
+<li><a href="#_functions">Functions</a></li>
+<li><a href="#_extensions_http_endpoints">Extensions (HTTP endpoints)</a></li>
+</ul>
+</li>
+</ul>
+</div>
 </div>
 <div id="content">
 <div class="sect1">
@@ -1230,7 +1260,7 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-06 01:23:32 BST
+Last updated 2019-06-06 01:46:33 BST
 </div>
 </div>
 </body>
