@@ -4,6 +4,7 @@
 The main method for importing RDF is `semantics.importRDF`. It imports and persists into Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically. More on how to parameterise the access to web services in section x[link]. 
 
 All import procedures take the following three parameters:
+[#common_params]
 
 [options="header"]
 |===
@@ -73,10 +74,10 @@ NSMNTX will import the RDF data and persist it into your Neo4j graph as the foll
 image::nsmntx-annotated.png[RDF data imported in Neo4j]
 
 
-The first thing you'll notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
+The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
 You will also notice a terminology/vocabulary transformation applied by default. The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher. 
 
-In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0____name` (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf____type` and so on...
+In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0\_\_name` (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf\_\_type` and so on...
 
 Prefixes for custom namespaces are assigned sequentially (`ns0`, `ns1`, etc) as they appear in the imported RDF. This is the default behavior but we'll see later on that it is possible to control that, and use custom prefixes. More details in section <<custom_ns>>.
 
@@ -205,9 +206,23 @@ NSMNTX default behavior is to keep only one value for literal properties and it 
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples")
 ----
 
-Only the last value for the multivalued `altName` property will be kept. This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here's where the config parameter `handleMultival` will help. 
+Only the last value for the multivalued `altName` property will be kept. 
 
-Let's take for example this Turtle RDF fragment with the description of a news article. The article has a number of keykeywords associated with it. 
+[source,cypher]
+----
+
+----
+
+This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here's where the config parameter `handleMultival` will help. Here's how:
+
+[source,cypher]
+----
+CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })
+----
+
+Now all properties are stored as arrays in Neo4j. Even the ones that have one value only! But we can do better than that, let's have a look at another example. 
+
+The following Turtle RDF fragment with the description of a news article. The article has a number of keykeywords associated with it. 
 
 [source,RDF]
 ----
@@ -235,14 +250,14 @@ And here's what the result of the import would look like:
 
 image::multivalued1.png[Multivalued properties loaded as arrays in Neo4j]
 
-When we analyse the result in the Neo4j browser we realise that we had nine triples but there's only one node(!). Yes, keep in mind that all triples in our RDF example are datatype properties, which are stored as node properties in neo4j. All the statements are there, no data is lost, it's just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image. 
+When we analyse the result in the Neo4j browser we realise that there's only one node for the nine triples imported! Yes, keep in mind that all triples in our RDF fragment are datatype properties, or in other words, properties with literal values, which are stored in Neo4j as node properties. All the statements are there, *no data is lost*, it's just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image. 
 
-Note that only the properties listed in the `multivalPropList` config parameter are stored as arrays, the rest are atomic values. 
+Note that this time only the properties listed in the `multivalPropList` config parameter are stored as arrays, the rest are kept as atomic values. 
 
 [WARNING]
-Keep in mind that if we set `handleMultival` to `'ARRAY'` but we don't provide a list of property URIs as `multivalPropList` ALL literal properties will be stored as arrays.
+Remember that if we set `handleMultival` to `'ARRAY'` but we don't provide a list of property URIs as `multivalPropList` ALL literal properties will be stored as arrays.
 
-And here's an example of how to query the multiple values of the keyword property:  _Give me articles tagged with the "Global Warming" keyword_.
+Here's an example of how to query the multiple values of the keyword property:  _Give me articles tagged with the "Global Warming" keyword_.
 
 [source,cypher]
 ----
@@ -283,7 +298,7 @@ By default, NSMNTX will strip out the language tags but if you want to keep them
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})
 ----
 
-When you import literal values keeping the language annotation, you'll see that string values have a suffix like `@fr` for French language, `@zn` for Chinese traditional, and so on.
+When you import literal values keeping the language annotation, you'll see that string values have a suffix like `@fr` for French language, `@zh-cmn-Hant` for Mandarin Chinese traditional, and so on.
 The function `getLangValue` can be used to get the value for a particular language tag. It returns null when there is not a value for the selected language tag. 
 The following Cypher fragment returns the french version of a property and when not found, defaults to the english version.
 
@@ -300,12 +315,85 @@ Language tags can also be used as a filter criteria. If we are only interested i
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
 ----
 
-
-==== Setting HTTP request parameters for fetching RDF data
+[#advancedfetching]
+==== Advanced settings for fetching RDF data
 
 Sometimes the RDF data will be a static file, and other times it'll be dynamically generated in response to an HTTP request (`GET` or `POST`) possibly containg parameters, even a SPARQL query.
+The following two parameters will help in these situations:
+`payload` : Takes a String as value and sends the specified data in a POST HTTP request to the the url passed as first parameter of the Stored Procedure. Useful typicaloy for SPARQL endpoints where we want to submit a query to produce the actual RDF.
+`headerParams` : Takes a map of property-values and adds each of them as an extra header in the HTTP request. Useful for sending credentials to services requiring authentication (using `Authorization` header) or to specify the required format (using `Accept` header).
 
---> HERE
+Here is an example of how to send a request to a SPARQL endpoint and ingest the results directly in Neo4j. The service in question is the Linked Open Data service of the British Library. You can test it http://bnb.data.bl.uk/flint-sparql[here]. The service is not authenticated, so no need to use the `Authorization` header but we want to select the RDF serialisation produced by our request, which we do by setting `Accept: "application/turtle"`. Finally, we pass the SPARQL query as the value of the `payload` parameter, prefixed with `query=`. 
+
+----
+headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>" }
+----
+
+We obviously need a query producing RDF so we can import it into Neo4j. I'm using a https://www.w3.org/TR/sparql11-query/#describe[SPARQL DESCRIBE] query in the following example but a https://www.w3.org/TR/sparql11-query/#construct[SPARQL CONSTRUCT] query could be used too. If you want to import all the details available in the British Library about 'The world of yesterday' by Stefan Zweig's, which by the way, if you haven't read, you should really take a break after this section and go read.  
+
+
+[source,cypher]
+----
+CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>" })
+----
+
+After running this you get a pretty poor graph, because the DESCRIBE query only returns the statements having 'The world of yesterday' (`<http://bnb.data.bl.uk/id/resource/018212405>`) as subject. But we can enrich it a bit by re-running it for every single URI connected to our book as follows:
+
+[source,cypher]
+----
+MATCH (:Book)-->(t) WITH t
+CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <" + t.uri + ">"}) yield triplesLoaded
+return t.uri, triplesLoaded 
+----
+
+Which returns: 
+
+[source,cypher]
+----
+╒══════════════════════════════════════════════════════════════════════╤═══════════════╕
+│"t.uri"                                                               │"triplesLoaded"│
+╞══════════════════════════════════════════════════════════════════════╪═══════════════╡
+│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │6              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/place/Europe"                               │9              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDACarrierType/1018"                │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/018212405/publicationevent/Placeofp│4              │
+│ublicationnotidentifiedPushkinPress2009"                              │               │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAContentType/1020"                │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │18             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
+│aphy"                                                                 │               │
+└──────────────────────────────────────────────────────────────────────┴───────────────┘
+----
+
+And produces this graph:
+
+image::worldofyesterday.png[Graph resulting of importing the data in the British National Library on 'The world of yesterday' by Stefan Zweig]
+
+Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPAQL savvy) reader. 
 
 [#custom_ns]
 ==== Defining custom prefixes for namespaces
@@ -366,18 +454,73 @@ And then when the namespace is detected during the ingestion of the RDF data, th
 
 Make sure you know what you're doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.
 
+[[OntoImport]]
+== Importing Ontologies
+
+Ontologies are serialised as RDF, so they can be imported using plain `importRDF` but the `liteOntoImport` method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j. It's important to note that this procedure exclusively import the following:
+
+1. Named class (category) declarations with both `rdfs:Class` and `owl:Class`.
+2. Explicit class hierarchies defined with `rdf:subClassOf` statements.
+3. Property definitions with `owl:ObjectProperty`, `owl:DatatypeProperty` and `rdfs:Property`
+4. Explicit property hierarchies defined with `rdfs:subPropertyOf` statements.
+5. Domain and range information for properties described as `rdfs:domain` and `rdfs:range` statements.
+
+All other elments will be ignored by this loader.
+
+he `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we'll import the ontology in link:docs/rdf/volkswagen.owl[this file].
+
+[source,cypher]
+----
+CALL semantics.liteOntoImport("...","Turtle")
+---- 
+
+As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively and and `rdf:subPropertyOf` statements are stored ass relationships of type `SPO` between `Relationship` or `Property` nodes.
 
 
+
+
+
+[[Preview]]
 == Previewing RDF data
 
-Sometimes before we go ahead and import RDF data in our Neo4j graph we want to see what it looks like or we may even want to take full control on what to do with each parsed triple. For these purpose NSMNTX provides the following procedures:
+Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.
+
+==== Streaming triples
+The `streamRDF` procedure also takes the same generic params described in <<common_params>>, so we will invoke it with a URL and a serialisation format just as we would invoke the `importRDF` procedure:
+
+[source,cypher]
+----
+CALL semantics.streamRDF("https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3","Turtle")
+---- 
+
+It will produce a stream of records, each one representing a triple parsed. So you will get fields for the subject, predicate and object plus three additional ones:
+
+1. *isLiteral*: a boolean indicating whether the object of the statement is a literal
+2. *literalType*: The datatype of the literal value when available 
+3. *literalLang*: The language when available
+
+In the previous example the output would look something like this:
+
+[source,cypher]
+----
+----
+
+The procedure is read-only and nothing is written to the graph, however, it is possible to use the output to write to the Graph with cypher like in the following example:
+
+[source,cypher]
+----
+----
+
+==== Previewing RDF data
+
+The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <<Preview>> section, both `previewRDF` and `previewRDFSnippet` are read only so will not persist anything in the graph. The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `previewRDFSnippet` takes an RDF fragment as text instead.
 
 
 
 |===
 | Stored Proc Name        | params           | Description and example usage  
 | semantics.importRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Imports into Neo4j all the triples in the data set according to the structural mapping defined in [this post](https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/). <br> **Note** that before running the import procedure an index needs to be created on property uri of Resource nodes. Just run `CREATE INDEX ON :Resource(uri)` on your Neo4j DB. <br>**Examples:**<br>CALL semantics.importRDF("file:///.../myfile.ttl","Turtle", { shortenUrls: false, typesToLabels: true, commitSize: 9000 }) <br> CALL semantics.importRDF("http:///.../donnees.rdf","RDF/XML", { languageFilter: 'fr', commitSize: 5000 , nodeCacheSize: 250000}) 
-| semantics.previewRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.<br> Notice that this is adequate for a preliminary visual analysis of a **SMALL dataset**. Think how many nodes you want rendered in your browser.<br> **Examples:**<br>CALL semantics.previewRDF("[https://.../clapton.n3](https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle", {}) 
+| semantics.previewRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.<br> Notice that this is adequate for a preliminary visual analysis of a **SMALL dataset**. Think how many nodes you want rendered in your browser.<br> **Examples:**<br>CALL semantics.previewRDF("[https://.../clapton.n3](https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle") 
 | semantics.streamRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Parses some RDF and streams the triples as records of the form subject, predicate, object plus three additional fields: <ul><li>a boolean indicating whether the object of the statement is a literal: `isLiteral`</li><li>The datatype of the literal value if available `literalType`</li><li>The language if available `literalLang`</li></ul> This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.<br> **Examples:**<br>CALL semantics.streamRDF("[https://.../clapton.n3](https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle", {}) 
 | semantics.previewRDFSnippet      | <ul><li>An RDF snippet</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Identical to previewRDF but takes an RDF snippet instead of the url of the dataset.<br> Again, adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser :)<br> **Examples:**<br>CALL semantics.previewRDFSnippet('[{"@id": "http://indiv#9132", "@type": ... }]', "JSON-LD", { languageFilter: 'en'}) 
 | semantics.liteOntoImport      | <ul><li>URL of the dataset</li><li>serialization(*)</li></ul> | Imports the basic elements of an OWL or RDFS ontology, i.e. Classes, Properties, Domains, Ranges. Extended description [here](https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/) <br> **Example:**<br>CALL semantics.liteOntoImport("http://.../myonto.trig","TriG")  
