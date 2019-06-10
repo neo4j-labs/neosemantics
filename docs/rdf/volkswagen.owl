@@ -1,0 +1,289 @@
+@prefix : <http://localhost/ontologies/2019/1/10/automobile#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <http://localhost/ontologies/2019/1/10/automobile> .
+
+<http://localhost/ontologies/2019/1/10/automobile> rdf:type owl:Ontology .
+
+#################################################################
+#    Object Properties
+#################################################################
+
+###  http://localhost/ontologies/2019/1/10/automobile#hasEngine
+:hasEngine rdf:type owl:ObjectProperty ;
+           rdfs:domain :Automobile ;
+           rdfs:range :Engine .
+
+
+#################################################################
+#    Classes
+#################################################################
+
+###  http://localhost/ontologies/2019/1/10/automobile#Atlas
+:Atlas rdf:type owl:Class ;
+       rdfs:subClassOf :SUV ;
+       rdfs:label "Atlas" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Automobile
+:Automobile rdf:type owl:Class ;
+            rdfs:label "Automobile" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Beetle
+:Beetle rdf:type owl:Class ;
+        rdfs:subClassOf :Compact ;
+        rdfs:label "Beetle" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Beetle_Convertible
+:Beetle_Convertible rdf:type owl:Class ;
+                    rdfs:subClassOf :Convertible ;
+                    rdfs:label "Beetle Convertible" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Compact
+:Compact rdf:type owl:Class ;
+         rdfs:subClassOf :Volkswagen ;
+         rdfs:label "Compact" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Components
+:Components rdf:type owl:Class ;
+            rdfs:label "Component" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Convertible
+:Convertible rdf:type owl:Class ;
+             rdfs:subClassOf :Volkswagen .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Electric
+:Electric rdf:type owl:Class ;
+          rdfs:subClassOf :Engine ;
+          rdfs:label "Electric" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Engine
+:Engine rdf:type owl:Class ;
+        rdfs:subClassOf :Components ;
+        rdfs:label "Engine" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf
+:Golf rdf:type owl:Class ;
+      owl:equivalentClass [ owl:intersectionOf ( :Compact
+                                                 [ rdf:type owl:Restriction ;
+                                                   owl:onProperty :hasEngine ;
+                                                   owl:hasValue :OWLNamedIndividual_e5d803a9_b2c4_4b42_9569_5bc7985a9cd5
+                                                 ]
+                                               ) ;
+                            rdf:type owl:Class
+                          ] ;
+      rdfs:subClassOf :Compact ;
+      rdfs:label "Golf" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_Alltrack
+:Golf_Alltrack rdf:type owl:Class ;
+               rdfs:subClassOf :Wagon ;
+               rdfs:label "Golf Alltrack" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_GTI
+:Golf_GTI rdf:type owl:Class ;
+          owl:equivalentClass [ owl:intersectionOf ( :Compact
+                                                     [ rdf:type owl:Restriction ;
+                                                       owl:onProperty :hasEngine ;
+                                                       owl:hasValue <http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo>
+                                                     ]
+                                                   ) ;
+                                rdf:type owl:Class
+                              ] ;
+          rdfs:subClassOf :Compact ;
+          rdfs:label "Golf GTI" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_R
+:Golf_R rdf:type owl:Class ;
+        rdfs:subClassOf :Compact ;
+        rdfs:label "Golf R" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_Sportwagen
+:Golf_Sportwagen rdf:type owl:Class ;
+                 rdfs:subClassOf :Wagon ;
+                 rdfs:label "Golf Sportwagen" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Jetta
+:Jetta rdf:type owl:Class ;
+       rdfs:subClassOf :Sedan ;
+       rdfs:label "Jetta" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLClass_4a7be008_c5fd_48ef_8c48_66c321827730
+:OWLClass_4a7be008_c5fd_48ef_8c48_66c321827730 rdf:type owl:Class ;
+                                               rdfs:subClassOf :Engine ;
+                                               rdfs:label "Gas"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Passat
+:Passat rdf:type owl:Class ;
+        rdfs:subClassOf :Sedan ;
+        rdfs:label "Passat" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#SUV
+:SUV rdf:type owl:Class ;
+     rdfs:subClassOf :Volkswagen .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Sedan
+:Sedan rdf:type owl:Class ;
+       rdfs:subClassOf :Volkswagen .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Tiguan
+:Tiguan rdf:type owl:Class ;
+        rdfs:subClassOf :SUV ;
+        rdfs:label "Tiguan" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Volkswagen
+:Volkswagen rdf:type owl:Class ;
+            rdfs:subClassOf :Automobile ;
+            rdfs:label "Volkswagen" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Wagon
+:Wagon rdf:type owl:Class ;
+       rdfs:subClassOf :Volkswagen .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#e-Golf
+:e-Golf rdf:type owl:Class ;
+        owl:equivalentClass [ owl:intersectionOf ( :Compact
+                                                   [ rdf:type owl:Restriction ;
+                                                     owl:onProperty :hasEngine ;
+                                                     owl:hasValue :OWLNamedIndividual_ffcdc378_4c39_4819_8f56_972132252c43
+                                                   ]
+                                                 ) ;
+                              rdf:type owl:Class
+                            ] ;
+        rdfs:subClassOf :Compact ;
+        rdfs:label "e-Golf" .
+
+
+#################################################################
+#    Individuals
+#################################################################
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_GTI_Autobahn
+:Golf_GTI_Autobahn rdf:type owl:NamedIndividual ,
+                            :Automobile ,
+                            :Compact ,
+                            :Golf_GTI ,
+                            :Volkswagen ;
+                   :hasEngine <http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo> ;
+                   rdfs:label "Golf GTI Autobahn" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_GTI_Rabbit_Edition
+:Golf_GTI_Rabbit_Edition rdf:type owl:NamedIndividual ,
+                                  :Automobile ,
+                                  :Compact ,
+                                  :Golf_GTI ,
+                                  :Volkswagen ;
+                         :hasEngine <http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo> ;
+                         rdfs:label "Golf GTI Rabbit Edition" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_GTI_S
+:Golf_GTI_S rdf:type owl:NamedIndividual ,
+                     :Automobile ,
+                     :Compact ,
+                     :Golf_GTI ,
+                     :Volkswagen ;
+            :hasEngine <http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo> ;
+            rdfs:label "Golf GTI S" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#Golf_GTI_SE
+:Golf_GTI_SE rdf:type owl:NamedIndividual ,
+                      :Automobile ,
+                      :Compact ,
+                      :Golf_GTI ,
+                      :Volkswagen ;
+             :hasEngine <http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo> ;
+             rdfs:label "Golf GTI SE" .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_0d96bd7e_7905_45b8_8fb0_0c0b994bf45d
+:OWLNamedIndividual_0d96bd7e_7905_45b8_8fb0_0c0b994bf45d rdf:type owl:NamedIndividual ,
+                                                                  :Automobile ,
+                                                                  :Compact ,
+                                                                  :Volkswagen ,
+                                                                  :e-Golf ;
+                                                         :hasEngine :OWLNamedIndividual_ffcdc378_4c39_4819_8f56_972132252c43 ;
+                                                         rdfs:label "e-Golf SE"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_6707f4f2_1f84_474d_a289_c6b85d9001fa
+:OWLNamedIndividual_6707f4f2_1f84_474d_a289_c6b85d9001fa rdf:type owl:NamedIndividual ,
+                                                                  :Automobile ,
+                                                                  :Compact ,
+                                                                  :Golf ,
+                                                                  :Volkswagen ;
+                                                         :hasEngine :OWLNamedIndividual_e5d803a9_b2c4_4b42_9569_5bc7985a9cd5 ;
+                                                         rdfs:label "Golf SE"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_b4e544ad_972f_42ae_ba3f_a424b7364e10
+:OWLNamedIndividual_b4e544ad_972f_42ae_ba3f_a424b7364e10 rdf:type owl:NamedIndividual ,
+                                                                  :Automobile ,
+                                                                  :Compact ,
+                                                                  :Volkswagen ,
+                                                                  :e-Golf ;
+                                                         :hasEngine :OWLNamedIndividual_ffcdc378_4c39_4819_8f56_972132252c43 ;
+                                                         rdfs:label "e-Golf SEL Premium"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_ced457df_f62f_4c17_a76f_8c63387a90c5
+:OWLNamedIndividual_ced457df_f62f_4c17_a76f_8c63387a90c5 rdf:type owl:NamedIndividual ,
+                                                                  :Automobile ,
+                                                                  :Compact ,
+                                                                  :Golf ,
+                                                                  :Volkswagen ;
+                                                         :hasEngine :OWLNamedIndividual_e5d803a9_b2c4_4b42_9569_5bc7985a9cd5 ;
+                                                         rdfs:label "Golf S"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_e5d803a9_b2c4_4b42_9569_5bc7985a9cd5
+:OWLNamedIndividual_e5d803a9_b2c4_4b42_9569_5bc7985a9cd5 rdf:type owl:NamedIndividual ,
+                                                                  :Components ,
+                                                                  :Engine ,
+                                                                  :OWLClass_4a7be008_c5fd_48ef_8c48_66c321827730 ;
+                                                         rdfs:label "1.4L Turbo"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#OWLNamedIndividual_ffcdc378_4c39_4819_8f56_972132252c43
+:OWLNamedIndividual_ffcdc378_4c39_4819_8f56_972132252c43 rdf:type owl:NamedIndividual ,
+                                                                  :Components ,
+                                                                  :Electric ,
+                                                                  :Engine ;
+                                                         rdfs:label "100kW"@en .
+
+
+###  http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo
+<http://localhost/ontologies/2019/1/10/automobile#2.0L_Turbo> rdf:type owl:NamedIndividual ,
+                                                                       :Components ,
+                                                                       :Engine ,
+                                                                       :OWLClass_4a7be008_c5fd_48ef_8c48_66c321827730 ;
+                                                              rdfs:label "2.0L Turbo" .
+
+
+###  Generated by the OWL API (version 4.5.6.2018-09-06T00:27:41Z) https://github.com/owlcs/owlapi

@@ -440,15 +440,26 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_handling_multivalued_properties">Handling multivalued properties</a></li>
 <li><a href="#_handling_language_tags">Handling language tags</a></li>
 <li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
-<li><a href="#_setting_http_request_parameters_for_fetching_rdf_data">Setting HTTP request parameters for fetching RDF data</a></li>
+<li><a href="#advancedfetching">Advanced settings for fetching RDF data</a></li>
 <li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
 </ul>
 </li>
+<li><a href="#OntoImport">Importing Ontologies</a></li>
+<li><a href="#Preview">Previewing RDF data</a>
+<ul class="sectlevel3">
+<li><a href="#_streaming_triples">Streaming triples</a></li>
 <li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
+</ul>
+</li>
 <li><a href="#Export">Exporting RDF data</a></li>
 <li><a href="#Mapping">Mapping graph models</a></li>
 <li><a href="#Inference">Inferencing/Reasoning</a></li>
-<li><a href="#Examples">Examples of use</a></li>
+<li><a href="#Examples">Examples of use</a>
+<ul class="sectlevel2">
+<li><a href="#_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query">Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.</a></li>
+<li><a href="#_enrich_your_model_with_dbpedia_data">Enrich your model with DBPedia data</a></li>
+</ul>
+</li>
 <li><a href="#Reference">NSMNTX Reference</a>
 <ul class="sectlevel2">
 <li><a href="#_stored_procedures">Stored Procedures</a></li>
@@ -544,7 +555,7 @@ You can check that the extension is mounted by running</p>
 <div class="paragraph">
 <p>All import procedures take the following three parameters:</p>
 </div>
-<table class="tableblock frame-all grid-all spread">
+<table id="common_params" class="tableblock frame-all grid-all spread">
 <colgroup>
 <col style="width: 33.3333%;">
 <col style="width: 33.3333%;">
@@ -631,11 +642,11 @@ neo4ind:neo4j355 neo4voc:name "neo4j" ;
 </div>
 </div>
 <div class="paragraph">
-<p>The first thing you&#8217;ll notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That&#8217;s pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in <a href="https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/">this post</a>.
+<p>The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That&#8217;s pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in <a href="https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/">this post</a>.
 You will also notice a terminology/vocabulary transformation applied by default. The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher.</p>
 </div>
 <div class="paragraph">
-<p>In our example, <code><a href="http://neo4j.org/vocab/sw#name" class="bare">http://neo4j.org/vocab/sw#name</a></code> has been shortened to <code>ns0<em>__name</code> (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, <code><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" class="bare">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a></code> would be shortened to <code>rdf</em>__type</code> and so on&#8230;&#8203;</p>
+<p>In our example, <code><a href="http://neo4j.org/vocab/sw#name" class="bare">http://neo4j.org/vocab/sw#name</a></code> has been shortened to <code>ns0_\_name</code> (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, <code><a href="http://www.w3.org/1999/02/22-rdf-syntax-ns#type" class="bare">http://www.w3.org/1999/02/22-rdf-syntax-ns#type</a></code> would be shortened to <code>rdf\_\_type</code> and so on&#8230;&#8203;</p>
 </div>
 <div class="paragraph">
 <p>Prefixes for custom namespaces are assigned sequentially (<code>ns0</code>, <code>ns1</code>, etc) as they appear in the imported RDF. This is the default behavior but we&#8217;ll see later on that it is possible to control that, and use custom prefixes. More details in section <a href="#custom_ns">Defining custom prefixes for namespaces</a>.</p>
@@ -810,10 +821,26 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 </div>
 <div class="paragraph">
-<p>Only the last value for the multivalued <code>altName</code> property will be kept. This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here&#8217;s where the config parameter <code>handleMultival</code> will help.</p>
+<p>Only the last value for the multivalued <code>altName</code> property will be kept.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+</div>
 </div>
 <div class="paragraph">
-<p>Let&#8217;s take for example this Turtle RDF fragment with the description of a news article. The article has a number of keykeywords associated with it.</p>
+<p>This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here&#8217;s where the config parameter <code>handleMultival</code> will help. Here&#8217;s how:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now all properties are stored as arrays in Neo4j. Even the ones that have one value only! But we can do better than that, let&#8217;s have a look at another example.</p>
+</div>
+<div class="paragraph">
+<p>The following Turtle RDF fragment with the description of a news article. The article has a number of keykeywords associated with it.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -848,10 +875,10 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 </div>
 <div class="paragraph">
-<p>When we analyse the result in the Neo4j browser we realise that we had nine triples but there&#8217;s only one node(!). Yes, keep in mind that all triples in our RDF example are datatype properties, which are stored as node properties in neo4j. All the statements are there, no data is lost, it&#8217;s just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image.</p>
+<p>When we analyse the result in the Neo4j browser we realise that there&#8217;s only one node for the nine triples imported! Yes, keep in mind that all triples in our RDF fragment are datatype properties, or in other words, properties with literal values, which are stored in Neo4j as node properties. All the statements are there, <strong>no data is lost</strong>, it&#8217;s just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image.</p>
 </div>
 <div class="paragraph">
-<p>Note that only the properties listed in the <code>multivalPropList</code> config parameter are stored as arrays, the rest are atomic values.</p>
+<p>Note that this time only the properties listed in the <code>multivalPropList</code> config parameter are stored as arrays, the rest are kept as atomic values.</p>
 </div>
 <div class="admonitionblock warning">
 <table>
@@ -860,13 +887,13 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 <div class="title">Warning</div>
 </td>
 <td class="content">
-Keep in mind that if we set <code>handleMultival</code> to <code>'ARRAY'</code> but we don&#8217;t provide a list of property URIs as <code>multivalPropList</code> ALL literal properties will be stored as arrays.
+Remember that if we set <code>handleMultival</code> to <code>'ARRAY'</code> but we don&#8217;t provide a list of property URIs as <code>multivalPropList</code> ALL literal properties will be stored as arrays.
 </td>
 </tr>
 </table>
 </div>
 <div class="paragraph">
-<p>And here&#8217;s an example of how to query the multiple values of the keyword property:  <em>Give me articles tagged with the "Global Warming" keyword</em>.</p>
+<p>Here&#8217;s an example of how to query the multiple values of the keyword property:  <em>Give me articles tagged with the "Global Warming" keyword</em>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -911,7 +938,7 @@ ind:218 show:localName "Cette Série des Années Septante"@fr-be .</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>When you import literal values keeping the language annotation, you&#8217;ll see that string values have a suffix like <code>@fr</code> for French language, <code>@zn</code> for Chinese traditional, and so on.
+<p>When you import literal values keeping the language annotation, you&#8217;ll see that string values have a suffix like <code>@fr</code> for French language, <code>@zh-cmn-Hant</code> for Mandarin Chinese traditional, and so on.
 The function <code>getLangValue</code> can be used to get the value for a particular language tag. It returns null when there is not a value for the selected language tag.
 The following Cypher fragment returns the french version of a property and when not found, defaults to the english version.</p>
 </div>
@@ -933,12 +960,93 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 </div>
 <div class="sect3">
-<h4 id="_setting_http_request_parameters_for_fetching_rdf_data"><a class="link" href="#_setting_http_request_parameters_for_fetching_rdf_data">Setting HTTP request parameters for fetching RDF data</a></h4>
+<h4 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF data</a></h4>
 <div class="paragraph">
-<p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.</p>
+<p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.
+The following two parameters will help in these situations:
+<code>payload</code> : Takes a String as value and sends the specified data in a POST HTTP request to the the url passed as first parameter of the Stored Procedure. Useful typicaloy for SPARQL endpoints where we want to submit a query to produce the actual RDF.
+<code>headerParams</code> : Takes a map of property-values and adds each of them as an extra header in the HTTP request. Useful for sending credentials to services requiring authentication (using <code>Authorization</code> header) or to specify the required format (using <code>Accept</code> header).</p>
 </div>
 <div class="paragraph">
-<p>-&#8594; HERE</p>
+<p>Here is an example of how to send a request to a SPARQL endpoint and ingest the results directly in Neo4j. The service in question is the Linked Open Data service of the British Library. You can test it <a href="http://bnb.data.bl.uk/flint-sparql">here</a>. The service is not authenticated, so no need to use the <code>Authorization</code> header but we want to select the RDF serialisation produced by our request, which we do by setting <code>Accept: "application/turtle"</code>. Finally, we pass the SPARQL query as the value of the <code>payload</code> parameter, prefixed with <code>query=</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;" }</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We obviously need a query producing RDF so we can import it into Neo4j. I&#8217;m using a <a href="https://www.w3.org/TR/sparql11-query/#describe">SPARQL DESCRIBE</a> query in the following example but a <a href="https://www.w3.org/TR/sparql11-query/#construct">SPARQL CONSTRUCT</a> query could be used too. If you want to import all the details available in the British Library about 'The world of yesterday' by Stefan Zweig&#8217;s, which by the way, if you haven&#8217;t read, you should really take a break after this section and go read.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;" })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After running this you get a pretty poor graph, because the DESCRIBE query only returns the statements having 'The world of yesterday' (<code><a href="http://bnb.data.bl.uk/id/resource/018212405" class="bare">http://bnb.data.bl.uk/id/resource/018212405</a></code>) as subject. But we can enrich it a bit by re-running it for every single URI connected to our book as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (:Book)--&gt;(t) WITH t
+CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE &lt;" + t.uri + "&gt;"}) yield triplesLoaded
+return t.uri, triplesLoaded</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Which returns:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════════════════════════════════════════════════════════════╤═══════════════╕
+│"t.uri"                                                               │"triplesLoaded"│
+╞══════════════════════════════════════════════════════════════════════╪═══════════════╡
+│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │6              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/place/Europe"                               │9              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDACarrierType/1018"                │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/018212405/publicationevent/Placeofp│4              │
+│ublicationnotidentifiedPushkinPress2009"                              │               │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAContentType/1020"                │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │18             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │10             │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
+│aphy"                                                                 │               │
+└──────────────────────────────────────────────────────────────────────┴───────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And produces this graph:</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/worldofyesterday.png" alt="Graph resulting of importing the data in the British National Library on 'The world of yesterday' by Stefan Zweig">
+</div>
+</div>
+<div class="paragraph">
+<p>Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPAQL savvy) reader.</p>
 </div>
 </div>
 <div class="sect3">
@@ -1011,10 +1119,99 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 </div>
 <div class="sect1">
-<h2 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h2>
+<h2 id="OntoImport"><a class="link" href="#OntoImport">Importing Ontologies</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>Sometimes before we go ahead and import RDF data in our Neo4j graph we want to see what it looks like or we may even want to take full control on what to do with each parsed triple. For these purpose NSMNTX provides the following procedures:</p>
+<p>Ontologies are serialised as RDF, so they can be imported using plain <code>importRDF</code> but the <code>liteOntoImport</code> method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j. It&#8217;s important to note that this procedure exclusively import the following:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p>Named class (category) declarations with both <code>rdfs:Class</code> and <code>owl:Class</code>.</p>
+</li>
+<li>
+<p>Explicit class hierarchies defined with <code>rdf:subClassOf</code> statements.</p>
+</li>
+<li>
+<p>Property definitions with <code>owl:ObjectProperty</code>, <code>owl:DatatypeProperty</code> and <code>rdfs:Property</code></p>
+</li>
+<li>
+<p>Explicit property hierarchies defined with <code>rdfs:subPropertyOf</code> statements.</p>
+</li>
+<li>
+<p>Domain and range information for properties described as <code>rdfs:domain</code> and <code>rdfs:range</code> statements.</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>All other elments will be ignored by this loader.</p>
+</div>
+<div class="paragraph">
+<p>he <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we&#8217;ll import the ontology in <a href="docs/rdf/volkswagen.owl">this file</a>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("...","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As we see in the ingested graph, by default, classes will be persissted as nodes with label <code>Class</code> with two properties: uri and name and <code>rdf:subClassOf</code> statements are stored ass relationships of type <code>SCO</code> between <code>Class</code> nodes. Similarly, relationships will be persisted as nodes with labels <code>Relationship</code> or <code>Property</code> for <code>owl:ObjectProperty</code> and <code>owl:DatatypeProperty</code> respectively and and <code>rdf:subPropertyOf</code> statements are stored ass relationships of type <code>SPO</code> between <code>Relationship</code> or <code>Property</code> nodes.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="Preview"><a class="link" href="#Preview">Previewing RDF data</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.</p>
+</div>
+<div class="sect3">
+<h4 id="_streaming_triples"><a class="link" href="#_streaming_triples">Streaming triples</a></h4>
+<div class="paragraph">
+<p>The <code>streamRDF</code> procedure also takes the same generic params described in <a href="#common_params">[common_params]</a>, so we will invoke it with a URL and a serialisation format just as we would invoke the <code>importRDF</code> procedure:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It will produce a stream of records, each one representing a triple parsed. So you will get fields for the subject, predicate and object plus three additional ones:</p>
+</div>
+<div class="olist arabic">
+<ol class="arabic">
+<li>
+<p><strong>isLiteral</strong>: a boolean indicating whether the object of the statement is a literal</p>
+</li>
+<li>
+<p><strong>literalType</strong>: The datatype of the literal value when available</p>
+</li>
+<li>
+<p><strong>literalLang</strong>: The language when available</p>
+</li>
+</ol>
+</div>
+<div class="paragraph">
+<p>In the previous example the output would look something like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The procedure is read-only and nothing is written to the graph, however, it is possible to use the output to write to the Graph with cypher like in the following example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h4>
+<div class="paragraph">
+<p>The <code>previewRDF</code> and <code>previewRDFSnippet</code> methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <a href="#Preview">Previewing RDF data</a> section, both <code>previewRDF</code> and <code>previewRDFSnippet</code> are read only so will not persist anything in the graph. The difference between them is that <code>previewRDF</code> takes a url (and optionally additional configuration settings as described in  <a href="#advancedfetching">Advanced settings for fetching RDF data</a>) whereas <code>previewRDFSnippet</code> takes an RDF fragment as text instead.</p>
 </div>
 <table class="tableblock frame-all grid-all spread">
 <colgroup>
@@ -1036,7 +1233,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDF</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.&lt;br&gt; Notice that this is adequate for a preliminary visual analysis of a <strong>SMALL dataset</strong>. Think how many nodes you want rendered in your browser.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>, {})</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.&lt;br&gt; Notice that this is adequate for a preliminary visual analysis of a <strong>SMALL dataset</strong>. Think how many nodes you want rendered in your browser.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">semantics.streamRDF</p></td>
@@ -1124,6 +1321,7 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 </div>
 </div>
 </div>
+</div>
 <div class="sect1">
 <h2 id="Export"><a class="link" href="#Export">Exporting RDF data</a></h2>
 <div class="sectionbody">
@@ -1153,6 +1351,16 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 <div class="sectionbody">
 <div class="paragraph">
 <p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+<div class="sect2">
+<h3 id="_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query"><a class="link" href="#_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query">Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.</a></h3>
+
+</div>
+<div class="sect2">
+<h3 id="_enrich_your_model_with_dbpedia_data"><a class="link" href="#_enrich_your_model_with_dbpedia_data">Enrich your model with DBPedia data</a></h3>
+<div class="paragraph">
+<p>===</p>
+</div>
 </div>
 </div>
 </div>
@@ -1260,7 +1468,7 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-06 01:46:33 BST
+Last updated 2019-06-11 00:46:43 CEST
 </div>
 </div>
 </body>
