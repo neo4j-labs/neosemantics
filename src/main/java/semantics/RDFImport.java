@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
@@ -94,8 +93,6 @@ public class RDFImport {
       parseRDF(getInputStream(url, props), url, format,
           (props.containsKey("verifyUriSyntax") ? (Boolean) props
               .get("verifyUriSyntax") : true), statementLoader);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
       e.printStackTrace();
@@ -299,11 +296,14 @@ public class RDFImport {
 
     Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
     Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher(literal);
+    Matcher matcherLanguageTagged = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(literal);
     String result = literal;
     if (matcherShortened.matches()) {
       result = matcherShortened.group(1);
     } else if (matcherRegular.matches()) {
       result = matcherRegular.group(1);
+    } else if (matcherLanguageTagged.matches()) {
+      result = matcherLanguageTagged.group(1);
     }
     return result;
   }

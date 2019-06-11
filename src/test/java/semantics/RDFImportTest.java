@@ -1116,7 +1116,7 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testGetPropValue() throws Exception {
+  public void testGetValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
@@ -1137,6 +1137,9 @@ public class RDFImportTest {
       next = importResults.next().asMap();
       assertEquals("10000", next.get("val"));
 
+      importResults = session.run("return semantics.getValue('This is a test@en') AS val");
+      next = importResults.next().asMap();
+      assertEquals("This is a test", next.get("val"));
     }
   }
 
