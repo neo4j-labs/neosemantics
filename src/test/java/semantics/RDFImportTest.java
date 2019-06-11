@@ -1812,6 +1812,41 @@ public class RDFImportTest {
     }
   }
 
+  @Test
+  public void testImportRDFDataset() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDataset/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(11L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN count(n) AS count");
+      assertEquals(2, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN n.graphUri AS graphUri ORDER BY graphUri");
+      List<Record> list = result.list();
+
+      assertEquals("http://www.example.org/exampleDocument#G1",
+          list.get(0).get("graphUri").asString());
+      assertEquals("http://www.example.org/exampleDocument#G2",
+          list.get(1).get("graphUri").asString());
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G1'})"
+          + "RETURN n.`http://www.example.org/vocabulary#created` AS created");
+      assertEquals("06.06.2019^^http://www.w3.org/2001/XMLSchema#date",
+          result.next().get("created").asList().get(0));
+
+    }
+  }
+
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");
   }

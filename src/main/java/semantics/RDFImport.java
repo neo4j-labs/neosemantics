@@ -106,6 +106,32 @@ public class RDFImport {
     return Stream.of(importResults);
   }
 
+  @Procedure(mode = Mode.WRITE)
+  public Stream<ImportResults> importRDFDataset(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+    RDFParserConfig conf = new RDFParserConfig(props);
+
+    ImportResults importResults = new ImportResults();
+
+    RDFDatasetDirectStatementLoader statementLoader = new RDFDatasetDirectStatementLoader(db, conf,
+        log);
+    try {
+      checkIndexesExist();
+      parseRDF(getInputStream(url, props), url, format,
+          (props.containsKey("verifyUriSyntax") ? (Boolean) props
+              .get("verifyUriSyntax") : true), statementLoader);
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      importResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setNamespaces(statementLoader.getNamespaces());
+    }
+    return Stream.of(importResults);
+  }
+
   private void parseRDF(InputStream inputStream, @Name("url") String url,
       @Name("format") String format,
       boolean verifyUriSyntax, RDFHandler statementLoader)
@@ -155,8 +181,6 @@ public class RDFImport {
       parseRDF(getInputStream(url, props), url, format,
           (props.containsKey("verifyUriSyntax") ? (Boolean) props
               .get("verifyUriSyntax") : true), statementViewer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -176,8 +200,6 @@ public class RDFImport {
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
       parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementStreamer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -205,8 +227,6 @@ public class RDFImport {
               rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format,
           (props.containsKey("verifyUriSyntax") ? (Boolean) props
               .get("verifyUriSyntax") : true), statementViewer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -234,11 +254,6 @@ public class RDFImport {
       RDFParser rdfParser = Rio.createParser(getFormat(format));
       rdfParser.setRDFHandler(statementDeleter);
       rdfParser.parse(inputStream, url);
-    } catch (MalformedURLException e) {
-      // This seems to be wrong (the exception should be processed as the other ones)
-      // but was left this way for consistency.
-      // FIXME: fix for all methods if this is not the intended behaviour
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       deleteResults.setTerminationKO(e.getMessage());
       e.printStackTrace();

@@ -1,0 +1,17 @@
+@prefix ex: <http://www.example.org/vocabulary#> .
+@prefix exDoc: <http://www.example.org/exampleDocument#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+exDoc:G1 ex:created "06.06.2019"^^xsd:date .
+exDoc:G2 ex:created "07.06.2019"^^xsd:date .
+
+exDoc:G1 { exDoc:Monica a ex:Person ;
+              ex:name "Monica Murphy" ;
+              ex:homepage <http://www.monicamurphy.org> ;
+              ex:email <mailto:monica@monicamurphy.org> ;
+              ex:hasSkill ex:Management ,
+                          ex:Programming . }
+
+exDoc:G2 { exDoc:Monica a ex:Person ;
+              ex:city "New York" ;
+              ex:country "USA" . }
