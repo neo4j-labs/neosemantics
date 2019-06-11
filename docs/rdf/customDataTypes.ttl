@@ -1,0 +1,7 @@
+@prefix ex: <http://example.com/> .
+
+ex:Mercedes 
+	rdf:type ex:Car ;
+	ex:price "10000"^^ex:EUR ;
+	ex:power "300"^^ex:HP ;
+	ex:color "red"^^ex:Color .

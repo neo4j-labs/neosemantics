@@ -315,6 +315,116 @@ Language tags can also be used as a filter criteria. If we are only interested i
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
 ----
 
+==== Handling properties with custom data types
+
+In RDF custom data types are annotated to literals after the seperator `^^` in form of an IRI.
+For example, you can have a custom data type for a currency like in the following Turtle RDF fragment:
+
+[source,RDF]
+----
+@prefix ex: <http://example.com/> .
+
+ex:Mercedes
+	rdf:type ex:Car ;
+	ex:price "10000"^^ex:EUR ;
+	ex:power "300"^^ex:HP ;
+	ex:color "red"^^ex:Color .
+----
+
+NSMNTX default behavior is to not keep custom data types for properties.
+So if you run a straight import on that data like this:
+
+[source,cypher]
+----
+CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")
+----
+
+Only the value for the properties will be kept.
+
+[source,cypher]
+----
+MATCH (n:ns0__Car)
+RETURN n.ns0__price, n.ns0__power, n.ns0__color
+----
+[source,cypher]
+----
+╒══════════════╤══════════════╤══════════════╕
+│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
+╞══════════════╪══════════════╪══════════════╡
+│"10000"       │"300"         │"red"         │
+└──────────────┴──────────────┴──────────────┘
+----
+
+This makes things simple and will be perfect if your dataset does not have properties with custom data types.
+But if you need to keep the custom data types the config parameter `keepCustomDataTypes` comes into play. Here's how:
+
+[source,cypher]
+----
+CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true})
+----
+
+Now all properties that have a custom data type are saved as strings with their respective custom data type IRIs in Neo4j.
+
+[source,cypher]
+----
+╒═════════════════╤══════════════╤═════════════════╕
+│"n.ns0__price"   │"n.ns0__power"│"n.ns0__color"   │
+╞═════════════════╪══════════════╪═════════════════╡
+│"10000^^ns0__EUR"│"300^^ns0__HP"│"red^^ns0__Color"│
+└─────────────────┴──────────────┴─────────────────┘
+----
+
+But we can do better than that, let's have a look at another example.We will use the same Turtle file from above for this example.
+
+If we want to keep the custom data type for only some of the properties then we can instruct NSMNTX to do that by setting `keepCustomDataTypes` to `true` and `customDataTypedPropList` to the list of property types whose custom data types we want to keep.
+In the example the list will only contain `'http://example.com/power'`.
+
+Here is the import command that we need:
+
+[source,cypher]
+----
+CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/power']})
+----
+
+And here's what the result of the cypher query above would look like after this import:
+
+[source,cypher]
+----
+╒══════════════╤══════════════╤══════════════╕
+│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
+╞══════════════╪══════════════╪══════════════╡
+│"10000"       │"300^^ns0__HP"│"red"         │
+└──────────────┴──────────────┴──────────────┘
+----
+
+Note that this time only the custom data types of the properties listed in the `customDataTypedPropList` are kept, the rest will only have the literal value.
+
+[WARNING]
+Remember that if we set `keepCustomDataTypes` to `true` but we don't provide a list of property URIs as `customDataTypedPropList` ALL literals with a custom data type will be stored as strings with their respective custom data type IRIs.
+
+When you import literal values keeping the custom data types, you'll see that string values have a IRI suffix separated by `^^` from the raw value. For instance `"10000^^ns0__EUR"` from the example above.
+The function `getDataType` can be used to get the data type for a particular property. It returns null when there is no custom data type for the given property.
+
+The following Cypher fragment returns the data type of `power`.
+
+[source,cypher]
+----
+MATCH (n:ns0__Car)
+RETURN semantics.getDataType(n.ns0__power)
+----
+
+The function `getValue` can be used to get the raw value of a particular property without custom data types or language tags.
+
+The following Cypher fragment returns the raw value of `power`.
+
+[source,cypher]
+----
+MATCH (n:ns0__Car)
+RETURN semantics.getValue(n.ns0__power)
+----
+
+The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
+
 [#advancedfetching]
 ==== Advanced settings for fetching RDF data
 
@@ -581,7 +691,9 @@ The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to vis
 | languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported  
 | headerParams      | map {} | parameters to be passed in the HTTP GET request. <br> Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'} 
 | commitSize      | integer (25000) | commit a partial transaction every n triples 
-| nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB 
+| nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB
+| keepCustomDataTypes | boolean(false) | when set to true, all properties containing a custom data type will be saved as a string followed by their custom data type IRIs
+| customDataTypedPropList| ['http://example.com/power'] | when set, only custom data types of literal properties in this list are imported
 |===
 
 
