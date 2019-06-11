@@ -467,16 +467,33 @@ Ontologies are serialised as RDF, so they can be imported using plain `importRDF
 
 All other elments will be ignored by this loader.
 
-he `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we'll import the ontology in link:docs/rdf/volkswagen.owl[this file].
+he `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we'll import the ontology in link:docs/rdf/vw.owl[this file].
 
 [source,cypher]
 ----
-CALL semantics.liteOntoImport("...","Turtle")
+CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")
 ---- 
+
+image::vwonto.png[VW ontology imported in Neo4j]
 
 As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively and and `rdf:subPropertyOf` statements are stored ass relationships of type `SPO` between `Relationship` or `Property` nodes.
 
+These graph model elements can be overriden by using the following configuration params:
 
+* *classLabel*: Label to be used for Ontology Classes (categories). Default is `Class`.
+* *subClassOfRel*: Relationship to be used for `rdfs:subClassOf` hierarchies. Default is `SCO`.
+* *dataTypePropertyLabel*: Label to be used for DataType properties in the Ontology. Default is `Property`. 
+* *objectPropertyLabel*: Label to be used for Object properties in the Ontology. Default is `Relationship`. 
+* *subPropertyOfRel*: Relationship to be used for `rdfs:subPropertyOf` hierarchies. Default is `SPO`.
+* *domainRel*: Relationship to be used for `rdfs:domain`. Default is `DOMAIN`.
+* *rangeRel*: Relationship to be used for `rdfs:range`. Default is `RANGE`.
+
+Here's an example of how to load an ontology using some of these parameters:
+
+[source,cypher]
+----
+CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+---- 
 
 
 
@@ -490,7 +507,7 @@ The `streamRDF` procedure also takes the same generic params described in <<comm
 
 [source,cypher]
 ----
-CALL semantics.streamRDF("https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3","Turtle")
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")
 ---- 
 
 It will produce a stream of records, each one representing a triple parsed. So you will get fields for the subject, predicate and object plus three additional ones:
@@ -501,15 +518,41 @@ It will produce a stream of records, each one representing a triple parsed. So y
 
 In the previous example the output would look something like this:
 
-[source,cypher]
-----
-----
+image::streamRDF.png[RDF parsed and streamed in Neo4j]
 
-The procedure is read-only and nothing is written to the graph, however, it is possible to use the output to write to the Graph with cypher like in the following example:
+The procedure is read-only and nothing is written to the graph, however, it is possible to use cypher on the output of the procedure to analyse the triples returned like in this first example:
 
 [source,cypher]
 ----
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
+WHERE predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+RETURN object as category, count(*) as itemsInCategory
 ----
+
+----
+╒═══════════════════════════════════════════╤═════════════════╕
+│"category"                                 │"itemsInCategory"│
+╞═══════════════════════════════════════════╪═════════════════╡
+│"http://neo4j.org/vocab/sw#Neo4jPlugin"    │3                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#GraphPlatform"  │1                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#AwesomePlatform"│1                │
+└───────────────────────────────────────────┴─────────────────┘
+----
+
+Or even to write to the Graph to create your own custom structure like in this second one:
+
+[source,cypher]
+----
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") 
+YIELD subject, predicate, object, isLiteral  
+WHERE NOT ( isLiteral OR predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" )
+MERGE (from:Thing { id: subject})
+MERGE (to:Thing { id: object })
+MERGE (from)-[:CONNECTED_TO { id: predicate }]->(to)
+----
+
 
 ==== Previewing RDF data
 

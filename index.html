@@ -1147,15 +1147,56 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <p>All other elments will be ignored by this loader.</p>
 </div>
 <div class="paragraph">
-<p>he <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we&#8217;ll import the ontology in <a href="docs/rdf/volkswagen.owl">this file</a>.</p>
+<p>he <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we&#8217;ll import the ontology in <a href="docs/rdf/vw.owl">this file</a>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("...","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
+</div>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/vwonto.png" alt="VW ontology imported in Neo4j">
 </div>
 </div>
 <div class="paragraph">
 <p>As we see in the ingested graph, by default, classes will be persissted as nodes with label <code>Class</code> with two properties: uri and name and <code>rdf:subClassOf</code> statements are stored ass relationships of type <code>SCO</code> between <code>Class</code> nodes. Similarly, relationships will be persisted as nodes with labels <code>Relationship</code> or <code>Property</code> for <code>owl:ObjectProperty</code> and <code>owl:DatatypeProperty</code> respectively and and <code>rdf:subPropertyOf</code> statements are stored ass relationships of type <code>SPO</code> between <code>Relationship</code> or <code>Property</code> nodes.</p>
+</div>
+<div class="paragraph">
+<p>These graph model elements can be overriden by using the following configuration params:</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>classLabel</strong>: Label to be used for Ontology Classes (categories). Default is <code>Class</code>.</p>
+</li>
+<li>
+<p><strong>subClassOfRel</strong>: Relationship to be used for <code>rdfs:subClassOf</code> hierarchies. Default is <code>SCO</code>.</p>
+</li>
+<li>
+<p><strong>dataTypePropertyLabel</strong>: Label to be used for DataType properties in the Ontology. Default is <code>Property</code>.</p>
+</li>
+<li>
+<p><strong>objectPropertyLabel</strong>: Label to be used for Object properties in the Ontology. Default is <code>Relationship</code>.</p>
+</li>
+<li>
+<p><strong>subPropertyOfRel</strong>: Relationship to be used for <code>rdfs:subPropertyOf</code> hierarchies. Default is <code>SPO</code>.</p>
+</li>
+<li>
+<p><strong>domainRel</strong>: Relationship to be used for <code>rdfs:domain</code>. Default is <code>DOMAIN</code>.</p>
+</li>
+<li>
+<p><strong>rangeRel</strong>: Relationship to be used for <code>rdfs:range</code>. Default is <code>RANGE</code>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example of how to load an ontology using some of these parameters:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
+</div>
 </div>
 </div>
 </div>
@@ -1172,7 +1213,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1194,17 +1235,45 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <div class="paragraph">
 <p>In the previous example the output would look something like this:</p>
 </div>
-<div class="listingblock">
+<div class="imageblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+<img src="docs/img/streamRDF.png" alt="RDF parsed and streamed in Neo4j">
 </div>
 </div>
 <div class="paragraph">
-<p>The procedure is read-only and nothing is written to the graph, however, it is possible to use the output to write to the Graph with cypher like in the following example:</p>
+<p>The procedure is read-only and nothing is written to the graph, however, it is possible to use cypher on the output of the procedure to analyse the triples returned like in this first example:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
+WHERE predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+RETURN object as category, count(*) as itemsInCategory</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre>╒═══════════════════════════════════════════╤═════════════════╕
+│"category"                                 │"itemsInCategory"│
+╞═══════════════════════════════════════════╪═════════════════╡
+│"http://neo4j.org/vocab/sw#Neo4jPlugin"    │3                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#GraphPlatform"  │1                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#AwesomePlatform"│1                │
+└───────────────────────────────────────────┴─────────────────┘</pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or even to write to the Graph to create your own custom structure like in this second one:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")
+YIELD subject, predicate, object, isLiteral
+WHERE NOT ( isLiteral OR predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" )
+MERGE (from:Thing { id: subject})
+MERGE (to:Thing { id: object })
+MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 </div>
 </div>
 </div>
