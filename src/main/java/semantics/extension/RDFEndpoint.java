@@ -13,6 +13,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.InternalServerErrorException;
@@ -176,7 +177,8 @@ public class RDFEndpoint {
                     r -> processRelationship(namespaces, writer, valueFactory, baseVocabNS, r));
               } else if (o instanceof Node) {
                 Node node = (Node) o;
-                if (!serializedNodes.contains(node.getProperty("uri").toString())) {
+                if (StreamSupport.stream(node.getLabels().spliterator(), false)
+                    .anyMatch(name -> Label.label("Resource").equals(name)) && !serializedNodes.contains(node.getProperty("uri").toString())) {
                   processNode(namespaces, writer, valueFactory, baseVocabNS, node);
                   serializedNodes.add(node.getProperty("uri").toString());
                 }

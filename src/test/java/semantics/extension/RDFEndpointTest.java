@@ -689,6 +689,62 @@ public class RDFEndpointTest {
   }
 
   @Test
+  public void testOneNodeCypherWithUrisSerializeAsJsonLd() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              String nsDefCreation =
+                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                      +
+                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+              graphDatabaseService.execute(nsDefCreation);
+              String dataInsertion =
+                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
+              graphDatabaseService.execute(dataInsertion);
+              tx.success();
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Result result = server.graph()
+          .execute("MATCH (n) RETURN id(n) AS id ");
+      //assertEquals( 1, count( result ) );
+
+      Long id = (Long) result.next().get("id");
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n) RETURN n ");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "[ {\n" +
+          "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
+          "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
+          "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
+          "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+          "    \"@value\" : \"1964\"\n" +
+          "  } ],\n" +
+          "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
+          "    \"@value\" : \"Keanu Reeves\"\n" +
+          "  } ]\n" +
+          "} ]";
+
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+    }
+  }
+
+  @Test
   public void testCypherWithBNodesSerializeAsRDFXML() throws Exception {
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
