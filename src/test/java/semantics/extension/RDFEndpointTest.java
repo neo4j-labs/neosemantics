@@ -10,8 +10,10 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -1318,6 +1320,60 @@ public class RDFEndpointTest {
           "\tex:released \"2019\"^^xsd:long ;\n" +
           "\tex:type \"Cabrio\" .";
 
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterDeleteRDFBNodes()
+      throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->()"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "text/turtle")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources.toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"), StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
