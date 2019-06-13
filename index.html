@@ -434,19 +434,20 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#introduction">Introduction</a></li>
 <li><a href="#Install">Installation</a></li>
 <li><a href="#Import">Importing RDF data</a>
-<ul class="sectlevel4">
+<ul class="sectlevel2">
 <li><a href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></li>
 <li><a href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></li>
 <li><a href="#_handling_multivalued_properties">Handling multivalued properties</a></li>
 <li><a href="#_handling_language_tags">Handling language tags</a></li>
 <li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
+<li><a href="#_handling_properties_with_custom_data_types">Handling properties with custom data types</a></li>
 <li><a href="#advancedfetching">Advanced settings for fetching RDF data</a></li>
 <li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
 </ul>
 </li>
 <li><a href="#OntoImport">Importing Ontologies</a></li>
 <li><a href="#Preview">Previewing RDF data</a>
-<ul class="sectlevel3">
+<ul class="sectlevel2">
 <li><a href="#_streaming_triples">Streaming triples</a></li>
 <li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
 </ul>
@@ -745,8 +746,8 @@ RETURN n.name, MAX(n.version)</code></pre>
 <div class="paragraph">
 <p>The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.</p>
 </div>
-<div class="sect4">
-<h5 id="_storing_categories_classess_as_nodes_instead_of_labels"><a class="link" href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></h5>
+<div class="sect2">
+<h3 id="_storing_categories_classess_as_nodes_instead_of_labels"><a class="link" href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></h3>
 <div class="paragraph">
 <p>The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you&#8217;ll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes.
 If you want <code>rdf:type</code> statements (triples) to be imported in this way, all you have to do is set the <code>typesToLabels</code> parameter to <code>false</code>.</p>
@@ -787,8 +788,8 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 <p>More on the usefulness of representing the ontology in the neo4j graph in section <a href="#Inference">Inferencing/Reasoning</a>.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_filtering_triples_by_predicate"><a class="link" href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></h4>
+<div class="sect2">
+<h3 id="_filtering_triples_by_predicate"><a class="link" href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></h3>
 <div class="paragraph">
 <p>Another thing you can do when your import RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to you. The exclusion is done by predicate type <em>"I don&#8217;t need to load the version property, or the release date"</em>, all you&#8217;ll need to do is provide the list of URIs of the predicates you want excluded in parameter <code>predicateExclList</code>. Note that the list needs to contain full URIs.</p>
 </div>
@@ -798,8 +799,8 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_handling_multivalued_properties"><a class="link" href="#_handling_multivalued_properties">Handling multivalued properties</a></h4>
+<div class="sect2">
+<h3 id="_handling_multivalued_properties"><a class="link" href="#_handling_multivalued_properties">Handling multivalued properties</a></h3>
 <div class="paragraph">
 <p>In RDF multiple values for the same property are just multiple triples. For example, you can have multiple alternative names for an individual like in the next RDF fragment:</p>
 </div>
@@ -912,8 +913,8 @@ RETURN a.title as title</code></pre>
 </div>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_handling_language_tags"><a class="link" href="#_handling_language_tags">Handling language tags</a></h4>
+<div class="sect2">
+<h3 id="_handling_language_tags"><a class="link" href="#_handling_language_tags">Handling language tags</a></h3>
 <div class="paragraph">
 <p>Literal values in RDF can be tagged with language information. This can be used in any context but it&#8217;s common to find it used in combination with multivalued properties to create multilingual descriptions for items in a dataset. In the following example we have a description of a TV series with a multivalued property <code>show:localName</code> where each of the values is annotated with the language.</p>
 </div>
@@ -948,8 +949,8 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_filtering_triples_by_language_tag"><a class="link" href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></h4>
+<div class="sect2">
+<h3 id="_filtering_triples_by_language_tag"><a class="link" href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></h3>
 <div class="paragraph">
 <p>Language tags can also be used as a filter criteria. If we are only interested in a particular language when loading a multilingual dataset, we can set a filter so only literal values with a given language tag (or untagged ones) are imported into Neo4j. The configuration parameter that does it is <code>languageFilter</code> and you&#8217;ll need to set it to the relevant tag, for instance 'es' for literals in Spanish language. Here&#8217;s what such a configuration would look like:</p>
 </div>
@@ -959,8 +960,144 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 </div>
 </div>
-<div class="sect3">
-<h4 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF data</a></h4>
+<div class="sect2">
+<h3 id="_handling_properties_with_custom_data_types"><a class="link" href="#_handling_properties_with_custom_data_types">Handling properties with custom data types</a></h3>
+<div class="paragraph">
+<p>In RDF custom data types are annotated to literals after the seperator <code>^^</code> in form of an IRI.
+For example, you can have a custom data type for a currency like in the following Turtle RDF fragment:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://example.com/&gt; .
+
+ex:Mercedes
+	rdf:type ex:Car ;
+	ex:price "10000"^^ex:EUR ;
+	ex:power "300"^^ex:HP ;
+	ex:color "red"^^ex:Color .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>NSMNTX default behavior is to not keep custom data types for properties.
+So if you run a straight import on that data like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Only the value for the properties will be kept.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Car)
+RETURN n.ns0__price, n.ns0__power, n.ns0__color</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════╤══════════════╤══════════════╕
+│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
+╞══════════════╪══════════════╪══════════════╡
+│"10000"       │"300"         │"red"         │
+└──────────────┴──────────────┴──────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This makes things simple and will be perfect if your dataset does not have properties with custom data types.
+But if you need to keep the custom data types the config parameter <code>keepCustomDataTypes</code> comes into play. Here&#8217;s how:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now all properties that have a custom data type are saved as strings with their respective custom data type IRIs in Neo4j.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒═════════════════╤══════════════╤═════════════════╕
+│"n.ns0__price"   │"n.ns0__power"│"n.ns0__color"   │
+╞═════════════════╪══════════════╪═════════════════╡
+│"10000^^ns0__EUR"│"300^^ns0__HP"│"red^^ns0__Color"│
+└─────────────────┴──────────────┴─────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>But we can do better than that, let&#8217;s have a look at another example.We will use the same Turtle file from above for this example.</p>
+</div>
+<div class="paragraph">
+<p>If we want to keep the custom data type for only some of the properties then we can instruct NSMNTX to do that by setting <code>keepCustomDataTypes</code> to <code>true</code> and <code>customDataTypedPropList</code> to the list of property types whose custom data types we want to keep.
+In the example the list will only contain <code>'http://example.com/power'</code>.</p>
+</div>
+<div class="paragraph">
+<p>Here is the import command that we need:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/power']})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And here&#8217;s what the result of the cypher query above would look like after this import:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════╤══════════════╤══════════════╕
+│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
+╞══════════════╪══════════════╪══════════════╡
+│"10000"       │"300^^ns0__HP"│"red"         │
+└──────────────┴──────────────┴──────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Note that this time only the custom data types of the properties listed in the <code>customDataTypedPropList</code> are kept, the rest will only have the literal value.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+Remember that if we set <code>keepCustomDataTypes</code> to <code>true</code> but we don&#8217;t provide a list of property URIs as <code>customDataTypedPropList</code> ALL literals with a custom data type will be stored as strings with their respective custom data type IRIs.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>When you import literal values keeping the custom data types, you&#8217;ll see that string values have a IRI suffix separated by <code>^^</code> from the raw value. For instance <code>"10000^^ns0__EUR"</code> from the example above.
+The function <code>getDataType</code> can be used to get the data type for a particular property. It returns null when there is no custom data type for the given property.</p>
+</div>
+<div class="paragraph">
+<p>The following Cypher fragment returns the data type of <code>power</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Car)
+RETURN semantics.getDataType(n.ns0__power)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The function <code>getValue</code> can be used to get the raw value of a particular property without custom data types or language tags.</p>
+</div>
+<div class="paragraph">
+<p>The following Cypher fragment returns the raw value of <code>power</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Car)
+RETURN semantics.getValue(n.ns0__power)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The user functions mentioned above can be combined with other user functions like <code>uriFromShort</code> or <code>getIRILocalName</code> etc.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF data</a></h3>
 <div class="paragraph">
 <p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.
 The following two parameters will help in these situations:
@@ -1049,8 +1186,8 @@ return t.uri, triplesLoaded</code></pre>
 <p>Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPAQL savvy) reader.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="custom_ns"><a class="link" href="#custom_ns">Defining custom prefixes for namespaces</a></h4>
+<div class="sect2">
+<h3 id="custom_ns"><a class="link" href="#custom_ns">Defining custom prefixes for namespaces</a></h3>
 <div class="paragraph">
 <p>When applying url shortening on RDF ingestion (either explicitly or implicitly), we have the option of letting neosemantics automatically assign prefixes to namespaces as they appear in the imported RDF. But before doing that, a few popular ones will be set with familiar prefixes. These include <code>"http://www.w3.org/1999/02/22-rdf-syntax-ns#"</code> prefixed as <code>rdf</code> and <code>"http://www.w3.org/2004/02/skos/core#"</code> prefixed as <code>skos</code>.</p>
 </div>
@@ -1206,8 +1343,8 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <div class="paragraph">
 <p>Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.</p>
 </div>
-<div class="sect3">
-<h4 id="_streaming_triples"><a class="link" href="#_streaming_triples">Streaming triples</a></h4>
+<div class="sect2">
+<h3 id="_streaming_triples"><a class="link" href="#_streaming_triples">Streaming triples</a></h3>
 <div class="paragraph">
 <p>The <code>streamRDF</code> procedure also takes the same generic params described in <a href="#common_params">[common_params]</a>, so we will invoke it with a URL and a serialisation format just as we would invoke the <code>importRDF</code> procedure:</p>
 </div>
@@ -1277,116 +1414,10 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 </div>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h4>
+<div class="sect2">
+<h3 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h3>
 <div class="paragraph">
 <p>The <code>previewRDF</code> and <code>previewRDFSnippet</code> methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <a href="#Preview">Previewing RDF data</a> section, both <code>previewRDF</code> and <code>previewRDFSnippet</code> are read only so will not persist anything in the graph. The difference between them is that <code>previewRDF</code> takes a url (and optionally additional configuration settings as described in  <a href="#advancedfetching">Advanced settings for fetching RDF data</a>) whereas <code>previewRDFSnippet</code> takes an RDF fragment as text instead.</p>
-</div>
-<table class="tableblock frame-all grid-all spread">
-<colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
-</colgroup>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Stored Proc Name</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Description and example usage</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importRDF</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Imports into Neo4j all the triples in the data set according to the structural mapping defined in [this post](<a href="https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/" class="bare">https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/</a>). &lt;br&gt; <strong>Note</strong> that before running the import procedure an index needs to be created on property uri of Resource nodes. Just run <code>CREATE INDEX ON :Resource(uri)</code> on your Neo4j DB. &lt;br&gt;<strong>Examples:</strong>&lt;br&gt;CALL semantics.importRDF("file:///&#8230;&#8203;/myfile.ttl","Turtle", { shortenUrls: false, typesToLabels: true, commitSize: 9000 }) &lt;br&gt; CALL semantics.importRDF("http:///&#8230;&#8203;/donnees.rdf","RDF/XML", { languageFilter: 'fr', commitSize: 5000 , nodeCacheSize: 250000})</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDF</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.&lt;br&gt; Notice that this is adequate for a preliminary visual analysis of a <strong>SMALL dataset</strong>. Think how many nodes you want rendered in your browser.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>)</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.streamRDF</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Parses some RDF and streams the triples as records of the form subject, predicate, object plus three additional fields: &lt;ul&gt;&lt;li&gt;a boolean indicating whether the object of the statement is a literal: <code>isLiteral</code>&lt;/li&gt;&lt;li&gt;The datatype of the literal value if available <code>literalType</code>&lt;/li&gt;&lt;li&gt;The language if available <code>literalLang</code>&lt;/li&gt;&lt;/ul&gt; This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.streamRDF("[<a href="https://&#8230;&#8203;/clapton.n3" class="bare">https://&#8230;&#8203;/clapton.n3</a>](<a href="https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"" class="bare">https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle"</a>, {})</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDFSnippet</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;An RDF snippet&lt;/li&gt;&lt;li&gt;serialization format(*)&lt;/li&gt;&lt;li&gt;map with zero or more params (see table below)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Identical to previewRDF but takes an RDF snippet instead of the url of the dataset.&lt;br&gt; Again, adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser :)&lt;br&gt; <strong>Examples:</strong>&lt;br&gt;CALL semantics.previewRDFSnippet('[{"@id": "http://indiv#9132", "@type": &#8230;&#8203; }]', "JSON-LD", { languageFilter: 'en'})</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.liteOntoImport</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">&lt;ul&gt;&lt;li&gt;URL of the dataset&lt;/li&gt;&lt;li&gt;serialization(*)&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Imports the basic elements of an OWL or RDFS ontology, i.e. Classes, Properties, Domains, Ranges. Extended description [here](<a href="https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/" class="bare">https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/</a>) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;CALL semantics.liteOntoImport("http://&#8230;&#8203;/myonto.trig","TriG")</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRILocalName</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the local part of the IRI (stripping out the namespace) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRILocalName('http://schema.org/Person')</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRINamespace</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the namespace part of the IRI (stripping out the local part) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRINamespace('http://schema.org/Person')</p></td>
-</tr>
-</tbody>
-</table>
-<table class="tableblock frame-all grid-all spread">
-<colgroup>
-<col style="width: 33.3333%;">
-<col style="width: 33.3333%;">
-<col style="width: 33.3334%;">
-</colgroup>
-<tbody>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Param</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">values(default)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">shortenUrls</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">typesToLabels</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, rdf:type statements are imported as node labels in Neo4j</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">languageFilter</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">['en','fr','es',&#8230;&#8203;]</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">when set, only literal properties with this language tag (or untagged ones) are imported</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">headerParams</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">map {}</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">parameters to be passed in the HTTP GET request. &lt;br&gt; Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">commitSize</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">integer (25000)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">commit a partial transaction every n triples</p></td>
-</tr>
-<tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">nodeCacheSize</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">integer (10000)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">keep n nodes in cache to minimize reads from DB</p></td>
-</tr>
-</tbody>
-</table>
-<div class="admonitionblock warning">
-<table>
-<tr>
-<td class="icon">
-<div class="title">Warning</div>
-</td>
-<td class="content">
-Graph Algorithms (similarity, centrality and clustering) in APOC are deprecated and about to be removed.
-Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algorithms</a> instead.
-</td>
-</tr>
-</table>
 </div>
 </div>
 </div>
@@ -1490,10 +1521,90 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 </tr>
 </tbody>
 </table>
+<div class="paragraph">
+<p>Params</p>
+</div>
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Param</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">values(default)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">shortenUrls</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">typesToLabels</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">boolean (true)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, rdf:type statements are imported as node labels in Neo4j</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">languageFilter</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">['en','fr','es',&#8230;&#8203;]</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set, only literal properties with this language tag (or untagged ones) are imported</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">headerParams</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">map {}</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">parameters to be passed in the HTTP GET request. &lt;br&gt; Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">commitSize</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer (25000)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">commit a partial transaction every n triples</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">nodeCacheSize</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">integer (10000)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">keep n nodes in cache to minimize reads from DB</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">keepCustomDataTypes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">boolean(false)</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set to true, all properties containing a custom data type will be saved as a string followed by their custom data type IRIs</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">customDataTypedPropList</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">['http://example.com/power']</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">when set, only custom data types of literal properties in this list are imported</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="sect2">
 <h3 id="_functions"><a class="link" href="#_functions">Functions</a></h3>
-
+<table class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Stored Proc Name</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Description and example usage</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRILocalName</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the local part of the IRI (stripping out the namespace) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRILocalName('http://schema.org/Person')</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRINamespace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock"><strong>[function]</strong>&lt;ul&gt;&lt;li&gt;IRI string&lt;/li&gt;&lt;/ul&gt;</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the namespace part of the IRI (stripping out the local part) &lt;br&gt; <strong>Example:</strong>&lt;br&gt;RETURN semantics.getIRINamespace('http://schema.org/Person')</p></td>
+</tr>
+</tbody>
+</table>
 </div>
 <div class="sect2">
 <h3 id="_extensions_http_endpoints"><a class="link" href="#_extensions_http_endpoints">Extensions (HTTP endpoints)</a></h3>
@@ -1537,7 +1648,7 @@ Please use the algorithms in <a href="https://r.neo4j.com/algo">neo4j-graph-algo
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-11 00:46:43 CEST
+Last updated 2019-06-12 01:22:06 CEST
 </div>
 </div>
 </body>
