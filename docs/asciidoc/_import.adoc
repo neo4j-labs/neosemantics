@@ -564,6 +564,104 @@ And then when the namespace is detected during the ingestion of the RDF data, th
 
 Make sure you know what you're doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.
 
+[[DeleteRDF]]
+== Deleting imported RDF data
+
+The method to delete imported RDF data is `semantics.deleteRDF`. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
+All delete procedures take the following three parameters, like the import procedures:
+[#common_params]
+
+[options="header"]
+|===
+| Parameter        | Type |  Description
+| url | String | URL of the dataset
+| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
+| params | Map  | Set of parameters (see description in table below)
+|===
+
+In its most basic form the `semantics.deleteRDF` method just takes the url string to access the RDF data and the serialisation format.
+Let's say you have already imported the following set of triples into Neo4j with this command:
+
+[source,cypher]
+----
+CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/dataset.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+----
+
+[source,RDF]
+----
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Resource1
+  a ex:TestResource ;
+  ex:Predicate1 "100"^^ex:CDT ;
+  ex:Predicate2 "test";
+  ex:Predicate3 ex:Resource2 ;
+  ex:Predicate4 "val1" ;
+  ex:Predicate4 "val2" ;
+  ex:Predicate4 "val3" ;
+  ex:Predicate4 "val4" .
+
+ex:Resource2
+  a ex:TestResource ;
+  ex:Predicate1 "test";
+  ex:Predicate2 ex:Resource3 ;
+  ex:Predicate3 "100"^^xsd:long ;
+  ex:Predicate3 "200"^^xsd:long ;
+  ex:Predicate4 "300.0"^^xsd:double ;
+  ex:Predicate4 "400.0"^^xsd:double .
+
+----
+
+Let's say you're trying to delete the following set of triples from Neo4j after the import above:
+
+[source,RDF]
+----
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Resource1
+  ex:Predicate3 ex:Resource2 .
+
+ex:Resource2
+  a ex:TestResource ;
+  ex:Predicate1 "test";
+  ex:Predicate2 ex:Resource3 ;
+  ex:Predicate3 "100"^^xsd:long ;
+  ex:Predicate3 "200"^^xsd:long ;
+  ex:Predicate4 "300.0"^^xsd:double ;
+  ex:Predicate4 "400.0"^^xsd:double .
+----
+
+Here is the cypher snippet showing how to do that:
+
+[source,cypher]
+----
+CALL semantics.deleteRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/delete.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+----
+
+NSMNTX will delete the RDF data in your Neo4j graph. After this deletion your RDF data will look like this:
+
+[source,RDF]
+----
+@prefix ex: <http://example.org/> .
+
+ex:Resource1
+  a ex:TestResource ;
+  ex:Predicate1 "100"^^ex:CDT ;
+  ex:Predicate2 "test";
+  ex:Predicate4 "val1" ;
+  ex:Predicate4 "val2" ;
+  ex:Predicate4 "val3" ;
+  ex:Predicate4 "val4" .
+----
+
+[IMPORTANT]
+You *must* to use the same map of parameters that you used during import, also during deletion. Otherwise you will encounter problems.
+
+**Note** that currently blank nodes cannot be deleted due to not having a persistent IRI.
+
+
 [[OntoImport]]
 == Importing Ontologies
 
