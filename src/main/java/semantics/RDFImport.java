@@ -6,13 +6,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -72,6 +70,7 @@ public class RDFImport {
 
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
+
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
@@ -91,10 +90,9 @@ public class RDFImport {
     DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format,  (props.containsKey("verifyUriSyntax") ? (Boolean) props
-          .get("verifyUriSyntax") : true), statementLoader);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
+      parseRDF(getInputStream(url, props), url, format,
+          (props.containsKey("verifyUriSyntax") ? (Boolean) props
+              .get("verifyUriSyntax") : true), statementLoader);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
       e.printStackTrace();
@@ -148,12 +146,12 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels, log);
+    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+        log);
     try {
-      parseRDF(getInputStream(url, props), url, format, (props.containsKey("verifyUriSyntax") ? (Boolean) props
-          .get("verifyUriSyntax") : true), statementViewer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
+      parseRDF(getInputStream(url, props), url, format,
+          (props.containsKey("verifyUriSyntax") ? (Boolean) props
+              .get("verifyUriSyntax") : true), statementViewer);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -173,8 +171,6 @@ public class RDFImport {
     StatementStreamer statementStreamer = new StatementStreamer();
     try {
       parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementStreamer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -195,14 +191,13 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels, log);
+    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+        log);
     try {
       parseRDF(new ByteArrayInputStream(
               rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format,
           (props.containsKey("verifyUriSyntax") ? (Boolean) props
               .get("verifyUriSyntax") : true), statementViewer);
-    } catch (MalformedURLException e) {
-      e.printStackTrace();
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -211,6 +206,35 @@ public class RDFImport {
     return Stream.of(graphResult);
 
 
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<DeleteResults> deleteRDF(@Name("url") String url, @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+    RDFParserConfig conf = new RDFParserConfig(props);
+    conf.setCommitSize(Long.MAX_VALUE);
+
+    DeleteResults deleteResults = new DeleteResults();
+
+    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, conf, log);
+    try {
+      checkIndexesExist();
+
+      InputStream inputStream = getInputStream(url, props);
+      RDFParser rdfParser = Rio.createParser(getFormat(format));
+      rdfParser.setRDFHandler(statementDeleter);
+      rdfParser.parse(inputStream, url);
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      deleteResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      deleteResults.setTriplesDeleted(
+          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+    }
+    return Stream.of(deleteResults);
   }
 
   @UserFunction
@@ -246,11 +270,14 @@ public class RDFImport {
 
     Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
     Matcher matcherRegular = DATATYPE_REGULAR_PATTERN.matcher(literal);
+    Matcher matcherLanguageTagged = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(literal);
     String result = literal;
     if (matcherShortened.matches()) {
       result = matcherShortened.group(1);
     } else if (matcherRegular.matches()) {
       result = matcherRegular.group(1);
+    } else if (matcherLanguageTagged.matches()) {
+      result = matcherLanguageTagged.group(1);
     }
     return result;
   }
@@ -404,6 +431,32 @@ public class RDFImport {
 
     public void setTriplesLoaded(long triplesLoaded) {
       this.triplesLoaded = triplesLoaded;
+    }
+
+    public void setNamespaces(Map<String, String> namespaces) {
+      this.namespaces = namespaces;
+    }
+
+    public void setTerminationKO(String message) {
+      this.terminationStatus = "KO";
+      this.extraInfo = message;
+    }
+
+  }
+
+  public static class DeleteResults {
+
+    public String terminationStatus = "OK";
+    public long triplesDeleted = 0;
+    public Map<String, String> namespaces;
+    public String extraInfo = "";
+
+    public void setTriplesDeleted(long triplesDeleted) {
+      this.triplesDeleted = triplesDeleted;
+    }
+
+    public void setExtraInfo(String extraInfo) {
+      this.extraInfo = extraInfo;
     }
 
     public void setNamespaces(Map<String, String> namespaces) {

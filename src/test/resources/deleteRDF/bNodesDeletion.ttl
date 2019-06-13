@@ -1,0 +1,15 @@
+@prefix ex: <http://example.org/> .
+
+<http://example.org/web-data>
+    ex:title "Web Data" ;
+    ex:generatedBy _:activity1 .
+
+_:activity1
+   a ex:Event;
+   ex:creator _:entity .
+
+_:activity2
+   a ex:Event, ex:Update ;
+   ex:actionOver _:activity1 ;
+   ex:creator _:entity2 ;
+   ex:atTime "Monday 17 February, 08:12:00 CST" .
