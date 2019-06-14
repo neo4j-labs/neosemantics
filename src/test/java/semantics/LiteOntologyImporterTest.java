@@ -88,6 +88,47 @@ public class LiteOntologyImporterTest {
 
   }
 
+
+  @Test
+  public void liteOntoImportWithCustomNamesAndResourceLabels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(16L, importResults.next().get("elementsLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop:Resource)-[:DOMAIN]->(:Category)  RETURN count(n) AS count")
+              .next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
   @Test
   public void liteOntoImportSchemaOrg() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),

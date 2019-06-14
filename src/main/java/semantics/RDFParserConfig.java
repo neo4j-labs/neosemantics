@@ -44,18 +44,22 @@ public class RDFParserConfig {
     handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     multivalPropList = (props.containsKey("multivalPropList")
-        ? ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet())
+        : null);
     predicateExclusionList = (props.containsKey("predicateExclusionList")
-        ? ((List<String>) props.get("predicateExclusionList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("predicateExclusionList")).stream().collect(Collectors.toSet())
+        : null);
     customDataTypedPropList = (props.containsKey("customDataTypedPropList")
-        ? ((List<String>) props.get("customDataTypedPropList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("customDataTypedPropList")).stream().collect(Collectors.toSet())
+        : null);
     typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
         .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
     keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
         .get("keepLangTag") : false);
     keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
         .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
-    commitSize = (props.containsKey("commitSize") ? ((long) props.get("commitSize") > 0 ? (long) props.get("commitSize") : DEFAULT_COMMIT_SIZE)
+    commitSize = (props.containsKey("commitSize") ? ((long) props.get("commitSize") > 0
+        ? (long) props.get("commitSize") : DEFAULT_COMMIT_SIZE)
         : DEFAULT_COMMIT_SIZE);
     nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props
         .get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);

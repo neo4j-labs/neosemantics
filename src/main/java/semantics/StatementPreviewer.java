@@ -5,7 +5,6 @@ import static semantics.RDFImport.RELATIONSHIP;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -23,7 +22,8 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
   private Map<String, Node> vNodes;
   private List<Relationship> vRels;
 
-  public StatementPreviewer(GraphDatabaseService db, RDFParserConfig conf, Map<String, Node> virtualNodes,
+  public StatementPreviewer(GraphDatabaseService db, RDFParserConfig conf,
+      Map<String, Node> virtualNodes,
       List<Relationship> virtualRels, Log l) {
     super(db, conf);
     vNodes = virtualNodes;

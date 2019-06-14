@@ -551,8 +551,6 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-
-
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
@@ -1373,7 +1371,9 @@ public class RDFEndpointTest {
               HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
               params);
 
-      String expected = Resources.toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"), StandardCharsets.UTF_8);
+      String expected = Resources
+          .toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"),
+              StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
