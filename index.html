@@ -435,16 +435,17 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#Install">Installation</a></li>
 <li><a href="#Import">Importing RDF data</a>
 <ul class="sectlevel2">
-<li><a href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></li>
 <li><a href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></li>
 <li><a href="#_handling_multivalued_properties">Handling multivalued properties</a></li>
 <li><a href="#_handling_language_tags">Handling language tags</a></li>
 <li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
-<li><a href="#_handling_properties_with_custom_data_types">Handling properties with custom data types</a></li>
-<li><a href="#advancedfetching">Advanced settings for fetching RDF data</a></li>
+<li><a href="#_handling_custom_data_types">Handling custom data types</a></li>
+<li><a href="#_classess_as_nodes_instead_of_labels">Classess as Nodes (instead of Labels)</a></li>
+<li><a href="#advancedfetching">Advanced settings for fetching RDF</a></li>
 <li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
 </ul>
 </li>
+<li><a href="#DeleteRDF">Deleting imported RDF data</a></li>
 <li><a href="#OntoImport">Importing Ontologies</a></li>
 <li><a href="#Preview">Previewing RDF data</a>
 <ul class="sectlevel2">
@@ -747,51 +748,9 @@ RETURN n.name, MAX(n.version)</code></pre>
 <p>The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.</p>
 </div>
 <div class="sect2">
-<h3 id="_storing_categories_classess_as_nodes_instead_of_labels"><a class="link" href="#_storing_categories_classess_as_nodes_instead_of_labels">Storing categories (classess) as Nodes instead of Labels</a></h3>
-<div class="paragraph">
-<p>The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you&#8217;ll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes.
-If you want <code>rdf:type</code> statements (triples) to be imported in this way, all you have to do is set the <code>typesToLabels</code> parameter to <code>false</code>.</p>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s an example: Let&#8217;s say we want to load an ontology (notice that it&#8217;s actually a small fragment of several ontologies, but it will work for our example). For what it&#8217;s worth, it&#8217;s an RDF file, so we load it the usual way, with all default settings</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="docs/img/minionto.png" alt="Ontology imported in Neo4j">
-</div>
-</div>
-<div class="paragraph">
-<p>Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming <code>rdf:type</code> statements into Property Graph labels. We can achieve this by setting the <code>typesToLabels</code> to <code>false</code>.</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere&#8217;s nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="docs/img/miniontoandinstances.png" alt="Connected ontology and instance data imported in Neo4j">
-</div>
-</div>
-<div class="paragraph">
-<p>More on the usefulness of representing the ontology in the neo4j graph in section <a href="#Inference">Inferencing/Reasoning</a>.</p>
-</div>
-</div>
-<div class="sect2">
 <h3 id="_filtering_triples_by_predicate"><a class="link" href="#_filtering_triples_by_predicate">Filtering triples by predicate</a></h3>
 <div class="paragraph">
-<p>Another thing you can do when your import RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to you. The exclusion is done by predicate type <em>"I don&#8217;t need to load the version property, or the release date"</em>, all you&#8217;ll need to do is provide the list of URIs of the predicates you want excluded in parameter <code>predicateExclList</code>. Note that the list needs to contain full URIs.</p>
+<p>Something you may need to do when importing RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to your projecty. The exclusion is done by predicate type <em>"I don&#8217;t need to load the version property, or the release date"</em>, all you&#8217;ll need to do is provide the list of URIs of the predicates you want excluded in parameter <code>predicateExclList</code>. Note that the list needs to contain full URIs.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -961,7 +920,7 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 </div>
 <div class="sect2">
-<h3 id="_handling_properties_with_custom_data_types"><a class="link" href="#_handling_properties_with_custom_data_types">Handling properties with custom data types</a></h3>
+<h3 id="_handling_custom_data_types"><a class="link" href="#_handling_custom_data_types">Handling custom data types</a></h3>
 <div class="paragraph">
 <p>In RDF custom data types are annotated to literals after the seperator <code>^^</code> in form of an IRI.
 For example, you can have a custom data type for a currency like in the following Turtle RDF fragment:</p>
@@ -1097,7 +1056,49 @@ RETURN semantics.getValue(n.ns0__power)</code></pre>
 </div>
 </div>
 <div class="sect2">
-<h3 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF data</a></h3>
+<h3 id="_classess_as_nodes_instead_of_labels"><a class="link" href="#_classess_as_nodes_instead_of_labels">Classess as Nodes (instead of Labels)</a></h3>
+<div class="paragraph">
+<p>The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you&#8217;ll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes.
+If you want <code>rdf:type</code> statements (triples) to be imported in this way, all you have to do is set the <code>typesToLabels</code> parameter to <code>false</code>.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s an example: Let&#8217;s say we want to load an ontology (notice that it&#8217;s actually a small fragment of several ontologies, but it will work for our example). For what it&#8217;s worth, it&#8217;s an RDF file, so we load it the usual way, with all default settings</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/minionto.png" alt="Ontology imported in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming <code>rdf:type</code> statements into Property Graph labels. We can achieve this by setting the <code>typesToLabels</code> to <code>false</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere&#8217;s nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/miniontoandinstances.png" alt="Connected ontology and instance data imported in Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>More on the usefulness of representing the ontology in the neo4j graph in section <a href="#Inference">Inferencing/Reasoning</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF</a></h3>
 <div class="paragraph">
 <p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.
 The following two parameters will help in these situations:
@@ -1256,6 +1257,141 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 </div>
 <div class="sect1">
+<h2 id="DeleteRDF"><a class="link" href="#DeleteRDF">Deleting imported RDF data</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>The method to delete imported RDF data is <code>semantics.deleteRDF</code>. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
+All delete procedures take the following three parameters, like the import procedures:</p>
+</div>
+<table id="common_params_delete" class="tableblock frame-all grid-all spread">
+<colgroup>
+<col style="width: 33.3333%;">
+<col style="width: 33.3333%;">
+<col style="width: 33.3334%;">
+</colgroup>
+<thead>
+<tr>
+<th class="tableblock halign-left valign-top">Parameter</th>
+<th class="tableblock halign-left valign-top">Type</th>
+<th class="tableblock halign-left valign-top">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">url</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">URL of the dataset</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">format</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML</p></td>
+</tr>
+<tr>
+<td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Map</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Set of parameters (see description in table below)</p></td>
+</tr>
+</tbody>
+</table>
+<div class="paragraph">
+<p>In its most basic form the <code>semantics.deleteRDF</code> method just takes the url string to access the RDF data and the serialisation format.
+Let&#8217;s say you have already imported the following set of triples into Neo4j with this command:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/dataset.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://example.org/&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+ex:Resource1
+  a ex:TestResource ;
+  ex:Predicate1 "100"^^ex:CDT ;
+  ex:Predicate2 "test";
+  ex:Predicate3 ex:Resource2 ;
+  ex:Predicate4 "val1" ;
+  ex:Predicate4 "val2" ;
+  ex:Predicate4 "val3" ;
+  ex:Predicate4 "val4" .
+
+ex:Resource2
+  a ex:TestResource ;
+  ex:Predicate1 "test";
+  ex:Predicate2 ex:Resource3 ;
+  ex:Predicate3 "100"^^xsd:long ;
+  ex:Predicate3 "200"^^xsd:long ;
+  ex:Predicate4 "300.0"^^xsd:double ;
+  ex:Predicate4 "400.0"^^xsd:double .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s say you&#8217;re trying to delete the following set of triples from Neo4j after the import above:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://example.org/&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+ex:Resource1
+  ex:Predicate3 ex:Resource2 .
+
+ex:Resource2
+  a ex:TestResource ;
+  ex:Predicate1 "test";
+  ex:Predicate2 ex:Resource3 ;
+  ex:Predicate3 "100"^^xsd:long ;
+  ex:Predicate3 "200"^^xsd:long ;
+  ex:Predicate4 "300.0"^^xsd:double ;
+  ex:Predicate4 "400.0"^^xsd:double .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Here is the cypher snippet showing how to do that:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.deleteRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/delete.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>NSMNTX will delete the RDF data in your Neo4j graph. After this deletion your RDF data will look like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://example.org/&gt; .
+
+ex:Resource1
+  a ex:TestResource ;
+  ex:Predicate1 "100"^^ex:CDT ;
+  ex:Predicate2 "test";
+  ex:Predicate4 "val1" ;
+  ex:Predicate4 "val2" ;
+  ex:Predicate4 "val3" ;
+  ex:Predicate4 "val4" .</code></pre>
+</div>
+</div>
+<div class="admonitionblock important">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Important</div>
+</td>
+<td class="content">
+You <strong>must</strong> use for deletion the same set of parameters that you used during import, otherwise you will not get the expected results.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p><strong>Note</strong> that currently blank nodes cannot be deleted due to not having a persistent IRI.</p>
+</div>
+</div>
+</div>
+<div class="sect1">
 <h2 id="OntoImport"><a class="link" href="#OntoImport">Importing Ontologies</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
@@ -1284,7 +1420,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <p>All other elments will be ignored by this loader.</p>
 </div>
 <div class="paragraph">
-<p>he <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we&#8217;ll import the ontology in <a href="docs/rdf/vw.owl">this file</a>.</p>
+<p>The <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in <a href="docs/rdf/vw.owl">this file</a>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1297,7 +1433,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 </div>
 <div class="paragraph">
-<p>As we see in the ingested graph, by default, classes will be persissted as nodes with label <code>Class</code> with two properties: uri and name and <code>rdf:subClassOf</code> statements are stored ass relationships of type <code>SCO</code> between <code>Class</code> nodes. Similarly, relationships will be persisted as nodes with labels <code>Relationship</code> or <code>Property</code> for <code>owl:ObjectProperty</code> and <code>owl:DatatypeProperty</code> respectively and and <code>rdf:subPropertyOf</code> statements are stored ass relationships of type <code>SPO</code> between <code>Relationship</code> or <code>Property</code> nodes.</p>
+<p>As we see in the ingested graph, by default, classes will be persissted as nodes with label <code>Class</code> with two properties: uri and name and <code>rdf:subClassOf</code> statements are stored ass relationships of type <code>SCO</code> between <code>Class</code> nodes. Similarly, relationships will be persisted as nodes with name and uri and labels <code>Relationship</code> or <code>Property</code> for <code>owl:ObjectProperty</code> and <code>owl:DatatypeProperty</code> respectively. Statements with <code>rdf:subPropertyOf</code> as predicate are stored as relationships of type <code>SPO</code> between <code>Relationship</code> or <code>Property</code> nodes.</p>
 </div>
 <div class="paragraph">
 <p>These graph model elements can be overriden by using the following configuration params:</p>
@@ -1334,6 +1470,9 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <div class="content">
 <pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
 </div>
+</div>
+<div class="paragraph">
+<p>Finally, it&#8217;s also possible to have imported nodes (both Classes and Properties/Relationships) labeled as <code>Resource</code> for compatibility with the importRDF procedure. This is done by setting the <code>addResourceLabels</code> parameter to <code>true</code>.</p>
 </div>
 </div>
 </div>
@@ -1417,7 +1556,7 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <div class="sect2">
 <h3 id="_previewing_rdf_data"><a class="link" href="#_previewing_rdf_data">Previewing RDF data</a></h3>
 <div class="paragraph">
-<p>The <code>previewRDF</code> and <code>previewRDFSnippet</code> methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <a href="#Preview">Previewing RDF data</a> section, both <code>previewRDF</code> and <code>previewRDFSnippet</code> are read only so will not persist anything in the graph. The difference between them is that <code>previewRDF</code> takes a url (and optionally additional configuration settings as described in  <a href="#advancedfetching">Advanced settings for fetching RDF data</a>) whereas <code>previewRDFSnippet</code> takes an RDF fragment as text instead.</p>
+<p>The <code>previewRDF</code> and <code>previewRDFSnippet</code> methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <a href="#Preview">Previewing RDF data</a> section, both <code>previewRDF</code> and <code>previewRDFSnippet</code> are read only so will not persist anything in the graph. The difference between them is that <code>previewRDF</code> takes a url (and optionally additional configuration settings as described in  <a href="#advancedfetching">Advanced settings for fetching RDF</a>) whereas <code>previewRDFSnippet</code> takes an RDF fragment as text instead.</p>
 </div>
 </div>
 </div>
@@ -1648,7 +1787,7 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-12 01:22:06 CEST
+Last updated 2019-06-13 22:19:15 BST
 </div>
 </div>
 </body>
