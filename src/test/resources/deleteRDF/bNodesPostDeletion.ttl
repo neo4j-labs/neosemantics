@@ -1,0 +1,33 @@
+@prefix ex: <http://example.org/> .
+
+<http://example.org/web-data>
+  	ex:professor _:entity ;
+    ex:students _:students ;
+    ex:generatedBy _:activity1 .
+
+_:entity
+   ex:fullName "Alice Carol" ;
+   ex:homePage <http://example.net/alice-carol> ;
+   ex:hasAddress _:address .
+
+_:address
+   a ex:Address ;
+   ex:streetAddress "123 Main St." ;
+   ex:postalCode "A1A1A1" ;
+   ex:addressLocality "London" .
+
+_:students
+   a rdf:Bag ;
+   ex:hasMember _:s1 ;
+   ex:hasMember _:s2 .
+
+_:activity1
+   a ex:Event;
+   ex:creator _:entity ;
+   ex:atTime "Tuesday 11 February, 06:51:00 CST" .
+
+_:activity2
+   a ex:Event, ex:Update ;
+   ex:actionOver _:activity1 ;
+   ex:creator _:entity2 ;
+   ex:atTime "Monday 17 February, 08:12:00 CST" .

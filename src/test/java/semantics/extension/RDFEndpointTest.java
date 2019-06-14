@@ -10,8 +10,10 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
+import com.google.common.io.Resources;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -549,8 +551,6 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-
-
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
@@ -666,6 +666,62 @@ public class RDFEndpointTest {
 
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n:Resource) RETURN n LIMIT 1");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "[ {\n" +
+          "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
+          "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
+          "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
+          "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+          "    \"@value\" : \"1964\"\n" +
+          "  } ],\n" +
+          "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
+          "    \"@value\" : \"Keanu Reeves\"\n" +
+          "  } ]\n" +
+          "} ]";
+
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+    }
+  }
+
+  @Test
+  public void testOneNodeCypherWithUrisSerializeAsJsonLd() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              String nsDefCreation =
+                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                      +
+                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+              graphDatabaseService.execute(nsDefCreation);
+              String dataInsertion =
+                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
+              graphDatabaseService.execute(dataInsertion);
+              tx.success();
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Result result = server.graph()
+          .execute("MATCH (n) RETURN id(n) AS id ");
+      //assertEquals( 1, count( result ) );
+
+      Long id = (Long) result.next().get("id");
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n) RETURN n ");
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
@@ -1262,6 +1318,62 @@ public class RDFEndpointTest {
           "\tex:released \"2019\"^^xsd:long ;\n" +
           "\tex:type \"Cabrio\" .";
 
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFAfterDeleteRDFBNodes()
+      throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
+                      .toURI()
+                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->()"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "text/turtle")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources
+          .toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"),
+              StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));

@@ -13,9 +13,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -124,7 +124,7 @@ public class RDFEndpoint {
           }
           writer.endRDF();
           result.close();
-        }catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
       }
@@ -176,7 +176,9 @@ public class RDFEndpoint {
                     r -> processRelationship(namespaces, writer, valueFactory, baseVocabNS, r));
               } else if (o instanceof Node) {
                 Node node = (Node) o;
-                if (!serializedNodes.contains(node.getProperty("uri").toString())) {
+                if (StreamSupport.stream(node.getLabels().spliterator(), false)
+                    .anyMatch(name -> Label.label("Resource").equals(name)) && !serializedNodes
+                    .contains(node.getProperty("uri").toString())) {
                   processNode(namespaces, writer, valueFactory, baseVocabNS, node);
                   serializedNodes.add(node.getProperty("uri").toString());
                 }
@@ -188,7 +190,7 @@ public class RDFEndpoint {
           }
           writer.endRDF();
           result.close();
-        } catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
 
@@ -477,7 +479,8 @@ public class RDFEndpoint {
         return key;
       }
     }
-    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix).concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
+        .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
   private String getPrefix(String namespace, Map<String, String> namespaces) {
@@ -516,7 +519,7 @@ public class RDFEndpoint {
           writer.endRDF();
         } catch (NotFoundException e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
-        } catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
       }
@@ -598,7 +601,7 @@ public class RDFEndpoint {
     writer.handleNamespace("neovoc", BASE_VOCAB_NS);
     writer.handleNamespace("neoind", BASE_INDIV_NS);
     gds.execute(
-        "MATCH (mns:_MapNs) WHERE exists(mns._prefix) RETURN mns._ns as ns, mns._prefix as prefix").
+        "MATCH (mns:_MapNs) WHERE exists(mns._prefix) RETURN mns._ns AS ns, mns._prefix AS prefix").
         forEachRemaining(
             result -> writer
                 .handleNamespace((String) result.get("prefix"), (String) result.get("ns")));
@@ -658,9 +661,9 @@ public class RDFEndpoint {
 
           writer.endRDF();
 
-        }catch (Exception e){
-            handleSerialisationError(outputStream, e, acceptHeaderParam, format);
-          }
+        } catch (Exception e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
       }
     }).build();
   }
@@ -685,50 +688,50 @@ public class RDFEndpoint {
         writer.startRDF();
 
         try (Transaction tx = gds.beginTx()) {
-        Set<Statement> publishedStatements = new HashSet<>();
-        Result res = gds.execute("CALL db.schema() ");
+          Set<Statement> publishedStatements = new HashSet<>();
+          Result res = gds.execute("CALL db.schema() ");
 
-        Map<String, Object> next = res.next();
-        List<Node> nodeList = (List<Node>) next.get("nodes");
-        nodeList.forEach(node -> {
-          String catName = node.getAllProperties().get("name").toString();
-          if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
-            IRI subject = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
-            publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
-            publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(subject, RDFS.LABEL,
-                    valueFactory.createLiteral(subject.getLocalName())));
-          }
-        });
+          Map<String, Object> next = res.next();
+          List<Node> nodeList = (List<Node>) next.get("nodes");
+          nodeList.forEach(node -> {
+            String catName = node.getAllProperties().get("name").toString();
+            if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+              IRI subject = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(subject, RDFS.LABEL,
+                      valueFactory.createLiteral(subject.getLocalName())));
+            }
+          });
 
-        List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
-        for (Relationship r : relationshipList) {
-          IRI relUri = valueFactory
-              .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
-          publishStatement(publishedStatements, writer,
-              valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
-          publishStatement(publishedStatements, writer,
-              valueFactory.createStatement(relUri, RDFS.LABEL,
-                  valueFactory.createLiteral(relUri.getLocalName())));
-          String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
-          if (!domainClassStr.equals("Resource")) {
-            IRI domainUri = valueFactory
-                .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+          List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+          for (Relationship r : relationshipList) {
+            IRI relUri = valueFactory
+                .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
             publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
-          }
-          String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
-          if (!rangeClassStr.equals("Resource")) {
-            IRI rangeUri = valueFactory
-                .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+                valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
             publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+                valueFactory.createStatement(relUri, RDFS.LABEL,
+                    valueFactory.createLiteral(relUri.getLocalName())));
+            String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
+            if (!domainClassStr.equals("Resource")) {
+              IRI domainUri = valueFactory
+                  .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
+            }
+            String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
+            if (!rangeClassStr.equals("Resource")) {
+              IRI rangeUri = valueFactory
+                  .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+            }
           }
-        }
 
-        writer.endRDF();
-        }catch (Exception e){
+          writer.endRDF();
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
       }

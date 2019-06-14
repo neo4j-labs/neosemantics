@@ -146,47 +146,17 @@ image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces]
 The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.
 
 
-===== Storing categories (classess) as Nodes instead of Labels
 
-The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you'll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes. 
-If you want `rdf:type` statements (triples) to be imported in this way, all you have to do is set the `typesToLabels` parameter to `false`.
+=== Filtering triples by predicate
 
-Here's an example: Let's say we want to load an ontology (notice that it's actually a small fragment of several ontologies, but it will work for our example). For what it's worth, it's an RDF file, so we load it the usual way, with all default settings
-
-[source,cypher]
-----
-call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")
-----
-
-We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
-
-image::minionto.png[Ontology imported in Neo4j]
-
-Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming `rdf:type` statements into Property Graph labels. We can achieve this by setting the `typesToLabels` to `false`.
-
-[source,cypher]
-----
-call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })
-----
-
-The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
-
-image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j]
-
-More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
-
-
-
-==== Filtering triples by predicate
-
-Another thing you can do when your import RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to you. The exclusion is done by predicate type __"I don't need to load the version property, or the release date"__, all you'll need to do is provide the list of URIs of the predicates you want excluded in parameter `predicateExclList`. Note that the list needs to contain full URIs.
+Something you may need to do when importing RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data is relevant to your projecty. The exclusion is done by predicate type __"I don't need to load the version property, or the release date"__, all you'll need to do is provide the list of URIs of the predicates you want excluded in parameter `predicateExclList`. Note that the list needs to contain full URIs.
 
 [source,cypher]
 ----
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })
 ----
 
-==== Handling multivalued properties
+=== Handling multivalued properties
 
 In RDF multiple values for the same property are just multiple triples. For example, you can have multiple alternative names for an individual like in the next RDF fragment:
 
@@ -275,7 +245,7 @@ RETURN a.title as title
 └──────────────────────────────────────────────┘
 ----
 
-==== Handling language tags
+=== Handling language tags
 
 Literal values in RDF can be tagged with language information. This can be used in any context but it's common to find it used in combination with multivalued properties to create multilingual descriptions for items in a dataset. In the following example we have a description of a TV series with a multivalued property `show:localName` where each of the values is annotated with the language. 
 
@@ -307,7 +277,7 @@ The following Cypher fragment returns the french version of a property and when 
 MATCH (n:Resource) RETURN coalesce(semantics.getLangValue("fr",n.ns0__localName), semantics.getLangValue("en",n.ns0__localName))
 ----
 
-==== Filtering triples by language tag
+=== Filtering triples by language tag
 Language tags can also be used as a filter criteria. If we are only interested in a particular language when loading a multilingual dataset, we can set a filter so only literal values with a given language tag (or untagged ones) are imported into Neo4j. The configuration parameter that does it is `languageFilter` and you'll need to set it to the relevant tag, for instance 'es' for literals in Spanish language. Here's what such a configuration would look like:
 
 [source,cypher]
@@ -315,7 +285,7 @@ Language tags can also be used as a filter criteria. If we are only interested i
 CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
 ----
 
-==== Handling properties with custom data types
+=== Handling custom data types
 
 In RDF custom data types are annotated to literals after the seperator `^^` in form of an IRI.
 For example, you can have a custom data type for a currency like in the following Turtle RDF fragment:
@@ -425,8 +395,38 @@ RETURN semantics.getValue(n.ns0__power)
 
 The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
 
+=== Classess as Nodes (instead of Labels)
+
+The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you'll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes. 
+If you want `rdf:type` statements (triples) to be imported in this way, all you have to do is set the `typesToLabels` parameter to `false`.
+
+Here's an example: Let's say we want to load an ontology (notice that it's actually a small fragment of several ontologies, but it will work for our example). For what it's worth, it's an RDF file, so we load it the usual way, with all default settings
+
+[source,cypher]
+----
+call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")
+----
+
+We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
+
+image::minionto.png[Ontology imported in Neo4j]
+
+Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming `rdf:type` statements into Property Graph labels. We can achieve this by setting the `typesToLabels` to `false`.
+
+[source,cypher]
+----
+call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })
+----
+
+The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
+
+image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j]
+
+More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
+
+
 [#advancedfetching]
-==== Advanced settings for fetching RDF data
+=== Advanced settings for fetching RDF
 
 Sometimes the RDF data will be a static file, and other times it'll be dynamically generated in response to an HTTP request (`GET` or `POST`) possibly containg parameters, even a SPARQL query.
 The following two parameters will help in these situations:
@@ -506,7 +506,7 @@ image::worldofyesterday.png[Graph resulting of importing the data in the British
 Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPAQL savvy) reader. 
 
 [#custom_ns]
-==== Defining custom prefixes for namespaces
+=== Defining custom prefixes for namespaces
 
 When applying url shortening on RDF ingestion (either explicitly or implicitly), we have the option of letting neosemantics automatically assign prefixes to namespaces as they appear in the imported RDF. But before doing that, a few popular ones will be set with familiar prefixes. These include `"http://www.w3.org/1999/02/22-rdf-syntax-ns#"` prefixed as `rdf` and `"http://www.w3.org/2004/02/skos/core#"` prefixed as `skos`.
 
@@ -569,7 +569,7 @@ Make sure you know what you're doing if you manipulate the prefix definition, es
 
 The method to delete imported RDF data is `semantics.deleteRDF`. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
 All delete procedures take the following three parameters, like the import procedures:
-[#common_params]
+[#common_params_delete]
 
 [options="header"]
 |===
@@ -657,7 +657,7 @@ ex:Resource1
 ----
 
 [IMPORTANT]
-You *must* to use the same map of parameters that you used during import, also during deletion. Otherwise you will encounter problems.
+You *must* use for deletion the same set of parameters that you used during import, otherwise you will not get the expected results.
 
 **Note** that currently blank nodes cannot be deleted due to not having a persistent IRI.
 
@@ -675,17 +675,35 @@ Ontologies are serialised as RDF, so they can be imported using plain `importRDF
 
 All other elments will be ignored by this loader.
 
-he `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we'll import the ontology in link:docs/rdf/volkswagen.owl[this file].
+The `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
 
 [source,cypher]
 ----
-CALL semantics.liteOntoImport("...","Turtle")
+CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")
 ---- 
 
-As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively and and `rdf:subPropertyOf` statements are stored ass relationships of type `SPO` between `Relationship` or `Property` nodes.
+image::vwonto.png[VW ontology imported in Neo4j]
 
+As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively. Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
 
+These graph model elements can be overriden by using the following configuration params:
 
+* *classLabel*: Label to be used for Ontology Classes (categories). Default is `Class`.
+* *subClassOfRel*: Relationship to be used for `rdfs:subClassOf` hierarchies. Default is `SCO`.
+* *dataTypePropertyLabel*: Label to be used for DataType properties in the Ontology. Default is `Property`. 
+* *objectPropertyLabel*: Label to be used for Object properties in the Ontology. Default is `Relationship`. 
+* *subPropertyOfRel*: Relationship to be used for `rdfs:subPropertyOf` hierarchies. Default is `SPO`.
+* *domainRel*: Relationship to be used for `rdfs:domain`. Default is `DOMAIN`.
+* *rangeRel*: Relationship to be used for `rdfs:range`. Default is `RANGE`.
+
+Here's an example of how to load an ontology using some of these parameters:
+
+[source,cypher]
+----
+CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+---- 
+
+Finally, it's also possible to have imported nodes (both Classes and Properties/Relationships) labeled as `Resource` for compatibility with the importRDF procedure. This is done by setting the `addResourceLabels` parameter to `true`.
 
 
 [[Preview]]
@@ -693,12 +711,12 @@ As we see in the ingested graph, by default, classes will be persissted as nodes
 
 Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.
 
-==== Streaming triples
+=== Streaming triples
 The `streamRDF` procedure also takes the same generic params described in <<common_params>>, so we will invoke it with a URL and a serialisation format just as we would invoke the `importRDF` procedure:
 
 [source,cypher]
 ----
-CALL semantics.streamRDF("https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3","Turtle")
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")
 ---- 
 
 It will produce a stream of records, each one representing a triple parsed. So you will get fields for the subject, predicate and object plus three additional ones:
@@ -709,52 +727,43 @@ It will produce a stream of records, each one representing a triple parsed. So y
 
 In the previous example the output would look something like this:
 
-[source,cypher]
-----
-----
+image::streamRDF.png[RDF parsed and streamed in Neo4j]
 
-The procedure is read-only and nothing is written to the graph, however, it is possible to use the output to write to the Graph with cypher like in the following example:
+The procedure is read-only and nothing is written to the graph, however, it is possible to use cypher on the output of the procedure to analyse the triples returned like in this first example:
 
 [source,cypher]
 ----
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
+WHERE predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+RETURN object as category, count(*) as itemsInCategory
 ----
 
-==== Previewing RDF data
+----
+╒═══════════════════════════════════════════╤═════════════════╕
+│"category"                                 │"itemsInCategory"│
+╞═══════════════════════════════════════════╪═════════════════╡
+│"http://neo4j.org/vocab/sw#Neo4jPlugin"    │3                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#GraphPlatform"  │1                │
+├───────────────────────────────────────────┼─────────────────┤
+│"http://neo4j.org/vocab/sw#AwesomePlatform"│1                │
+└───────────────────────────────────────────┴─────────────────┘
+----
+
+Or even to write to the Graph to create your own custom structure like in this second one:
+
+[source,cypher]
+----
+CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") 
+YIELD subject, predicate, object, isLiteral  
+WHERE NOT ( isLiteral OR predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" )
+MERGE (from:Thing { id: subject})
+MERGE (to:Thing { id: object })
+MERGE (from)-[:CONNECTED_TO { id: predicate }]->(to)
+----
+
+
+=== Previewing RDF data
 
 The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <<Preview>> section, both `previewRDF` and `previewRDFSnippet` are read only so will not persist anything in the graph. The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `previewRDFSnippet` takes an RDF fragment as text instead.
-
-
-
-|===
-| Stored Proc Name        | params           | Description and example usage  
-| semantics.importRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Imports into Neo4j all the triples in the data set according to the structural mapping defined in [this post](https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/). <br> **Note** that before running the import procedure an index needs to be created on property uri of Resource nodes. Just run `CREATE INDEX ON :Resource(uri)` on your Neo4j DB. <br>**Examples:**<br>CALL semantics.importRDF("file:///.../myfile.ttl","Turtle", { shortenUrls: false, typesToLabels: true, commitSize: 9000 }) <br> CALL semantics.importRDF("http:///.../donnees.rdf","RDF/XML", { languageFilter: 'fr', commitSize: 5000 , nodeCacheSize: 250000}) 
-| semantics.previewRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Parses some RDF and produces a preview in Neo4j browser. Same parameters as data import except for periodic commit, since there is no data written to the DB.<br> Notice that this is adequate for a preliminary visual analysis of a **SMALL dataset**. Think how many nodes you want rendered in your browser.<br> **Examples:**<br>CALL semantics.previewRDF("[https://.../clapton.n3](https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle") 
-| semantics.streamRDF      | <ul><li>URL of the dataset</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Parses some RDF and streams the triples as records of the form subject, predicate, object plus three additional fields: <ul><li>a boolean indicating whether the object of the statement is a literal: `isLiteral`</li><li>The datatype of the literal value if available `literalType`</li><li>The language if available `literalLang`</li></ul> This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.<br> **Examples:**<br>CALL semantics.streamRDF("[https://.../clapton.n3](https://raw.githubusercontent.com/motools/musicontology/master/examples/clapton_perf/clapton.n3)","Turtle", {}) 
-| semantics.previewRDFSnippet      | <ul><li>An RDF snippet</li><li>serialization format(*)</li><li>map with zero or more params (see table below)</li></ul> | Identical to previewRDF but takes an RDF snippet instead of the url of the dataset.<br> Again, adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser :)<br> **Examples:**<br>CALL semantics.previewRDFSnippet('[{"@id": "http://indiv#9132", "@type": ... }]', "JSON-LD", { languageFilter: 'en'}) 
-| semantics.liteOntoImport      | <ul><li>URL of the dataset</li><li>serialization(*)</li></ul> | Imports the basic elements of an OWL or RDFS ontology, i.e. Classes, Properties, Domains, Ranges. Extended description [here](https://jesusbarrasa.wordpress.com/2016/04/06/building-a-semantic-graph-in-neo4j/) <br> **Example:**<br>CALL semantics.liteOntoImport("http://.../myonto.trig","TriG")  
-| semantics.getIRILocalName      | **[function]**<ul><li>IRI string</li></ul> | Returns the local part of the IRI (stripping out the namespace) <br> **Example:**<br>RETURN semantics.getIRILocalName('http://schema.org/Person')  
-| semantics.getIRINamespace      | **[function]**<ul><li>IRI string</li></ul> | Returns the namespace part of the IRI (stripping out the local part) <br> **Example:**<br>RETURN semantics.getIRINamespace('http://schema.org/Person')  
-|===
-
-
-
-
-|===
-| Param        | values(default)           | Description  
-| shortenUrls      | boolean (true) | when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels 
-| typesToLabels      | boolean (true) | when set to true, rdf:type statements are imported as node labels in Neo4j 
-| languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported  
-| headerParams      | map {} | parameters to be passed in the HTTP GET request. <br> Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'} 
-| commitSize      | integer (25000) | commit a partial transaction every n triples 
-| nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB
-| keepCustomDataTypes | boolean(false) | when set to true, all properties containing a custom data type will be saved as a string followed by their custom data type IRIs
-| customDataTypedPropList| ['http://example.com/power'] | when set, only custom data types of literal properties in this list are imported
-|===
-
-
-
-[WARNING]
-Graph Algorithms (similarity, centrality and clustering) in APOC are deprecated and about to be removed.
-Please use the algorithms in https://r.neo4j.com/algo[neo4j-graph-algorithms] instead.
-
 

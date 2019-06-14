@@ -51,6 +51,7 @@ public class LiteOntologyImporter {
   private static final String DEFAULT_SPO_REL_NAME = "SPO";
   private static final String DEFAULT_DOMAIN_REL_NAME = "DOMAIN";
   private static final String DEFAULT_RANGE_REL_NAME = "RANGE";
+  private static final boolean DEFAULT_ADD_RESOURCE_LABELS = false;
   @Context
   public GraphDatabaseService db;
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
@@ -68,6 +69,9 @@ public class LiteOntologyImporter {
     int datatypePropsLoaded = 0;
     int objPropsLoaded = 0;
     int propsLoaded = 0;
+    boolean addResourceLabel =
+        props.containsKey("addResourceLabels") ? (boolean) props.get("addResourceLabels")
+            : DEFAULT_ADD_RESOURCE_LABELS;
     String classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel")
         : DEFAULT_CLASS_LABEL_NAME;
     String subClassOfRelName =
@@ -97,14 +101,14 @@ public class LiteOntologyImporter {
       Model model = new LinkedHashModel();
       rdfParser.setRDFHandler(new StatementCollector(model));
       rdfParser.parse(inputStream, url);
-      classesLoaded = extractClasses(model, classLabelName, subClassOfRelName);
+      classesLoaded = extractClasses(model, classLabelName, subClassOfRelName, addResourceLabel);
       objPropsLoaded = extractProps(model, OWL.OBJECTPROPERTY, objectPropertyLabelName,
-          subPropertyOfRelName, domainRelName, rangeRelName);
+          subPropertyOfRelName, domainRelName, rangeRelName, addResourceLabel);
       datatypePropsLoaded = extractProps(model, OWL.DATATYPEPROPERTY, dataTypePropertyLabelName,
-          subPropertyOfRelName, domainRelName, rangeRelName);
+          subPropertyOfRelName, domainRelName, rangeRelName, addResourceLabel);
       //an rdf:property can be either datatype or objecttype? I'll treat it as an object property
       propsLoaded = extractProps(model, RDF.PROPERTY, objectPropertyLabelName, subPropertyOfRelName,
-          domainRelName, rangeRelName);
+          domainRelName, rangeRelName, addResourceLabel);
 
     } catch (MalformedURLException e) {
       e.printStackTrace();
@@ -144,7 +148,7 @@ public class LiteOntologyImporter {
 
   private int extractProps(Model model, IRI propType, String propertyLabelName,
       String subPropertyOfRelName,
-      String domainRelName, String rangeRelName) {
+      String domainRelName, String rangeRelName, boolean addResourceLabels) {
     int propsLoaded = 0;
     Set<Resource> allProps = model.filter(null, RDF.TYPE, propType).subjects();
     List<Map<String, Object>> allPropParams = new ArrayList<>();
@@ -176,21 +180,23 @@ public class LiteOntologyImporter {
     Map<String, Object> paramsForPropQuery = new HashMap<>();
     paramsForPropQuery.put("paramList", allPropParams);
     db.execute(String
-        .format("UNWIND $paramList AS param MERGE (p:%s { uri: param.uri}) SET p+=param.props",
-            propertyLabelName), paramsForPropQuery);
+        .format("UNWIND $paramList AS param MERGE (p:%s`%s` { uri: param.uri}) SET p+=param.props",
+            (addResourceLabels ? "Resource:" : ""), propertyLabelName), paramsForPropQuery);
 
     Map<String, Object> paramsForDomainQuery = new HashMap<>();
     paramsForDomainQuery.put("paramList", allDomainParams);
     db.execute(String.format(
-        "UNWIND $paramList AS param MATCH (p:`%s` { uri: param.propUri}), (c { uri: param.domainUri}) MERGE (p)-[:`%s`]->(c)",
+        "UNWIND $paramList AS param MATCH (p:%s`%s` { uri: param.propUri}), (c { uri: param.domainUri}) MERGE (p)-[:`%s`]->(c)",
         // c can be a class or an object property
-        propertyLabelName, domainRelName), paramsForDomainQuery);
+        (addResourceLabels ? "Resource:" : ""), propertyLabelName, domainRelName),
+        paramsForDomainQuery);
 
     Map<String, Object> paramsForRangeQuery = new HashMap<>();
     paramsForRangeQuery.put("paramList", allRangeParams);
     db.execute(String.format(
-        "UNWIND $paramList AS param MATCH (p:`%s` { uri: param.propUri}), (c { uri: param.rangeUri}) MERGE (p)-[:`%s`]->(c)",
-        propertyLabelName, rangeRelName), paramsForRangeQuery);
+        "UNWIND $paramList AS param MATCH (p:%s`%s` { uri: param.propUri}), (c { uri: param.rangeUri}) MERGE (p)-[:`%s`]->(c)",
+        (addResourceLabels ? "Resource:" : ""), propertyLabelName, rangeRelName),
+        paramsForRangeQuery);
 
     for (Resource propResource : allProps) {
       if (!(propResource instanceof BNode)) {
@@ -255,7 +261,8 @@ public class LiteOntologyImporter {
     }
   }
 
-  private int extractClasses(Model model, String classLabelName, String scoRelName) {
+  private int extractClasses(Model model, String classLabelName, String scoRelName,
+      boolean addResourceLabels) {
     // loads Simple Named Classes (https://www.w3.org/TR/2004/REC-owl-guide-20040210/#SimpleClasses)
     int classesLoaded = 0;
     Set<Resource> allClasses = model.filter(null, RDF.TYPE, OWL.CLASS).subjects();
@@ -287,8 +294,9 @@ public class LiteOntologyImporter {
     Map<String, Object> classParams = new HashMap<>();
     classParams.put("paramList", paramList);
     db.execute(String
-        .format("UNWIND $paramList AS params MERGE (p:`%s` { uri:params.uri}) SET p+=params.props",
-            classLabelName), classParams);
+        .format(
+            "UNWIND $paramList AS params MERGE (p:%s`%s` { uri:params.uri}) SET p+=params.props",
+            (addResourceLabels ? "Resource:" : ""), classLabelName), classParams);
 
     Set<Map<String, String>> scoPairs = new HashSet<>();
     for (Statement st : scoStatements) {

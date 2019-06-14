@@ -1,0 +1,7 @@
+@prefix ex: <http://example.org/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Resource2
+  ex:Predicate3 "100"^^xsd:long ;
+  ex:Predicate4 "400.0"^^xsd:double .
+
