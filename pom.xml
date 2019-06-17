@@ -9,7 +9,7 @@
   <packaging>jar</packaging>
   <properties>
     <neo4j.version>3.5.5</neo4j.version>
-    <sesame.version>2.5.1</sesame.version>
+    <sesame.version>2.5.2</sesame.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
@@ -49,6 +49,11 @@
     <dependency>
       <groupId>org.eclipse.rdf4j</groupId>
       <artifactId>rdf4j-rio-ntriples</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.rdf4j</groupId>
+      <artifactId>rdf4j-rio-nquads</artifactId>
       <version>${sesame.version}</version>
     </dependency>
 

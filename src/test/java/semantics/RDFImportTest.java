@@ -939,7 +939,7 @@ public class RDFImportTest {
       assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
       assertEquals("http://example.org/vocab/show/P854", next.get("predicate"));
       assertEquals(
-          "https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%25u00e4",
+          "https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4",
           next.get("object"));
       assertEquals(false, next.get("isLiteral"));
     }
