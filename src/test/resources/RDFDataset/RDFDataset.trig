@@ -5,13 +5,24 @@
 exDoc:G1 ex:created "06.06.2019"^^xsd:date .
 exDoc:G2 ex:created "07.06.2019"^^xsd:date .
 
-exDoc:G1 { exDoc:Monica a ex:Person ;
+exDoc:Monica a ex:Person ;
+             ex:friendOf exDoc:John .
+
+exDoc:G1 {
+    exDoc:Monica
               ex:name "Monica Murphy" ;
               ex:homepage <http://www.monicamurphy.org> ;
               ex:email <mailto:monica@monicamurphy.org> ;
               ex:hasSkill ex:Management ,
-                          ex:Programming . }
+                                  ex:Programming .
+    exDoc:Monica ex:knows exDoc:John . }
 
-exDoc:G2 { exDoc:Monica a ex:Person ;
+exDoc:G2 {
+    exDoc:Monica
               ex:city "New York" ;
               ex:country "USA" . }
+
+
+exDoc:G3 {
+    exDoc:John a ex:Person . }
+

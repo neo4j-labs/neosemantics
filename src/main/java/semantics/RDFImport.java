@@ -72,8 +72,7 @@ public class RDFImport {
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
-      RDFFormat.TURTLE,
-      RDFFormat.NTRIPLES, RDFFormat.TRIG};
+      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
   @Context
   public GraphDatabaseService db;
   @Context

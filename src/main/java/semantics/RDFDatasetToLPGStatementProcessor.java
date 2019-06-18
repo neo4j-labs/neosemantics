@@ -18,7 +18,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.eclipse.rdf4j.model.BNode;
@@ -50,8 +49,8 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
   protected Log log;
   Map<String, String> namespaces = new HashMap<>();
   protected Set<Statement> statements = new HashSet<>();
-  Map<ContexedResource, Map<String, Object>> resourceProps = new HashMap<>();
-  Map<ContexedResource, Set<String>> resourceLabels = new HashMap<>();
+  Map<ContextResource, Map<String, Object>> resourceProps = new HashMap<>();
+  Map<ContextResource, Set<String>> resourceLabels = new HashMap<>();
   int totalTriplesParsed = 0;
   int totalTriplesMapped = 0;
   int mappedTripleCounter = 0;
@@ -266,24 +265,24 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
   }
 
 
-  private void initialise(ContexedResource contexedResource) {
+  private void initialise(ContextResource contexedResource) {
     initialiseProps(contexedResource);
     initialiseLabels(contexedResource);
   }
 
-  private Set<String> initialiseLabels(ContexedResource contexedResource) {
+  private Set<String> initialiseLabels(ContextResource contexedResource) {
     Set<String> labels = new HashSet<>();
     resourceLabels.put(contexedResource, labels);
     return labels;
   }
 
-  private HashMap<String, Object> initialiseProps(ContexedResource contexedResource) {
+  private HashMap<String, Object> initialiseProps(ContextResource contexedResource) {
     HashMap<String, Object> props = new HashMap<>();
     resourceProps.put(contexedResource, props);
     return props;
   }
 
-  private boolean setProp(ContexedResource contexedResource, IRI propertyIRI,
+  private boolean setProp(ContextResource contexedResource, IRI propertyIRI,
       Literal propValueRaw) {
     Map<String, Object> props;
 
@@ -329,7 +328,7 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
     return propValue != null;
   }
 
-  private void setLabel(ContexedResource contexedResource, String label) {
+  private void setLabel(ContextResource contexedResource, String label) {
     Set<String> labels;
 
     if (!resourceLabels.containsKey(contexedResource)) {
@@ -342,7 +341,7 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
     labels.add(label);
   }
 
-  private void addResource(ContexedResource contexedResource) {
+  private void addResource(ContextResource contexedResource) {
 
     if (!resourceLabels.containsKey(contexedResource)) {
       initialise(contexedResource);
@@ -355,9 +354,9 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
     IRI predicate = st.getPredicate();
     Resource subject = st.getSubject();
     Value object = st.getObject();
-    ContexedResource sub = new ContexedResource(subject.stringValue(),
+    ContextResource sub = new ContextResource(subject.stringValue(),
         context != null ? context.stringValue() : null);
-    ContexedResource obj = new ContexedResource(object.stringValue(),
+    ContextResource obj = new ContextResource(object.stringValue(),
         context != null ? context.stringValue() : null);
 
     if (parserConfig.getPredicateExclusionList() == null || !parserConfig
@@ -388,48 +387,5 @@ abstract class RDFDatasetToLPGStatementProcessor implements RDFHandler {
   }
 
   protected abstract void periodicOperation();
-
-  /**
-   * ContextedResource contains a uri and a graphUri
-   * It represents a Resource with an optional graph (context) uri
-   * It is used as Key for the Maps containing labels and properties
-   */
-  protected static class ContexedResource {
-
-    private String uri;
-    private String graphUri;
-
-    ContexedResource(String uri, String graphUri) {
-      this.uri = uri;
-      this.graphUri = graphUri;
-    }
-
-    public String getUri() {
-      return uri;
-    }
-
-    String getGraphUri() {
-      return graphUri;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-      ContexedResource that = (ContexedResource) o;
-      return Objects.equals(getUri(), that.getUri()) &&
-          Objects.equals(getGraphUri(), that.getGraphUri());
-    }
-
-    @Override
-    public int hashCode() {
-      return Objects.hash(getUri(), getGraphUri());
-    }
-
-  }
 
 }
