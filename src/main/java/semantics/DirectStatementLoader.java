@@ -184,4 +184,5 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     mappedTripleCounter = 0;
     persistNamespaceNode();
   }
+
 }

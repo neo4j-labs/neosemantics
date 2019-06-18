@@ -28,7 +28,6 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
@@ -39,7 +38,7 @@ import org.neo4j.logging.Log;
  * Created by jbarrasa on 15/04/2019.
  */
 
-abstract class RDFToLPGStatementProcessor implements RDFHandler {
+abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   protected final Map<String, String> vocMappings;
   protected final RDFParserConfig parserConfig;
@@ -381,6 +380,11 @@ abstract class RDFToLPGStatementProcessor implements RDFHandler {
         && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }
+  }
+
+  @Override
+  RDFParserConfig getParserConfig() {
+    return parserConfig;
   }
 
   protected abstract void periodicOperation();

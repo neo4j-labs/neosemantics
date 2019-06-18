@@ -1815,6 +1815,187 @@ public class RDFImportTest {
     }
   }
 
+
+  @Test
+  public void ontoImportTest() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML')");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportWithCustomNames() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop)-[:DOMAIN]->(:Category)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+    }
+
+  }
+
+
+  @Test
+  public void ontoImportWithCustomNamesAndResourceLabels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop:Resource)-[:DOMAIN]->(:Category)  RETURN count(n) AS count")
+              .next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportSchemaOrg() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
+          "','RDF/XML')");
+
+      assertEquals(592L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(343L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(292L,
+          session.run("MATCH (n:Relationship)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(416L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportClassHierarchy() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
+              .toURI() +
+          "','RDF/XML')");
+
+      assertEquals(1L,
+          session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+              " RETURN count(p) AS count").next().get("count").asLong());
+    }
+  }
+
+
+  @Test
+  public void ontoImportPropHierarchy() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
+          "','RDF/XML')");
+
+      assertEquals(1L,
+          session.run("MATCH p=(:Property{name:'prop1'})-[:SPO]->(:Property{name:'superprop'})" +
+              " RETURN count(p) AS count").next().get("count").asLong());
+    }
+  }
+
+
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");
   }
