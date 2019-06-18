@@ -45,6 +45,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -551,11 +552,14 @@ public class RDFEndpoint {
         writer.startRDF();
         try (Transaction tx = gds.beginTx()) {
           Map<String, String> mappings = getExportMappingsFromDB(gds);
-          Node node = (Node) gds.findNode(Label.label(label), property,
+          ResourceIterator<Node> nodes = gds.findNodes(Label.label(label), property,
               (valType == null ? propVal : castValue(valType, propVal)));
-          processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
-          if (excludeContextParam == null) {
-            processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+          while (nodes.hasNext()) {
+            Node node = nodes.next();
+            processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            if (excludeContextParam == null) {
+              processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            }
           }
           writer.endRDF();
         } catch (NotFoundException e) {

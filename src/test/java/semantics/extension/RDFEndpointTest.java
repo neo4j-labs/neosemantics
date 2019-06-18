@@ -110,12 +110,52 @@ public class RDFEndpointTest {
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
+    }
+  }
+
+  @Test
+  public void testFindNodeByLabelAndProperty() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                  "MERGE (a:Category {catName: 'Actor'})\n" +
+                  "MERGE (d:Category {catName: 'Director'})\n" +
+                  "MERGE (c:Category {catName: 'Critic'})\n" +
+                  "CREATE (a)-[:SCO]->(p)\n" +
+                  "CREATE (d)-[:SCO]->(p)\n" +
+                  "CREATE (c)-[:SCO]->(p)\n" +
+                  "RETURN *";
+              graphDatabaseService.execute(ontoCreation);
+              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1964})\n" +
+                  "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+                  "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+              graphDatabaseService.execute(dataInsertion);
+              tx.success();
+            }
+            return null;
+          }
+        })
+        .newServer()) {
       // When
-      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
+      Long id = (Long) result.next().get("id");
+      assertEquals(new Long(7), id);
+
+      // When
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/Director/born/1961?valType=INTEGER");
 
-      expected = "[ {\n"
+      String expected = "[ {\n"
           + "  \"@id\" : \"neo4j://com.neo4j/indiv#6\",\n"
           + "  \"@type\" : [ \"neo4j://com.neo4j/voc#Director\" ],\n"
           + "  \"neo4j://com.neo4j/voc#born\" : [ {\n"
@@ -150,9 +190,43 @@ public class RDFEndpointTest {
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
+      // When
+      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/find/Actor/born/1964?valType=INTEGER");
 
+      expected = "[ {\n"
+          + "  \"@id\" : \"neo4j://com.neo4j/indiv#4\",\n"
+          + "  \"@type\" : [ \"neo4j://com.neo4j/voc#Actor\" ],\n"
+          + "  \"neo4j://com.neo4j/voc#born\" : [ {\n"
+          + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+          + "    \"@value\" : \"1964\"\n"
+          + "  } ],\n"
+          + "  \"neo4j://com.neo4j/voc#name\" : [ {\n"
+          + "    \"@value\" : \"Keanu Reeves\"\n"
+          + "  } ]\n"
+          + "}, {\n"
+          + "  \"@id\" : \"neo4j://com.neo4j/indiv#7\",\n"
+          + "  \"neo4j://com.neo4j/voc#WORKS_WITH\" : [ {\n"
+          + "    \"@id\" : \"neo4j://com.neo4j/indiv#8\"\n"
+          + "  } ]\n"
+          + "}, {\n"
+          + "  \"@id\" : \"neo4j://com.neo4j/indiv#8\",\n"
+          + "  \"@type\" : [ \"neo4j://com.neo4j/voc#Actor\" ],\n"
+          + "  \"neo4j://com.neo4j/voc#born\" : [ {\n"
+          + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+          + "    \"@value\" : \"1964\"\n"
+          + "  } ],\n"
+          + "  \"neo4j://com.neo4j/voc#name\" : [ {\n"
+          + "    \"@value\" : \"Andy Wachowski\"\n"
+          + "  } ]\n"
+          + "} ]";
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
     }
   }
+
 
   @Test
   public void testGetNodeByIdNotFoundOrInvalid() throws Exception {
@@ -170,6 +244,28 @@ public class RDFEndpointTest {
       response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/id/adb");
+
+      assertEquals("", response.rawContent());
+      assertEquals(404, response.status());
+
+    }
+  }
+
+  @Test
+  public void testFindNodeByLabelAndPropertyNotFoundOrInvalid() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class).newServer()) {
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/find/WrongLabel/wrongProperty/someValue");
+
+      assertEquals("[ ]", response.rawContent());
+      assertEquals(200, response.status());
+
+      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/find/Something");
 
       assertEquals("", response.rawContent());
       assertEquals(404, response.status());
