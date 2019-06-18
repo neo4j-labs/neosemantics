@@ -35,7 +35,7 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
 
   private static final Label RESOURCE = Label.label("Resource");
   private static final String[] EMPTY_ARRAY = new String[0];
-  private Cache<String, Node> nodeCache;
+  private Cache<ContextResource, Node> nodeCache;
 
   RDFDatasetDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
@@ -71,43 +71,31 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
     return namespaces;
   }
 
-  // Stolen from APOC :)
-  private Object toPropertyValue(Object value) {
-    Iterable it = (Iterable) value;
-    Object first = Iterables.firstOrNull(it);
-    if (first == null) {
-      return EMPTY_ARRAY;
-    }
-    return Iterables.asArray(first.getClass(), it);
-  }
-
   @Override
   public Integer call() throws Exception {
     int count = 0;
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
 
-      final Node node = nodeCache.get(entry.getKey().toString(), new Callable<Node>() {
+      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
         @Override
         public Node call() {
           Node node = null;
-          StringBuilder cypher = new StringBuilder();
-          cypher.append("MATCH (n:Resource) ");
-          cypher.append("WHERE n.uri = '");
-          cypher.append(entry.getKey().getUri());
-          cypher.append("' ");
-          if (entry.getKey().getGraphUri() != null) {
-            cypher.append("AND n.graphUri = '");
-            cypher.append(entry.getKey().getGraphUri());
-            cypher.append("' ");
-          } else {
-            cypher.append("AND NOT EXISTS(n.graphUri) ");
-          }
-          cypher.append("RETURN n");
-          Result result = graphdb.execute(cypher.toString());
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(entry.getKey().getUri(),
+              entry.getKey().getGraphUri(),
+              params);
+          Result result = graphdb.execute(cypher, params);
           if (result.hasNext()) {
-            long size = result.stream().count();
-            node = (Node) result.next();
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + entry.getKey().getUri() +
+                      (entry.getKey().getGraphUri() == null ? "}" :
+                          ", graphUri: " + entry.getKey().getGraphUri() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
+            }
           }
           if (node == null) {
             node = graphdb.createNode(RESOURCE);
@@ -146,84 +134,64 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
     }
 
     for (Statement st : statements) {
-
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue()
-              .concat(st.getContext() != null ? st.getContext().stringValue() : ""),
-          new Callable<Node>() {
-            @Override
-            public Node call() {  //throws AnyException
-              Node node;
-              StringBuilder cypher = new StringBuilder();
-              cypher.append("MATCH (n:Resource) ");
-              cypher.append("WHERE n.uri = '");
-              cypher.append(st.getSubject().stringValue());
-              cypher.append("' ");
-              if (st.getContext() != null) {
-                cypher.append("AND n.graphUri = '");
-                cypher.append(st.getContext().stringValue());
-                cypher.append("' ");
-              } else {
-                cypher.append("AND NOT EXISTS(n.graphUri) ");
-              }
-              cypher.append("RETURN n");
-              Result result = graphdb.execute(cypher.toString());
-              if (result.hasNext()) {
-                node = (Node) result.next().get("n");
-                if (result.hasNext()) {
-                  String props =
-                      "{uri: " + st.getSubject().stringValue() +
-                          (st.getContext() == null ? "}" :
-                              ", graphUri: " + st.getContext().stringValue() + "}");
-                  throw new IllegalStateException(
-                      "There are multiple matching nodes for the given properties " + props);
-                }
-              } else {
-                throw new NoSuchElementException(
-                    "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                        + " and \"graphUri\": " + st.getContext().stringValue());
-              }
-              return node;
+      ContextResource from = new ContextResource(st.getSubject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
+      final Node fromNode = nodeCache.get(from, new Callable<Node>() {
+        @Override
+        public Node call() {  //throws AnyException
+          Node node;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getSubject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + st.getSubject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
             }
-          });
-
-      final Node toNode = nodeCache.get(st.getObject().stringValue()
-              .concat(st.getContext() != null ? st.getContext().stringValue() : ""),
-          new Callable<Node>() {
-            @Override
-            public Node call() {  //throws AnyException
-              Node node;
-              StringBuilder cypher = new StringBuilder();
-              cypher.append("MATCH (n:Resource) ");
-              cypher.append("WHERE n.uri = '");
-              cypher.append(st.getObject().stringValue());
-              cypher.append("' ");
-              if (st.getContext() != null) {
-                cypher.append("AND n.graphUri = '");
-                cypher.append(st.getContext().stringValue());
-                cypher.append("' ");
-              } else {
-                cypher.append("AND NOT EXISTS(n.graphUri) ");
-              }
-              cypher.append("RETURN n");
-              Result result = graphdb.execute(cypher.toString());
-              if (result.hasNext()) {
-                node = (Node) result.next().get("n");
-                if (result.hasNext()) {
-                  String props =
-                      "{uri: " + st.getObject().stringValue() +
-                          (st.getContext() == null ? "}" :
-                              ", graphUri: " + st.getContext().stringValue() + "}");
-                  throw new IllegalStateException(
-                      "There are multiple matching nodes for the given properties " + props);
-                }
-              } else {
-                throw new NoSuchElementException(
-                    "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                        + " and \"graphUri\": " + st.getContext().stringValue());
-              }
-              return node;
+          } else {
+            throw new NoSuchElementException(
+                "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                    + " and \"graphUri\": " + st.getContext().stringValue());
+          }
+          return node;
+        }
+      });
+      ContextResource to = new ContextResource(st.getObject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
+      final Node toNode = nodeCache.get(to, new Callable<Node>() {
+        @Override
+        public Node call() {  //throws AnyException
+          Node node;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getObject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + st.getObject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
             }
-          });
+          } else {
+            throw new NoSuchElementException(
+                "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                    + " and \"graphUri\": " + st.getContext().stringValue());
+          }
+          return node;
+        }
+      });
 
       // check if the rel is already present. If so, don't recreate.
       // explore the node with the lowest degree
@@ -266,12 +234,21 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
     return 0;
   }
 
-
   @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
     persistNamespaceNode();
+  }
+
+  // Stolen from APOC :)
+  private Object toPropertyValue(Object value) {
+    Iterable it = (Iterable) value;
+    Object first = Iterables.firstOrNull(it);
+    if (first == null) {
+      return EMPTY_ARRAY;
+    }
+    return Iterables.asArray(first.getClass(), it);
   }
 }
