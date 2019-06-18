@@ -84,7 +84,7 @@ public class RDFEndpointTest {
 
       // When
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
-          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/id?nodeid="
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/id/"
               + id.toString());
 
       String expected = "[ {\n" +
@@ -110,6 +110,47 @@ public class RDFEndpointTest {
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
+      // When
+      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/find/Director/born/1961?valType=INTEGER");
+
+      expected = "[ {\n"
+          + "  \"@id\" : \"neo4j://com.neo4j/indiv#6\",\n"
+          + "  \"@type\" : [ \"neo4j://com.neo4j/voc#Director\" ],\n"
+          + "  \"neo4j://com.neo4j/voc#born\" : [ {\n"
+          + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+          + "    \"@value\" : \"1961\"\n"
+          + "  } ],\n"
+          + "  \"neo4j://com.neo4j/voc#name\" : [ {\n"
+          + "    \"@value\" : \"Laurence Fishburne\"\n"
+          + "  } ]\n"
+          + "} ]";
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+
+      // When
+      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/find/Director/name/Laurence%20Fishburne");
+
+      expected = "[ {\n"
+          + "  \"@id\" : \"neo4j://com.neo4j/indiv#6\",\n"
+          + "  \"@type\" : [ \"neo4j://com.neo4j/voc#Director\" ],\n"
+          + "  \"neo4j://com.neo4j/voc#born\" : [ {\n"
+          + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+          + "    \"@value\" : \"1961\"\n"
+          + "  } ],\n"
+          + "  \"neo4j://com.neo4j/voc#name\" : [ {\n"
+          + "    \"@value\" : \"Laurence Fishburne\"\n"
+          + "  } ]\n"
+          + "} ]";
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+
+
     }
   }
 
@@ -120,7 +161,7 @@ public class RDFEndpointTest {
         .withExtension("/rdf", RDFEndpoint.class).newServer()) {
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/id?nodeid=9999999");
+              + "describe/id/9999999");
 
       assertEquals("[ ]", response.rawContent());
       assertEquals(200, response.status());
@@ -128,7 +169,7 @@ public class RDFEndpointTest {
       //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
       response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/id?nodeid=adb");
+              + "describe/id/adb");
 
       assertEquals("", response.rawContent());
       assertEquals(404, response.status());
@@ -143,7 +184,7 @@ public class RDFEndpointTest {
         .withExtension("/rdf", RDFEndpoint.class).newServer()) {
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?uri=9999999");
+              + "describe/uri/9999999");
 
       assertEquals("[ ]", response.rawContent());
       assertEquals(200, response.status());
@@ -427,7 +468,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=https://permid.org/1-21523433750");
+              + "describe/uri/" + URLEncoder
+              .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString()));
       //TODO Make it better
       String expected = "@prefix neovoc: <neo4j://vocabulary#> .\n" +
           "\n" +
@@ -483,8 +525,10 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement"
-              + "&excludeContext=true");
+              + "describe/uri/" + URLEncoder.encode(
+              "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement",
+              StandardCharsets.UTF_8.toString())
+              + "?excludeContext=true");
 
       String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
           "<rdf:RDF\txmlns:neovoc=\"neo4j://vocabulary#\"" +
@@ -503,7 +547,7 @@ public class RDFEndpointTest {
 
       //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
       response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
-          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri?nodeuri="
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri/"
               + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace", "UTF-8")
       );
 
@@ -553,7 +597,9 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
+              + "describe/uri/" + URLEncoder
+              .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
+                  StandardCharsets.UTF_8.toString()));
       System.out.println(response.rawContent());
       assertEquals(200, response.status());
       String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -601,7 +647,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://example.org/vocab/show/218");
+              + "describe/uri/" + URLEncoder
+              .encode("http://example.org/vocab/show/218", StandardCharsets.UTF_8.toString()));
 
       String expected = "@prefix show: <http://example.org/vocab/show/> .\n" +
           "show:218 show:localName \"That Seventies Show\"@en .                 # literal with a language tag\n"
@@ -862,7 +909,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://example.org/Resource1");
+              + "describe/uri/" + URLEncoder
+              .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
           "\n" +
@@ -923,7 +971,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://example.org/Resource1");
+              + "describe/uri/" + URLEncoder
+              .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
           "\n" +
@@ -985,7 +1034,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://example.com/Mercedes");
+              + "describe/uri/" + URLEncoder
+              .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
           "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1045,7 +1095,8 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://example.com/Mercedes");
+              + "describe/uri/" + URLEncoder
+              .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
           "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +

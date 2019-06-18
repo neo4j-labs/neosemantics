@@ -18,6 +18,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
@@ -285,12 +286,11 @@ public class RDFEndpoint {
 
 
   @GET
-  @Path("/describe/uri")
+  @Path("/describe/uri/{nodeuri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+      "application/x-trig", "application/ld+json"})
   public Response nodebyuri(@Context GraphDatabaseService gds,
-      @QueryParam("nodeuri") String idParam,
+      @PathParam("nodeuri") String idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -492,11 +492,11 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/id")
+  @Path("/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
       "application/x-trig",
       "application/ld+json"})
-  public Response nodebyid(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
+  public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
       @QueryParam("format") String format,
@@ -526,6 +526,59 @@ public class RDFEndpoint {
 
 
     }).build();
+  }
+
+
+  @GET
+  @Path("/describe/find/{label}/{property}/{propertyValue}")
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
+      "application/x-trig",
+      "application/ld+json"})
+  public Response nodefind(@Context GraphDatabaseService gds, @PathParam("label") String label,
+      @PathParam("property") String property, @PathParam("propertyValue") String propVal,
+      @QueryParam("valType") String valType,
+      @QueryParam("excludeContext") String excludeContextParam,
+      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("format") String format,
+      @HeaderParam("accept") String acceptHeaderParam) {
+    return Response.ok().entity(new StreamingOutput() {
+      @Override
+      public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+
+        RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+        SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+        handleNamespaces(writer, gds);
+        writer.startRDF();
+        try (Transaction tx = gds.beginTx()) {
+          Map<String, String> mappings = getExportMappingsFromDB(gds);
+          Node node = (Node) gds.findNode(Label.label(label), property,
+              (valType == null ? propVal : castValue(valType, propVal)));
+          processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+          if (excludeContextParam == null) {
+            processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+          }
+          writer.endRDF();
+        } catch (NotFoundException e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        } catch (Exception e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
+      }
+
+
+    }).build();
+  }
+
+  private Object castValue(String valType, String propVal) {
+    if (valType.equals("INTEGER")) {
+      return Integer.valueOf(propVal);
+    } else if (valType.equals("FLOAT")) {
+      return Float.valueOf(propVal);
+    } else if (valType.equals("BOOLEAN")) {
+      return Boolean.valueOf(propVal);
+    } else {
+      return propVal;
+    }
   }
 
   private void processRelsOnLPG(RDFWriter writer, SimpleValueFactory valueFactory,
