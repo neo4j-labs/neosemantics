@@ -13,10 +13,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.StreamSupport;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
@@ -43,6 +45,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -181,7 +184,9 @@ public class RDFEndpoint {
                     node.getProperty("uri").toString(),
                     node.hasProperty("graphUri") ?
                         node.getProperty("graphUri").toString() : null);
-                if (!serializedNodes.contains(currentContextResource)) {
+                if (StreamSupport.stream(node.getLabels().spliterator(), false)
+                    .anyMatch(name -> Label.label("Resource").equals(name)) &&
+                    !serializedNodes.contains(currentContextResource)) {
                   processNode(namespaces, writer, valueFactory, baseVocabNS, node);
                   serializedNodes.add(currentContextResource);
                 }
@@ -311,12 +316,12 @@ public class RDFEndpoint {
 
 
   @GET
-  @Path("/describe/uri")
+  @Path("/describe/uri/{nodeuri}/{graphuri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyuri(@Context GraphDatabaseService gds,
-      @QueryParam("nodeuri") String uriParam,
-      @QueryParam("graphuri") String graphUriParam,
+      @PathParam("nodeuri") String uriParam,
+      @PathParam("graphuri") String graphUriParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -454,7 +459,7 @@ public class RDFEndpoint {
         return key;
       }
     }
-    throw new RDFEndpoint.MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
+    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
         .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
@@ -467,10 +472,10 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/id")
+  @Path("/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodebyid(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
+  public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
       @QueryParam("format") String format,
@@ -500,6 +505,62 @@ public class RDFEndpoint {
 
 
     }).build();
+  }
+
+
+  @GET
+  @Path("/describe/find/{label}/{property}/{propertyValue}")
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
+      "application/x-trig",
+      "application/ld+json"})
+  public Response nodefind(@Context GraphDatabaseService gds, @PathParam("label") String label,
+      @PathParam("property") String property, @PathParam("propertyValue") String propVal,
+      @QueryParam("valType") String valType,
+      @QueryParam("excludeContext") String excludeContextParam,
+      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("format") String format,
+      @HeaderParam("accept") String acceptHeaderParam) {
+    return Response.ok().entity(new StreamingOutput() {
+      @Override
+      public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+
+        RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+        SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+        handleNamespaces(writer, gds);
+        writer.startRDF();
+        try (Transaction tx = gds.beginTx()) {
+          Map<String, String> mappings = getExportMappingsFromDB(gds);
+          ResourceIterator<Node> nodes = gds.findNodes(Label.label(label), property,
+              (valType == null ? propVal : castValue(valType, propVal)));
+          while (nodes.hasNext()) {
+            Node node = nodes.next();
+            processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            if (excludeContextParam == null) {
+              processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            }
+          }
+          writer.endRDF();
+        } catch (NotFoundException e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        } catch (Exception e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
+      }
+
+
+    }).build();
+  }
+
+  private Object castValue(String valType, String propVal) {
+    if (valType.equals("INTEGER")) {
+      return Integer.valueOf(propVal);
+    } else if (valType.equals("FLOAT")) {
+      return Float.valueOf(propVal);
+    } else if (valType.equals("BOOLEAN")) {
+      return Boolean.valueOf(propVal);
+    } else {
+      return propVal;
+    }
   }
 
   private void processRelsOnLPG(RDFWriter writer, SimpleValueFactory valueFactory,
@@ -566,7 +627,7 @@ public class RDFEndpoint {
     writer.handleNamespace("neovoc", BASE_VOCAB_NS);
     writer.handleNamespace("neoind", BASE_INDIV_NS);
     gds.execute(
-        "MATCH (mns:_MapNs) WHERE exists(mns._prefix) RETURN mns._ns as ns, mns._prefix as prefix").
+        "MATCH (mns:_MapNs) WHERE exists(mns._prefix) RETURN mns._ns AS ns, mns._prefix AS prefix").
         forEachRemaining(
             result -> writer
                 .handleNamespace((String) result.get("prefix"), (String) result.get("ns")));

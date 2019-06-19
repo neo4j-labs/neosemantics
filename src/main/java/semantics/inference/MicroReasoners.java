@@ -31,6 +31,7 @@ public class MicroReasoners {
 
   private static final String sloInferenceFormatReturnClassNames = "RETURN $virtLabel as l UNION MATCH (:`%1$s` { `%2$s`: $virtLabel})<-[:`%3$s`*]-(sl:`%1$s`) RETURN distinct sl.`%2$s` as l";
   private static final String scoInferenceCypher = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
+  private static final String scoInferenceCypherBottomUp = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(subcat) = $catId RETURN collect(DISTINCT id(cat)) AS catIds";
   private static final String sroInferenceFormatReturnRelNames = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
   private static final String DEFAULT_SLO_REL_NAME = "SLO";
   private static final String DEFAULT_SCO_REL_NAME = "SCO";
@@ -40,6 +41,7 @@ public class MicroReasoners {
   private static final String DEFAULT_REL_LABEL_NAME = "Relationship";
   private static final String DEFAULT_REL_NAME_PROP_NAME = "name";
   private static final String DEFAULT_SRO_REL_NAME = "SRO";
+  private static final boolean DEFAULT_SEARCH_TOP_DOWN = false;
 
   @Context
   public GraphDatabaseService db;
@@ -125,6 +127,13 @@ public class MicroReasoners {
         : scoInferenceCypher.replace("SCO", subCatRelName)), params).next().get("catIds");
   }
 
+  private List<Long> getSuperCatIds(long catNodeId, String subCatRelName) {
+    Map<String, Object> params = new HashMap<String, Object>();
+    params.put("catId", catNodeId);
+    return (List<Long>) db.execute((subCatRelName == null ? scoInferenceCypherBottomUp
+        : scoInferenceCypherBottomUp.replace("SCO", subCatRelName)), params).next().get("catIds");
+  }
+
   @Procedure(mode = Mode.READ)
   @Description(
       "semantics.inference.getRels(node,'rel','>') - returns all outgoing relationships of type 'virtRel' "
@@ -198,18 +207,31 @@ public class MicroReasoners {
         : DEFAULT_IN_CAT_REL_NAME);
     final String subCatRelName = (props.containsKey("subCatRel") ? (String) props.get("subCatRel")
         : DEFAULT_SCO_REL_NAME);
-
-    List<Long> subLabels = getSubcatIds(category, subCatRelName);
+    final boolean searchTopDown = (props.containsKey("searchTopDown") ? (boolean) props.get("searchTopDown")
+        : DEFAULT_SEARCH_TOP_DOWN);
 
     Iterator<Relationship> relIterator = individual
         .getRelationships(RelationshipType.withName(inCatRelName), Direction.OUTGOING).iterator();
 
-    boolean is = false;
-    while (!is && relIterator.hasNext()) {
-      is |= subLabels.contains(relIterator.next().getEndNode().getId());
+    if (searchTopDown) {
+      List<Long> catIds = getSubcatIds(category, subCatRelName);
+      boolean is = false;
+      while (!is && relIterator.hasNext()) {
+        is |= catIds.contains(relIterator.next().getEndNode().getId());
+      }
+      return is;
+
+    } else {
+      boolean is = false;
+      while (!is && relIterator.hasNext()) {
+        List<Long> catIds = getSuperCatIds(relIterator.next().getEndNode().getId(), subCatRelName);
+        is |= catIds.contains(category.getId());
+      }
+      return is;
+
     }
 
-    return is;
+
   }
 
 }

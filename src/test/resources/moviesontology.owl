@@ -97,6 +97,7 @@
         <rdfs:range  rdf:resource="#Movie" />
     </owl:ObjectProperty>
 
+    <!-- Properties on properties is not alowed in RDFS
     <owl:DatatypeProperty rdf:ID="roles">
         <rdfs:label xml:lang="en">roles</rdfs:label>
         <rdfs:comment xml:lang="en">characters played by an actor in a movie</rdfs:comment>
@@ -114,5 +115,6 @@
         <rdfs:comment xml:lang="en">Film rating (0 to 100)</rdfs:comment>
         <rdfs:domain rdf:resource="#REVIEWED" />
     </owl:DatatypeProperty>
+    -->
 
 </rdf:RDF>

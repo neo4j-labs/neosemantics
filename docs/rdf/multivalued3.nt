@@ -1,0 +1,4 @@
+<neo4j://individual/JB> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://neo4j.org/voc#Person> .
+<neo4j://individual/JB> <http://neo4j.org/voc#altVal> "12"^^<http://www.w3.org/2001/XMLSchema#long> .
+<neo4j://individual/JB> <http://neo4j.org/voc#altVal> "14"^^<http://www.w3.org/2001/XMLSchema#long> .
+<neo4j://individual/JB> <http://neo4j.org/voc#altVal> "16"^^<http://www.w3.org/2001/XMLSchema#long>	 .

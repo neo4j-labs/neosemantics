@@ -1,5 +1,6 @@
 package semantics;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -24,6 +25,7 @@ public class RDFParserConfig {
   private final boolean typesToLabels;
   private final boolean keepLangTag;
   private final boolean keepCustomDataTypes;
+  private final boolean verifyUriSyntax;
   private long commitSize;
   private final long nodeCacheSize;
   private final String languageFilter;
@@ -44,23 +46,29 @@ public class RDFParserConfig {
     handleMultival = (props.containsKey("handleMultival") ? getHandleMultivalAsInt(
         (String) props.get("handleMultival")) : 0);
     multivalPropList = (props.containsKey("multivalPropList")
-        ? ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet())
+        : null);
     predicateExclusionList = (props.containsKey("predicateExclusionList")
-        ? ((List<String>) props.get("predicateExclusionList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("predicateExclusionList")).stream().collect(Collectors.toSet())
+        : null);
     customDataTypedPropList = (props.containsKey("customDataTypedPropList")
-        ? ((List<String>) props.get("customDataTypedPropList")).stream().collect(Collectors.toSet()) : null);
+        ? ((List<String>) props.get("customDataTypedPropList")).stream().collect(Collectors.toSet())
+        : null);
     typesToLabels = (props.containsKey("typesToLabels") ? (boolean) props
         .get("typesToLabels") : DEFAULT_TYPES_TO_LABELS);
     keepLangTag = (props.containsKey("keepLangTag") ? (boolean) props
         .get("keepLangTag") : false);
     keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") ? (boolean) props
         .get("keepCustomDataTypes") : DEFAULT_KEEP_CUSTOM_DATA_TYPES);
-    commitSize = (props.containsKey("commitSize") ? ((long) props.get("commitSize") > 0 ? (long) props.get("commitSize") : DEFAULT_COMMIT_SIZE)
+    commitSize = (props.containsKey("commitSize") ? ((long) props.get("commitSize") > 0
+        ? (long) props.get("commitSize") : DEFAULT_COMMIT_SIZE)
         : DEFAULT_COMMIT_SIZE);
     nodeCacheSize = (props.containsKey("nodeCacheSize") ? (long) props
         .get("nodeCacheSize") : DEFAULT_NODE_CACHE_SIZE);
     languageFilter = (props.containsKey("languageFilter") ? (String) props
         .get("languageFilter") : null);
+    verifyUriSyntax = props.containsKey("verifyUriSyntax") ? (Boolean) props
+        .get("verifyUriSyntax") : true;
   }
 
 
@@ -76,15 +84,43 @@ public class RDFParserConfig {
     }
   }
 
-  private int getHandleMultivalAsInt(String ignoreUrlsAsText) {
-    if (ignoreUrlsAsText.equals("OVERWRITE")) {
+  private String getHandleVocabUrisAsString() {
+    if (handleVocabUris == 0) {
+      return "SHORTEN";
+    } else if (handleVocabUris == 1) {
+      return "IGNORE";
+    } else if (handleVocabUris == 2) {
+      return "MAP";
+    } else {
+      return "KEEP";
+    }
+  }
+
+  private int getHandleMultivalAsInt(String multivalAsText) {
+    if (multivalAsText.equals("OVERWRITE")) {
       return 0;
-    } else if (ignoreUrlsAsText.equals("ARRAY")) {
+    } else if (multivalAsText.equals("ARRAY")) {
       return 1;
-    } else if (ignoreUrlsAsText.equals("REIFY")) {
+    }
+    // Not in use at the moment
+    else if (multivalAsText.equals("REIFY")) {
       return 2;
-    } else { //HYBRID
+    } else {
       return 3;
+    }
+  }
+
+  private String getHandleMultivalAsString() {
+    if (handleMultival == 0) {
+      return "OVERWRITE";
+    } else if (handleMultival == 1) {
+      return "ARRAY";
+    }
+    // Not in use at the moment
+    else if (handleMultival == 2) {
+      return "REIFY";
+    } else {
+      return "HYBRID";
     }
   }
 
@@ -110,6 +146,10 @@ public class RDFParserConfig {
 
   public Set<String> getCustomDataTypedPropList() {
     return customDataTypedPropList;
+  }
+
+  public boolean isVerifyUriSyntax() {
+    return verifyUriSyntax;
   }
 
   public boolean isTypesToLabels() {
@@ -138,5 +178,63 @@ public class RDFParserConfig {
 
   public void setCommitSize(long commitSize) {
     this.commitSize = commitSize;
+  }
+
+  public Map<String, Object> getConfigSummary() {
+    Map<String, Object> summary = new HashMap<>();
+
+    if (handleVocabUris != 0) {
+      summary.put("handleVocabUris", getHandleVocabUrisAsString());
+    }
+
+    if (applyNeo4jNaming != false) {
+      summary.put("applyNeo4jNaming", applyNeo4jNaming);
+    }
+
+    if (handleMultival != 0) {
+      summary.put("handleMultival", getHandleMultivalAsString());
+    }
+
+    if (multivalPropList != null) {
+      summary.put("multivalPropList", multivalPropList);
+    }
+
+    if (predicateExclusionList != null) {
+      summary.put("predicateExclusionList", predicateExclusionList);
+    }
+
+    if (customDataTypedPropList != null) {
+      summary.put("customDataTypedPropList", customDataTypedPropList);
+    }
+
+    if (typesToLabels != DEFAULT_TYPES_TO_LABELS) {
+      summary.put("typesToLabels", typesToLabels);
+    }
+
+    if (keepLangTag != false) {
+      summary.put("keepLangTag", keepLangTag);
+    }
+
+    if (keepCustomDataTypes != DEFAULT_KEEP_CUSTOM_DATA_TYPES) {
+      summary.put("keepCustomDataTypes", keepCustomDataTypes);
+    }
+
+    if (commitSize != DEFAULT_COMMIT_SIZE) {
+      summary.put("commitSize", commitSize);
+    }
+
+    if (nodeCacheSize != DEFAULT_NODE_CACHE_SIZE) {
+      summary.put("nodeCacheSize", nodeCacheSize);
+    }
+
+    if (languageFilter != null) {
+      summary.put("languageFilter", languageFilter);
+    }
+
+    if (verifyUriSyntax != true) {
+      summary.put("verifyUriSyntax", verifyUriSyntax);
+    }
+
+    return summary;
   }
 }

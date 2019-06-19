@@ -1,0 +1,5 @@
+<neo4j://individual/JB> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://neo4j.org/voc#Person> .
+<neo4j://individual/JB> <http://neo4j.org/voc#name> "J. Barrasa" .
+<neo4j://individual/JB> <http://neo4j.org/voc#altName> "JB" .
+<neo4j://individual/JB> <http://neo4j.org/voc#altName> "Jesús" .
+<neo4j://individual/JB> <http://neo4j.org/voc#altName> "Dr J" .

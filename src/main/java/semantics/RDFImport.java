@@ -23,7 +23,6 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
@@ -90,15 +89,49 @@ public class RDFImport {
     DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format,
-          (props.containsKey("verifyUriSyntax") ? (Boolean) props
-              .get("verifyUriSyntax") : true), statementLoader);
+      parseRDF(getInputStream(url, props), url, format, statementLoader);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
+      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+      importResults.setConfigSummary(conf.getConfigSummary());
       e.printStackTrace();
+
     } finally {
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
       importResults.setNamespaces(statementLoader.getNamespaces());
+      importResults.setConfigSummary(conf.getConfigSummary());
+
+    }
+    return Stream.of(importResults);
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<ImportResults> importLargeOnto(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+    OntologyLoaderConfig conf = new OntologyLoaderConfig(props);
+
+    ImportResults importResults = new ImportResults();
+
+    OntologyImporter ontoImporter = new OntologyImporter(db, conf, log);
+    try {
+      checkIndexesExist();
+      InputStream stream = getInputStream(url, props);
+      parseRDF(stream, url, format, ontoImporter);
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      importResults.setTerminationKO(e.getMessage());
+      importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
+      importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+      importResults.setConfigSummary(conf.getConfigSummary());
+      e.printStackTrace();
+    } finally {
+      importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
+      importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+      importResults.setConfigSummary(conf.getConfigSummary());
     }
     return Stream.of(importResults);
   }
@@ -131,11 +164,12 @@ public class RDFImport {
 
   private void parseRDF(InputStream inputStream, @Name("url") String url,
       @Name("format") String format,
-      boolean verifyUriSyntax, RDFHandler statementLoader)
+      ConfiguredStatementHandler handler)
       throws IOException, RDFImportPreRequisitesNotMet {
     RDFParser rdfParser = Rio.createParser(getFormat(format));
-    rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, verifyUriSyntax);
-    rdfParser.setRDFHandler(statementLoader);
+    rdfParser
+        .set(BasicParserSettings.VERIFY_URI_SYNTAX, handler.getParserConfig().isVerifyUriSyntax());
+    rdfParser.setRDFHandler(handler);
     rdfParser.parse(inputStream, url);
   }
 
@@ -175,9 +209,7 @@ public class RDFImport {
     StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
         log);
     try {
-      parseRDF(getInputStream(url, props), url, format,
-          (props.containsKey("verifyUriSyntax") ? (Boolean) props
-              .get("verifyUriSyntax") : true), statementViewer);
+      parseRDF(getInputStream(url, props), url, format, statementViewer);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -194,9 +226,9 @@ public class RDFImport {
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
         .get("verifyUriSyntax") : true);
 
-    StatementStreamer statementStreamer = new StatementStreamer();
+    StatementStreamer statementStreamer = new StatementStreamer(new RDFParserConfig(props));
     try {
-      parseRDF(getInputStream(url, props), url, format, verifyUriSyntax, statementStreamer);
+      parseRDF(getInputStream(url, props), url, format, statementStreamer);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -220,10 +252,8 @@ public class RDFImport {
     StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
         log);
     try {
-      parseRDF(new ByteArrayInputStream(
-              rdfFragment.getBytes(Charset.defaultCharset())), "http://neo4j.com/base/", format,
-          (props.containsKey("verifyUriSyntax") ? (Boolean) props
-              .get("verifyUriSyntax") : true), statementViewer);
+      parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+          "http://neo4j.com/base/", format, statementViewer);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
     }
@@ -483,11 +513,21 @@ public class RDFImport {
 
     public String terminationStatus = "OK";
     public long triplesLoaded = 0;
+    public long triplesParsed = 0;
     public Map<String, String> namespaces;
     public String extraInfo = "";
+    public Map<String, Object> configSummary;
 
-    public void setTriplesLoaded(long triplesLoaded) {
-      this.triplesLoaded = triplesLoaded;
+    public void setTriplesLoaded(long count) {
+      this.triplesLoaded = count;
+    }
+
+    public void setTriplesParsed(long count) {
+      this.triplesParsed = count;
+    }
+
+    public void setConfigSummary(Map<String, Object> summary) {
+      this.configSummary = summary;
     }
 
     public void setNamespaces(Map<String, String> namespaces) {

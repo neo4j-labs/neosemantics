@@ -1,0 +1,10 @@
+[[Examples]]
+== Examples of use
+
+...work in progress...
+
+=== Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.
+
+=== Enrich your model with DBPedia data
+
+=== 

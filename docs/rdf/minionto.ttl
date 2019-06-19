@@ -1,0 +1,24 @@
+@prefix neo4voc: <http://neo4j.org/vocab/sw#> .
+@prefix sch: <http://schema.org/> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+
+
+# Ontology
+
+neo4voc:Author a rdfs:Class;
+	rdfs:label "Author";
+	rdfs:subClassOf sch:Person .
+
+neo4voc:Columnist a rdfs:Class;
+	rdfs:label "Columnist";
+	rdfs:subClassOf neo4voc:Author .
+
+sch:Person a rdfs:Class;
+	rdfs:label "Person" .
+
+neo4voc:OpinionArticle a rdfs:Class;
+	rdfs:label "OpinionArticle";
+	rdfs:subClassOf sch:Article .
+
+sch:Article a rdfs:Class;
+	rdfs:label "Article".
