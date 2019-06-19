@@ -15,7 +15,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -47,6 +46,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
+import semantics.ContextResource;
 
 /**
  * Created by jbarrasa on 08/09/2016.
@@ -54,12 +54,11 @@ import org.neo4j.logging.Log;
 @Path("/")
 public class RDFEndpoint {
 
-  public static final String BASE_VOCAB_NS = "neo4j://com.neo4j/voc#";
-  public static final String BASE_INDIV_NS = "neo4j://com.neo4j/indiv#";
+  private static final String BASE_VOCAB_NS = "neo4j://com.neo4j/voc#";
+  private static final String BASE_INDIV_NS = "neo4j://com.neo4j/indiv#";
   private static final ObjectMapper objectMapper = new ObjectMapper();
-  public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
-      RDFFormat.TURTLE,
-      RDFFormat.NTRIPLES, RDFFormat.TRIG};
+  private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
+      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
   private final Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
   private final Pattern customDataTypePattern = Pattern
       .compile("^(.*)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(.*)$");
@@ -72,9 +71,8 @@ public class RDFEndpoint {
 
   @POST
   @Path("/cypher")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response cypherOnPlainLPG(@Context GraphDatabaseService gds,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
     return Response.ok().entity(new StreamingOutput() {
@@ -124,7 +122,7 @@ public class RDFEndpoint {
           }
           writer.endRDF();
           result.close();
-        }catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
       }
@@ -133,9 +131,8 @@ public class RDFEndpoint {
 
   @POST
   @Path("/cypheronrdf")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response cypherOnImportedRDF(@Context GraphDatabaseService gds,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
     return Response.ok().entity(new StreamingOutput() {
@@ -147,10 +144,10 @@ public class RDFEndpoint {
             .readValue(body,
                 new TypeReference<Map<String, String>>() {
                 });
-        try (Transaction tx = gds.beginTx()) {
+        try (Transaction tx = gds.beginTx(); Result result = gds.execute(jsonMap.get("cypher"))) {
           final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
-          Result result = gds.execute(jsonMap.get("cypher"));
-          Set<String> serializedNodes = new HashSet<String>();
+
+          Set<ContextResource> serializedNodes = new HashSet<ContextResource>();
           RDFWriter writer = Rio
               .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
                   outputStream);
@@ -167,18 +164,26 @@ public class RDFEndpoint {
               if (o instanceof org.neo4j.graphdb.Path) {
                 org.neo4j.graphdb.Path path = (org.neo4j.graphdb.Path) o;
                 path.nodes().forEach(n -> {
-                  if (!serializedNodes.contains(n.getProperty("uri").toString())) {
+                  ContextResource currentContextResource = new ContextResource(
+                      n.getProperty("uri").toString(),
+                      n.hasProperty("graphUri") ?
+                          n.getProperty("graphUri").toString() : null);
+                  if (!serializedNodes.contains(currentContextResource)) {
                     processNode(namespaces, writer, valueFactory, baseVocabNS, n);
-                    serializedNodes.add(n.getProperty("uri").toString());
+                    serializedNodes.add(currentContextResource);
                   }
                 });
                 path.relationships().forEach(
                     r -> processRelationship(namespaces, writer, valueFactory, baseVocabNS, r));
               } else if (o instanceof Node) {
                 Node node = (Node) o;
-                if (!serializedNodes.contains(node.getProperty("uri").toString())) {
+                ContextResource currentContextResource = new ContextResource(
+                    node.getProperty("uri").toString(),
+                    node.hasProperty("graphUri") ?
+                        node.getProperty("graphUri").toString() : null);
+                if (!serializedNodes.contains(currentContextResource)) {
                   processNode(namespaces, writer, valueFactory, baseVocabNS, node);
-                  serializedNodes.add(node.getProperty("uri").toString());
+                  serializedNodes.add(currentContextResource);
                 }
               } else if (o instanceof Relationship) {
                 processRelationship(namespaces, writer, valueFactory, baseVocabNS,
@@ -187,8 +192,7 @@ public class RDFEndpoint {
             }
           }
           writer.endRDF();
-          result.close();
-        } catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
         }
 
@@ -198,10 +202,27 @@ public class RDFEndpoint {
 
   private void processRelationship(Map<String, String> namespaces, RDFWriter writer,
       SimpleValueFactory valueFactory, String baseVocabNS, Relationship rel) {
-    Resource subject = buildSubject(rel.getStartNode().getProperty("uri").toString(), valueFactory);
+    Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString(),
+        valueFactory);
     IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, rel.getType().name(), namespaces));
-    Resource object = buildSubject(rel.getEndNode().getProperty("uri").toString(), valueFactory);
-    writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+    Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString(),
+        valueFactory);
+    Resource context = null;
+    if (rel.getStartNode().hasProperty("graphUri") && rel.getEndNode().hasProperty("graphUri")) {
+      if (rel.getStartNode().getProperty("graphUri").toString()
+          .equals(rel.getEndNode().getProperty("graphUri").toString())) {
+        context = buildSubjectOrContext(rel.getStartNode().getProperty("graphUri").toString(),
+            valueFactory);
+      } else {
+        throw new IllegalStateException(
+            "Graph uri of a statement has to be the same for both start and end node of the relationship!");
+      }
+    } else if (rel.getStartNode().hasProperty("graphUri") != rel.getEndNode()
+        .hasProperty("graphUri")) {
+      throw new IllegalStateException(
+          "Graph uri of a statement has to be the same for both start and end node of the relationship!");
+    }
+    writer.handleStatement(valueFactory.createStatement(subject, predicate, object, context));
   }
 
   private void processNode(Map<String, String> namespaces, RDFWriter writer,
@@ -214,46 +235,53 @@ public class RDFEndpoint {
           label.name().equals("BNode"))) {
         writer.handleStatement(
             valueFactory
-                .createStatement(buildSubject(node.getProperty("uri").toString(), valueFactory),
+                .createStatement(
+                    buildSubjectOrContext(node.getProperty("uri").toString(), valueFactory),
                     RDF.TYPE,
-                    valueFactory.createIRI(buildURI(baseVocabNS, label.name(), namespaces))));
+                    valueFactory.createIRI(buildURI(baseVocabNS, label.name(), namespaces)),
+                    node.hasProperty("graphUri") ? valueFactory
+                        .createIRI(node.getProperty("graphUri").toString()) : null));
 
       }
     }
     Map<String, Object> allProperties = node.getAllProperties();
     for (String key : allProperties.keySet()) {
-      if (!key.equals("uri")) {
-        Resource subject = buildSubject(node.getProperty("uri").toString(), valueFactory);
+      if (!key.equals("uri") && !key.equals("graphUri")) {
+        Resource subject = buildSubjectOrContext(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);
+        Resource context = null;
+        if (node.hasProperty("graphUri")) {
+          context = buildSubjectOrContext(node.getProperty("graphUri").toString(), valueFactory);
+        }
         if (propertyValueObject instanceof Object[]) {
           for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
                     namespaces)));
             writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
+                valueFactory.createStatement(subject, predicate, object, context));
           }
         } else if (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((long[]) propertyValueObject)[i]);
             writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
+                valueFactory.createStatement(subject, predicate, object, context));
           }
         } else if (propertyValueObject instanceof double[]) {
           for (int i = 0; i < ((double[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((double[]) propertyValueObject)[i]);
             writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
+                valueFactory.createStatement(subject, predicate, object, context));
           }
         } else if (propertyValueObject instanceof boolean[]) {
           for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((boolean[]) propertyValueObject)[i]);
             writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
+                valueFactory.createStatement(subject, predicate, object, context));
           }
         } else {
           Literal object;
@@ -264,13 +292,13 @@ public class RDFEndpoint {
             object = createTypedLiteral(valueFactory, propertyValueObject);
           }
           writer.handleStatement(
-              valueFactory.createStatement(subject, predicate, object));
+              valueFactory.createStatement(subject, predicate, object, context));
         }
       }
     }
   }
 
-  private Resource buildSubject(String id, ValueFactory vf) {
+  private Resource buildSubjectOrContext(String id, ValueFactory vf) {
     Resource result;
     try {
       result = vf.createIRI(id);
@@ -284,11 +312,11 @@ public class RDFEndpoint {
 
   @GET
   @Path("/describe/uri")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyuri(@Context GraphDatabaseService gds,
-      @QueryParam("nodeuri") String idParam,
+      @QueryParam("nodeuri") String uriParam,
+      @QueryParam("graphuri") String graphUriParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -297,16 +325,31 @@ public class RDFEndpoint {
       public void write(OutputStream outputStream) throws IOException, WebApplicationException {
 
         Map<String, String> namespaces = getNamespacesFromDB(gds);
-
-        String queryWithContext = "MATCH (x:Resource {uri:{theuri}}) " +
-            "OPTIONAL MATCH (x)-[r]-(val:Resource) WHERE exists(val.uri)\n" +
-            "RETURN x, r, val.uri AS value";
-
-        String queryNoContext = "MATCH (x:Resource {uri:{theuri}}) " +
-            "RETURN x, null AS r, null AS value";
-
+        String queryWithContext;
+        String queryNoContext;
         Map<String, Object> params = new HashMap<>();
-        params.put("theuri", idParam);
+        params.put("uri", uriParam);
+        if (graphUriParam == null || graphUriParam.equals("")) {
+          queryWithContext = "MATCH (x:Resource {uri:{uri}}) " +
+              "WHERE NOT EXISTS(x.graphUri)\n" +
+              "OPTIONAL MATCH (x)-[r]-(val:Resource) " +
+              "WHERE exists(val.uri)\n" +
+              "AND NOT EXISTS(val.graphUri)\n" +
+              "RETURN x, r, val.uri AS value";
+
+          queryNoContext = "MATCH (x:Resource {uri:{uri}}) " +
+              "WHERE NOT EXISTS(x.graphUri)\n" +
+              "RETURN x, null AS r, null AS value";
+        } else {
+          queryWithContext = "MATCH (x:Resource {uri:{uri}, graphUri:{graphUri}}) " +
+              "OPTIONAL MATCH (x)-[r]-(val:Resource {graphUri:{graphUri}}) " +
+              "WHERE exists(val.uri)\n" +
+              "RETURN x, r, val.uri AS value";
+
+          queryNoContext = "MATCH (x:Resource {uri:{uri}, graphUri:{graphUri}}) " +
+              "RETURN x, null AS r, null AS value";
+          params.put("graphUri", graphUriParam);
+        }
         try (Transaction tx = gds.beginTx()) {
           Result result = gds
               .execute((excludeContextParam != null ? queryNoContext : queryWithContext),
@@ -320,81 +363,15 @@ public class RDFEndpoint {
           boolean doneOnce = false;
           while (result.hasNext()) {
             Map<String, Object> row = result.next();
+            Node node = (Node) row.get("x");
             if (!doneOnce) {
               //Output only once the props of the selected node as literal properties
-              Node node = (Node) row.get("x");
-              Iterable<Label> nodeLabels = node.getLabels();
-              for (Label label : nodeLabels) {
-                //Exclude the Resource category created by the importer to emulate RDF
-                if (!label.name().equals("Resource")) {
-
-                  writer.handleStatement(
-                      valueFactory.createStatement(getResource(idParam.toString(), valueFactory),
-                          RDF.TYPE,
-                          valueFactory.createIRI(
-                              buildURI(baseVocabNS, label.name(), namespaces))));
-                }
-              }
-              Map<String, Object> allProperties = node.getAllProperties();
-              for (String key : allProperties.keySet()) {
-                if (!key.equals("uri")) {
-                  Resource subject = getResource(idParam.toString(), valueFactory);
-                  IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
-                  Object propertyValueObject = allProperties.get(key);
-                  if (propertyValueObject instanceof Object[]) {
-                    for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-                      Literal object = createTypedLiteral(valueFactory,
-                          (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
-                              namespaces)));
-                      writer.handleStatement(
-                          valueFactory.createStatement(subject, predicate, object));
-                    }
-                  } else if (propertyValueObject instanceof long[]) {
-                    for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
-                      Literal object = createTypedLiteral(valueFactory,
-                          ((long[]) propertyValueObject)[i]);
-                      writer.handleStatement(
-                          valueFactory.createStatement(subject, predicate, object));
-                    }
-                  } else if (propertyValueObject instanceof double[]) {
-                    for (int i = 0; i < ((double[]) propertyValueObject).length; i++) {
-                      Literal object = createTypedLiteral(valueFactory,
-                          ((double[]) propertyValueObject)[i]);
-                      writer.handleStatement(
-                          valueFactory.createStatement(subject, predicate, object));
-                    }
-                  } else if (propertyValueObject instanceof boolean[]) {
-                    for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
-                      Literal object = createTypedLiteral(valueFactory,
-                          ((boolean[]) propertyValueObject)[i]);
-                      writer.handleStatement(
-                          valueFactory.createStatement(subject, predicate, object));
-                    }
-                  } else {
-                    Literal object;
-                    if (propertyValueObject instanceof String) {
-                      object = createTypedLiteral(valueFactory,
-                          (buildCustomDTFromShortURI((String) propertyValueObject, namespaces)));
-                    } else {
-                      object = createTypedLiteral(valueFactory, propertyValueObject);
-                    }
-                    writer.handleStatement(
-                        valueFactory.createStatement(subject, predicate, object));
-                  }
-                }
-              }
+              processNode(namespaces, writer, valueFactory, baseVocabNS, node);
               doneOnce = true;
             }
             Relationship rel = (Relationship) row.get("r");
             if (rel != null) {
-
-              Resource subject = getResource(rel.getStartNode().getProperty("uri").toString(),
-                  valueFactory);
-              IRI predicate = valueFactory
-                  .createIRI(
-                      buildURI(baseVocabNS, rel.getType().name(), namespaces));
-              IRI object = valueFactory.createIRI(rel.getEndNode().getProperty("uri").toString());
-              writer.handleStatement(valueFactory.createStatement(subject, predicate, object));
+              processRelationship(namespaces, writer, valueFactory, baseVocabNS, rel);
             }
           }
           writer.endRDF();
@@ -477,7 +454,8 @@ public class RDFEndpoint {
         return key;
       }
     }
-    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix).concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+    throw new RDFEndpoint.MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
+        .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
   private String getPrefix(String namespace, Map<String, String> namespaces) {
@@ -490,9 +468,8 @@ public class RDFEndpoint {
 
   @GET
   @Path("/describe/id")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyid(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
@@ -516,7 +493,7 @@ public class RDFEndpoint {
           writer.endRDF();
         } catch (NotFoundException e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
-        } catch (Exception e){
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
       }
@@ -529,17 +506,8 @@ public class RDFEndpoint {
       Map<String, String> mappings,
       Node node, boolean onlyMappedInfo) {
     Iterable<Relationship> relationships = node.getRelationships();
-    relationships.forEach(rel -> {
-      if (!onlyMappedInfo || mappings.containsKey(rel.getType().name())) {
-        writer.handleStatement(valueFactory.createStatement(
-            valueFactory.createIRI(BASE_INDIV_NS, String.valueOf(rel.getStartNode().getId())),
-            valueFactory.createIRI(
-                mappings.get(rel.getType().name()) != null ? mappings.get(rel.getType().name())
-                    :
-                        BASE_VOCAB_NS + rel.getType().name()),
-            valueFactory.createIRI(BASE_INDIV_NS, String.valueOf(rel.getEndNode().getId()))));
-      }
-    });
+    relationships
+        .forEach(rel -> processRelOnLPG(writer, valueFactory, mappings, rel, onlyMappedInfo));
   }
 
   private void processRelOnLPG(RDFWriter writer, SimpleValueFactory valueFactory,
@@ -615,9 +583,8 @@ public class RDFEndpoint {
 
   @GET
   @Path("/onto")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response exportOnto(@Context GraphDatabaseService gds, @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity(new StreamingOutput() {
@@ -658,18 +625,17 @@ public class RDFEndpoint {
 
           writer.endRDF();
 
-        }catch (Exception e){
-            handleSerialisationError(outputStream, e, acceptHeaderParam, format);
-          }
+        } catch (Exception e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
       }
     }).build();
   }
 
   @GET
   @Path("/rdfonto")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response exportRdfOnto(@Context GraphDatabaseService gds,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -685,50 +651,50 @@ public class RDFEndpoint {
         writer.startRDF();
 
         try (Transaction tx = gds.beginTx()) {
-        Set<Statement> publishedStatements = new HashSet<>();
-        Result res = gds.execute("CALL db.schema() ");
+          Set<Statement> publishedStatements = new HashSet<>();
+          Result res = gds.execute("CALL db.schema() ");
 
-        Map<String, Object> next = res.next();
-        List<Node> nodeList = (List<Node>) next.get("nodes");
-        nodeList.forEach(node -> {
-          String catName = node.getAllProperties().get("name").toString();
-          if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
-            IRI subject = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
-            publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
-            publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(subject, RDFS.LABEL,
-                    valueFactory.createLiteral(subject.getLocalName())));
-          }
-        });
+          Map<String, Object> next = res.next();
+          List<Node> nodeList = (List<Node>) next.get("nodes");
+          nodeList.forEach(node -> {
+            String catName = node.getAllProperties().get("name").toString();
+            if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+              IRI subject = valueFactory.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(subject, RDFS.LABEL,
+                      valueFactory.createLiteral(subject.getLocalName())));
+            }
+          });
 
-        List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
-        for (Relationship r : relationshipList) {
-          IRI relUri = valueFactory
-              .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
-          publishStatement(publishedStatements, writer,
-              valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
-          publishStatement(publishedStatements, writer,
-              valueFactory.createStatement(relUri, RDFS.LABEL,
-                  valueFactory.createLiteral(relUri.getLocalName())));
-          String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
-          if (!domainClassStr.equals("Resource")) {
-            IRI domainUri = valueFactory
-                .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+          List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
+          for (Relationship r : relationshipList) {
+            IRI relUri = valueFactory
+                .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
             publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
-          }
-          String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
-          if (!rangeClassStr.equals("Resource")) {
-            IRI rangeUri = valueFactory
-                .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+                valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
             publishStatement(publishedStatements, writer,
-                valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+                valueFactory.createStatement(relUri, RDFS.LABEL,
+                    valueFactory.createLiteral(relUri.getLocalName())));
+            String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
+            if (!domainClassStr.equals("Resource")) {
+              IRI domainUri = valueFactory
+                  .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
+            }
+            String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
+            if (!rangeClassStr.equals("Resource")) {
+              IRI rangeUri = valueFactory
+                  .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+              publishStatement(publishedStatements, writer,
+                  valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+            }
           }
-        }
 
-        writer.endRDF();
-        }catch (Exception e){
+          writer.endRDF();
+        } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
       }
