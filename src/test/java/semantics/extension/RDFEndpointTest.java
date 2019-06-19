@@ -1559,16 +1559,75 @@ public class RDFEndpointTest {
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri?nodeuri=http://www.example.org/exampleDocument%23Monica&graphuri=http://www.example.org/exampleDocument%23G1");
 
-      String expected = "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
-          + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"
-          + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John> <http://www.example.org/exampleDocument#G1> .\n"
-          + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management> <http://www.example.org/exampleDocument#G1> .\n"
-          + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Programming> <http://www.example.org/exampleDocument#G1> .\n"
-          + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> <http://www.example.org/exampleDocument#G1> .";
+      String expected =
+          "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Programming> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> <http://www.example.org/exampleDocument#G1> .";
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFDatasetAfterDeleteRDFBNodes() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                  RDFImportTest.class.getClassLoader().getResource(
+                      "RDFDatasets/RDFDatasetBNodes.trig")
+                      .toURI()
+                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              Result res = graphDatabaseService.execute("CALL semantics.deleteRDFDataset('" +
+                  RDFImportTest.class.getClassLoader().getResource(
+                      "RDFDatasets/RDFDatasetBNodesDelete.trig")
+                      .toURI()
+                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              assertEquals(2L, res.next().get("triplesDeleted"));
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->()"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "application/trig")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources
+          .toString(Resources.getResource("RDFDatasets/RDFDatasetBNodesPostDeletion.trig"),
+              StandardCharsets.UTF_8);
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }

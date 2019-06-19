@@ -1824,7 +1824,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
-          RDFImportTest.class.getClassLoader().getResource("RDFDataset/RDFDataset.trig")
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -1892,7 +1892,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
-          RDFImportTest.class.getClassLoader().getResource("RDFDataset/RDFDataset.nq")
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -1948,6 +1948,70 @@ public class RDFImportTest {
                   + "(m:Resource)"
                   + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
       assertFalse(result.next().get("result").asBoolean());
+    }
+  }
+
+  @Test
+  public void testDeleteRDFDatasetTriG() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
+    }
+  }
+
+  @Test
+  public void testDeleteRDFDatasetNQuads() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+              .toURI()
+          + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.nq")
+              .toURI()
+          + "', 'N-Quads', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
     }
   }
 

@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import org.eclipse.rdf4j.model.BNode;
@@ -22,36 +23,34 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * This class implements an RDF handler to statement-wise delete imported RDF data
+ * This class implements an RDF handler to statement-wise delete imported RDF data sets
  *
- * Created on 03/06/2019.
+ * Created on 18/06/2019.
  *
  * @author Emre Arkan
  */
-class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Callable<Integer> {
+
+class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor implements
+    Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
 
-  private final Cache<String, Node> nodeCache;
-
+  private Cache<ContextResource, Node> nodeCache;
   private long notDeletedStatementCount;
   private long bNodeCount;
   private String bNodeInfo;
 
-  DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
-
+  RDFDatasetDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
     log = l;
-    bNodeInfo = "";
-    notDeletedStatementCount = 0;
-    bNodeCount = 0;
   }
 
   @Override
@@ -70,8 +69,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   @Override
   public Integer call() throws Exception {
 
-    for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
-      if (entry.getKey().startsWith("genid")) {
+    for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
+      if (entry.getKey().getUri().startsWith("genid")) {
         bNodeCount++;
         notDeletedStatementCount++;
         continue;
@@ -82,19 +81,30 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
           @Override
           public Node call() {
-            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-            if (node != null) {
-              return node;
-            } else {
-              return node;
+            Node node = null;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(entry.getKey().getUri(),
+                entry.getKey().getGraphUri(),
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + entry.getKey().getUri() +
+                        (entry.getKey().getGraphUri() == null ? "}" :
+                            ", graphUri: " + entry.getKey().getGraphUri() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
             }
+            return node;
           }
         });
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
+      } catch (InvalidCacheLoadException | IllegalStateException e) {
+        e.printStackTrace();
       }
       node = tempNode;
-      //Can't delete node if it doesn't exist
       if (node == null) {
         notDeletedStatementCount++;
       }
@@ -166,34 +176,83 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         notDeletedStatementCount++;
         continue;
       }
+      ContextResource from = new ContextResource(st.getSubject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+        fromNode = nodeCache.get(from, new Callable<Node>() {
           @Override
           public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+            Node node;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(st.getSubject().stringValue(),
+                st.getContext() != null ? st.getContext().stringValue() : null,
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + st.getSubject().stringValue() +
+                        (st.getContext() == null ? "}" :
+                            ", graphUri: " + st.getContext().stringValue() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
+            } else {
+              throw new NoSuchElementException(
+                  "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                      + " and \"graphUri\": " + st.getContext().stringValue());
+            }
+            return node;
           }
         });
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
+      } catch (InvalidCacheLoadException | NoSuchElementException e) {
+        e.printStackTrace();
       }
       if (fromNode == null) {
+        notDeletedStatementCount++;
         continue;
       }
+      ContextResource to = new ContextResource(st.getObject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
       Node toNode = null;
       try {
-        toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+        toNode = nodeCache.get(to, new Callable<Node>() {
           @Override
           public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+            Node node;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(st.getObject().stringValue(),
+                st.getContext() != null ? st.getContext().stringValue() : null,
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + st.getObject().stringValue() +
+                        (st.getContext() == null ? "}" :
+                            ", graphUri: " + st.getContext().stringValue() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
+            } else {
+              throw new NoSuchElementException(
+                  "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                      + " and \"graphUri\": " + st.getContext().stringValue());
+            }
+            return node;
           }
         });
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
+      } catch (InvalidCacheLoadException | NoSuchElementException e) {
+        e.printStackTrace();
       }
       if (toNode == null) {
+        notDeletedStatementCount++;
         continue;
       }
+
       // find relationship if it exists
       if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
           Direction.OUTGOING) <
@@ -263,7 +322,10 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     if (!(node.hasRelationship(Direction.OUTGOING) ||
         node.hasRelationship(Direction.INCOMING)) && (node.hasLabel(RESOURCE) &&
         Iterators.size(node.getLabels().iterator()) == 1) &&
-        (node.getAllProperties().containsKey("uri") && nodePropertyCount == 1)) {
+        ((node.getAllProperties().containsKey("uri") && nodePropertyCount == 1) ||
+            ((node.getAllProperties().containsKey("uri") &&
+                node.getAllProperties().containsKey("graphUri")) &&
+                nodePropertyCount == 2))) {
       node.delete();
     }
   }
@@ -283,4 +345,5 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     }
     return value;
   }
+
 }

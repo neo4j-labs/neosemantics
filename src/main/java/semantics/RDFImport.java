@@ -1,5 +1,6 @@
 package semantics;
 
+import com.google.common.base.Preconditions;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -106,7 +107,7 @@ public class RDFImport {
   public Stream<ImportResults> importRDFDataset(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-
+    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
@@ -243,6 +244,37 @@ public class RDFImport {
     DeleteResults deleteResults = new DeleteResults();
 
     DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, conf, log);
+    try {
+      checkIndexesExist();
+
+      InputStream inputStream = getInputStream(url, props);
+      RDFParser rdfParser = Rio.createParser(getFormat(format));
+      rdfParser.setRDFHandler(statementDeleter);
+      rdfParser.parse(inputStream, url);
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      deleteResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      deleteResults.setTriplesDeleted(
+          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+    }
+    return Stream.of(deleteResults);
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<DeleteResults> deleteRDFDataset(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
+    RDFParserConfig conf = new RDFParserConfig(props);
+    conf.setCommitSize(Long.MAX_VALUE);
+
+    DeleteResults deleteResults = new DeleteResults();
+
+    RDFDatasetDirectStatementDeleter statementDeleter = new RDFDatasetDirectStatementDeleter(db,
+        conf, log);
     try {
       checkIndexesExist();
 
