@@ -581,7 +581,6 @@ public class RDFEndpointTest {
           "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n"
           +
           "    <https://permid.org/1-21523433750> .\n";
-
       assertEquals(200, response.status());
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
@@ -1002,7 +1001,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
@@ -1064,7 +1063,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
@@ -1127,7 +1126,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
@@ -1188,7 +1187,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
@@ -1251,7 +1250,7 @@ public class RDFEndpointTest {
       params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
           "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1316,7 +1315,7 @@ public class RDFEndpointTest {
       params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
           "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1382,7 +1381,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a:`http://example.com/Car`) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -1446,7 +1445,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a:ns0__Car) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -1661,7 +1660,9 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://www.example.org/exampleDocument%23Monica");
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString()));
 
       String expected = "{\n"
           + "  <http://www.example.org/exampleDocument#Monica> a <http://www.example.org/vocabulary#Person>;\n"
@@ -1708,7 +1709,10 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://www.example.org/exampleDocument%23Monica&graphuri=http://www.example.org/exampleDocument%23G1");
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString())
+              + "?graphuri=http://www.example.org/exampleDocument%23G1");
 
       String expected = "<http://www.example.org/exampleDocument#G1> {\n"
           + "  <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name>\n"
@@ -1760,8 +1764,10 @@ public class RDFEndpointTest {
 
       HTTP.Response response = HTTP.withHeaders("Accept", "application/n-quads").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
-              + "describe/uri?nodeuri=http://www.example.org/exampleDocument%23Monica&graphuri=http://www.example.org/exampleDocument%23G1");
-
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString())
+              + "?graphuri=http://www.example.org/exampleDocument%23G1");
       String expected =
           "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
               + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"

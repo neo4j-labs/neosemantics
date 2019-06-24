@@ -149,9 +149,8 @@ public class RDFImport {
         log);
     try {
       checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format,
-          (props.containsKey("verifyUriSyntax") ? (Boolean) props
-              .get("verifyUriSyntax") : true), statementLoader);
+      parseRDF(getInputStream(url, props), url, format, statementLoader);
+
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
       e.printStackTrace();

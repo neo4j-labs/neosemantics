@@ -43,7 +43,6 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
@@ -168,7 +167,8 @@ public class RDFEndpoint {
                 org.neo4j.graphdb.Path path = (org.neo4j.graphdb.Path) o;
                 path.nodes().forEach(n -> {
                   ContextResource currentContextResource = new ContextResource(
-                      n.getProperty("uri").toString(),
+                      n.hasProperty("uri") ?
+                          n.getProperty("uri").toString() : null,
                       n.hasProperty("graphUri") ?
                           n.getProperty("graphUri").toString() : null);
                   if (!serializedNodes.contains(currentContextResource)) {
@@ -181,7 +181,8 @@ public class RDFEndpoint {
               } else if (o instanceof Node) {
                 Node node = (Node) o;
                 ContextResource currentContextResource = new ContextResource(
-                    node.getProperty("uri").toString(),
+                    node.hasProperty("uri") ?
+                        node.getProperty("uri").toString() : null,
                     node.hasProperty("graphUri") ?
                         node.getProperty("graphUri").toString() : null);
                 if (StreamSupport.stream(node.getLabels().spliterator(), false)
@@ -316,12 +317,12 @@ public class RDFEndpoint {
 
 
   @GET
-  @Path("/describe/uri/{nodeuri}/{graphuri}")
+  @Path("/describe/uri/{nodeuri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyuri(@Context GraphDatabaseService gds,
       @PathParam("nodeuri") String uriParam,
-      @PathParam("graphuri") String graphUriParam,
+      @QueryParam("graphuri") String graphUriParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -496,8 +497,6 @@ public class RDFEndpoint {
             processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
           }
           writer.endRDF();
-        } catch (NotFoundException e) {
-          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
@@ -510,9 +509,8 @@ public class RDFEndpoint {
 
   @GET
   @Path("/describe/find/{label}/{property}/{propertyValue}")
-  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
+      "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodefind(@Context GraphDatabaseService gds, @PathParam("label") String label,
       @PathParam("property") String property, @PathParam("propertyValue") String propVal,
       @QueryParam("valType") String valType,
@@ -540,8 +538,6 @@ public class RDFEndpoint {
             }
           }
           writer.endRDF();
-        } catch (NotFoundException e) {
-          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         } catch (Exception e) {
           handleSerialisationError(outputStream, e, acceptHeaderParam, format);
         }
