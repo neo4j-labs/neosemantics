@@ -1,4 +1,347 @@
 [[Export]]
 == Exporting RDF data 
 
-...work in progress...
+In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.
+
+RDF is a W3C standard model for data interchange on the Web that represents data as a graph, hence the seamless serialisation of graph data from Neo4j in RDF as we'll see.
+
+There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the graph by its unique identifier (id or uri), selecting a group of nodes by Label + property value and via Cypher. Let's analyse each of them in detail.
+
+[WARNING]
+The paths used in the following sections assume that NSMNTX is mounted at `/rdf`. If you've mounted the extension under a different name (instructions on how to do this can be found in the <<install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used. 
+
+=== By node ID
+
+==== /rdf/describe/id
+
+To explain how some this method works, we'll use the Northwind Graph. You can easily load it in your Neo4j instance by running `:play northwind-graph` in your browser. This will bring up a guide with step by step instructions on how to create it. I'll assume the graph is now loaded.
+
+The describe/id method emulates the SPARQL DESCRIBE operation. It takes the unique identifier of an element in the graph and it produces an RDF serialisation of all information available about it. This includes properties, labels, and relationships (both incoming and outgoing).
+
+The only required parameter is the id of the node. As you know any node in Neo4j has a unique identifier that you can get via cypher using the `id` function.
+
+[source,Cypher]
+----
+MATCH (p:Product) WHERE p.productName = "Queso Manchego La Pastora" RETURN ID(p)
+----
+
+In my case, the `ID` returned by the previous query is `11`, so if I want NSMNTX to produce an RDF serialisation of this node, all I need to do is issue the following HTTP request:
+
+[source,HTTP]
+----
+http://localhost:7474/rdf/describe/id/11
+----
+
+Or if you're working on your Neo4j browser, you can run it like this too:
+
+[source,Cypher]
+----
+:GET /rdf/describe/id/11
+----
+
+And you will get a description for your node, serialised as Turtle RDF by default. Something like this:
+
+[source,Turtle]
+----
+@prefix neovoc: <neo4j://com.neo4j/voc#> .
+@prefix neoind: <neo4j://com.neo4j/indiv#> .
+
+
+neoind:11 a neovoc:Product;
+  neovoc:PART_OF neoind:83;
+  neovoc:categoryID "4";
+  neovoc:discontinued false;
+  neovoc:productID "12";
+  neovoc:productName "Queso Manchego La Pastora";
+  neovoc:quantityPerUnit "10 - 500 g pkgs.";
+  neovoc:reorderLevel "0"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:supplierID "5";
+  neovoc:unitPrice 3.8E1;
+  neovoc:unitsInStock "86"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:unitsOnOrder "0"^^<http://www.w3.org/2001/XMLSchema#long> .
+
+neoind:1038 neovoc:ORDERS neoind:11 .
+neoind:684 neovoc:ORDERS neoind:11 .
+neoind:1035 neovoc:ORDERS neoind:11 .
+neoind:525 neovoc:ORDERS neoind:11 .
+neoind:622 neovoc:ORDERS neoind:11 .
+neoind:968 neovoc:ORDERS neoind:11 .
+neoind:532 neovoc:ORDERS neoind:11 .
+neoind:667 neovoc:ORDERS neoind:11 .
+neoind:957 neovoc:ORDERS neoind:11 .
+neoind:1007 neovoc:ORDERS neoind:11 .
+neoind:707 neovoc:ORDERS neoind:11 .
+neoind:255 neovoc:ORDERS neoind:11 .
+neoind:1066 neovoc:ORDERS neoind:11 .
+neoind:428 neovoc:ORDERS neoind:11 .
+neoind:104 neovoc:SUPPLIES neoind:11 . 
+
+----
+
+You can modify the output of the describe method as follows:
+* Change serialisation format by either by using the `accept` header param with any of the RDF media types: `"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig", "application/ld+json"` or the `format` request param using any of the following values: `Turtle, N-Triples, JSON-LD, TriG, RDF/XML`. The `format` request parameter if used will override the `accept` header param.
+* Exclude relationships and just return the properties and labels of the selected node by setting the request parameter `exculdeContext` to `true`.
+* Exclude unmapped elements by setting the request parameter `showOnlyMapped` to true. We'll see in section <<Mapping>> how to define basic model mappings with NSMNTX.
+
+Here's an example of using some of this modifiers. The following request (again simplified notation for the Neo4j browser):
+
+[source,Cypher]
+----
+:GET /rdf/describe/id/11?format=RDF/XML&excludeContext=true
+----
+
+Would filter out relationships (RDF Object Properties) and set the serialisation format to `RDF/XML` to produce:
+
+[source,RDF/XML]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+	xmlns:neovoc="neo4j://com.neo4j/voc#"
+	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#11">
+	<rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/>
+	<neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long">0</neovoc:reorderLevel>
+	<neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long">86</neovoc:unitsInStock>
+	<neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double">38.0</neovoc:unitPrice>
+	<neovoc:supplierID>5</neovoc:supplierID>
+	<neovoc:productID>12</neovoc:productID>
+	<neovoc:quantityPerUnit>10 - 500 g pkgs.</neovoc:quantityPerUnit>
+	<neovoc:discontinued rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">false</neovoc:discontinued>
+	<neovoc:productName>Queso Manchego La Pastora</neovoc:productName>
+	<neovoc:categoryID>4</neovoc:categoryID>
+	<neovoc:unitsOnOrder rdf:datatype="http://www.w3.org/2001/XMLSchema#long">0</neovoc:unitsOnOrder>
+</rdf:Description>
+
+</rdf:RDF>
+----
+
+=== By URI
+
+==== /rdf/describe/uri
+
+If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested. You can do this in a very similar way to how you do it for any other Neo4j graph. The `/rdf/describe/uri` works exactly in the same way as the `/rdf/describe/id` but instead of taking a node's ID, it takes it's URI. Here's an example on the graph we imported in section <<import>>:
+
+[source,Cypher]
+----
+:GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
+----
+
+Again, notice the URL enconding of the URI and the `format` parameter to specify the serialisation format. Here's the output of the request:
+
+[source,Cypher]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+	xmlns:neovoc="neo4j://vocabulary#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+<rdf:Description rdf:about="http://neo4j.org/ind#neo4j355">
+	<rdf:type rdf:resource="http://neo4j.org/vocab/sw#GraphPlatform"/>
+	<rdf:type rdf:resource="http://neo4j.org/vocab/sw#AwesomePlatform"/>
+	<name xmlns="http://neo4j.org/vocab/sw#">neo4j</name>
+	<version xmlns="http://neo4j.org/vocab/sw#">3.5.5</version>
+</rdf:Description>
+
+<rdf:Description rdf:about="http://neo4j.org/ind#graphql3502">
+	<runsOn xmlns="http://neo4j.org/vocab/sw#" rdf:resource="http://neo4j.org/ind#neo4j355"/>
+</rdf:Description>
+
+<rdf:Description rdf:about="http://neo4j.org/ind#nsmntx3502">
+	<runsOn xmlns="http://neo4j.org/vocab/sw#" rdf:resource="http://neo4j.org/ind#neo4j355"/>
+</rdf:Description>
+
+<rdf:Description rdf:about="http://neo4j.org/ind#apoc3502">
+	<runsOn xmlns="http://neo4j.org/vocab/sw#" rdf:resource="http://neo4j.org/ind#neo4j355"/>
+</rdf:Description>
+
+</rdf:RDF>
+----
+
+=== By Label + property value
+
+==== /rdf/describe/find/
+
+An alternative way to select he node (or set of nodes) to serialise as RDF is to do a search by label and property. Let's say in our Northwind Database example we want to get the Suppliers in a given postal code. The label we're interested in is `Supplier` and the property is `postcode`. Here's what a request of this type would look like:
+
+[source,Cypher]
+----
+:GET /rdf/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples
+----
+
+In this request we are setting the serialisation to N-Triples format. Also notice that the property value (EC1 4SD) needs to be URL Encoded. Here's the output of the request:
+
+[source,RDF]
+----
+<neo4j://com.neo4j/indiv#100> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Supplier> .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#country> "UK" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#contactTitle> "Purchasing Manager" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#address> "49 Gilbert St." .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#supplierID> "1" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#phone> "(171) 555-2222" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#city> "London" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#contactName> "Charlotte Cooper" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#companyName> "Exotic Liquids" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#postalCode> "EC1 4SD" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#region> "NULL" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#fax> "NULL" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#homePage> "NULL" .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#SUPPLIES> <neo4j://com.neo4j/indiv#0> .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#SUPPLIES> <neo4j://com.neo4j/indiv#1> .
+<neo4j://com.neo4j/indiv#100> <neo4j://com.neo4j/voc#SUPPLIES> <neo4j://com.neo4j/indiv#2> .
+----
+
+By default property values are treated as strings which may or may not work depending on the actual datatype stored in the node property in the Database. If you need to specify the datatype, you'll need the `valType` parameter. The following request returns all products with a given price point.
+
+[source,Cypher]
+----
+:GET /rdf/describe/find/Product/unitPrice/15?valType=INTEGER&excludeContext
+----
+
+Notice how we are being explicit about the datatype using the `valType` request parameter. If we removed this parameter the request would return no results because there is no Product in the Northwind Database with a `unitPrice` stored as a string.
+Here's the ouptut produced (default serialisation is Turtle).
+
+[source,RDF]
+----
+@prefix neovoc: <neo4j://com.neo4j/voc#> .
+@prefix neoind: <neo4j://com.neo4j/indiv#> .
+
+
+neoind:69 a neovoc:Product;
+  neovoc:categoryID "1";
+  neovoc:discontinued false;
+  neovoc:productID "70";
+  neovoc:productName "Outback Lager";
+  neovoc:quantityPerUnit "24 - 355 ml bottles";
+  neovoc:reorderLevel "30"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:supplierID "7";
+  neovoc:unitPrice 1.5E1;
+  neovoc:unitsInStock "15"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:unitsOnOrder "10"^^<http://www.w3.org/2001/XMLSchema#long> .
+
+neoind:72 a neovoc:Product;
+  neovoc:categoryID "8";
+  neovoc:discontinued false;
+  neovoc:productID "73";
+  neovoc:productName "Röd Kaviar";
+  neovoc:quantityPerUnit "24 - 150 g jars";
+  neovoc:reorderLevel "5"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:supplierID "17";
+  neovoc:unitPrice 1.5E1;
+  neovoc:unitsInStock "101"^^<http://www.w3.org/2001/XMLSchema#long>;
+  neovoc:unitsOnOrder "0"^^<http://www.w3.org/2001/XMLSchema#long> .
+----
+
+The different values that the `valType` request parameter can take are currently: `INTEGER`, `FLOAT` and `BOOLEAN`.
+
+=== Using Cypher
+
+==== /rdf/cypher
+
+Finally, the most powerful way of selecting the portion of the graph that we want to serialise as cypher would obviously be to use Cypher. That's exactly what this method does. In this case it's a POST request that takes as payload a JSON map with at least one `cypher` key having as its value the query returning the graph objects (nodes with their properties and relationships) to be serialised.
+
+Optionally, the JSON map may include the `format` key that can be used to override the default serialization format (Turtle) and also a `showOnlyMapped` key (default value is `false`). Whe present, the returned serialisation will exclude unmapped elements (same functionality explained in the `describe` methods). Here's an example of use on the Northwind database. Note that your query needs to return graph elements: nodes, relationships or paths. Produces an RDF serialization of the nodes and relationships returned by the query.<br> 
+
+[source,Cypher]
+----
+:POST /rdf/cypher 
+{ "cypher" : "MATCH path = (n:Customer { customerID : 'GROSR'})-[:PURCHASED]->(o)-[:ORDERS]->()-[:PART_OF]->(:Category { categoryName : 'Beverages'}) RETURN path " , "format": "RDF/XML" }
+----
+
+This is the subgraph (path) that we are serialising as RDF. We're taking a customer by its `customerID` and getting all orders containing items in category `Beverages`. Nice path expression in Cypher :
+
+image::customer-order-product-neo4j.png[Customer, order, product, category graph path]
+
+And this is the generated RDF/XML.
+
+[source,RDF]
+----
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+	xmlns:neovoc="neo4j://com.neo4j/voc#"
+	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#172">
+	<rdf:type rdf:resource="neo4j://com.neo4j/voc#Customer"/>
+	<neovoc:country>Venezuela</neovoc:country>
+	<neovoc:address>5ª Ave. Los Palos Grandes</neovoc:address>
+	<neovoc:contactTitle>Owner</neovoc:contactTitle>
+	<neovoc:city>Caracas</neovoc:city>
+	<neovoc:phone>(2) 283-2951</neovoc:phone>
+	<neovoc:contactName>Manuel Pereira</neovoc:contactName>
+	<neovoc:companyName>GROSELLA-Restaurante</neovoc:companyName>
+	<neovoc:postalCode>1081</neovoc:postalCode>
+	<neovoc:customerID>GROSR</neovoc:customerID>
+	<neovoc:fax>(2) 283-3397</neovoc:fax>
+	<neovoc:region>DF</neovoc:region>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#774">
+	<rdf:type rdf:resource="neo4j://com.neo4j/voc#Order"/>
+	<neovoc:shipCity>Caracas</neovoc:shipCity>
+	<neovoc:orderID>10785</neovoc:orderID>
+	<neovoc:freight>1.51</neovoc:freight>
+	<neovoc:requiredDate>1998-01-15 00:00:00.000</neovoc:requiredDate>
+	<neovoc:employeeID>1</neovoc:employeeID>
+	<neovoc:shipPostalCode>1081</neovoc:shipPostalCode>
+	<neovoc:shipName>GROSELLA-Restaurante</neovoc:shipName>
+	<neovoc:shipCountry>Venezuela</neovoc:shipCountry>
+	<neovoc:shipAddress>5ª Ave. Los Palos Grandes</neovoc:shipAddress>
+	<neovoc:shipVia>3</neovoc:shipVia>
+	<neovoc:customerID>GROSR</neovoc:customerID>
+	<neovoc:shipRegion>DF</neovoc:shipRegion>
+	<neovoc:shippedDate>1997-12-24 00:00:00.000</neovoc:shippedDate>
+	<neovoc:orderDate>1997-12-18 00:00:00.000</neovoc:orderDate>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#74">
+	<rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/>
+	<neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long">25</neovoc:reorderLevel>
+	<neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long">125</neovoc:unitsInStock>
+	<neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double">7.75</neovoc:unitPrice>
+	<neovoc:supplierID>12</neovoc:supplierID>
+	<neovoc:productID>75</neovoc:productID>
+	<neovoc:quantityPerUnit>24 - 0.5 l bottles</neovoc:quantityPerUnit>
+	<neovoc:discontinued rdf:datatype="http://www.w3.org/2001/XMLSchema#boolean">false</neovoc:discontinued>
+	<neovoc:productName>Rhönbräu Klosterbier</neovoc:productName>
+	<neovoc:categoryID>1</neovoc:categoryID>
+	<neovoc:unitsOnOrder rdf:datatype="http://www.w3.org/2001/XMLSchema#long">0</neovoc:unitsOnOrder>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#80">
+	<rdf:type rdf:resource="neo4j://com.neo4j/voc#Category"/>
+	<neovoc:description>Soft drinks, coffees, teas, beers, and ales</neovoc:description>
+	<neovoc:categoryName>Beverages</neovoc:categoryName>
+	<neovoc:picture>0x151C2F00020000000D000E0014002100FFFFFFFF4269746D617020496D616765005061696E742E5069637475726500010500000200000007000000504272757368000000000000000000A0290000424D98290000000000005600000028000000AC00000078000000010004000000000000000000880B0000880B0000080000</neovoc:picture>
+	<neovoc:categoryID>1</neovoc:categoryID>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#172">
+	<neovoc:PURCHASED rdf:resource="neo4j://com.neo4j/indiv#774"/>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#774">
+	<neovoc:ORDERS rdf:resource="neo4j://com.neo4j/indiv#74"/>
+</rdf:Description>
+
+<rdf:Description rdf:about="neo4j://com.neo4j/indiv#74">
+	<neovoc:PART_OF rdf:resource="neo4j://com.neo4j/indiv#80"/>
+</rdf:Description>
+
+</rdf:RDF>
+
+----
+
+And here's the graph visualisation produced by the https://www.w3.org/RDF/Validator/[W3C's RDF validation service] for this RDF. Feel free to test the parsing of the generated RDF yourself. You can do it manually copy-pasting it in the form, or you can point directly to your Neo4j instance RDF endpoint if the URL is publicly accessible.
+
+image::customer-order-product-rdf.png[RDF Graph visualisation generated by W3C RDF Validation service]
+
+
+==== /rdf/cypheronrdf
+
+If the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and of course if you did NOT use the `IGNORE` option), `rdf/cypheronrdf` will work in exactly the same way as `rdf/cypher` but will use the namespace information to generate exactly the same RDF triples that were originally ingested. The parameters are identical to the previous case.
+
+
+Produces an RDF serialization of the nodes and relationships returned by the query. It works on a model either imported from an RDF dataset via semantics.importRDF or built in a way that nodes are labeled as :Resource and have an uri.<br> Example:<br>:POST /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b) RETURN a, r, b"}
