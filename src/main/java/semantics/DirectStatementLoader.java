@@ -34,11 +34,10 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
   public DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-    super(db, conf);
+    super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    log = l;
   }
 
   @Override

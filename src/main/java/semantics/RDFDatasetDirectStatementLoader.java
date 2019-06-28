@@ -39,11 +39,10 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
 
   RDFDatasetDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-    super(db, conf);
+    super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    log = l;
   }
 
   @Override

@@ -21,6 +21,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.logging.Log;
 
 
 /**
@@ -35,8 +36,8 @@ abstract class RDFDatasetToLPGStatementProcessor extends RDFToLPGStatementProces
   Map<ContextResource, Map<String, Object>> resourceProps;
   Map<ContextResource, Set<String>> resourceLabels;
 
-  RDFDatasetToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf) {
-    super(db, conf);
+  RDFDatasetToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+    super(db, conf, l);
     resourceProps = new HashMap<>();
     resourceLabels = new HashMap<>();
   }

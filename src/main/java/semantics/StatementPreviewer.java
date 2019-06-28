@@ -25,10 +25,9 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
   public StatementPreviewer(GraphDatabaseService db, RDFParserConfig conf,
       Map<String, Node> virtualNodes,
       List<Relationship> virtualRels, Log l) {
-    super(db, conf);
+    super(db, conf, l);
     vNodes = virtualNodes;
     vRels = virtualRels;
-    log = l;
   }
 
   public void endRDF() throws RDFHandlerException {

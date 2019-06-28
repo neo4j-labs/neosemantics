@@ -43,7 +43,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   protected final Map<String, String> vocMappings;
   protected final RDFParserConfig parserConfig;
   protected GraphDatabaseService graphdb;
-  protected Log log;
+  protected final Log log;
   protected Map<String, String> namespaces = new HashMap<>();
   protected Set<Statement> statements = new HashSet<>();
   protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
@@ -52,9 +52,10 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   protected long totalTriplesMapped = 0;
   protected long mappedTripleCounter = 0;
 
-  protected RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf) {
+  protected RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     this.graphdb = db;
     this.parserConfig = conf;
+    log = l;
     if (this.parserConfig.getHandleVocabUris() == URL_MAP) {
       Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {

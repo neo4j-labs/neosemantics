@@ -46,11 +46,10 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
   private String bNodeInfo;
 
   RDFDatasetDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
-    super(db, conf);
+    super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    log = l;
   }
 
   @Override
@@ -319,9 +318,10 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
 
   private void deleteNodeIfEmpty(Node node) {
     int nodePropertyCount = node.getAllProperties().size();
-    if (!(node.hasRelationship(Direction.OUTGOING) ||
-        node.hasRelationship(Direction.INCOMING)) && (node.hasLabel(RESOURCE) &&
-        Iterators.size(node.getLabels().iterator()) == 1) &&
+    int labelCount = Iterators.size(node.getLabels().iterator());
+    if (!node.hasRelationship(Direction.OUTGOING) &&
+        !node.hasRelationship(Direction.INCOMING) &&
+        node.hasLabel(RESOURCE) && labelCount == 1 &&
         ((node.getAllProperties().containsKey("uri") && nodePropertyCount == 1) ||
             ((node.getAllProperties().containsKey("uri") &&
                 node.getAllProperties().containsKey("graphUri")) &&

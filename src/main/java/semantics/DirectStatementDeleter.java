@@ -44,11 +44,10 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
   DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
-    super(db, conf);
+    super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    log = l;
     bNodeInfo = "";
     notDeletedStatementCount = 0;
     bNodeCount = 0;
@@ -260,9 +259,10 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
   private void deleteNodeIfEmpty(Node node) {
     int nodePropertyCount = node.getAllProperties().size();
-    if (!(node.hasRelationship(Direction.OUTGOING) ||
-        node.hasRelationship(Direction.INCOMING)) && (node.hasLabel(RESOURCE) &&
-        Iterators.size(node.getLabels().iterator()) == 1) &&
+    int labelCount = Iterators.size(node.getLabels().iterator());
+    if (!node.hasRelationship(Direction.OUTGOING) &&
+        !node.hasRelationship(Direction.INCOMING) &&
+        node.hasLabel(RESOURCE) && labelCount == 1 &&
         (node.getAllProperties().containsKey("uri") && nodePropertyCount == 1)) {
       node.delete();
     }
