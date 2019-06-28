@@ -322,10 +322,9 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
     if (!node.hasRelationship(Direction.OUTGOING) &&
         !node.hasRelationship(Direction.INCOMING) &&
         node.hasLabel(RESOURCE) && labelCount == 1 &&
-        ((node.getAllProperties().containsKey("uri") && nodePropertyCount == 1) ||
-            ((node.getAllProperties().containsKey("uri") &&
-                node.getAllProperties().containsKey("graphUri")) &&
-                nodePropertyCount == 2))) {
+        node.getAllProperties().containsKey("uri") &&
+        ((node.getAllProperties().containsKey("graphUri") && nodePropertyCount == 2) ||
+            nodePropertyCount == 1)) {
       node.delete();
     }
   }
