@@ -3,8 +3,7 @@ package semantics;
 import java.util.Objects;
 
 /**
- * ContextResource contains a uri and a graphUri
- * It represents a Resource with an optional graph (context) uri
+ * @see ContextResource represents a Resource with an optional graph (context) uri
  * It is used as Key for the Maps containing labels and properties
  *
  * Created on 06.06.2019
@@ -13,18 +12,27 @@ import java.util.Objects;
  */
 public class ContextResource {
 
-  private String uri;
-  private String graphUri;
+  final private String uri;
+  final private String graphUri;
 
   public ContextResource(String uri, String graphUri) {
     this.uri = uri;
     this.graphUri = graphUri;
   }
 
+  /**
+   * returns the uri of the current instance
+   *
+   * @return uri
+   */
   public String getUri() {
     return uri;
   }
 
+  /**
+   * returns the graphUri of the current instance
+   * @return graphUri
+   */
   public String getGraphUri() {
     return graphUri;
   }
