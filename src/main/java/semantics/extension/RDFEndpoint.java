@@ -6,6 +6,9 @@ import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +39,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
@@ -820,6 +824,10 @@ public class RDFEndpoint {
       result = valueFactory.createLiteral((Double) value);
     } else if (value instanceof Boolean) {
       result = valueFactory.createLiteral((Boolean) value);
+    } else if (value instanceof LocalDateTime) {
+      result = valueFactory.createLiteral(((LocalDateTime)value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), XMLSchema.DATETIME);
+    } else if (value instanceof LocalDate) {
+      result = valueFactory.createLiteral(((LocalDate)value).format(DateTimeFormatter.ISO_LOCAL_DATE), XMLSchema.DATE);
     } else {
       // default to string
       result = valueFactory.createLiteral("" + value);
