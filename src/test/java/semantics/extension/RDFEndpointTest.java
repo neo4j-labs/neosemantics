@@ -602,6 +602,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -611,6 +612,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -667,6 +669,7 @@ public class RDFEndpointTest {
               graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -683,6 +686,7 @@ public class RDFEndpointTest {
                   + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -723,6 +727,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -732,6 +737,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -982,6 +988,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -994,6 +1001,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1044,6 +1052,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1056,6 +1065,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1105,6 +1115,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1119,6 +1130,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1166,6 +1178,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1180,6 +1193,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1227,6 +1241,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1239,6 +1254,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1292,6 +1308,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1304,6 +1321,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1357,6 +1375,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1371,6 +1390,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1421,6 +1441,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1435,6 +1456,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1484,6 +1506,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1502,6 +1525,7 @@ public class RDFEndpointTest {
                   map.get("extraInfo"));
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1544,6 +1568,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1553,6 +1578,7 @@ public class RDFEndpointTest {
                   + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1595,6 +1621,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1604,6 +1631,7 @@ public class RDFEndpointTest {
                   + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1646,6 +1674,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1656,6 +1685,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1695,6 +1725,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1705,6 +1736,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1750,6 +1782,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1760,6 +1793,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1802,6 +1836,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1822,6 +1857,7 @@ public class RDFEndpointTest {
                   map.get("extraInfo"));
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
