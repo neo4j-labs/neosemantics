@@ -60,11 +60,6 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
-  public Map<String, String> getNamespaces() {
-
-    return namespaces;
-  }
-
   // Stolen from APOC :)
   private Object toPropertyValue(Object value) {
     Iterable it = (Iterable) value;

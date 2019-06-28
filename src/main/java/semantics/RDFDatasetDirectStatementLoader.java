@@ -65,11 +65,6 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
-  Map<String, String> getNamespaces() {
-
-    return namespaces;
-  }
-
   @Override
   public Integer call() throws Exception {
     int count = 0;

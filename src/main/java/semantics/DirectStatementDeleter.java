@@ -241,10 +241,6 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     mappedTripleCounter = 0;
   }
 
-  Map<String, String> getNamespaces() {
-    return namespaces;
-  }
-
   long getNotDeletedStatementCount() {
     return notDeletedStatementCount;
   }

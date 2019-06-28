@@ -388,6 +388,10 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return parserConfig;
   }
 
+  Map<String, String> getNamespaces() {
+    return namespaces;
+  }
+
   protected abstract void periodicOperation();
 
 }
