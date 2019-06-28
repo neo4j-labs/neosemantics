@@ -157,6 +157,7 @@ public class RDFImport {
     } finally {
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
       importResults.setNamespaces(statementLoader.getNamespaces());
+      importResults.setConfigSummary(conf.getConfigSummary());
     }
     return Stream.of(importResults);
   }
