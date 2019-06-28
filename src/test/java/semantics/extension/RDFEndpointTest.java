@@ -1487,14 +1487,19 @@ public class RDFEndpointTest {
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+              graphDatabaseService.execute("CALL semantics.importRDF('" +
                   RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
                       .toURI()
                   + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
+              Result res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
                   RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
                       .toURI()
                   + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              Map map = res.next();
+              assertEquals(1L, map.get("triplesDeleted"));
+              assertEquals(
+                  "8 of the statements could not be deleted, due to containing a blank node.",
+                  map.get("extraInfo"));
               tx.success();
             } catch (Exception e) {
               fail(e.getMessage());
@@ -1810,7 +1815,11 @@ public class RDFEndpointTest {
                       "RDFDatasets/RDFDatasetBNodesDelete.trig")
                       .toURI()
                   + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              assertEquals(2L, res.next().get("triplesDeleted"));
+              Map map = res.next();
+              assertEquals(3L, map.get("triplesDeleted"));
+              assertEquals(
+                  "4 of the statements could not be deleted, due to containing a blank node.",
+                  map.get("extraInfo"));
               tx.success();
             } catch (Exception e) {
               fail(e.getMessage());

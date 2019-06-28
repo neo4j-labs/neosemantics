@@ -39,7 +39,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private final Cache<String, Node> nodeCache;
 
   private long notDeletedStatementCount;
-  private long bNodeCount;
+  private long statementsWithbNodeCount;
   private String bNodeInfo;
 
   DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
@@ -50,7 +50,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         .build();
     bNodeInfo = "";
     notDeletedStatementCount = 0;
-    bNodeCount = 0;
+    statementsWithbNodeCount = 0;
   }
 
   @Override
@@ -71,8 +71,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().startsWith("genid")) {
-        bNodeCount++;
-        notDeletedStatementCount++;
+        statementsWithbNodeCount += entry.getValue().size() + 1;
         continue;
       }
       Node tempNode = null;
@@ -160,9 +159,10 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     }
 
     for (Statement st : statements) {
+      if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
+        statementsWithbNodeCount++;
+      }
       if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
-        bNodeCount++;
-        notDeletedStatementCount++;
         continue;
       }
       Node fromNode = null;
@@ -223,8 +223,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-    if (notDeletedStatementCount > 0) {
-      setbNodeInfo(bNodeCount
+    if (statementsWithbNodeCount > 0) {
+      setbNodeInfo(statementsWithbNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
 
@@ -242,7 +242,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   }
 
   long getNotDeletedStatementCount() {
-    return notDeletedStatementCount;
+    return notDeletedStatementCount + statementsWithbNodeCount;
   }
 
   String getbNodeInfo() {

@@ -42,7 +42,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
 
   private Cache<ContextResource, Node> nodeCache;
   private long notDeletedStatementCount;
-  private long bNodeCount;
+  private long statementsWithbNodeCount;
   private String bNodeInfo;
 
   RDFDatasetDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
@@ -50,6 +50,9 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
+    bNodeInfo = "";
+    notDeletedStatementCount = 0;
+    statementsWithbNodeCount = 0;
   }
 
   @Override
@@ -70,8 +73,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().getUri().startsWith("genid")) {
-        bNodeCount++;
-        notDeletedStatementCount++;
+        statementsWithbNodeCount += entry.getValue().size() + 1;
         continue;
       }
       Node tempNode = null;
@@ -170,9 +172,10 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
     }
 
     for (Statement st : statements) {
+      if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
+        statementsWithbNodeCount++;
+      }
       if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
-        bNodeCount++;
-        notDeletedStatementCount++;
         continue;
       }
       ContextResource from = new ContextResource(st.getSubject().stringValue(),
@@ -282,8 +285,8 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-    if (notDeletedStatementCount > 0) {
-      setbNodeInfo(bNodeCount
+    if (statementsWithbNodeCount > 0) {
+      setbNodeInfo(statementsWithbNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
 
@@ -301,7 +304,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
   }
 
   long getNotDeletedStatementCount() {
-    return notDeletedStatementCount;
+    return notDeletedStatementCount + statementsWithbNodeCount;
   }
 
   String getbNodeInfo() {
