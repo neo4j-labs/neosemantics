@@ -1297,7 +1297,8 @@ public class RDFEndpointTest {
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
               Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple-multivalued.ttl")
+                  RDFImportTest.class.getClassLoader()
+                      .getResource("datetime/datetime-simple-multivalued.ttl")
                       .toURI()
                   + "','Turtle',{handleMultival: 'ARRAY'})");
 

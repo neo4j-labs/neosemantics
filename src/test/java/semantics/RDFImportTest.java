@@ -2007,7 +2007,8 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl").toURI() + "','Turtle')");
+          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl").toURI()
+          + "','Turtle')");
       assertEquals(2L, importResults1.single().get("triplesLoaded").asLong());
       Record result = session.run(
           "MATCH (n) RETURN n.ns0__reportedOn AS rep, n.`ns0__creation-date` AS cre")
@@ -2029,7 +2030,8 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl").toURI() + "','Turtle')");
+          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl").toURI()
+          + "','Turtle')");
       assertEquals(23L, importResults1.single().get("triplesLoaded").asLong());
       Record result = session.run(
           "MATCH (n:ns0__Issue) RETURN n.ns0__reportedOn AS report, n.ns0__reproducedOn AS reprod")
@@ -2051,7 +2053,9 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
-          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple-multivalued.ttl").toURI() + "','Turtle', { handleMultival: 'ARRAY' })");
+          RDFImportTest.class.getClassLoader()
+              .getResource("datetime/datetime-simple-multivalued.ttl").toURI()
+          + "','Turtle', { handleMultival: 'ARRAY' })");
       assertEquals(5L, importResults1.single().get("triplesLoaded").asLong());
 
       Set<LocalDate> expectedDates = new HashSet<>();
@@ -2067,10 +2071,10 @@ public class RDFImportTest {
           "MATCH (n) RETURN n.ns0__someDateValue as dates, n.ns0__someDateTimeValues as dateTimes")
           .next();
       Set<LocalDate> actualDates = new HashSet<LocalDate>();
-      result.get("dates").asList().forEach(x -> actualDates.add((LocalDate)x));
+      result.get("dates").asList().forEach(x -> actualDates.add((LocalDate) x));
 
       Set<LocalDateTime> actualDateTimes = new HashSet<LocalDateTime>();
-      result.get("dateTimes").asList().forEach(x -> actualDateTimes.add((LocalDateTime)x));
+      result.get("dateTimes").asList().forEach(x -> actualDateTimes.add((LocalDateTime) x));
 
       assertTrue(actualDates.containsAll(expectedDates));
       assertTrue(expectedDates.containsAll(actualDates));

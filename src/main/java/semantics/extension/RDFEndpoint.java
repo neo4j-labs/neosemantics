@@ -234,7 +234,7 @@ public class RDFEndpoint {
         Resource subject = buildSubject(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);
-        if  (propertyValueObject instanceof long[]) {
+        if (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((long[]) propertyValueObject)[i]);
@@ -839,9 +839,13 @@ public class RDFEndpoint {
     } else if (value instanceof Boolean) {
       result = valueFactory.createLiteral((Boolean) value);
     } else if (value instanceof LocalDateTime) {
-      result = valueFactory.createLiteral(((LocalDateTime)value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), XMLSchema.DATETIME);
+      result = valueFactory
+          .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+              XMLSchema.DATETIME);
     } else if (value instanceof LocalDate) {
-      result = valueFactory.createLiteral(((LocalDate)value).format(DateTimeFormatter.ISO_LOCAL_DATE), XMLSchema.DATE);
+      result = valueFactory
+          .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
+              XMLSchema.DATE);
     } else {
       // default to string
       result = valueFactory.createLiteral("" + value);

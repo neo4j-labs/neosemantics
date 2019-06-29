@@ -13,8 +13,6 @@ import static semantics.RDFParserConfig.URL_MAP;
 import static semantics.RDFParserConfig.URL_SHORTEN;
 import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
