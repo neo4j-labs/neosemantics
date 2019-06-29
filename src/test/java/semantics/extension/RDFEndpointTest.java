@@ -1280,6 +1280,58 @@ public class RDFEndpointTest {
   }
 
   @Test
+  public void testCypherOnRDFDatesAndDatetimes() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                  RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple-multivalued.ttl")
+                      .toURI()
+                  + "','Turtle',{handleMultival: 'ARRAY'})");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      String expected = "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n"
+          + "@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.\n"
+          + "@prefix exterms: <hhttp://www.example.org/terms/>.\n"
+          + "@prefix ex: <hhttp://www.example.org/indiv/>.\n"
+          + "\n"
+          + "ex:index.html  exterms:someDateValue  \"1999-08-16\"^^xsd:date, \"1999-08-17\"^^xsd:date, \"1999-08-18\"^^xsd:date  ;\n"
+          + "               exterms:someDateTimeValues \"2012-12-31T23:57:00\"^^xsd:dateTime, \"2012-12-30T23:57:00\"^^xsd:dateTime .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
   public void testCypherOnRDFAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
     // Given

@@ -234,15 +234,7 @@ public class RDFEndpoint {
         Resource subject = buildSubject(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);
-        if (propertyValueObject instanceof Object[]) {
-          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-            Literal object = createTypedLiteral(valueFactory,
-                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
-                    namespaces)));
-            writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
-          }
-        } else if (propertyValueObject instanceof long[]) {
+        if  (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((long[]) propertyValueObject)[i]);
@@ -260,6 +252,28 @@ public class RDFEndpoint {
           for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((boolean[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof LocalDateTime[]) {
+          for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDateTime[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof LocalDate[]) {
+          for (int i = 0; i < ((LocalDate[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDate[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof Object[]) {
+          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
+                    namespaces)));
             writer.handleStatement(
                 valueFactory.createStatement(subject, predicate, object));
           }
@@ -860,7 +874,7 @@ public class RDFEndpoint {
       }
     } else {
       if (mimetype != null) {
-        log.info("serialization from mimetipe in request: " + mimetype);
+        log.info("serialization from media tipe in request: " + mimetype);
         for (RDFFormat parser : availableParsers) {
           if (parser.getMIMETypes().contains(mimetype)) {
             log.info("parser to be used: " + parser.getDefaultMIMEType());
