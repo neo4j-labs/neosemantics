@@ -32,7 +32,7 @@ public class LiteOntologyImporterTest {
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
-      assertEquals(16L, importResults.next().get("elementsLoaded").asLong());
+      assertEquals(13L, importResults.next().get("elementsLoaded").asLong());
 
       assertEquals(2L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -41,7 +41,7 @@ public class LiteOntologyImporterTest {
           session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
-      assertEquals(3L,
+      assertEquals(0L,
           session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count")
               .next().get("count").asLong());
 
@@ -63,7 +63,7 @@ public class LiteOntologyImporterTest {
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
-      assertEquals(16L, importResults.next().get("elementsLoaded").asLong());
+      assertEquals(13L, importResults.next().get("elementsLoaded").asLong());
 
       assertEquals(0L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -98,10 +98,9 @@ public class LiteOntologyImporterTest {
 
       StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
-          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
-          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
-      assertEquals(16L, importResults.next().get("elementsLoaded").asLong());
+      assertEquals(13L, importResults.next().get("elementsLoaded").asLong());
 
       assertEquals(0L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -123,8 +122,7 @@ public class LiteOntologyImporterTest {
               .asLong());
 
       assertEquals(6L,
-          session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
-              .asLong());
+          session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
     }
 
   }

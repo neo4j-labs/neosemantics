@@ -1,0 +1,26 @@
+@prefix : <http://www.w3.org/2012/12/rdf-val/SOTA-ex#> .
+@prefix foaf: <http://xmlns.com/foaf/0.1/'> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<issue7> a :Issue , :SecurityIssue ;
+    :state :unassigned ;
+    :reportedBy <user6> , <user2> ; # only one reportedBy permitted
+    :reportedOn "2012-12-31T23:57:00"^^xsd:dateTime ;
+    :reproducedBy <user2>, <user1> ;
+    :reproducedOn "2012-11-30T23:57:00"^^xsd:dateTime ; # reproduced before being reported
+    :related <issue4>, <issue3>, <issue2> . # referenced issues not included
+
+<issue4> # a ??? - missing type arc
+    :state :unsinged ; # misspelled term in value set.# :reportedBy ??? - missing required property
+    :reportedOn "2012-12-31T23:57:00"^^xsd:dateTime .
+
+<user2> a foaf:Person ;
+    foaf:givenName "Alice" ;
+    foaf:familyName "Smith" ;
+    foaf:phone <tel:+1.555.222.2222> ;
+    foaf:mbox <mailto:alice@example.com> .
+
+<user6> a foaf:Agent ; # should be foaf:Person
+    foaf:givenName "Bob" ; # foaf:familyName "???" - missing required property
+    foaf:phone <tel:+.555.222.2222> ; # malformed tel: URL
+    foaf:mbox <mailto:alice@example.com> .

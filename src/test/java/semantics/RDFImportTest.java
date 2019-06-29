@@ -11,6 +11,8 @@ import static semantics.RDFImport.PREFIX_SEPARATOR;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -1273,8 +1275,8 @@ public class RDFImportTest {
           .run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
               "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
 
-      assertEquals("2019-09-01", dates.next().get("fromDates").asString());
-      assertEquals("2016-09-01", dates.next().get("fromDates").asString());
+      assertEquals(LocalDate.parse("2019-09-01"), dates.next().get("fromDates").asLocalDate());
+      assertEquals(LocalDate.parse("2016-09-01"), dates.next().get("fromDates").asLocalDate());
 
       StatementResult statements = session.run("MATCH (statement)\n" +
           "WHERE (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#subject`]->()\n" +
@@ -1814,6 +1816,275 @@ public class RDFImportTest {
 
     }
   }
+
+
+  @Test
+  public void ontoImportTest() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML')");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportWithCustomNames() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop)-[:DOMAIN]->(:Category)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+    }
+
+  }
+
+
+  @Test
+  public void ontoImportWithCustomNamesAndResourceLabels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop:Resource)-[:DOMAIN]->(:Category)  RETURN count(n) AS count")
+              .next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportSchemaOrg() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
+          "','RDF/XML')");
+
+      assertEquals(592L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(343L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(292L,
+          session.run("MATCH (n:Relationship)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(416L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
+  public void ontoImportClassHierarchy() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
+              .toURI() +
+          "','RDF/XML')");
+
+      assertEquals(1L,
+          session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+              " RETURN count(p) AS count").next().get("count").asLong());
+    }
+  }
+
+
+  @Test
+  public void ontoImportPropHierarchy() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
+          "','RDF/XML')");
+
+      assertEquals(1L,
+          session.run("MATCH p=(:Property{name:'prop1'})-[:SPO]->(:Property{name:'superprop'})" +
+              " RETURN count(p) AS count").next().get("count").asLong());
+    }
+  }
+
+  @Test
+  public void testImportDatesAndTimes() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl").toURI()
+          + "','Turtle')");
+      assertEquals(2L, importResults1.single().get("triplesLoaded").asLong());
+      Record result = session.run(
+          "MATCH (n) RETURN n.ns0__reportedOn AS rep, n.`ns0__creation-date` AS cre")
+          .next();
+      assertEquals(LocalDateTime.parse("2012-12-31T23:57"),
+          result.get("rep").asLocalDateTime());
+      assertEquals(LocalDate.parse("1999-08-16"),
+          result.get("cre").asLocalDate());
+    }
+  }
+
+  @Test
+  public void testImportDatesAndTimes2() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl").toURI()
+          + "','Turtle')");
+      assertEquals(23L, importResults1.single().get("triplesLoaded").asLong());
+      Record result = session.run(
+          "MATCH (n:ns0__Issue) RETURN n.ns0__reportedOn AS report, n.ns0__reproducedOn AS reprod")
+          .next();
+      assertEquals(LocalDateTime.parse("2012-12-31T23:57:00"),
+          result.get("report").asLocalDateTime());
+      assertEquals(LocalDateTime.parse("2012-11-30T23:57:00"),
+          result.get("reprod").asLocalDateTime());
+    }
+  }
+
+  @Test
+  public void testImportDatesAndTimesMultivalued() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader()
+              .getResource("datetime/datetime-simple-multivalued.ttl").toURI()
+          + "','Turtle', { handleMultival: 'ARRAY' })");
+      assertEquals(5L, importResults1.single().get("triplesLoaded").asLong());
+
+      Set<LocalDate> expectedDates = new HashSet<>();
+      expectedDates.add(LocalDate.parse("1999-08-16"));
+      expectedDates.add(LocalDate.parse("1999-08-17"));
+      expectedDates.add(LocalDate.parse("1999-08-18"));
+
+      Set<LocalDateTime> expectedDatetimes = new HashSet<>();
+      expectedDatetimes.add(LocalDateTime.parse("2012-12-31T23:57:00"));
+      expectedDatetimes.add(LocalDateTime.parse("2012-12-30T23:57:00"));
+
+      Record result = session.run(
+          "MATCH (n) RETURN n.ns0__someDateValue as dates, n.ns0__someDateTimeValues as dateTimes")
+          .next();
+      Set<LocalDate> actualDates = new HashSet<LocalDate>();
+      result.get("dates").asList().forEach(x -> actualDates.add((LocalDate) x));
+
+      Set<LocalDateTime> actualDateTimes = new HashSet<LocalDateTime>();
+      result.get("dateTimes").asList().forEach(x -> actualDateTimes.add((LocalDateTime) x));
+
+      assertTrue(actualDates.containsAll(expectedDates));
+      assertTrue(expectedDates.containsAll(actualDates));
+
+      assertTrue(actualDateTimes.containsAll(expectedDatetimes));
+      assertTrue(expectedDatetimes.containsAll(actualDateTimes));
+
+    }
+  }
+
 
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");

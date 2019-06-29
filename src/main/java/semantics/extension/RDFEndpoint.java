@@ -6,6 +6,9 @@ import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -18,6 +21,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.WebApplicationException;
@@ -35,6 +39,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
@@ -44,6 +49,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -228,15 +234,7 @@ public class RDFEndpoint {
         Resource subject = buildSubject(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);
-        if (propertyValueObject instanceof Object[]) {
-          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-            Literal object = createTypedLiteral(valueFactory,
-                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
-                    namespaces)));
-            writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object));
-          }
-        } else if (propertyValueObject instanceof long[]) {
+        if (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((long[]) propertyValueObject)[i]);
@@ -254,6 +252,28 @@ public class RDFEndpoint {
           for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((boolean[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof LocalDateTime[]) {
+          for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDateTime[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof LocalDate[]) {
+          for (int i = 0; i < ((LocalDate[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDate[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object));
+          }
+        } else if (propertyValueObject instanceof Object[]) {
+          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
+                    namespaces)));
             writer.handleStatement(
                 valueFactory.createStatement(subject, predicate, object));
           }
@@ -285,12 +305,11 @@ public class RDFEndpoint {
 
 
   @GET
-  @Path("/describe/uri")
+  @Path("/describe/uri/{nodeuri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
-      "application/x-trig",
-      "application/ld+json"})
+      "application/x-trig", "application/ld+json"})
   public Response nodebyuri(@Context GraphDatabaseService gds,
-      @QueryParam("nodeuri") String idParam,
+      @PathParam("nodeuri") String idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -492,11 +511,11 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/id")
+  @Path("/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
       "application/x-trig",
       "application/ld+json"})
-  public Response nodebyid(@Context GraphDatabaseService gds, @QueryParam("nodeid") Long idParam,
+  public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
       @QueryParam("format") String format,
@@ -526,6 +545,62 @@ public class RDFEndpoint {
 
 
     }).build();
+  }
+
+
+  @GET
+  @Path("/describe/find/{label}/{property}/{propertyValue}")
+  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
+      "application/x-trig",
+      "application/ld+json"})
+  public Response nodefind(@Context GraphDatabaseService gds, @PathParam("label") String label,
+      @PathParam("property") String property, @PathParam("propertyValue") String propVal,
+      @QueryParam("valType") String valType,
+      @QueryParam("excludeContext") String excludeContextParam,
+      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("format") String format,
+      @HeaderParam("accept") String acceptHeaderParam) {
+    return Response.ok().entity(new StreamingOutput() {
+      @Override
+      public void write(OutputStream outputStream) throws IOException, WebApplicationException {
+
+        RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
+        SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+        handleNamespaces(writer, gds);
+        writer.startRDF();
+        try (Transaction tx = gds.beginTx()) {
+          Map<String, String> mappings = getExportMappingsFromDB(gds);
+          ResourceIterator<Node> nodes = gds.findNodes(Label.label(label), property,
+              (valType == null ? propVal : castValue(valType, propVal)));
+          while (nodes.hasNext()) {
+            Node node = nodes.next();
+            processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            if (excludeContextParam == null) {
+              processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
+            }
+          }
+          writer.endRDF();
+        } catch (NotFoundException e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        } catch (Exception e) {
+          handleSerialisationError(outputStream, e, acceptHeaderParam, format);
+        }
+      }
+
+
+    }).build();
+  }
+
+  private Object castValue(String valType, String propVal) {
+    if (valType.equals("INTEGER")) {
+      return Integer.valueOf(propVal);
+    } else if (valType.equals("FLOAT")) {
+      return Float.valueOf(propVal);
+    } else if (valType.equals("BOOLEAN")) {
+      return Boolean.valueOf(propVal);
+    } else {
+      return propVal;
+    }
   }
 
   private void processRelsOnLPG(RDFWriter writer, SimpleValueFactory valueFactory,
@@ -763,6 +838,14 @@ public class RDFEndpoint {
       result = valueFactory.createLiteral((Double) value);
     } else if (value instanceof Boolean) {
       result = valueFactory.createLiteral((Boolean) value);
+    } else if (value instanceof LocalDateTime) {
+      result = valueFactory
+          .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+              XMLSchema.DATETIME);
+    } else if (value instanceof LocalDate) {
+      result = valueFactory
+          .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
+              XMLSchema.DATE);
     } else {
       // default to string
       result = valueFactory.createLiteral("" + value);
@@ -795,7 +878,7 @@ public class RDFEndpoint {
       }
     } else {
       if (mimetype != null) {
-        log.info("serialization from mimetipe in request: " + mimetype);
+        log.info("serialization from media tipe in request: " + mimetype);
         for (RDFFormat parser : availableParsers) {
           if (parser.getMIMETypes().contains(mimetype)) {
             log.info("parser to be used: " + parser.getDefaultMIMEType());

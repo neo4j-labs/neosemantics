@@ -5,13 +5,18 @@ import java.util.List;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import semantics.result.StreamedStatement;
 
-public class StatementStreamer implements RDFHandler {
+public class StatementStreamer extends ConfiguredStatementHandler {
 
   private List<StreamedStatement> statements;
+  protected final RDFParserConfig parserConfig;
+
+  public StatementStreamer(
+      RDFParserConfig pc) {
+    parserConfig = pc;
+  }
 
   @Override
   public void startRDF() throws RDFHandlerException {
@@ -48,5 +53,10 @@ public class StatementStreamer implements RDFHandler {
 
   public List<StreamedStatement> getStatements() {
     return statements;
+  }
+
+  @Override
+  RDFParserConfig getParserConfig() {
+    return parserConfig;
   }
 }

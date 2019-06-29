@@ -1,0 +1,7 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.
+@prefix exterms: <hhttp://www.example.org/terms/>.
+@prefix ex: <hhttp://www.example.org/indiv/>.
+
+ex:index.html  exterms:someDateValue  "1999-08-16"^^xsd:date, "1999-08-17"^^xsd:date, "1999-08-18"^^xsd:date  ;
+               exterms:someDateTimeValues "2012-12-31T23:57:00"^^xsd:dateTime, "2012-12-30T23:57:00"^^xsd:dateTime .

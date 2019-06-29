@@ -16,7 +16,7 @@ neo4ind:apoc3502 neo4voc:name "APOC" ;
 neo4ind:graphql3502 neo4voc:name "Neo4j-GraphQL" ;
 			   a neo4voc:Neo4jPlugin ;
 			   neo4voc:version "3.5.0.3" ;
-			   neo4voc:releaseDate "05/05/19" ;			   
+			   neo4voc:releaseDate "05-05-2019" ;			   
 			   neo4voc:runsOn neo4ind:neo4j355 .			   			   
 
 neo4ind:neo4j355 neo4voc:name "neo4j" ;
