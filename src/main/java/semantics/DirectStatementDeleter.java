@@ -92,10 +92,6 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         icle.printStackTrace();
       }
       node = tempNode;
-      //Can't delete node if it doesn't exist
-      if (node == null) {
-        notDeletedStatementCount++;
-      }
       entry.getValue().forEach(l -> {
         if (node != null && node.hasLabel(Label.label(l))) {
           node.removeLabel(Label.label(l));
@@ -106,51 +102,51 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
           List valuesToDelete = (List) v;
-          if (node == null) {
-            notDeletedStatementCount += valuesToDelete.size();
-            return;
-          }
-          ArrayList<Object> newProps = new ArrayList<>();
-          Object prop = node.getProperty(k);
-          if (prop instanceof long[]) {
-            long[] props = (long[]) prop;
-            for (long currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
+          if (node != null && node.hasProperty(k)) {
+            ArrayList<Object> newProps = new ArrayList<>();
+            Object prop = node.getProperty(k);
+            if (prop instanceof long[]) {
+              long[] props = (long[]) prop;
+              for (long currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof double[]) {
+              double[] props = (double[]) prop;
+              for (double currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof boolean[]) {
+              boolean[] props = (boolean[]) prop;
+              for (boolean currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else {
+              Object[] props = (Object[]) prop;
+              for (Object currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
               }
             }
-          } else if (prop instanceof double[]) {
-            double[] props = (double[]) prop;
-            for (double currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
-            }
-          } else if (prop instanceof boolean[]) {
-            boolean[] props = (boolean[]) prop;
-            for (boolean currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
+            node.removeProperty(k);
+            if (!newProps.isEmpty()) {
+              node.setProperty(k, toPropertyValue(newProps));
             }
           } else {
-            Object[] props = (Object[]) prop;
-            for (Object currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
-            }
-          }
-          node.removeProperty(k);
-          if (!newProps.isEmpty()) {
-            node.setProperty(k, toPropertyValue(newProps));
+            notDeletedStatementCount += valuesToDelete.size();
           }
         } else {
-          if (node == null) {
+          if (node != null && node.hasProperty(k)) {
+            node.removeProperty(k);
+          } else {
             notDeletedStatementCount++;
-            return;
           }
-          node.removeProperty(k);
         }
       });
       if (node != null) {
@@ -176,9 +172,6 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
-      if (fromNode == null) {
-        continue;
-      }
       Node toNode = null;
       try {
         toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
@@ -190,7 +183,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
-      if (toNode == null) {
+      if (fromNode == null || toNode == null) {
+        notDeletedStatementCount++;
         continue;
       }
       // find relationship if it exists

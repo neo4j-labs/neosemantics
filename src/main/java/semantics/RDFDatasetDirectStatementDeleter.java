@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import org.eclipse.rdf4j.model.BNode;
@@ -106,9 +105,6 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
         e.printStackTrace();
       }
       node = tempNode;
-      if (node == null) {
-        notDeletedStatementCount++;
-      }
       entry.getValue().forEach(l -> {
         if (node != null && node.hasLabel(Label.label(l))) {
           node.removeLabel(Label.label(l));
@@ -119,51 +115,52 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
         if (v instanceof List) {
           List valuesToDelete = (List) v;
-          if (node == null) {
-            notDeletedStatementCount += valuesToDelete.size();
-            return;
-          }
-          ArrayList<Object> newProps = new ArrayList<>();
-          Object prop = node.getProperty(k);
-          if (prop instanceof long[]) {
-            long[] props = (long[]) prop;
-            for (long currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
+          if (node != null && node.hasProperty(k)) {
+            ArrayList<Object> newProps = new ArrayList<>();
+            Object prop = node.getProperty(k);
+            if (prop instanceof long[]) {
+              long[] props = (long[]) prop;
+              for (long currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof double[]) {
+              double[] props = (double[]) prop;
+              for (double currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof boolean[]) {
+              boolean[] props = (boolean[]) prop;
+              for (boolean currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else {
+              Object[] props = (Object[]) prop;
+              for (Object currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
               }
             }
-          } else if (prop instanceof double[]) {
-            double[] props = (double[]) prop;
-            for (double currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
-            }
-          } else if (prop instanceof boolean[]) {
-            boolean[] props = (boolean[]) prop;
-            for (boolean currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
+            node.removeProperty(k);
+            if (!newProps.isEmpty()) {
+              node.setProperty(k, toPropertyValue(newProps));
             }
           } else {
-            Object[] props = (Object[]) prop;
-            for (Object currentVal : props) {
-              if (!valuesToDelete.contains(currentVal)) {
-                newProps.add(currentVal);
-              }
-            }
-          }
-          node.removeProperty(k);
-          if (!newProps.isEmpty()) {
-            node.setProperty(k, toPropertyValue(newProps));
+            notDeletedStatementCount += valuesToDelete.size();
           }
         } else {
-          if (node == null) {
+          if (node != null && node.hasProperty(k)) {
+            node.removeProperty(k);
+          } else {
             notDeletedStatementCount++;
-            return;
           }
-          node.removeProperty(k);
+
         }
       });
       if (node != null) {
@@ -185,7 +182,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
         fromNode = nodeCache.get(from, new Callable<Node>() {
           @Override
           public Node call() {  //throws AnyException
-            Node node;
+            Node node = null;
             Map<String, Object> params = new HashMap<>();
             String cypher = buildCypher(st.getSubject().stringValue(),
                 st.getContext() != null ? st.getContext().stringValue() : null,
@@ -201,20 +198,12 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
                 throw new IllegalStateException(
                     "There are multiple matching nodes for the given properties " + props);
               }
-            } else {
-              throw new NoSuchElementException(
-                  "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                      + " and \"graphUri\": " + st.getContext().stringValue());
             }
             return node;
           }
         });
-      } catch (InvalidCacheLoadException | NoSuchElementException e) {
+      } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
-      }
-      if (fromNode == null) {
-        notDeletedStatementCount++;
-        continue;
       }
       ContextResource to = new ContextResource(st.getObject().stringValue(),
           st.getContext() != null ? st.getContext().stringValue() : null);
@@ -223,7 +212,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
         toNode = nodeCache.get(to, new Callable<Node>() {
           @Override
           public Node call() {  //throws AnyException
-            Node node;
+            Node node = null;
             Map<String, Object> params = new HashMap<>();
             String cypher = buildCypher(st.getObject().stringValue(),
                 st.getContext() != null ? st.getContext().stringValue() : null,
@@ -239,18 +228,14 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
                 throw new IllegalStateException(
                     "There are multiple matching nodes for the given properties " + props);
               }
-            } else {
-              throw new NoSuchElementException(
-                  "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                      + " and \"graphUri\": " + st.getContext().stringValue());
             }
             return node;
           }
         });
-      } catch (InvalidCacheLoadException | NoSuchElementException e) {
+      } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
-      if (toNode == null) {
+      if (fromNode == null || toNode == null) {
         notDeletedStatementCount++;
         continue;
       }

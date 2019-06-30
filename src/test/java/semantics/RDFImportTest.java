@@ -2196,6 +2196,45 @@ public class RDFImportTest {
     }
   }
 
+  @Test
+  public void testRepetitiveDeletionRDFDataset() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
+      deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(0L, deleteResult.next().get("triplesDeleted").asLong());
+
+    }
+  }
+
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");
   }
