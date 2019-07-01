@@ -8,6 +8,7 @@ import com.google.common.cache.CacheBuilder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -19,20 +20,24 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * Created by jbarrasa on 09/11/2016.
+ * Created on 06/06/2019.
+ *
+ * @author Emre Arkan
  */
 
-class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
+class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor implements
+    Callable<Integer> {
 
-  public static final Label RESOURCE = Label.label("Resource");
-  public static final String[] EMPTY_ARRAY = new String[0];
-  Cache<String, Node> nodeCache;
+  private static final Label RESOURCE = Label.label("Resource");
+  private static final String[] EMPTY_ARRAY = new String[0];
+  private Cache<ContextResource, Node> nodeCache;
 
-  public DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFDatasetDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
@@ -60,29 +65,38 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
-  // Stolen from APOC :)
-  private Object toPropertyValue(Object value) {
-    Iterable it = (Iterable) value;
-    Object first = Iterables.firstOrNull(it);
-    if (first == null) {
-      return EMPTY_ARRAY;
-    }
-    return Iterables.asArray(first.getClass(), it);
-  }
-
   @Override
   public Integer call() throws Exception {
     int count = 0;
 
-    for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
+    for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
 
       final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
         @Override
         public Node call() {
-          Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+          Node node = null;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(entry.getKey().getUri(),
+              entry.getKey().getGraphUri(),
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + entry.getKey().getUri() +
+                      (entry.getKey().getGraphUri() == null ? "}" :
+                          ", graphUri: " + entry.getKey().getGraphUri() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
+            }
+          }
           if (node == null) {
             node = graphdb.createNode(RESOURCE);
-            node.setProperty("uri", entry.getKey());
+            node.setProperty("uri", entry.getKey().getUri());
+            if (entry.getKey().getGraphUri() != null) {
+              node.setProperty("graphUri", entry.getKey().getGraphUri());
+            }
           }
           return node;
         }
@@ -114,18 +128,62 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     }
 
     for (Statement st : statements) {
-
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+      ContextResource from = new ContextResource(st.getSubject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
+      final Node fromNode = nodeCache.get(from, new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          Node node;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getSubject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + st.getSubject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
+            }
+          } else {
+            throw new NoSuchElementException(
+                "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                    + " and \"graphUri\": " + st.getContext().stringValue());
+          }
+          return node;
         }
       });
-
-      final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+      ContextResource to = new ContextResource(st.getObject().stringValue(),
+          st.getContext() != null ? st.getContext().stringValue() : null);
+      final Node toNode = nodeCache.get(to, new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          Node node;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getObject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
+            if (result.hasNext()) {
+              String props =
+                  "{uri: " + st.getObject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
+            }
+          } else {
+            throw new NoSuchElementException(
+                "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                    + " and \"graphUri\": " + st.getContext().stringValue());
+          }
+          return node;
         }
       });
 
@@ -170,7 +228,6 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     return 0;
   }
 
-
   @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
@@ -179,4 +236,13 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     persistNamespaceNode();
   }
 
+  // Stolen from APOC :)
+  private Object toPropertyValue(Object value) {
+    Iterable it = (Iterable) value;
+    Object first = Iterables.firstOrNull(it);
+    if (first == null) {
+      return EMPTY_ARRAY;
+    }
+    return Iterables.asArray(first.getClass(), it);
+  }
 }

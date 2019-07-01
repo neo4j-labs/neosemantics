@@ -581,7 +581,6 @@ public class RDFEndpointTest {
           "<https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n"
           +
           "    <https://permid.org/1-21523433750> .\n";
-
       assertEquals(200, response.status());
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
@@ -603,6 +602,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -612,6 +612,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -668,6 +669,7 @@ public class RDFEndpointTest {
               graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -684,6 +686,7 @@ public class RDFEndpointTest {
                   + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -696,7 +699,6 @@ public class RDFEndpointTest {
               + "describe/uri/" + URLEncoder
               .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
                   StandardCharsets.UTF_8.toString()));
-      System.out.println(response.rawContent());
       assertEquals(200, response.status());
       String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           + "<rdf:RDF\n"
@@ -725,6 +727,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -734,6 +737,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -984,6 +988,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -996,6 +1001,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1003,7 +1009,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
@@ -1046,6 +1052,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1058,6 +1065,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1065,7 +1073,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
@@ -1107,6 +1115,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1121,6 +1130,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1128,7 +1138,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
@@ -1168,6 +1178,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1182,6 +1193,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1189,7 +1201,7 @@ public class RDFEndpointTest {
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
@@ -1229,6 +1241,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1241,6 +1254,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1252,7 +1266,7 @@ public class RDFEndpointTest {
       params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
           "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1294,6 +1308,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1306,6 +1321,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1317,7 +1333,7 @@ public class RDFEndpointTest {
       params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
           "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1359,6 +1375,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1373,6 +1390,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1383,7 +1401,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a:`http://example.com/Car`) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -1423,6 +1441,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1437,6 +1456,7 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1447,7 +1467,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a:ns0__Car) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -1473,8 +1493,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testCypherOnRDFAfterDeleteRDFBNodes()
-      throws Exception {
+  public void testCypherOnRDFAfterDeleteRDFBNodes() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1487,19 +1506,26 @@ public class RDFEndpointTest {
 
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+              graphDatabaseService.execute("CALL semantics.importRDF('" +
                   RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
                       .toURI()
                   + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
+              Result res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
                   RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
                       .toURI()
                   + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              Map map = res.next();
+              assertEquals(1L, map.get("triplesDeleted"));
+              assertEquals(
+                  "8 of the statements could not be deleted, due to containing a blank node.",
+                  map.get("extraInfo"));
               tx.success();
             } catch (Exception e) {
+              e.printStackTrace();
               fail(e.getMessage());
             }
             return null;
@@ -1524,6 +1550,323 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFDatasetSerializeAsTriG() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->(b:Resource)"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "application/trig")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources
+          .toString(Resources.getResource("RDFDatasets/RDFDataset.trig"),
+              StandardCharsets.UTF_8);
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFDatasetSerializeAsNQuads() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                    .toURI()
+                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->(b)"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "application/n-quads")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources
+          .toString(Resources.getResource("RDFDatasets/RDFDataset.nq"),
+              StandardCharsets.UTF_8);
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriOnRDFDataset() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString()));
+
+      String expected = "{\n"
+          + "  <http://www.example.org/exampleDocument#Monica> a <http://www.example.org/vocabulary#Person>;\n"
+          + "    <http://www.example.org/vocabulary#friendOf> <http://www.example.org/exampleDocument#John> .\n"
+          + "}";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriWithGraphUriOnRDFDatasetTrig() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString())
+              + "?graphuri=http://www.example.org/exampleDocument%23G1");
+
+      String expected = "<http://www.example.org/exampleDocument#G1> {\n"
+          + "  <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name>\n"
+          + "      \"Monica Murphy\";\n"
+          + "    <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org>;\n"
+          + "    <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John>;\n"
+          + "    <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management>,\n"
+          + "      <http://www.example.org/vocabulary#Programming>;\n"
+          + "    <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> .\n"
+          + "}";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+
+    }
+  }
+
+  @Test
+  public void testNodeByUriWithGraphUriOnRDFDatasetNQuads() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                    .toURI()
+                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
+        })
+        .newServer()) {
+
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/n-quads").GET(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
+              + "describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString())
+              + "?graphuri=http://www.example.org/exampleDocument%23G1");
+      String expected =
+          "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Programming> <http://www.example.org/exampleDocument#G1> .\n"
+              + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> <http://www.example.org/exampleDocument#G1> .";
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFDatasetAfterDeleteRDFBNodes() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              e.printStackTrace();
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                  RDFImportTest.class.getClassLoader().getResource(
+                      "RDFDatasets/RDFDatasetBNodes.trig")
+                      .toURI()
+                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              Result res = graphDatabaseService.execute("CALL semantics.deleteRDFDataset('" +
+                  RDFImportTest.class.getClassLoader().getResource(
+                      "RDFDatasets/RDFDatasetBNodesDelete.trig")
+                      .toURI()
+                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              Map map = res.next();
+              assertEquals(3L, map.get("triplesDeleted"));
+              assertEquals(
+                  "4 of the statements could not be deleted, due to containing a blank node.",
+                  map.get("extraInfo"));
+              tx.success();
+            } catch (Exception e) {
+              e.printStackTrace();
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (a:Resource) "
+          + "OPTIONAL MATCH (a)-[r]->()"
+          + "RETURN DISTINCT *");
+
+      HTTP.Response response = HTTP.
+          withHeaders("Accept", "application/trig")
+          .POST(
+              HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf",
+              params);
+
+      String expected = Resources
+          .toString(Resources.getResource("RDFDatasets/RDFDatasetBNodesPostDeletion.trig"),
+              StandardCharsets.UTF_8);
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }
