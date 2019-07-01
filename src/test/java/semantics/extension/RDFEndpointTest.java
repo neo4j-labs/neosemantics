@@ -1332,6 +1332,48 @@ public class RDFEndpointTest {
     }
   }
 
+
+  @Test
+  public void testCypherOnRDFErrorWhereModelIsNotRDF() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute(""
+                  + "CREATE (:Node { uri: 'neo4j://ind#123' })-[:LINKED_TO]->(:Node { id: 124 })");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n)-[r]-(m) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      assertEquals(200, response.status());
+      assertEquals("# No such property, 'uri'.\n", response.rawContent());
+
+    }
+  }
+
+
   @Test
   public void testCypherOnRDFAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
