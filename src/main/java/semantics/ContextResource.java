@@ -3,17 +3,20 @@ package semantics;
 import java.util.Objects;
 
 /**
- * @see ContextResource represents a Resource with an optional graph (context) uri
- * It is used as Key for the Maps containing labels and properties
+ * ContextResource represents a Resource with an optional graph (context) uri.
+ * <p>
+ * It is used as Key for the Maps containing labels and properties.
  *
  * Created on 06.06.2019
  *
  * @author Emre Arkan
+ * @see RDFDatasetDirectStatementLoader
+ * @see RDFDatasetDirectStatementDeleter
  */
 public class ContextResource {
 
-  final private String uri;
-  final private String graphUri;
+  private final String uri;
+  private final String graphUri;
 
   public ContextResource(String uri, String graphUri) {
     this.uri = uri;
@@ -21,17 +24,14 @@ public class ContextResource {
   }
 
   /**
-   * returns the uri of the current instance
-   *
-   * @return uri
+   * @return uri the URI of the current instance
    */
   public String getUri() {
     return uri;
   }
 
   /**
-   * returns the graphUri of the current instance
-   * @return graphUri
+   * @return graphUri the graph URI of the current instance if given, {@code null} otherwise
    */
   public String getGraphUri() {
     return graphUri;

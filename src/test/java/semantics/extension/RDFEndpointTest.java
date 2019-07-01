@@ -1560,29 +1560,26 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-                      .toURI()
-                  + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1613,29 +1610,26 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
-                      .toURI()
-                  + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                    .toURI()
+                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1666,30 +1660,27 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-                      .toURI()
-                  + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1717,30 +1708,27 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-                      .toURI()
-                  + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                    .toURI()
+                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1774,30 +1762,27 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
-                      .toURI()
-                  + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                    .toURI()
+                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
