@@ -15,6 +15,7 @@ import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
+import semantics.result.NamespacePrefixesResult;
 import semantics.result.NodeResult;
 
 public class MappingUtils {
@@ -26,14 +27,14 @@ public class MappingUtils {
 
   @Procedure(mode = Mode.WRITE)
   public Stream<NodeResult> addSchema(@Name("schemaUri") String uri,
-      @Name("prefix") String prefix) {
+      @Name("prefix") String prefix) throws MappingDefinitionException {
     //what should the logic be??? no two prefixes for the same ns and no more than one prefix for a voc
     Map<String, Object> params = new HashMap<>();
     params.put("schema", uri);
     params.put("prefix", prefix);
     String checkIfSchemaOrPrefixExist = "MATCH (mns:_MapNs { _ns: $schema}) RETURN mns UNION MATCH (mns:_MapNs { _prefix : $prefix }) RETURn mns ";
     if (db.execute(checkIfSchemaOrPrefixExist, params).hasNext()) {
-      return null;
+      throw new MappingDefinitionException("The schema URI or the prefix are already in use. Drop existing ones before reusing.");
     } else {
       String createNewSchema = "CREATE (mns:_MapNs { _ns: $schema, _prefix : $prefix }) return mns";
       return db.execute(createNewSchema, params).stream().map(n -> (Node) n.get("mns"))
@@ -42,8 +43,10 @@ public class MappingUtils {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NodeResult> addCommonSchemas() {
-    String cypher = "UNWIND [ { namespace: 'http://schema.org/', prefix: 'sch' },\n" +
+  public Stream<NamespacePrefixesResult> addCommonSchemas() {
+    String cypher = "call semantics.mapping.listSchemas() yield prefix, namespace "
+        + "WITH collect(prefix) as prefixes, collect(namespace) as namespaces "
+        + "WITH prefixes, namespaces, [ { namespace: 'http://schema.org/', prefix: 'sch' },\n" +
         "{ namespace: 'http://purl.org/dc/elements/1.1/', prefix: 'dc' },\n" +
         "{ namespace: 'http://purl.org/dc/terms/', prefix: 'dct' },\n" +
         "{ namespace: 'http://www.w3.org/2004/02/skos/core#', prefix: 'skos' },\n" +
@@ -72,31 +75,44 @@ public class MappingUtils {
         +
         "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/', prefix: 'fibo-fnd-utl-av' }\n"
         +
-        "] AS schemaDef \n" +
+        "] AS new \n" +
+        " WITH filter(x in new where not (x.namespace in namespaces or x.prefix in prefixes)) as newfiltered "
+        + " UNWIND newfiltered AS schemaDef " +
         " CALL semantics.mapping.addSchema(schemaDef.namespace, schemaDef.prefix) YIELD node AS mns"
         +
-        " RETURN mns";
+        " RETURN mns._ns as uri, mns._prefix as prefix";
 
-    return db.execute(cypher).stream().map(n -> (Node) n.get("mns")).map(NodeResult::new);
+    return db.execute(cypher).stream().map(
+        n -> new NamespacePrefixesResult((String) n.get("prefix"),
+            (String) n.get("uri")));
   }
 
   @Procedure(mode = Mode.READ)
-  public Stream<NodeResult> listSchemas(
+  public Stream<NamespacePrefixesResult> listSchemas(
       @Name(value = "searchString", defaultValue = "") String searchString) {
 
     Map<String, Object> params = new HashMap<>();
     params.put("searchString", searchString);
 
-    String cypher = (searchString.trim().equals("") ? "MATCH (mns:_MapNs) RETURN mns " :
-        "MATCH (mns:_MapNs) WHERE mns._ns CONTAINS $searchString OR mns._prefix CONTAINS $searchString RETURN mns ");
+    String cypher = (searchString.trim().equals("") ? "MATCH (mns:_MapNs) "
+        + "RETURN mns._ns as uri, mns._prefix as prefix  " :
+        "MATCH (mns:_MapNs) WHERE mns._ns CONTAINS $searchString OR mns._prefix CONTAINS $searchString "
+            + "RETURN mns._ns as uri, mns._prefix as prefix ");
 
-    return db.execute(cypher, params).stream().map(n -> (Node) n.get("mns")).map(NodeResult::new);
+    return db.execute(cypher, params).stream().map(
+        n -> new NamespacePrefixesResult((String) n.get("prefix"),
+            (String) n.get("uri")));
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NodeResult> addMappingToSchema(@Name("schemaNode") Node schema,
+  public Stream<NodeResult> addMappingToSchema(@Name("schemaUri") String schemaUri,
       @Name("graphElementName") String gElem,
-      @Name("schemaElementlocalName") String schElem) {
+      @Name("schemaElementlocalName") String schElem) throws MappingDefinitionException {
+
+    Node schema = db.findNode(Label.label("_MapNs"), "_ns", schemaUri);
+    if (schema == null){
+      throw new MappingDefinitionException("Schema URI not defined. Define it first with semantics.mapping.addSchema ");
+    }
     Node mapDef;
     Map<String, Object> props = new HashMap<>();
     props.put("_key", gElem);
@@ -213,6 +229,14 @@ public class MappingUtils {
       this.schemaElement = record.get("schemaElement").toString();
       this.schemaNs = record.get("schemaNs").toString();
       this.schemaPrefix = record.get("schemaPrefix").toString();
+    }
+  }
+
+  private class MappingDefinitionException extends Throwable {
+
+    public MappingDefinitionException(
+        String s) {
+      super(s);
     }
   }
 }
