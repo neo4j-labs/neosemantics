@@ -77,15 +77,12 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       Node tempNode = null;
       final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-            if (node != null) {
-              return node;
-            } else {
-              return node;
-            }
+        tempNode = nodeCache.get(entry.getKey(), () -> {
+          Node node1 = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+          if (node1 != null) {
+            return node1;
+          } else {
+            return node1;
           }
         });
       } catch (InvalidCacheLoadException icle) {
@@ -163,22 +160,16 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       }
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-          }
+        fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
+          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
       Node toNode = null;
       try {
-        toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
-          }
+        toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
+          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();

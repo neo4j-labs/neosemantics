@@ -76,16 +76,13 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
-      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-        @Override
-        public Node call() {
-          Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-          if (node == null) {
-            node = graphdb.createNode(RESOURCE);
-            node.setProperty("uri", entry.getKey());
-          }
-          return node;
+      final Node node = nodeCache.get(entry.getKey(), () -> {
+        Node node1 = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+        if (node1 == null) {
+          node1 = graphdb.createNode(RESOURCE);
+          node1.setProperty("uri", entry.getKey());
         }
+        return node1;
       });
 
       entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
@@ -115,18 +112,13 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
     for (Statement st : statements) {
 
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        }
-      });
+      final Node fromNode = nodeCache
+          .get(st.getSubject().stringValue(), () -> {  //throws AnyException
+            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          });
 
-      final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        }
+      final Node toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
+        return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
       });
 
       // check if the rel is already present. If so, don't recreate.
