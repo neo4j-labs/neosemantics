@@ -66,7 +66,6 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
 
   @Override
   public Integer call() throws Exception {
-    int count = 0;
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
 
