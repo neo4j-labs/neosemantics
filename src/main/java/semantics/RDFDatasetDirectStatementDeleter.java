@@ -78,29 +78,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
       Node tempNode = null;
       final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(entry.getKey().getUri(),
-                entry.getKey().getGraphUri(),
-                params);
-            Result result = graphdb.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + entry.getKey().getUri() +
-                        (entry.getKey().getGraphUri() == null ? "}" :
-                            ", graphUri: " + entry.getKey().getGraphUri() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
-            }
-            return node;
-          }
-        });
+        tempNode = nodeCache.get(entry.getKey(), loadNode(entry.getKey()));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -179,29 +157,10 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(from, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getSubject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = graphdb.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getSubject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
-            }
-            return node;
-          }
-        });
+        ContextResource contextResource = new ContextResource(
+            st.getSubject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null);
+        fromNode = nodeCache.get(from, loadNode(contextResource));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -209,29 +168,11 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node toNode = null;
       try {
-        toNode = nodeCache.get(to, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getObject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = graphdb.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getObject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
-            }
-            return node;
-          }
-        });
+        ContextResource contextResource = new ContextResource(
+            st.getObject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null
+        );
+        toNode = nodeCache.get(to, loadNode(contextResource));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -277,6 +218,35 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
 
     //TODO what to return here? number of nodes and rels?
     return 0;
+  }
+
+  /**
+   * @param key the resource to load
+   * @return a {@link Callable} to retrieve a {@link Node}, which can be {@code null}
+   */
+  private Callable<? extends Node> loadNode(ContextResource key) {
+
+    return (Callable<Node>) () -> {
+      Node node = null;
+      Map<String, Object> params = new HashMap<>();
+      String cypher = buildCypher(key.getUri(),
+          key.getGraphUri(),
+          params);
+      Result result = graphdb.execute(cypher, params);
+
+      if (result.hasNext()) {
+        node = (Node) result.next().get("n");
+        if (result.hasNext()) {
+          String props =
+              "{uri: " + key.getUri() +
+                  (key.getGraphUri() == null ? "}" :
+                      ", graphUri: " + key.getGraphUri() + "}");
+          throw new IllegalStateException(
+              "There are multiple matching nodes for the given properties " + props);
+        }
+      }
+      return node;
+    };
   }
 
   @Override
