@@ -872,7 +872,8 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       String addMapping1 =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n" +
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
+              +
               "call semantics.mapping.addMappingToSchema(sch,\"WHERE\",\"location\") yield elemName as mapping1\n"
               +
               "call semantics.mapping.addMappingToSchema(sch,\"desc\",\"description\") yield elemName as mapping2\n"
