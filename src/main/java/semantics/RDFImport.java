@@ -36,6 +36,7 @@ import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
+import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
@@ -79,6 +80,7 @@ public class RDFImport {
   public Log log;
 
   @Procedure(mode = Mode.WRITE)
+  @Description("Imports RDF and stores it in Neo4j as a property graph. Requires and index on :Resource(uri)")
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -108,7 +110,8 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<ImportResults> importLargeOnto(@Name("url") String url,
+  @Description("Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.")
+  public Stream<ImportResults> importOntology(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -171,6 +174,8 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.READ)
+  @Description("Parses RDF and produces virtual Nodes and relationships for preview in the Neo4j "
+      + "browser. No writing to the DB.")
   public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -195,6 +200,8 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.READ)
+  @Description("Parses RDF and streams each triple as a record with <S,P,O> along with datatype and "
+      + "language tag for Literal values. No writing to the DB.")
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
@@ -213,6 +220,8 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.READ)
+  @Description("Parses an RDF fragment passed as parameter (no retrieval from url) and produces "
+      + "virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB.")
   public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -239,6 +248,8 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
+  @Description("Deletes triples from Neo4j. Works on a graph resulted of importing RDF via "
+      + "semantics.importRDF(). Delete config must match the one used on import.")
   public Stream<DeleteResults> deleteRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -268,6 +279,7 @@ public class RDFImport {
   }
 
   @UserFunction
+  @Description("Returns the XMLSchema or custom datatype of a property when present")
   public String getDataType(@Name("literal") Object literal) {
 
     String result;
@@ -296,6 +308,8 @@ public class RDFImport {
   }
 
   @UserFunction
+  @Description("Returns the value of a datatype of a property after stripping out the datatype "
+      + "information when present")
   public String getValue(@Name("literal") String literal) {
 
     Matcher matcherShortened = DATATYPE_SHORTENED_PATTERN.matcher(literal);
@@ -313,16 +327,20 @@ public class RDFImport {
   }
 
   @UserFunction
+  @Description("Returns the local part of an IRI")
   public String getIRILocalName(@Name("url") String url) {
     return url.substring(URIUtil.getLocalNameIndex(url));
   }
 
   @UserFunction
+  @Description("Returns the namespace part of an IRI")
   public String getIRINamespace(@Name("url") String url) {
     return url.substring(0, URIUtil.getLocalNameIndex(url));
   }
 
   @UserFunction
+  @Description("Returns the value with the language tag passed as first argument or null if "
+      + "there's not a value for the provided language tag")
   public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
 
     if (values instanceof List) {
@@ -352,6 +370,8 @@ public class RDFImport {
   }
 
   @UserFunction
+  @Description("Returns the expanded (full) IRI given a shortened one created in the load process "
+      + "with semantics.importRDF")
   public String uriFromShort(@Name("short") String str) {
 
     Matcher m = SHORTENED_URI_PATTERN.matcher(str);
@@ -373,6 +393,7 @@ public class RDFImport {
   }
 
   @UserFunction
+  @Description("Returns the shortened version of an IRI using the existing namespace definitions")
   public String shortFromUri(@Name("uri") String str) {
     try {
       IRI iri = SimpleValueFactory.getInstance().createIRI(str);
@@ -394,6 +415,7 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
+  @Description("Adds namespace - prefix pair definition")
   public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix,
       @Name("ns") String ns) {
 
@@ -410,6 +432,7 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.READ)
+  @Description("Lists all existing namespace prefix definitions")
   public Stream<NamespacePrefixesResult> listNamespacePrefixes() {
 
     return db

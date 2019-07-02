@@ -186,6 +186,7 @@ public class MappingUtils {
     params.put("elemName", schemaElem);
 
     String cypher = ("MATCH (mns:_MapNs)<-[:_IN]-(elem:_MapDef) WHERE elem._key CONTAINS $elemName "
+        + " OR elem._local CONTAINS $elemName"
         +
         " RETURN elem._key AS elemName, elem._local AS schemaElement, mns._prefix AS schemaPrefix, mns._ns AS schemaNs  ");
 
