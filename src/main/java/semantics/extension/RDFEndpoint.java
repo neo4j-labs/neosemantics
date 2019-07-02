@@ -82,10 +82,9 @@ public class RDFEndpoint {
           .readValue(body,
               new TypeReference<Map<String, String>>() {
               });
-      try (Transaction tx = gds.beginTx()) {
+      try (Transaction tx = gds.beginTx(); Result result = gds.execute(jsonMap.get("cypher"))) {
         final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
-        Result result = gds.execute(jsonMap.get("cypher"));
-        Set<Long> serializedNodes = new HashSet<Long>();
+        Set<Long> serializedNodes = new HashSet<>();
         RDFWriter writer = Rio
             .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
                 outputStream);
@@ -121,7 +120,6 @@ public class RDFEndpoint {
           }
         }
         writer.endRDF();
-        result.close();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
       }
@@ -142,9 +140,8 @@ public class RDFEndpoint {
               new TypeReference<Map<String, String>>() {
               });
       try (Transaction tx = gds.beginTx(); Result result = gds.execute(jsonMap.get("cypher"))) {
-        final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
 
-        Set<ContextResource> serializedNodes = new HashSet<ContextResource>();
+        Set<ContextResource> serializedNodes = new HashSet<>();
         RDFWriter writer = Rio
             .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
                 outputStream);
@@ -152,7 +149,6 @@ public class RDFEndpoint {
         String baseVocabNS = "neo4j://vocabulary#";
         writer.handleNamespace("neovoc", baseVocabNS);
         writer.startRDF();
-        boolean doneOnce = false;
         while (result.hasNext()) {
           Map<String, Object> row = result.next();
           Set<Entry<String, Object>> entries = row.entrySet();
@@ -348,10 +344,8 @@ public class RDFEndpoint {
             "RETURN x, null AS r, null AS value";
         params.put("graphUri", graphUriParam);
       }
-      try (Transaction tx = gds.beginTx()) {
-        Result result = gds
-            .execute((excludeContextParam != null ? queryNoContext : queryWithContext),
-                params);
+      try (Transaction tx = gds.beginTx(); Result result = gds
+          .execute((excludeContextParam != null ? queryNoContext : queryWithContext), params)) {
 
         RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
@@ -373,7 +367,6 @@ public class RDFEndpoint {
           }
         }
         writer.endRDF();
-        result.close();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
@@ -384,21 +377,11 @@ public class RDFEndpoint {
   private void handleSerialisationError(OutputStream outputStream, Exception e,
       @HeaderParam("accept") String acceptHeaderParam, @QueryParam("format") String format) {
     //output the error message using the right serialisation
-    //TODO: maybe seiralise all that can be serialised and just comment the offending triples?
+    //TODO: maybe serialise all that can be serialised and just comment the offending triples?
     RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
     writer.startRDF();
     writer.handleComment(e.getMessage());
     writer.endRDF();
-  }
-
-  private Resource getResource(String s, ValueFactory vf) {
-    // taken from org.eclipse.rdf4j.model.impl.SimpleIRI
-    // explicit storage of blank nodes in the graph to be considered
-    if (s.indexOf(58) >= 0) {
-      return vf.createIRI(s);
-    } else {
-      return vf.createBNode(s);
-    }
   }
 
   private Map<String, String> getNamespacesFromDB(GraphDatabaseService graphdb) {
@@ -455,14 +438,6 @@ public class RDFEndpoint {
         .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
-  private String getPrefix(String namespace, Map<String, String> namespaces) {
-    if (namespaces.containsKey(namespace)) {
-      return namespaces.get(namespace);
-    } else {
-      return namespace;
-    }
-  }
-
   @GET
   @Path("/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
@@ -480,7 +455,7 @@ public class RDFEndpoint {
       writer.startRDF();
       try (Transaction tx = gds.beginTx()) {
         Map<String, String> mappings = getExportMappingsFromDB(gds);
-        Node node = (Node) gds.getNodeById(idParam);
+        Node node = gds.getNodeById(idParam);
         processNodeInLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
         if (excludeContextParam == null) {
           processRelsOnLPG(writer, valueFactory, mappings, node, onlyMappedInfo != null);
@@ -529,14 +504,15 @@ public class RDFEndpoint {
   }
 
   private Object castValue(String valType, String propVal) {
-    if (valType.equals("INTEGER")) {
-      return Integer.valueOf(propVal);
-    } else if (valType.equals("FLOAT")) {
-      return Float.valueOf(propVal);
-    } else if (valType.equals("BOOLEAN")) {
-      return Boolean.valueOf(propVal);
-    } else {
-      return propVal;
+    switch (valType) {
+      case "INTEGER":
+        return Integer.valueOf(propVal);
+      case "FLOAT":
+        return Float.valueOf(propVal);
+      case "BOOLEAN":
+        return Boolean.valueOf(propVal);
+      default:
+        return propVal;
     }
   }
 
@@ -677,7 +653,6 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       Map<String, String> namespaces = getNamespacesFromDB(gds);
-      String baseVocabNS = "neo4j://vocabulary#";
 
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
       SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
@@ -745,7 +720,7 @@ public class RDFEndpoint {
 
 
   private Literal createTypedLiteral(SimpleValueFactory valueFactory, Object value) {
-    Literal result = null;
+    Literal result;
     if (value instanceof String) {
       result = getLiteralWithTagOrDTIfPresent((String) value, valueFactory);
     } else if (value instanceof Integer) {
@@ -808,8 +783,7 @@ public class RDFEndpoint {
 
   private class MissingNamespacePrefixDefinition extends RDFHandlerException {
 
-    public MissingNamespacePrefixDefinition(
-        String msg) {
+    MissingNamespacePrefixDefinition(String msg) {
       super("RDF Serialization ERROR: ".concat(msg));
     }
   }
