@@ -17,12 +17,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Test;
-import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.ServerControls;
@@ -50,31 +48,28 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-                  "MERGE (a:Category {catName: 'Actor'})\n" +
-                  "MERGE (d:Category {catName: 'Director'})\n" +
-                  "MERGE (c:Category {catName: 'Critic'})\n" +
-                  "CREATE (a)-[:SCO]->(p)\n" +
-                  "CREATE (d)-[:SCO]->(p)\n" +
-                  "CREATE (c)-[:SCO]->(p)\n" +
-                  "RETURN *";
-              graphDatabaseService.execute(ontoCreation);
-              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-                  "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-                  "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                "MERGE (a:Category {catName: 'Actor'})\n" +
+                "MERGE (d:Category {catName: 'Director'})\n" +
+                "MERGE (c:Category {catName: 'Critic'})\n" +
+                "CREATE (a)-[:SCO]->(p)\n" +
+                "CREATE (d)-[:SCO]->(p)\n" +
+                "CREATE (c)-[:SCO]->(p)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(ontoCreation);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+                "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+                "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
       // When
@@ -83,7 +78,7 @@ public class RDFEndpointTest {
       assertEquals(new Long(7), id);
 
       // When
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/id/"
               + id.toString());
 
@@ -107,8 +102,8 @@ public class RDFEndpointTest {
           "  } ]\n" +
           "} ]";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
     }
   }
@@ -118,31 +113,28 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-                  "MERGE (a:Category {catName: 'Actor'})\n" +
-                  "MERGE (d:Category {catName: 'Director'})\n" +
-                  "MERGE (c:Category {catName: 'Critic'})\n" +
-                  "CREATE (a)-[:SCO]->(p)\n" +
-                  "CREATE (d)-[:SCO]->(p)\n" +
-                  "CREATE (c)-[:SCO]->(p)\n" +
-                  "RETURN *";
-              graphDatabaseService.execute(ontoCreation);
-              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1964})\n" +
-                  "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-                  "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                "MERGE (a:Category {catName: 'Actor'})\n" +
+                "MERGE (d:Category {catName: 'Director'})\n" +
+                "MERGE (c:Category {catName: 'Critic'})\n" +
+                "CREATE (a)-[:SCO]->(p)\n" +
+                "CREATE (d)-[:SCO]->(p)\n" +
+                "CREATE (c)-[:SCO]->(p)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(ontoCreation);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1964})\n" +
+                "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+                "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
       // When
@@ -151,7 +143,7 @@ public class RDFEndpointTest {
       assertEquals(new Long(7), id);
 
       // When
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/Director/born/1961?valType=INTEGER");
 
@@ -167,11 +159,11 @@ public class RDFEndpointTest {
           + "  } ]\n"
           + "} ]";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
       // When
-      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/Director/name/Laurence%20Fishburne");
 
@@ -187,11 +179,11 @@ public class RDFEndpointTest {
           + "  } ]\n"
           + "} ]";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
 
       // When
-      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/Actor/born/1964?valType=INTEGER");
 
@@ -222,8 +214,8 @@ public class RDFEndpointTest {
           + "  } ]\n"
           + "} ]";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
     }
   }
 
@@ -233,7 +225,7 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class).newServer()) {
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/id/9999999");
 
@@ -241,7 +233,7 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
 
       //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
-      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/id/adb");
 
@@ -256,14 +248,14 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class).newServer()) {
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/WrongLabel/wrongProperty/someValue");
 
       assertEquals("[ ]", response.rawContent());
       assertEquals(200, response.status());
 
-      response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/Something");
 
@@ -278,7 +270,7 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class).newServer()) {
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/9999999");
 
@@ -307,29 +299,26 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
-                  "MERGE (a:Category {catName: 'Actor'})\n" +
-                  "MERGE (d:Category {catName: 'Director'})\n" +
-                  "MERGE (c:Category {catName: 'Critic'})\n" +
-                  "CREATE (a)-[:SCO]->(p)\n" +
-                  "CREATE (d)-[:SCO]->(p)\n" +
-                  "CREATE (c)-[:SCO]->(p)\n" +
-                  "RETURN *";
-              graphDatabaseService.execute(ontoCreation);
-              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
+                "MERGE (a:Category {catName: 'Actor'})\n" +
+                "MERGE (d:Category {catName: 'Director'})\n" +
+                "MERGE (c:Category {catName: 'Critic'})\n" +
+                "CREATE (a)-[:SCO]->(p)\n" +
+                "CREATE (d)-[:SCO]->(p)\n" +
+                "CREATE (c)-[:SCO]->(p)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(ontoCreation);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -340,7 +329,7 @@ public class RDFEndpointTest {
       map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
       //map.put("showOnlyMapped", "true");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
       String expected =
@@ -358,8 +347,8 @@ public class RDFEndpointTest {
               "<neo4j://com.neo4j/indiv#1> <neo4j://com.neo4j/voc#catName> \"Actor\" .\n";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
     }
   }
@@ -369,30 +358,27 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String dataInsertion = "CREATE (kean:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (mtrx:Movie {title:'The Matrix', released:2001})\n" +
-                  "CREATE (dir:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (cri:Critic {name:'Hugo Weaving', born:1960})\n" +
-                  "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
-                  "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
-                  "CREATE (cri)-[:RATED]->(mtrx)\n" +
-                  "RETURN *";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String dataInsertion = "CREATE (kean:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (mtrx:Movie {title:'The Matrix', released:2001})\n" +
+                "CREATE (dir:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (cri:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
+                "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
+                "CREATE (cri)-[:RATED]->(mtrx)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
       Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "onto");
 
       String expected =
@@ -430,8 +416,8 @@ public class RDFEndpointTest {
               +
               "<neo4j://com.neo4j/voc#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://com.neo4j/voc#Movie> .\n";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
 
     }
@@ -442,42 +428,39 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String nsDefCreation =
-                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                      +
-                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-              graphDatabaseService.execute(nsDefCreation);
-              String dataInsertion =
-                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
-                      "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String nsDefCreation =
+                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                    +
+                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+            graphDatabaseService.execute(nsDefCreation);
+            String dataInsertion =
+                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                    + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                    + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                    + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                    + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                    + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                    "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
+                    "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "rdfonto");
 
       String expected =
@@ -509,8 +492,8 @@ public class RDFEndpointTest {
               +
               "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
 
     }
@@ -521,38 +504,35 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String nsDefCreation =
-                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                      +
-                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-              graphDatabaseService.execute(nsDefCreation);
-              String dataInsertion =
-                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
-                      "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String nsDefCreation =
+                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                    +
+                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+            graphDatabaseService.execute(nsDefCreation);
+            String dataInsertion =
+                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                    + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                    + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                    + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                    + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                    + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                    "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
+                    "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -562,7 +542,7 @@ public class RDFEndpointTest {
 
       Long id = (Long) result.next().get("id");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString()));
@@ -582,8 +562,8 @@ public class RDFEndpointTest {
           +
           "    <https://permid.org/1-21523433750> .\n";
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -594,33 +574,30 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-                      .toURI() + "','RDF/XML',{})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                    .toURI() + "','RDF/XML',{})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder.encode(
               "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement",
@@ -639,18 +616,18 @@ public class RDFEndpointTest {
           "</rdf:Description></rdf:RDF>";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
 
       //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
-      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
+      response = HTTP.withHeaders("Accept", "text/plain").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/uri/"
               + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace", "UTF-8")
       );
 
       expected = "<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .";
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
       assertEquals(200, response.status());
     }
   }
@@ -662,39 +639,36 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              //set a prefix that we can remove afterwards
-              graphDatabaseService.execute("CREATE (n:NamespacePrefixDefinition) "
-                  + "SET n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/` = 'fiboanno'");
-
-              graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-                      .toURI() + "','RDF/XML',{})");
-
-              //we remove the namespace now
-              graphDatabaseService.execute("MATCH (n:NamespacePrefixDefinition) "
-                  + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            //set a prefix that we can remove afterwards
+            graphDatabaseService.execute("CREATE (n:NamespacePrefixDefinition) "
+                + "SET n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/` = 'fiboanno'");
+
+            graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                    .toURI() + "','RDF/XML',{})");
+
+            //we remove the namespace now
+            graphDatabaseService.execute("MATCH (n:NamespacePrefixDefinition) "
+                + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
@@ -706,8 +680,8 @@ public class RDFEndpointTest {
           + "<!-- RDF Serialization ERROR: Prefix fiboanno in use but not defined in the 'NamespacePrefixDefinition' node -->\n"
           + "\n"
           + "</rdf:RDF>";
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
       assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno in use "
           + "but not defined in the 'NamespacePrefixDefinition' node"));
     }
@@ -719,33 +693,30 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
-                      .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
+                    .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).GET(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/" + URLEncoder
               .encode("http://example.org/vocab/show/218", StandardCharsets.UTF_8.toString()));
@@ -758,8 +729,8 @@ public class RDFEndpointTest {
           "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
 
     }
@@ -771,37 +742,34 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String nsDefCreation =
-                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                      +
-                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-              graphDatabaseService.execute(nsDefCreation);
-              String dataInsertion =
-                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String nsDefCreation =
+                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                    +
+                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+            graphDatabaseService.execute(nsDefCreation);
+            String dataInsertion =
+                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                    + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                    + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                    + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                    + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                    + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                    "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -814,7 +782,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n:Resource) RETURN n LIMIT 1");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "[ {\n" +
@@ -830,8 +798,8 @@ public class RDFEndpointTest {
           "} ]";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
     }
   }
 
@@ -840,24 +808,21 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String nsDefCreation =
-                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                      +
-                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-              graphDatabaseService.execute(nsDefCreation);
-              String dataInsertion =
-                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                      + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String nsDefCreation =
+                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                    +
+                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+            graphDatabaseService.execute(nsDefCreation);
+            String dataInsertion =
+                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                    + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -870,7 +835,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n) RETURN n ");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/ld+json"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "[ {\n" +
@@ -886,8 +851,8 @@ public class RDFEndpointTest {
           "} ]";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
     }
   }
 
@@ -895,37 +860,34 @@ public class RDFEndpointTest {
   public void testCypherWithBNodesSerializeAsRDFXML() throws Exception {
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              String nsDefCreation =
-                  "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                      +
-                      "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-              graphDatabaseService.execute(nsDefCreation);
-              String dataInsertion =
-                  "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                      + "born:1964, uri: '_:1-21523433750' })\n" +
-                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
-              graphDatabaseService.execute(dataInsertion);
-              tx.success();
-            }
-            return null;
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String nsDefCreation =
+                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
+                    +
+                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
+            graphDatabaseService.execute(nsDefCreation);
+            String dataInsertion =
+                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                    + "born:1964, uri: '_:1-21523433750' })\n" +
+                    "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                    "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                    + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                    + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                    "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                    + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                    + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                    "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                    + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                    + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                    "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -939,7 +901,7 @@ public class RDFEndpointTest {
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a)-[r:ns0" + PREFIX_SEPARATOR + "Likes]-(b) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "application/rdf+xml"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -968,8 +930,8 @@ public class RDFEndpointTest {
           "</rdf:RDF>";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
 
     }
   }
@@ -980,32 +942,29 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
-                  +
-                  "keepCustomDataTypes: true, typesToLabels: true})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
+                +
+                "keepCustomDataTypes: true, typesToLabels: true})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1033,7 +992,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1044,32 +1003,29 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
-                  +
-                  "keepCustomDataTypes: true, typesToLabels: true})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+                +
+                "keepCustomDataTypes: true, typesToLabels: true})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1097,7 +1053,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
     }
   }
 
@@ -1107,34 +1063,31 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-                  +
-                  "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
-                  +
-                  "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+                +
+                "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
+                +
+                "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1159,7 +1112,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1170,34 +1123,31 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-                  +
-                  "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
-                  +
-                  "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+                +
+                "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
+                +
+                "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1222,7 +1172,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1233,32 +1183,29 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
-                  +
-                  "keepCustomDataTypes: true})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
+                +
+                "keepCustomDataTypes: true})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1288,7 +1235,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1395,32 +1342,29 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
-                  +
-                  "keepCustomDataTypes: true})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+                +
+                "keepCustomDataTypes: true})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1450,7 +1394,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1462,34 +1406,31 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-                  +
-                  "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-                  +
-                  "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+                +
+                "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+                +
+                "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1516,7 +1457,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1528,34 +1469,31 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-                  +
-                  "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-                  +
-                  "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
-
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+                +
+                "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+                +
+                "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1582,7 +1520,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1593,38 +1531,35 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              Result res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
-                  RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
-                      .toURI()
-                  + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              Map map = res.next();
-              assertEquals(1L, map.get("triplesDeleted"));
-              assertEquals(
-                  "8 of the statements could not be deleted, due to containing a blank node.",
-                  map.get("extraInfo"));
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+            Result res = graphDatabaseService.execute("CALL semantics.deleteRDF('" +
+                RDFImportTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
+                    .toURI()
+                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+            Map map = res.next();
+            assertEquals(1L, map.get("triplesDeleted"));
+            assertEquals(
+                "8 of the statements could not be deleted, due to containing a blank node.",
+                map.get("extraInfo"));
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1644,7 +1579,7 @@ public class RDFEndpointTest {
               StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1694,7 +1629,7 @@ public class RDFEndpointTest {
               StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+          .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }
@@ -1744,7 +1679,7 @@ public class RDFEndpointTest {
               StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+          .compareModels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
 
     }
   }
@@ -1792,7 +1727,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+          .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }
@@ -1846,7 +1781,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+          .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }
@@ -1897,7 +1832,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+          .compareModels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
 
     }
   }
@@ -1908,40 +1843,37 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource(
-                      "RDFDatasets/RDFDatasetBNodes.trig")
-                      .toURI()
-                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              Result res = graphDatabaseService.execute("CALL semantics.deleteRDFDataset('" +
-                  RDFImportTest.class.getClassLoader().getResource(
-                      "RDFDatasets/RDFDatasetBNodesDelete.trig")
-                      .toURI()
-                  + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-              Map map = res.next();
-              assertEquals(3L, map.get("triplesDeleted"));
-              assertEquals(
-                  "4 of the statements could not be deleted, due to containing a blank node.",
-                  map.get("extraInfo"));
-              tx.success();
-            } catch (Exception e) {
-              e.printStackTrace();
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource(
+                    "RDFDatasets/RDFDatasetBNodes.trig")
+                    .toURI()
+                + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+            Result res = graphDatabaseService.execute("CALL semantics.deleteRDFDataset('" +
+                RDFImportTest.class.getClassLoader().getResource(
+                    "RDFDatasets/RDFDatasetBNodesDelete.trig")
+                    .toURI()
+                + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+            Map map = res.next();
+            assertEquals(3L, map.get("triplesDeleted"));
+            assertEquals(
+                "4 of the statements could not be deleted, due to containing a blank node.",
+                map.get("extraInfo"));
+            tx.success();
+          } catch (Exception e) {
+            e.printStackTrace();
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
@@ -1961,7 +1893,7 @@ public class RDFEndpointTest {
               StandardCharsets.UTF_8);
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+          .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
     }
   }

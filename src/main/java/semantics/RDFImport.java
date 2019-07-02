@@ -10,11 +10,13 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -46,7 +48,7 @@ import semantics.result.NamespacePrefixesResult;
 import semantics.result.StreamedStatement;
 
 /**
- * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instancdes of DatatypeProperties
+ * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instances of DatatypeProperties
  * become node attributes 2. rdf:type relationships are transformed either into labels or
  * relationships to nodes representing the class 3. Instances of ObjectProperties become
  * relationships ( See https://jbarrasa.com/2016/06/07/importing-rdf-data-into-neo4j/ )
@@ -71,7 +73,7 @@ public class RDFImport {
   private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
 
-  public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
+  private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
   @Context
   public GraphDatabaseService db;
@@ -184,11 +186,11 @@ public class RDFImport {
         HttpURLConnection http = (HttpURLConnection) urlConn;
         http.setRequestMethod(method.toString());
       }
-      headerParams.forEach((k, v) -> urlConn.setRequestProperty(k, v));
+      headerParams.forEach(urlConn::setRequestProperty);
       if (props.containsKey("payload")) {
         urlConn.setDoOutput(true);
         BufferedWriter writer = new BufferedWriter(
-            new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
+            new OutputStreamWriter(urlConn.getOutputStream(), StandardCharsets.UTF_8));
         writer.write(props.get("payload").toString());
         writer.close();
       }
@@ -393,8 +395,8 @@ public class RDFImport {
       }
     } else if (values instanceof String[]) {
       String[] valuesAsArray = (String[]) values;
-      for (int i = 0; i < valuesAsArray.length; i++) {
-        Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(valuesAsArray[i]);
+      for (String s : valuesAsArray) {
+        Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher(s);
         if (m.matches() && m.group(2).equals(lang)) {
           return m.group(1);
         }
@@ -416,9 +418,7 @@ public class RDFImport {
       ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
-        Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-        while (nsIterator.hasNext()) {
-          Map.Entry<String, Object> kv = nsIterator.next();
+        for (Entry<String, Object> kv : namespaces.entrySet()) {
           if (m.group(1).equals(kv.getValue())) {
             return kv.getKey() + m.group(2);
           }
@@ -436,9 +436,7 @@ public class RDFImport {
       ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
-        Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-        while (nsIterator.hasNext()) {
-          Map.Entry<String, Object> kv = nsIterator.next();
+        for (Entry<String, Object> kv : namespaces.entrySet()) {
           if (kv.getKey().equals(iri.getNamespace())) {
             return kv.getValue() + PREFIX_SEPARATOR + iri.getLocalName();
           }
@@ -480,16 +478,16 @@ public class RDFImport {
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
     Iterable<IndexDefinition> indexes = db.schema().getIndexes();
-    if (missing(indexes.iterator(), "Resource")) {
+    if (missing(indexes.iterator())) {
       throw new RDFImportPreRequisitesNotMet(
           "The required index on :Resource(uri) could not be found");
     }
   }
 
-  private boolean missing(Iterator<IndexDefinition> iterator, String indexLabel) {
+  private boolean missing(Iterator<IndexDefinition> iterator) {
     while (iterator.hasNext()) {
       IndexDefinition indexDef = iterator.next();
-      if (indexDef.getLabel().name().equals(indexLabel) &&
+      if (indexDef.getLabel().name().equals("Resource") &&
           indexDef.getPropertyKeys().iterator().next().equals("uri")) {
         return false;
       }

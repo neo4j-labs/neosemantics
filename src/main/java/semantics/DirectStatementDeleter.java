@@ -41,7 +41,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private final Cache<String, Node> nodeCache;
 
   private long notDeletedStatementCount;
-  private long statementsWithbNodeCount;
+  private long statementsWithBNodeCount;
   private String bNodeInfo;
 
   DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
@@ -52,7 +52,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         .build();
     bNodeInfo = "";
     notDeletedStatementCount = 0;
-    statementsWithbNodeCount = 0;
+    statementsWithBNodeCount = 0;
   }
 
   @Override
@@ -73,23 +73,14 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().startsWith("genid")) {
-        statementsWithbNodeCount += entry.getValue().size() + 1;
+        statementsWithBNodeCount += entry.getValue().size() + 1;
         continue;
       }
       Node tempNode = null;
       final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-            if (node != null) {
-              return node;
-            } else {
-              return node;
-            }
-          }
-        });
+        tempNode = nodeCache
+            .get(entry.getKey(), () -> graphdb.findNode(RESOURCE, "uri", entry.getKey()));
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
@@ -172,29 +163,23 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
 
     for (Statement st : statements) {
       if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
-        statementsWithbNodeCount++;
+        statementsWithBNodeCount++;
       }
       if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
         continue;
       }
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-          }
+        fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
+          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
       Node toNode = null;
       try {
-        toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
-          }
+        toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
+          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
@@ -233,8 +218,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-    if (statementsWithbNodeCount > 0) {
-      setbNodeInfo(statementsWithbNodeCount
+    if (statementsWithBNodeCount > 0) {
+      setbNodeInfo(statementsWithBNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
 
@@ -252,7 +237,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   }
 
   long getNotDeletedStatementCount() {
-    return notDeletedStatementCount + statementsWithbNodeCount;
+    return notDeletedStatementCount + statementsWithBNodeCount;
   }
 
   String getbNodeInfo() {

@@ -2,13 +2,13 @@ package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
 import static semantics.RDFParserConfig.URL_SHORTEN;
+import static semantics.Util.loadNode;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -20,7 +20,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
@@ -67,40 +66,11 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
 
   @Override
   public Integer call() throws Exception {
-    int count = 0;
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
 
-      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-        @Override
-        public Node call() {
-          Node node = null;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(entry.getKey().getUri(),
-              entry.getKey().getGraphUri(),
-              params);
-          Result result = graphdb.execute(cypher, params);
-          if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + entry.getKey().getUri() +
-                      (entry.getKey().getGraphUri() == null ? "}" :
-                          ", graphUri: " + entry.getKey().getGraphUri() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
-          }
-          if (node == null) {
-            node = graphdb.createNode(RESOURCE);
-            node.setProperty("uri", entry.getKey().getUri());
-            if (entry.getKey().getGraphUri() != null) {
-              node.setProperty("graphUri", entry.getKey().getGraphUri());
-            }
-          }
-          return node;
-        }
-      });
+      final Node node = nodeCache
+          .get(entry.getKey(), loadOrCreateNode(loadNode(entry.getKey(), graphdb), entry.getKey()));
 
       entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
       resourceProps.get(entry.getKey()).forEach((k, v) -> {
@@ -130,62 +100,10 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
     for (Statement st : statements) {
       ContextResource from = new ContextResource(st.getSubject().stringValue(),
           st.getContext() != null ? st.getContext().stringValue() : null);
-      final Node fromNode = nodeCache.get(from, new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          Node node;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(st.getSubject().stringValue(),
-              st.getContext() != null ? st.getContext().stringValue() : null,
-              params);
-          Result result = graphdb.execute(cypher, params);
-          if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + st.getSubject().stringValue() +
-                      (st.getContext() == null ? "}" :
-                          ", graphUri: " + st.getContext().stringValue() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
-          } else {
-            throw new NoSuchElementException(
-                "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                    + " and \"graphUri\": " + st.getContext().stringValue());
-          }
-          return node;
-        }
-      });
+      final Node fromNode = nodeCache.get(from, loadNode(from, graphdb));
       ContextResource to = new ContextResource(st.getObject().stringValue(),
           st.getContext() != null ? st.getContext().stringValue() : null);
-      final Node toNode = nodeCache.get(to, new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          Node node;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(st.getObject().stringValue(),
-              st.getContext() != null ? st.getContext().stringValue() : null,
-              params);
-          Result result = graphdb.execute(cypher, params);
-          if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + st.getObject().stringValue() +
-                      (st.getContext() == null ? "}" :
-                          ", graphUri: " + st.getContext().stringValue() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
-          } else {
-            throw new NoSuchElementException(
-                "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                    + " and \"graphUri\": " + st.getContext().stringValue());
-          }
-          return node;
-        }
-      });
+      final Node toNode = nodeCache.get(to, loadNode(from, graphdb));
 
       // check if the rel is already present. If so, don't recreate.
       // explore the node with the lowest degree
@@ -226,6 +144,21 @@ class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor 
 
     //TODO what to return here? number of nodes and rels?
     return 0;
+  }
+
+  private Callable<Node> loadOrCreateNode(Callable<Node> loadNode,
+      ContextResource contextResource) {
+    return () -> {
+      Node node = loadNode.call();
+      if (node == null) {
+        node = graphdb.createNode(RESOURCE);
+        node.setProperty("uri", contextResource.getUri());
+        if (contextResource.getGraphUri() != null) {
+          node.setProperty("graphUri", contextResource.getGraphUri());
+        }
+      }
+      return node;
+    };
   }
 
   @Override
