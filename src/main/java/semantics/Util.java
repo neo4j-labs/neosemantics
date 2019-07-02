@@ -1,7 +1,10 @@
 package semantics;
 
+import com.google.common.base.Preconditions;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -13,6 +16,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 /**
@@ -96,5 +101,63 @@ public class Util {
       return labels;
     }
     return new Label[]{Label.label(labelNames.toString())};
+  }
+
+  /**
+   * @param key the resource to load
+   * @return a {@link Callable} to retrieve a {@link Node}, which can be {@code null}
+   * @author Emre Arkan
+   *
+   * Created on 02.07.2019
+   * @see RDFDatasetDirectStatementLoader
+   * @see RDFDatasetDirectStatementDeleter
+   */
+  static Callable<Node> loadNode(ContextResource key, GraphDatabaseService graphdb) {
+    return () -> {
+      Node node = null;
+      Map<String, Object> params = new HashMap<>();
+      String cypher = buildCypher(key.getUri(),
+          key.getGraphUri(),
+          params);
+      Result result = graphdb.execute(cypher, params);
+
+      if (result.hasNext()) {
+        node = (Node) result.next().get("n");
+        if (result.hasNext()) {
+          String props =
+              "{uri: " + key.getUri() +
+                  (key.getGraphUri() == null ? "}" :
+                      ", graphUri: " + key.getGraphUri() + "}");
+          throw new IllegalStateException(
+              "There are multiple matching nodes for the given properties " + props);
+        }
+      }
+      return node;
+    };
+  }
+
+  /**
+   * @param uri the uri of the searched node
+   * @param graphUri the graph uri of the searched node
+   * @param params parameters of the query
+   * @return a {@link String} of the Cypher query to be executed
+   * @author Emre Arkan
+   *
+   * Created on 02.07.2019
+   */
+  private static String buildCypher(String uri, String graphUri, Map<String, Object> params) {
+    Preconditions.checkNotNull(uri);
+    StringBuilder cypher = new StringBuilder();
+    params.put("uri", uri);
+    cypher.append("MATCH (n:Resource) ");
+    cypher.append("WHERE n.uri = $uri ");
+    if (graphUri != null) {
+      cypher.append("AND n.graphUri = $graphUri ");
+      params.put("graphUri", graphUri);
+    } else {
+      cypher.append("AND NOT EXISTS(n.graphUri) ");
+    }
+    cypher.append("RETURN n");
+    return cypher.toString();
   }
 }

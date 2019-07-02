@@ -2,6 +2,7 @@ package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
 import static semantics.RDFParserConfig.URL_SHORTEN;
+import static semantics.Util.loadNode;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -22,7 +23,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
@@ -78,7 +78,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
       Node tempNode = null;
       final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), loadNode(entry.getKey()));
+        tempNode = nodeCache.get(entry.getKey(), loadNode(entry.getKey(), graphdb));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -160,7 +160,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
         ContextResource contextResource = new ContextResource(
             st.getSubject().stringValue(),
             st.getContext() != null ? st.getContext().stringValue() : null);
-        fromNode = nodeCache.get(from, loadNode(contextResource));
+        fromNode = nodeCache.get(from, loadNode(contextResource, graphdb));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -172,7 +172,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
             st.getObject().stringValue(),
             st.getContext() != null ? st.getContext().stringValue() : null
         );
-        toNode = nodeCache.get(to, loadNode(contextResource));
+        toNode = nodeCache.get(to, loadNode(contextResource, graphdb));
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -218,35 +218,6 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
 
     //TODO what to return here? number of nodes and rels?
     return 0;
-  }
-
-  /**
-   * @param key the resource to load
-   * @return a {@link Callable} to retrieve a {@link Node}, which can be {@code null}
-   */
-  private Callable<? extends Node> loadNode(ContextResource key) {
-
-    return (Callable<Node>) () -> {
-      Node node = null;
-      Map<String, Object> params = new HashMap<>();
-      String cypher = buildCypher(key.getUri(),
-          key.getGraphUri(),
-          params);
-      Result result = graphdb.execute(cypher, params);
-
-      if (result.hasNext()) {
-        node = (Node) result.next().get("n");
-        if (result.hasNext()) {
-          String props =
-              "{uri: " + key.getUri() +
-                  (key.getGraphUri() == null ? "}" :
-                      ", graphUri: " + key.getGraphUri() + "}");
-          throw new IllegalStateException(
-              "There are multiple matching nodes for the given properties " + props);
-        }
-      }
-      return node;
-    };
   }
 
   @Override
