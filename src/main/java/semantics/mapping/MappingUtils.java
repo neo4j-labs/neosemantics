@@ -26,19 +26,23 @@ public class MappingUtils {
   public Log log;
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NodeResult> addSchema(@Name("schemaUri") String uri,
+  public Stream<NamespacePrefixesResult> addSchema(@Name("schemaUri") String uri,
       @Name("prefix") String prefix) throws MappingDefinitionException {
     //what should the logic be??? no two prefixes for the same ns and no more than one prefix for a voc
     Map<String, Object> params = new HashMap<>();
     params.put("schema", uri);
     params.put("prefix", prefix);
-    String checkIfSchemaOrPrefixExist = "MATCH (mns:_MapNs { _ns: $schema}) RETURN mns UNION MATCH (mns:_MapNs { _prefix : $prefix }) RETURn mns ";
+    String checkIfSchemaOrPrefixExist = "MATCH (mns:_MapNs { _ns: $schema}) RETURN mns "
+        + "UNION MATCH (mns:_MapNs { _prefix : $prefix }) RETURn mns ";
     if (db.execute(checkIfSchemaOrPrefixExist, params).hasNext()) {
-      throw new MappingDefinitionException("The schema URI or the prefix are already in use. Drop existing ones before reusing.");
+      throw new MappingDefinitionException("The schema URI or the prefix are already in use. "
+          + "Drop existing ones before reusing.");
     } else {
-      String createNewSchema = "CREATE (mns:_MapNs { _ns: $schema, _prefix : $prefix }) return mns";
-      return db.execute(createNewSchema, params).stream().map(n -> (Node) n.get("mns"))
-          .map(NodeResult::new);
+      String createNewSchema = "CREATE (mns:_MapNs { _ns: $schema, _prefix : $prefix }) "
+          + "RETURN  mns._ns as namespace, mns._prefix as prefix ";
+      return db.execute(createNewSchema, params).stream().map(
+          n -> new NamespacePrefixesResult((String) n.get("prefix"),
+              (String) n.get("namespace")));
     }
   }
 
@@ -78,13 +82,13 @@ public class MappingUtils {
         "] AS new \n" +
         " WITH filter(x in new where not (x.namespace in namespaces or x.prefix in prefixes)) as newfiltered "
         + " UNWIND newfiltered AS schemaDef " +
-        " CALL semantics.mapping.addSchema(schemaDef.namespace, schemaDef.prefix) YIELD node AS mns"
+        " CALL semantics.mapping.addSchema(schemaDef.namespace, schemaDef.prefix) YIELD namespace, prefix "
         +
-        " RETURN mns._ns as uri, mns._prefix as prefix";
+        " RETURN namespace, prefix";
 
     return db.execute(cypher).stream().map(
         n -> new NamespacePrefixesResult((String) n.get("prefix"),
-            (String) n.get("uri")));
+            (String) n.get("namespace")));
   }
 
   @Procedure(mode = Mode.READ)
@@ -105,13 +109,14 @@ public class MappingUtils {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NodeResult> addMappingToSchema(@Name("schemaUri") String schemaUri,
+  public Stream<MappingDesc> addMappingToSchema(@Name("schemaUri") String schemaUri,
       @Name("graphElementName") String gElem,
-      @Name("schemaElementlocalName") String schElem) throws MappingDefinitionException {
+      @Name("schemaElementName") String schElem) throws MappingDefinitionException {
 
     Node schema = db.findNode(Label.label("_MapNs"), "_ns", schemaUri);
     if (schema == null){
-      throw new MappingDefinitionException("Schema URI not defined. Define it first with semantics.mapping.addSchema ");
+      throw new MappingDefinitionException("Schema URI not defined. Define it first with semantics.mapping.addSchema('"+
+          schemaUri +"','yourprefix') ");
     }
     Node mapDef;
     Map<String, Object> props = new HashMap<>();
@@ -138,7 +143,7 @@ public class MappingUtils {
       mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
     }
 
-    return Stream.of(new NodeResult(mapDef));
+    return Stream.of(new MappingDesc(gElem, schElem, schemaUri, schema.getProperty("_prefix").toString()));
   }
 
   @Procedure(mode = Mode.WRITE)
@@ -219,10 +224,11 @@ public class MappingUtils {
 
   public class MappingDesc {
 
-    public String elemName;
-    public String schemaElement;
     public String schemaNs;
     public String schemaPrefix;
+    public String schemaElement;
+    public String elemName;
+
 
     public MappingDesc(Map<String, Object> record) {
       this.elemName = record.get("elemName").toString();
@@ -230,6 +236,14 @@ public class MappingUtils {
       this.schemaNs = record.get("schemaNs").toString();
       this.schemaPrefix = record.get("schemaPrefix").toString();
     }
+
+    public MappingDesc(String elemName, String schemaElement, String schemaNs, String schemaPrefix) {
+      this.elemName = elemName;
+      this.schemaElement = schemaElement;
+      this.schemaNs = schemaNs;
+      this.schemaPrefix = schemaPrefix;
+    }
+
   }
 
   private class MappingDefinitionException extends Throwable {

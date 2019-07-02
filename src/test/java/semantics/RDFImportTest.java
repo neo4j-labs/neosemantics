@@ -771,16 +771,16 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       String addMapping1 =
-          " call semantics.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield node as sch\n"
+          " call semantics.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield namespace as sch\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"uniqueName\",\"name\") yield node as mapping1\n"
+              "call semantics.mapping.addMappingToSchema(sch,\"uniqueName\",\"name\") yield elemName as mapping1\n"
               +
               "return *";
       session.run(addMapping1);
       String addMapping2 =
-          " call semantics.mapping.addSchema(\"http://neo4j.com/category/\",\"cats\") yield node as sch\n"
+          " call semantics.mapping.addSchema(\"http://neo4j.com/category/\",\"cats\") yield namespace as sch\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"Media\",\"Publication\") yield node as mapping1\n"
+              "call semantics.mapping.addMappingToSchema(sch,\"Media\",\"Publication\") yield elemName as mapping1\n"
               +
               "return *";
       session.run(addMapping2);
@@ -872,10 +872,10 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
 
       String addMapping1 =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(sch,\"WHERE\",\"location\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n" +
+              "call semantics.mapping.addMappingToSchema(sch,\"WHERE\",\"location\") yield elemName as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"desc\",\"description\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(sch,\"desc\",\"description\") yield elemName as mapping2\n"
               +
               "return *";
       session.run(addMapping1);

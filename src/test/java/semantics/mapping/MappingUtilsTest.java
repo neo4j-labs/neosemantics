@@ -11,6 +11,7 @@ import org.junit.Test;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
+import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.driver.v1.types.Node;
@@ -40,9 +41,9 @@ public class MappingUtilsTest {
 
       //add schema
       String addSchemaCypher = "CALL semantics.mapping.addSchema($ns,$prefix)";
-      Node mappingNs = session.run(addSchemaCypher, params).next().get("node").asNode();
-      assertEquals(vocPrefix, mappingNs.get("_prefix").asString());
-      assertEquals(vocUri, mappingNs.get("_ns").asString());
+      Record next = session.run(addSchemaCypher, params).next();
+      assertEquals(vocPrefix, next.get("prefix").asString());
+      assertEquals(vocUri, next.get("namespace").asString());
 
       //schema has been persisted
       String getSchemaByName = "MATCH (mns:_MapNs { _ns: $ns, _prefix : $prefix }) RETURN count(mns) as ct ";
@@ -181,11 +182,12 @@ public class MappingUtilsTest {
       params.put("graphElemName", key);
       params.put("localVocElem", localNameInVoc);
       String addMappingAndSchemaCypher =
-          " CALL semantics.mapping.addSchema($ns,$prefix) YIELD node AS sch WITH sch " +
-              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) YIELD node RETURN node";
-      Node mapping = session.run(addMappingAndSchemaCypher, params).next().get("node").asNode();
-      assertEquals(key, mapping.get("_key").asString());
-      assertEquals(localNameInVoc, mapping.get("_local").asString());
+          " CALL semantics.mapping.addSchema($ns,$prefix) YIELD namespace AS sch " +
+              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) "
+              + "YIELD schemaElement, elemName RETURN schemaElement, elemName ";
+      Record next = session.run(addMappingAndSchemaCypher, params).next();
+      assertEquals(key, next.get("elemName").asString());
+      assertEquals(localNameInVoc, next.get("schemaElement").asString());
       // check mapping is linked to the schema
       String existMappingAndNs = "MATCH (mns:_MapNs { _ns: $ns } )<-[:_IN]-" +
           "(elem:_MapDef { _key : $graphElemName, _local: $localVocElem }) RETURN mns, elem ";
@@ -196,10 +198,11 @@ public class MappingUtilsTest {
       params.put("localVocElem", alternativeLocalNameInVoc);
       String addMappingToExistingSchemaCypher =
           " CALL semantics.mapping.listSchemas($ns) YIELD namespace AS sch " +
-              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) YIELD node RETURN node";
-      mapping = session.run(addMappingToExistingSchemaCypher, params).next().get("node").asNode();
-      assertEquals(key, mapping.get("_key").asString());
-      assertEquals(alternativeLocalNameInVoc, mapping.get("_local").asString());
+              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) "
+              + " YIELD schemaElement, elemName RETURN schemaElement, elemName ";
+      next = session.run(addMappingToExistingSchemaCypher, params).next();
+      assertEquals(key, next.get("elemName").asString());
+      assertEquals(alternativeLocalNameInVoc,  next.get("schemaElement").asString());
       // check mapping is linked to the schema
       assertTrue(session.run(existMappingAndNs, params).hasNext());
       params.put("localVocElem", localNameInVoc);
@@ -218,12 +221,12 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as schema \n" +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as schema \n" +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName  as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName  as mapping2\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName  as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
@@ -235,7 +238,7 @@ public class MappingUtilsTest {
           .next().get("ct").asInt());
       String updateMappingCypher =
           " call semantics.mapping.listSchemas('http://schema.org/') yield namespace as sch\n" +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"MovieInSchemaDotOrg\") yield node as mapping\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"MovieInSchemaDotOrg\") yield elemName \n"
               +
               " return * ";
       assertTrue(session.run(updateMappingCypher).hasNext());
@@ -256,12 +259,12 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n" +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName as mapping2\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
@@ -286,12 +289,12 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n" +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName as mapping2\n"
               +
-              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
