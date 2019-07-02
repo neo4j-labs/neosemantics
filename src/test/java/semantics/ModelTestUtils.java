@@ -13,7 +13,7 @@ import org.eclipse.rdf4j.rio.helpers.StatementCollector;
 
 public class ModelTestUtils {
 
-  public static boolean comparemodels(String expected, RDFFormat formatExpected, String actual,
+  public static boolean compareModels(String expected, RDFFormat formatExpected, String actual,
       RDFFormat formatActual) throws IOException {
 
     Model expectedModel = createModel(expected, formatExpected);
