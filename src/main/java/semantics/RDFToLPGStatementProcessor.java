@@ -40,19 +40,19 @@ import org.neo4j.logging.Log;
 
 abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
-  protected final Map<String, String> vocMappings;
-  protected final RDFParserConfig parserConfig;
-  protected GraphDatabaseService graphdb;
   protected final Log log;
+  final RDFParserConfig parserConfig;
+  private final Map<String, String> vocMappings;
+  protected GraphDatabaseService graphdb;
   protected Map<String, String> namespaces = new HashMap<>();
   protected Set<Statement> statements = new HashSet<>();
-  protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
-  protected Map<String, Set<String>> resourceLabels = new HashMap<>();
-  protected long totalTriplesParsed = 0;
-  protected long totalTriplesMapped = 0;
-  protected long mappedTripleCounter = 0;
+  Map<String, Map<String, Object>> resourceProps = new HashMap<>();
+  Map<String, Set<String>> resourceLabels = new HashMap<>();
+  long totalTriplesParsed = 0;
+  long totalTriplesMapped = 0;
+  long mappedTripleCounter = 0;
 
-  protected RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     this.graphdb = db;
     this.parserConfig = conf;
     log = l;
@@ -68,11 +68,10 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     } else {
       this.vocMappings = null;
     }
-    ;
   }
 
 
-  protected void loadNamespaces() {
+  private void loadNamespaces() {
     Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
         "UNWIND keys(n) AS namespace\n" +
         "RETURN namespace, n[namespace] AS prefix");
@@ -93,7 +92,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   }
 
-  protected Map<String, String> popularNamespaceList() {
+  private Map<String, String> popularNamespaceList() {
     Map<String, String> ns = new HashMap<>();
     ns.put("http://schema.org/", "sch");
     ns.put("http://purl.org/dc/elements/1.1/", "dc");
@@ -107,7 +106,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  protected String getPrefix(String namespace) {
+  private String getPrefix(String namespace) {
     if (namespaces.containsKey(namespace)) {
       return namespaces.get(namespace);
     } else {
@@ -116,7 +115,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     }
   }
 
-  String nextPrefix() {
+  private String nextPrefix() {
 
     return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
   }
@@ -129,7 +128,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
    *
    * @return processed literal
    */
-  protected Object getObjectValue(IRI propertyIRI, Literal object) {
+  Object getObjectValue(IRI propertyIRI, Literal object) {
     IRI datatype = object.getDatatype();
     if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
       final Optional<String> language = object.getLanguage();
@@ -194,7 +193,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  protected String handleIRI(IRI iri, int elementType) {
+  String handleIRI(IRI iri, int elementType) {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
     if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       String localName = iri.getLocalName();
@@ -258,31 +257,31 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   }
 
-  protected void addStatement(Statement st) {
+  void addStatement(Statement st) {
     statements.add(st);
   }
 
 
-  protected void initialise(String subjectUri) {
+  private void initialise(String subjectUri) {
     initialiseProps(subjectUri);
     initialiseLabels(subjectUri);
   }
 
-  protected Set<String> initialiseLabels(String subjectUri) {
+  private Set<String> initialiseLabels(String subjectUri) {
     Set<String> labels = new HashSet<>();
     //        labels.add("Resource");  this was in the preview version (praaopt)
     resourceLabels.put(subjectUri, labels);
     return labels;
   }
 
-  protected HashMap<String, Object> initialiseProps(String subjectUri) {
+  private HashMap<String, Object> initialiseProps(String subjectUri) {
     HashMap<String, Object> props = new HashMap<>();
     //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
     resourceProps.put(subjectUri, props);
     return props;
   }
 
-  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
+  private boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
     Map<String, Object> props;
 
     String propName = handleIRI(propertyIRI, PROPERTY);
@@ -327,7 +326,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return propValue != null;
   }
 
-  protected void setLabel(String subjectUri, String label) {
+  void setLabel(String subjectUri, String label) {
     Set<String> labels;
 
     if (!resourceLabels.containsKey(subjectUri)) {
@@ -340,7 +339,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     labels.add(label);
   }
 
-  protected void addResource(String subjectUri) {
+  private void addResource(String subjectUri) {
 
     if (!resourceLabels.containsKey(subjectUri)) {
       initialise(subjectUri);
