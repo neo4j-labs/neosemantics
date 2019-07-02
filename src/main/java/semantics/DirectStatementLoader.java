@@ -28,11 +28,11 @@ import org.neo4j.logging.Log;
 
 class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
-  public static final Label RESOURCE = Label.label("Resource");
-  public static final String[] EMPTY_ARRAY = new String[0];
-  Cache<String, Node> nodeCache;
+  private static final Label RESOURCE = Label.label("Resource");
+  private static final String[] EMPTY_ARRAY = new String[0];
+  private Cache<String, Node> nodeCache;
 
-  public DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
@@ -94,8 +94,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
           } else {
             if (currentValue.getClass().isArray()) {
               Object[] properties = (Object[]) currentValue;
-              for (int i = 0; i < properties.length; i++) {
-                ((List) v).add(properties[i]);
+              for (Object property : properties) {
+                ((List) v).add(property);
                 //here an exception can be raised if types are conflicting
               }
             } else {
