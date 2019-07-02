@@ -11,9 +11,9 @@ import org.junit.Test;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
+import org.neo4j.driver.v1.Record;
 import org.neo4j.driver.v1.Session;
 import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.driver.v1.types.Node;
 import org.neo4j.harness.junit.Neo4jRule;
 
 public class MappingUtilsTest {
@@ -40,9 +40,9 @@ public class MappingUtilsTest {
 
       //add schema
       String addSchemaCypher = "CALL semantics.mapping.addSchema($ns,$prefix)";
-      Node mappingNs = session.run(addSchemaCypher, params).next().get("node").asNode();
-      assertEquals(vocPrefix, mappingNs.get("_prefix").asString());
-      assertEquals(vocUri, mappingNs.get("_ns").asString());
+      Record next = session.run(addSchemaCypher, params).next();
+      assertEquals(vocPrefix, next.get("prefix").asString());
+      assertEquals(vocUri, next.get("namespace").asString());
 
       //schema has been persisted
       String getSchemaByName = "MATCH (mns:_MapNs { _ns: $ns, _prefix : $prefix }) RETURN count(mns) as ct ";
@@ -51,7 +51,15 @@ public class MappingUtilsTest {
       //add same schema namespace with different prefix
       String alternativeVocPrefix = "v1alt";
       params.put("prefix", alternativeVocPrefix);
-      assertFalse(session.run(addSchemaCypher, params).hasNext());
+      try {
+        session.run(addSchemaCypher, params).hasNext();
+        //should never get here
+        assertFalse(true);
+      } catch (Exception e) {
+        //expected
+        assertTrue(e.getMessage().contains(
+            "Caused by: semantics.mapping.MappingUtils$MappingDefinitionException: The schema URI or the prefix are already in use. Drop existing ones before reusing."));
+      }
 
       //schema has not been changed in db
       assertEquals(0, session.run(getSchemaByName, params).next().get("ct").asInt());
@@ -62,7 +70,15 @@ public class MappingUtilsTest {
       //add an alternative schema namespace with a prefix already in use (default, no force overwrite)
       String alternativeVocUri = "http://vocabularies.com/vocabulary1alt/";
       params.put("ns", alternativeVocUri);
-      assertFalse(session.run(addSchemaCypher, params).hasNext());
+      try {
+        session.run(addSchemaCypher, params).hasNext();
+        //should never get here
+        assertFalse(true);
+      } catch (Exception e) {
+        //expected
+        assertTrue(e.getMessage().contains(
+            "Caused by: semantics.mapping.MappingUtils$MappingDefinitionException: The schema URI or the prefix are already in use. Drop existing ones before reusing."));
+      }
 
       //schema has not been changed in db
       assertEquals(0, session.run(getSchemaByName, params).next().get("ct").asInt());
@@ -83,7 +99,7 @@ public class MappingUtilsTest {
       //when DB is empty
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       assertEquals(18, session.run(
-          "CALL semantics.mapping.addCommonSchemas() YIELD node RETURN count(node) AS addedCount ")
+          "CALL semantics.mapping.addCommonSchemas() YIELD namespace RETURN count(namespace) AS addedCount ")
           .next().get("addedCount").asInt());
       //Check that schema.org is there
       Map<String, Object> params = new HashMap<>();
@@ -95,7 +111,7 @@ public class MappingUtilsTest {
 
       //if we run a second time, all schemas are in the DB so no changes
       assertEquals(0, session.run(
-          "CALL semantics.mapping.addCommonSchemas() YIELD node RETURN count(node) AS addedCount ")
+          "CALL semantics.mapping.addCommonSchemas() YIELD namespace RETURN count(namespace) AS addedCount ")
           .next().get("addedCount").asInt());
 
       //empty DB again
@@ -107,7 +123,7 @@ public class MappingUtilsTest {
       session.run(addSchemaCypher, params);
       //only those not in use should be added
       assertEquals(17, session.run(
-          "CALL semantics.mapping.addCommonSchemas() YIELD node RETURN count(node) AS addedCount ")
+          "CALL semantics.mapping.addCommonSchemas() YIELD namespace RETURN count(namespace) AS addedCount ")
           .next().get("addedCount").asInt());
       //and the original custom definition for schema.org should still be in the DB
       assertEquals(1, session
@@ -135,7 +151,9 @@ public class MappingUtilsTest {
       session.run("CALL semantics.mapping.addCommonSchemas()");
       Map<String, Object> params = new HashMap<>();
       params.put("searchString", "");
-      String getSchemaMatchesQuery = "CALL semantics.mapping.listSchemas($searchString) YIELD node RETURN COUNT(node) AS schemaCount";
+      String getSchemaMatchesQuery =
+          "CALL semantics.mapping.listSchemas($searchString) YIELD namespace "
+              + "RETURN COUNT(namespace) AS schemaCount";
       assertEquals(18,
           session.run(getSchemaMatchesQuery, params).next().get("schemaCount").asInt());
       params.put("searchString", "fibo");
@@ -166,11 +184,12 @@ public class MappingUtilsTest {
       params.put("graphElemName", key);
       params.put("localVocElem", localNameInVoc);
       String addMappingAndSchemaCypher =
-          " CALL semantics.mapping.addSchema($ns,$prefix) YIELD node AS sch WITH sch " +
-              " CALL semantics.mapping.addMappingToSchema(sch,$graphElemName, $localVocElem) YIELD node RETURN node";
-      Node mapping = session.run(addMappingAndSchemaCypher, params).next().get("node").asNode();
-      assertEquals(key, mapping.get("_key").asString());
-      assertEquals(localNameInVoc, mapping.get("_local").asString());
+          " CALL semantics.mapping.addSchema($ns,$prefix) YIELD namespace AS sch " +
+              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) "
+              + "YIELD schemaElement, elemName RETURN schemaElement, elemName ";
+      Record next = session.run(addMappingAndSchemaCypher, params).next();
+      assertEquals(key, next.get("elemName").asString());
+      assertEquals(localNameInVoc, next.get("schemaElement").asString());
       // check mapping is linked to the schema
       String existMappingAndNs = "MATCH (mns:_MapNs { _ns: $ns } )<-[:_IN]-" +
           "(elem:_MapDef { _key : $graphElemName, _local: $localVocElem }) RETURN mns, elem ";
@@ -180,11 +199,12 @@ public class MappingUtilsTest {
       String alternativeLocalNameInVoc = "differentRelationshipInSchema1";
       params.put("localVocElem", alternativeLocalNameInVoc);
       String addMappingToExistingSchemaCypher =
-          " CALL semantics.mapping.listSchemas($ns) YIELD node AS sch WITH sch " +
-              " CALL semantics.mapping.addMappingToSchema(sch,$graphElemName, $localVocElem) YIELD node RETURN node";
-      mapping = session.run(addMappingToExistingSchemaCypher, params).next().get("node").asNode();
-      assertEquals(key, mapping.get("_key").asString());
-      assertEquals(alternativeLocalNameInVoc, mapping.get("_local").asString());
+          " CALL semantics.mapping.listSchemas($ns) YIELD namespace AS sch " +
+              " CALL semantics.mapping.addMappingToSchema($ns,$graphElemName, $localVocElem) "
+              + " YIELD schemaElement, elemName RETURN schemaElement, elemName ";
+      next = session.run(addMappingToExistingSchemaCypher, params).next();
+      assertEquals(key, next.get("elemName").asString());
+      assertEquals(alternativeLocalNameInVoc, next.get("schemaElement").asString());
       // check mapping is linked to the schema
       assertTrue(session.run(existMappingAndNs, params).hasNext());
       params.put("localVocElem", localNameInVoc);
@@ -203,12 +223,13 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(sch,\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as schema \n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName  as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName  as mapping2\n"
+              +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName  as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
@@ -219,8 +240,8 @@ public class MappingUtilsTest {
           "CALL semantics.mapping.listMappings('Person') yield elemName RETURN count(elemName) as ct ")
           .next().get("ct").asInt());
       String updateMappingCypher =
-          " call semantics.mapping.listSchemas('http://schema.org/') yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(sch,\"Movie\",\"MovieInSchemaDotOrg\") yield node as mapping\n"
+          " call semantics.mapping.listSchemas('http://schema.org/') yield namespace as sch\n" +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"MovieInSchemaDotOrg\") yield elemName \n"
               +
               " return * ";
       assertTrue(session.run(updateMappingCypher).hasNext());
@@ -241,12 +262,13 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(sch,\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName as mapping2\n"
+              +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
@@ -271,12 +293,13 @@ public class MappingUtilsTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
       String addMappingAndSchemaCypher =
-          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield node as sch\n" +
-              "call semantics.mapping.addMappingToSchema(sch,\"Movie\",\"Movie\") yield node as mapping1\n"
+          " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"Person\",\"Person\") yield node as mapping2\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Movie\",\"Movie\") yield elemName as mapping1\n"
               +
-              "call semantics.mapping.addMappingToSchema(sch,\"name\",\"name\") yield node as mapping3\n"
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"Person\",\"Person\") yield elemName as mapping2\n"
+              +
+              "call semantics.mapping.addMappingToSchema(\"http://schema.org/\",\"name\",\"name\") yield elemName as mapping3\n"
               +
               "return *";
       assertTrue(session.run(addMappingAndSchemaCypher).hasNext());
@@ -293,7 +316,8 @@ public class MappingUtilsTest {
           .run("CALL semantics.mapping.listMappings() yield elemName RETURN count(elemName) as ct ")
           .next().get("ct").asInt());
       assertEquals(0,
-          session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ")
+          session.run(
+              "CALL semantics.mapping.listSchemas() yield namespace RETURN count(namespace) as ct ")
               .next().get("ct").asInt());
 
     }
@@ -312,19 +336,22 @@ public class MappingUtilsTest {
       String addCommonSchemasCypher = " call semantics.mapping.addCommonSchemas() ";
       assertTrue(session.run(addCommonSchemasCypher).hasNext());
       assertEquals(18,
-          session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ")
+          session.run(
+              "CALL semantics.mapping.listSchemas() yield namespace RETURN count(namespace) as ct ")
               .next().get("ct").asInt());
       assertEquals(2, session
-          .run("CALL semantics.mapping.listSchemas('schema') yield node RETURN count(node) as ct ")
+          .run(
+              "CALL semantics.mapping.listSchemas('schema') yield namespace RETURN count(namespace) as ct ")
           .next().get("ct").asInt());
       String batchDropSchemasCypher =
-          "CALL semantics.mapping.listSchemas('schema') YIELD node AS schemaDef WITH schemaDef,  schemaDef._ns AS schName "
+          "CALL semantics.mapping.listSchemas('schema') YIELD namespace AS schName "
               +
-              "    CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schName , output ";
+              "    CALL semantics.mapping.dropSchema(schName) YIELD output RETURN schName , output ";
       StatementResult batchResult = session.run(batchDropSchemasCypher);
       assertTrue(batchResult.hasNext());
       assertEquals(16,
-          session.run("CALL semantics.mapping.listSchemas() yield node RETURN count(node) as ct ")
+          session.run(
+              "CALL semantics.mapping.listSchemas() yield namespace RETURN count(namespace) as ct ")
               .next().get("ct").asInt());
 
     }

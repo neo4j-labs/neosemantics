@@ -13,6 +13,9 @@ import static semantics.RDFParserConfig.URL_MAP;
 import static semantics.RDFParserConfig.URL_SHORTEN;
 import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -148,6 +151,20 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
       return object.doubleValue();
     } else if (datatype.equals(XMLSchema.BOOLEAN)) {
       return object.booleanValue();
+    } else if (datatype.equals(XMLSchema.DATETIME)) {
+      try {
+        return LocalDateTime.parse(object.stringValue());
+      } catch (DateTimeParseException e) {
+        //if date cannot be parsed we return string value
+        return object.stringValue();
+      }
+    } else if (datatype.equals(XMLSchema.DATE)) {
+      try {
+        return LocalDate.parse(object.stringValue());
+      } catch (DateTimeParseException e) {
+        //if date cannot be parsed we return string value
+        return object.stringValue();
+      }
     } else {
       //it's a custom data type
       if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getHandleVocabUris() == URL_IGNORE
@@ -168,6 +185,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
         return value;
       }
     }
+    // default
     return object.stringValue();
   }
 

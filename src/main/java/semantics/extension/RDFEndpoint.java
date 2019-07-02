@@ -6,6 +6,9 @@ import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -36,6 +39,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
@@ -260,15 +264,7 @@ public class RDFEndpoint {
         if (node.hasProperty("graphUri")) {
           context = buildSubjectOrContext(node.getProperty("graphUri").toString(), valueFactory);
         }
-        if (propertyValueObject instanceof Object[]) {
-          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-            Literal object = createTypedLiteral(valueFactory,
-                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
-                    namespaces)));
-            writer.handleStatement(
-                valueFactory.createStatement(subject, predicate, object, context));
-          }
-        } else if (propertyValueObject instanceof long[]) {
+        if (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((long[]) propertyValueObject)[i]);
@@ -286,6 +282,28 @@ public class RDFEndpoint {
           for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(valueFactory,
                 ((boolean[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object, context));
+          }
+        } else if (propertyValueObject instanceof LocalDateTime[]) {
+          for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDateTime[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object, context));
+          }
+        } else if (propertyValueObject instanceof LocalDate[]) {
+          for (int i = 0; i < ((LocalDate[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                ((LocalDate[]) propertyValueObject)[i]);
+            writer.handleStatement(
+                valueFactory.createStatement(subject, predicate, object, context));
+          }
+        } else if (propertyValueObject instanceof Object[]) {
+          for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(valueFactory,
+                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i],
+                    namespaces)));
             writer.handleStatement(
                 valueFactory.createStatement(subject, predicate, object, context));
           }
@@ -770,10 +788,8 @@ public class RDFEndpoint {
 
 
   private Literal createTypedLiteral(SimpleValueFactory valueFactory, Object value) {
-    Literal result = null;
-    if (value instanceof String) {
-      result = getLiteralWithTagOrDTIfPresent((String) value, valueFactory);
-    } else if (value instanceof Integer) {
+    Literal result;
+    if (value instanceof Integer) {
       result = valueFactory.createLiteral((Integer) value);
     } else if (value instanceof Long) {
       result = valueFactory.createLiteral((Long) value);
@@ -783,9 +799,17 @@ public class RDFEndpoint {
       result = valueFactory.createLiteral((Double) value);
     } else if (value instanceof Boolean) {
       result = valueFactory.createLiteral((Boolean) value);
+    } else if (value instanceof LocalDateTime) {
+      result = valueFactory
+          .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+              XMLSchema.DATETIME);
+    } else if (value instanceof LocalDate) {
+      result = valueFactory
+          .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
+              XMLSchema.DATE);
     } else {
       // default to string
-      result = valueFactory.createLiteral("" + value);
+      result = getLiteralWithTagOrDTIfPresent((String) value, valueFactory);
     }
 
     return result;
@@ -815,7 +839,7 @@ public class RDFEndpoint {
       }
     } else {
       if (mimetype != null) {
-        log.info("serialization from mimetipe in request: " + mimetype);
+        log.info("serialization from media type in request: " + mimetype);
         for (RDFFormat parser : availableParsers) {
           if (parser.getMIMETypes().contains(mimetype)) {
             log.info("parser to be used: " + parser.getDefaultMIMEType());

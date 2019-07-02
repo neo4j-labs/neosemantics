@@ -207,7 +207,8 @@ public class MicroReasoners {
         : DEFAULT_IN_CAT_REL_NAME);
     final String subCatRelName = (props.containsKey("subCatRel") ? (String) props.get("subCatRel")
         : DEFAULT_SCO_REL_NAME);
-    final boolean searchTopDown = (props.containsKey("searchTopDown") ? (boolean) props.get("searchTopDown")
+    final boolean searchTopDown = (props.containsKey("searchTopDown") ? (boolean) props
+        .get("searchTopDown")
         : DEFAULT_SEARCH_TOP_DOWN);
 
     Iterator<Relationship> relIterator = individual

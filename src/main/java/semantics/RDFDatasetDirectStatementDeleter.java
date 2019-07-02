@@ -7,6 +7,8 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader.InvalidCacheLoadException;
 import com.google.common.collect.Iterators;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -135,6 +137,20 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
             } else if (prop instanceof boolean[]) {
               boolean[] props = (boolean[]) prop;
               for (boolean currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof LocalDateTime[]) {
+              LocalDateTime[] props = (LocalDateTime[]) prop;
+              for (LocalDateTime currentVal : props) {
+                if (!valuesToDelete.contains(currentVal)) {
+                  newProps.add(currentVal);
+                }
+              }
+            } else if (prop instanceof LocalDate[]) {
+              LocalDate[] props = (LocalDate[]) prop;
+              for (LocalDate currentVal : props) {
                 if (!valuesToDelete.contains(currentVal)) {
                   newProps.add(currentVal);
                 }

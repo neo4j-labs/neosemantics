@@ -2,7 +2,7 @@
 @prefix exDoc: <http://www.example.org/exampleDocument#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-exDoc:G2 ex:created "07.06.2019"^^xsd:date .
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
 
 exDoc:Monica a ex:Person ;
              ex:friendOf exDoc:John .

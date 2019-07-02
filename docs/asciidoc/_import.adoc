@@ -45,7 +45,7 @@ neo4ind:apoc3502 neo4voc:name "APOC" ;
 neo4ind:graphql3502 neo4voc:name "Neo4j-GraphQL" ;
          a neo4voc:Neo4jPlugin ;
          neo4voc:version "3.5.0.3" ;
-         neo4voc:releaseDate "05/05/19" ;        
+         neo4voc:releaseDate "05-05-2019" ;        
          neo4voc:runsOn neo4ind:neo4j355 .                 
 
 neo4ind:neo4j355 neo4voc:name "neo4j" ;
@@ -440,8 +440,8 @@ Let's say you're trying to load the following set of quadruples into Neo4j.
 @prefix exDoc: <http://www.example.org/exampleDocument#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-exDoc:G1 ex:created "06.06.2019"^^xsd:date .
-exDoc:G2 ex:created "07.06.2019"^^xsd:date .
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
 
 exDoc:Monica a ex:Person ;
              ex:friendOf exDoc:John .
@@ -452,8 +452,8 @@ exDoc:G1 {
               ex:homepage <http://www.monicamurphy.org> ;
               ex:email <mailto:monica@monicamurphy.org> ;
               ex:hasSkill ex:Management ,
-                                  ex:Programming ;
-              ex:knows exDoc:John . }
+                                  ex:Programming .
+    exDoc:Monica ex:knows exDoc:John . }
 
 exDoc:G2 {
     exDoc:Monica
@@ -792,7 +792,7 @@ Let's say you're trying to delete the following set of quadruples from Neo4j aft
 @prefix exDoc: <http://www.example.org/exampleDocument#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-exDoc:G2 ex:created "07.06.2019"^^xsd:date .
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
 
 exDoc:Monica a ex:Person ;
              ex:friendOf exDoc:John .
@@ -828,7 +828,7 @@ NSMNTX will delete the given quadruples in your Neo4j graph. After this deletion
 @prefix exDoc: <http://www.example.org/exampleDocument#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-exDoc:G1 ex:created "06.06.2019"^^xsd:date .
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
 
 exDoc:G1 {
     exDoc:Monica

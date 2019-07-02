@@ -1,4 +1,4 @@
-<http://www.example.org/exampleDocument#G2> <http://www.example.org/vocabulary#created> "07.06.2019"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://www.example.org/exampleDocument#G2> <http://www.example.org/vocabulary#created> "2019-06-07T10:15:30"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://www.example.org/exampleDocument#Monica> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.example.org/vocabulary#Person> .
 <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#friendOf> <http://www.example.org/exampleDocument#John> .
 <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> "Monica Murphy" <http://www.example.org/exampleDocument#G1> .
