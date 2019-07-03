@@ -86,16 +86,18 @@ public class RDFEndpoint {
     return Response.ok().entity(new StreamingOutput() {
       @Override
       public void write(OutputStream outputStream) throws IOException, WebApplicationException {
-        Map<String, String> jsonMap = objectMapper
+        Map<String, Object> jsonMap = objectMapper
             .readValue(body,
-                new TypeReference<Map<String, String>>() {
+                new TypeReference<Map<String, Object>>() {
                 });
         try (Transaction tx = gds.beginTx()) {
-          final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
-          Result result = gds.execute(jsonMap.get("cypher"));
+          final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
+          final Map<String, Object> queryParams = (Map<String, Object>) jsonMap
+              .getOrDefault("cypherParams", new HashMap<String, Object>());
+          Result result = gds.execute((String) jsonMap.get("cypher"), queryParams);
           Set<Long> serializedNodes = new HashSet<Long>();
           RDFWriter writer = Rio
-              .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
+              .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
                   outputStream);
           SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
           handleNamespaces(writer, gds);
@@ -131,7 +133,8 @@ public class RDFEndpoint {
           writer.endRDF();
           result.close();
         } catch (Exception e) {
-          handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
+          handleSerialisationError(outputStream, e, acceptHeaderParam,
+              (String) jsonMap.get("format"));
         }
       }
     }).build();
@@ -149,16 +152,18 @@ public class RDFEndpoint {
       public void write(OutputStream outputStream) throws IOException, WebApplicationException {
 
         Map<String, String> namespaces = getNamespacesFromDB(gds);
-        Map<String, String> jsonMap = objectMapper
+        Map<String, Object> jsonMap = objectMapper
             .readValue(body,
-                new TypeReference<Map<String, String>>() {
+                new TypeReference<Map<String, Object>>() {
                 });
         try (Transaction tx = gds.beginTx()) {
-          final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
-          Result result = gds.execute(jsonMap.get("cypher"));
+          final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
+          final Map<String, Object> queryParams = (Map<String, Object>) jsonMap
+              .getOrDefault("cypherParams", new HashMap<String, Object>());
+          Result result = gds.execute((String) jsonMap.get("cypher"), queryParams);
           Set<String> serializedNodes = new HashSet<String>();
           RDFWriter writer = Rio
-              .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
+              .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
                   outputStream);
           SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
           String baseVocabNS = "neo4j://vocabulary#";
@@ -197,7 +202,8 @@ public class RDFEndpoint {
           writer.endRDF();
           result.close();
         } catch (Exception e) {
-          handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
+          handleSerialisationError(outputStream, e, acceptHeaderParam,
+              (String) jsonMap.get("format"));
         }
 
       }
@@ -517,7 +523,7 @@ public class RDFEndpoint {
       "application/ld+json"})
   public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity(new StreamingOutput() {
@@ -557,7 +563,7 @@ public class RDFEndpoint {
       @PathParam("property") String property, @PathParam("propertyValue") String propVal,
       @QueryParam("valType") String valType,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity(new StreamingOutput() {

@@ -3,8 +3,9 @@
 
 ...work in progress...
 
-=== Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.
+Some ideas:
 
-=== Enrich your model with DBPedia data
+ Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.
 
-=== 
+ Enrich your model with DBPedia data
+

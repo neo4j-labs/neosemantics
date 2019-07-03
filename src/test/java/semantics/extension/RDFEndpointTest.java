@@ -34,6 +34,7 @@ import org.neo4j.test.server.HTTP;
 import semantics.ModelTestUtils;
 import semantics.RDFImport;
 import semantics.RDFImportTest;
+import semantics.mapping.MappingUtils;
 
 /**
  * Created by jbarrasa on 14/09/2016.
@@ -336,9 +337,8 @@ public class RDFEndpointTest {
       Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
 
-      Map<String, String> map = new HashMap<>();
+      Map<String, Object> map = new HashMap<>();
       map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
-      //map.put("showOnlyMapped", "true");
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
@@ -360,6 +360,92 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+      map.put("mappedElemsOnly", "true");
+      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
+
+      assertEquals(200, response.status());
+      assertEquals("", response.rawContent());
+
+
+    }
+  }
+
+  @Test
+  public void testCypherOnLPGMappingsAndQueryParams() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class).withProcedure(MappingUtils.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+
+              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967}) "
+                  + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
+              graphDatabaseService.execute(dataInsertion);
+
+              String mappingCreation = "CALL semantics.mapping.addSchema('http://schema.org/','sch') yield namespace  "
+                  + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','Actor','Person') yield elemName as en1  "
+                  + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','born','dob') yield elemName as en2 "
+                  + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','name','familyName') yield elemName as en3 "
+                  + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','ACTED_IN','inMovie') yield elemName as en4 "
+                  + "RETURN 'OK'" ;
+              graphDatabaseService.execute(mappingCreation);
+              tx.success();
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Result result = server.graph().execute(" MATCH (n:Actor) RETURN id(n) AS id ");
+      assertEquals(2, count(result));
+
+      result = server.graph().execute(" MATCH (n:_MapDef) RETURN id(n) as id ");
+      assertEquals(4, count(result));
+
+      Map<String, Object> map = new HashMap<>();
+      map.put("cypher", "MATCH (n:Actor { name : $actorName })-[r]-(m) RETURN n, r, m ");
+      Map<String,Object> cypherParams = new HashMap<String,Object>();
+      cypherParams.put("actorName","Keanu Reeves");
+      map.put("cypherParams",cypherParams);
+
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
+
+      String expected =
+          "<neo4j://com.neo4j/indiv#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://com.neo4j/voc#Movie> .\n"
+              + "<neo4j://com.neo4j/indiv#5> <neo4j://com.neo4j/voc#title> \"The Matrix\" .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://schema.org/inMovie> <neo4j://com.neo4j/indiv#5> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://schema.org/familyName> \"Keanu Reeves\" .";
+
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+      map.put("mappedElemsOnly", "true");
+      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
+
+      String expectedOnlyMapped =
+          "<neo4j://com.neo4j/indiv#0> <http://schema.org/inMovie> <neo4j://com.neo4j/indiv#5> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+              + "<neo4j://com.neo4j/indiv#0> <http://schema.org/familyName> \"Keanu Reeves\" .";
+
+      assertEquals(200, response.status());
+      assertEquals(true, ModelTestUtils
+          .comparemodels(expectedOnlyMapped, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
 
     }
   }
@@ -1331,6 +1417,48 @@ public class RDFEndpointTest {
 
     }
   }
+
+
+  @Test
+  public void testCypherOnRDFErrorWhereModelIsNotRDF() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withProcedure(RDFImport.class)
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(new Function<GraphDatabaseService, Void>() {
+          @Override
+          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            try (Transaction tx = graphDatabaseService.beginTx()) {
+              Result res = graphDatabaseService.execute(""
+                  + "CREATE (:Node { uri: 'neo4j://ind#123' })-[:LINKED_TO]->(:Node { id: 124 })");
+              tx.success();
+            } catch (Exception e) {
+              fail(e.getMessage());
+            }
+            return null;
+          }
+        })
+        .newServer()) {
+
+      Map<String, String> params = new HashMap<>();
+      params.put("cypher", "MATCH (n)-[r]-(m) RETURN *");
+
+      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
+
+      assertEquals(200, response.status());
+      assertEquals("# No such property, 'uri'.\n", response.rawContent());
+
+    }
+  }
+
 
   @Test
   public void testCypherOnRDFAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
