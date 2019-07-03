@@ -215,3 +215,107 @@ There's another example of use of mappings for export in https://jbarrasa.com/20
 === Mappings for import
 
 In this section we'll see how to use mappings to apply changes to an RDF dataset on ingestion using the RDF import procedures described in <<Import>>.
+
+Let's say we are importing into Neo4j the https://permid.org/download[the Open PermID dataset] from Thomson Reuters. Here is a small fragment of the 'Person' file:
+
+[source,RDF]
+----
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix permid: <https://permid.org/> .
+
+permid:1-34419230351
+  a vcard:Person ;
+  vcard:given-name "Keith"^^xsd:string .
+
+permid:1-34419198943
+  vcard:family-name "Peltz"^^xsd:string ;
+  vcard:given-name "Maxwell"^^xsd:string ;
+  vcard:additional-name "S"^^xsd:string ;
+  a vcard:Person .
+
+permid:1-34418273443
+  vcard:family-name "Benner"^^xsd:string ;
+  vcard:given-name "Thomas"^^xsd:string ;
+  a vcard:Person ;
+  vcard:friend-of <https://permid.org/1-34419230351> .
+----
+
+As part of the import process, we want to drop the namespaces (as described in <<Import>>, this can be done using the `handleVocabUris: "IGNORE"` configuration) *BUT* in this case, we also want to create more neo4j-friendly names for properties. We want to get rid of the dashes in property names like `given-name` or `additional-name` and use 'camelCase' notation instead. The way to tell NSMNTX to do that is by defining a model mapping and setting the `handleVocabUris` parameter on import to `'MAP'`.
+
+We'll start by defining a mapping like the one we defined for exporting RDF. Note that the properties we want to map are all in the same `vcard` vocabulary: `http://www.w3.org/2006/vcard/ns#`.  The following script should do the job:
+
+[source,Cypher]
+----
+WITH 
+[{ neoSchemaElem : "givenName", publicSchemaElem:	"given-name" },
+{ neoSchemaElem : "familyName", publicSchemaElem: "family-name" },
+{ neoSchemaElem : "additionalName", publicSchemaElem: "additional-name" },
+{ neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
+"http://www.w3.org/2006/vcard/ns#" AS vcardUri
+
+CALL semantics.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+UNWIND mappings as m
+CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement 
+RETURN count(schemaElement) AS mappingsDefined
+----
+
+Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`. If there were multiple vocabularies to map, we would just need repeat the process for each of them.
+
+Now we can check that the mappings are correctly defined by running:
+
+[source,Cypher]
+----
+CALL semantics.mapping.listMappings()
+----
+
+which produces:
+
+[source,Cypher]
+----
+╒══════════════════════════════════╤══════════════╤═════════════════╤════════════════╕
+│"schemaNs"                        │"schemaPrefix"│"schemaElement"  │"elemName"      │
+╞══════════════════════════════════╪══════════════╪═════════════════╪════════════════╡
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"given-name"     │"givenName"     │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"family-name"    │"familyName"    │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"additional-name"│"additionalName"│
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"friend-of"      │"FRIEND_OF"     │
+└──────────────────────────────────┴──────────────┴─────────────────┴────────────────┘
+----
+
+Important to note that when using the option `handleVocabUris: "MAP"`, all non-mapped vocabulary elements will get the default treatment they get when the `'IGNORE'` option is selected.
+
+Once the mappings are defined, we can run the import process as described in <<Import>> with the mentioned config param `handleVocabUris: 'MAP'` as follows:
+
+[source,Cypher]
+----
+CALL semantics.previewRDF("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })
+----
+
+After data load, we will be able to query the imported graph with a much more friendly cypher:
+
+[source,Cypher]
+----
+MATCH (n:Person) RETURN n.uri AS uri, n.familyName as familyName LIMIT 10
+----
+
+to get:
+
+[source,Cypher]
+----
+╒══════════════════════════════════╤══════════════╕
+│"uri"                             │"familyName"  │
+╞══════════════════════════════════╪══════════════╡
+│"https://permid.org/1-34419230351"│null          │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34418273443"│"Benner"      │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34419198943"│"Peltz"       │
+└──────────────────────────────────┴──────────────┘
+----
+
+[NOTE]
+The combination of a mapping definition plus the use of the `handleVocabUris: 'MAP'` configuration can be applied not only to the `semantics.importRDF` procedure but also to the preview ones `semantics.previewRDF` and `semantics.previewRDFSnippet`.

@@ -2269,6 +2269,129 @@ Elements for which no mapping has been defined will use the default Neo4j schema
 <div class="paragraph">
 <p>In this section we&#8217;ll see how to use mappings to apply changes to an RDF dataset on ingestion using the RDF import procedures described in <a href="#Import">Importing RDF data</a>.</p>
 </div>
+<div class="paragraph">
+<p>Let&#8217;s say we are importing into Neo4j the <a href="https://permid.org/download">the Open PermID dataset</a> from Thomson Reuters. Here is a small fragment of the 'Person' file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix vcard: &lt;http://www.w3.org/2006/vcard/ns#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+@prefix permid: &lt;https://permid.org/&gt; .
+
+permid:1-34419230351
+  a vcard:Person ;
+  vcard:given-name "Keith"^^xsd:string .
+
+permid:1-34419198943
+  vcard:family-name "Peltz"^^xsd:string ;
+  vcard:given-name "Maxwell"^^xsd:string ;
+  vcard:additional-name "S"^^xsd:string ;
+  a vcard:Person .
+
+permid:1-34418273443
+  vcard:family-name "Benner"^^xsd:string ;
+  vcard:given-name "Thomas"^^xsd:string ;
+  a vcard:Person ;
+  vcard:friend-of &lt;https://permid.org/1-34419230351&gt; .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As part of the import process, we want to drop the namespaces (as described in <a href="#Import">Importing RDF data</a>, this can be done using the <code>handleVocabUris: "IGNORE"</code> configuration) <strong>BUT</strong> in this case, we also want to create more neo4j-friendly names for properties. We want to get rid of the dashes in property names like <code>given-name</code> or <code>additional-name</code> and use 'camelCase' notation instead. The way to tell NSMNTX to do that is by defining a model mapping and setting the <code>handleVocabUris</code> parameter on import to <code>'MAP'</code>.</p>
+</div>
+<div class="paragraph">
+<p>We&#8217;ll start by defining a mapping like the one we defined for exporting RDF. Note that the properties we want to map are all in the same <code>vcard</code> vocabulary: <code><a href="http://www.w3.org/2006/vcard/ns#" class="bare">http://www.w3.org/2006/vcard/ns#</a></code>.  The following script should do the job:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">WITH
+[{ neoSchemaElem : "givenName", publicSchemaElem:	"given-name" },
+{ neoSchemaElem : "familyName", publicSchemaElem: "family-name" },
+{ neoSchemaElem : "additionalName", publicSchemaElem: "additional-name" },
+{ neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
+"http://www.w3.org/2006/vcard/ns#" AS vcardUri
+
+CALL semantics.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+UNWIND mappings as m
+CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
+RETURN count(schemaElement) AS mappingsDefined</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Just like we did in the previous section, we define a vocabulary with <code>mapping.addSchema</code> and then we add individual mappings for elements in the vocabulary with <code>mapping.addMappingToSchema</code>. If there were multiple vocabularies to map, we would just need repeat the process for each of them.</p>
+</div>
+<div class="paragraph">
+<p>Now we can check that the mappings are correctly defined by running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.mapping.listMappings()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>which produces:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒══════════════════════════════════╤══════════════╤═════════════════╤════════════════╕
+│"schemaNs"                        │"schemaPrefix"│"schemaElement"  │"elemName"      │
+╞══════════════════════════════════╪══════════════╪═════════════════╪════════════════╡
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"given-name"     │"givenName"     │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"family-name"    │"familyName"    │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"additional-name"│"additionalName"│
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"friend-of"      │"FRIEND_OF"     │
+└──────────────────────────────────┴──────────────┴─────────────────┴────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Important to note that when using the option <code>handleVocabUris: "MAP"</code>, all non-mapped vocabulary elements will get the default treatment they get when the <code>'IGNORE'</code> option is selected.</p>
+</div>
+<div class="paragraph">
+<p>Once the mappings are defined, we can run the import process as described in <a href="#Import">Importing RDF data</a> with the mentioned config param <code>handleVocabUris: 'MAP'</code> as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.previewRDF("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After data load, we will be able to query the imported graph with a much more friendly cypher:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (n:Person) RETURN n.uri AS uri, n.familyName as familyName LIMIT 10</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>to get:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒══════════════════════════════════╤══════════════╕
+│"uri"                             │"familyName"  │
+╞══════════════════════════════════╪══════════════╡
+│"https://permid.org/1-34419230351"│null          │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34418273443"│"Benner"      │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34419198943"│"Peltz"       │
+└──────────────────────────────────┴──────────────┘</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The combination of a mapping definition plus the use of the <code>handleVocabUris: 'MAP'</code> configuration can be applied not only to the <code>semantics.importRDF</code> procedure but also to the preview ones <code>semantics.previewRDF</code> and <code>semantics.previewRDFSnippet</code>.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
