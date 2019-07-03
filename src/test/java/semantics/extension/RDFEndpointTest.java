@@ -336,7 +336,7 @@ public class RDFEndpointTest {
       Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
 
-      Map<String, String> map = new HashMap<>();
+      Map<String, Object> map = new HashMap<>();
       map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
@@ -365,8 +365,7 @@ public class RDFEndpointTest {
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
       assertEquals(200, response.status());
-      assertEquals( "", response.rawContent());
-
+      assertEquals("", response.rawContent());
 
 
     }
