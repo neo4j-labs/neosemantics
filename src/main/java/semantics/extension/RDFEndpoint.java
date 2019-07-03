@@ -91,7 +91,7 @@ public class RDFEndpoint {
                 new TypeReference<Map<String, String>>() {
                 });
         try (Transaction tx = gds.beginTx()) {
-          final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
+          final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<Long> serializedNodes = new HashSet<Long>();
           RDFWriter writer = Rio
@@ -154,7 +154,7 @@ public class RDFEndpoint {
                 new TypeReference<Map<String, String>>() {
                 });
         try (Transaction tx = gds.beginTx()) {
-          final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
+          final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
           Result result = gds.execute(jsonMap.get("cypher"));
           Set<String> serializedNodes = new HashSet<String>();
           RDFWriter writer = Rio
@@ -517,7 +517,7 @@ public class RDFEndpoint {
       "application/ld+json"})
   public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity(new StreamingOutput() {
@@ -557,7 +557,7 @@ public class RDFEndpoint {
       @PathParam("property") String property, @PathParam("propertyValue") String propVal,
       @QueryParam("valType") String valType,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity(new StreamingOutput() {

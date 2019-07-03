@@ -338,7 +338,6 @@ public class RDFEndpointTest {
 
       Map<String, String> map = new HashMap<>();
       map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
-      //map.put("showOnlyMapped", "true");
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
@@ -360,6 +359,15 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
       assertEquals(true, ModelTestUtils
           .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+      map.put("mappedElemsOnly", "true");
+      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
+
+      assertEquals(200, response.status());
+      assertEquals( "", response.rawContent());
+
+
 
     }
   }
