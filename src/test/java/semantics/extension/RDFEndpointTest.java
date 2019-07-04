@@ -1246,36 +1246,33 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
-                  RDFImportTest.class.getClassLoader()
-                      .getResource("datetime/datetime-simple-multivalued.ttl")
-                      .toURI()
-                  + "','Turtle',{handleMultival: 'ARRAY'})");
-
-              tx.success();
-            } catch (Exception e) {
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute("CALL semantics.importRDF('" +
+                RDFImportTest.class.getClassLoader()
+                    .getResource("datetime/datetime-simple-multivalued.ttl")
+                    .toURI()
+                + "','Turtle',{handleMultival: 'ARRAY'})");
+
+            tx.success();
+          } catch (Exception e) {
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       String expected = "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n"
@@ -1288,7 +1285,7 @@ public class RDFEndpointTest {
 
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
-          .comparemodels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+          .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     }
   }
@@ -1300,32 +1297,29 @@ public class RDFEndpointTest {
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
         .withExtension("/rdf", RDFEndpoint.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            graphDatabaseService.execute("CREATE INDEX ON :Resource(uri)");
 
-              tx.success();
-            } catch (Exception e) {
-              fail(e.getMessage());
-            }
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-              Result res = graphDatabaseService.execute(""
-                  + "CREATE (:Node { uri: 'neo4j://ind#123' })-[:LINKED_TO]->(:Node { id: 124 })");
-              tx.success();
-            } catch (Exception e) {
-              fail(e.getMessage());
-            }
-            return null;
+            tx.success();
+          } catch (Exception e) {
+            fail(e.getMessage());
           }
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = graphDatabaseService.execute(""
+                + "CREATE (:Node { uri: 'neo4j://ind#123' })-[:LINKED_TO]->(:Node { id: 124 })");
+            tx.success();
+          } catch (Exception e) {
+            fail(e.getMessage());
+          }
+          return null;
         })
         .newServer()) {
 
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n)-[r]-(m) RETURN *");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/turtle"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypheronrdf", params);
 
       assertEquals(200, response.status());
