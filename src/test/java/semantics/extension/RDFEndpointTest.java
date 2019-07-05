@@ -459,10 +459,10 @@ public class RDFEndpointTest {
           @Override
           public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
             try (Transaction tx = graphDatabaseService.beginTx()) {
-              String dataInsertion = "CREATE (kean:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (mtrx:Movie {title:'The Matrix', released:2001})\n" +
-                  "CREATE (dir:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (cri:Critic {name:'Hugo Weaving', born:1960})\n" +
+              String dataInsertion = "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
+                  "CREATE (mtrx:Movie:Resource {title:'The Matrix', released:2001})\n" +
+                  "CREATE (dir:Director:Resource {name:'Laurence Fishburne', born:1961})\n" +
+                  "CREATE (cri:Critic:Resource {name:'Hugo Weaving', born:1960})\n" +
                   "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
                   "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
                   "CREATE (cri)-[:RATED]->(mtrx)\n" +

@@ -717,11 +717,14 @@ public class RDFEndpoint {
           List<Node> nodeList = (List<Node>) next.get("nodes");
           nodeList.forEach(node -> {
             String catName = node.getAllProperties().get("name").toString();
-            IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
-            writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
-            writer.handleStatement(
-                valueFactory
-                    .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
+            // Resource and NamespacePrefix should be named _Resource... to avoid conflicts
+            if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+              IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
+              writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+              writer.handleStatement(
+                  valueFactory
+                      .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
+            }
           });
 
           List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
@@ -730,14 +733,19 @@ public class RDFEndpoint {
             writer
                 .handleStatement(
                     valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
-            IRI domainUri = valueFactory
-                .createIRI(BASE_VOCAB_NS,
-                    r.getStartNode().getLabels().iterator().next().name());
-            writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
-            IRI rangeUri = valueFactory
-                .createIRI(BASE_VOCAB_NS,
-                    r.getEndNode().getLabels().iterator().next().name());
-            writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+            String domainLabel = r.getStartNode().getLabels().iterator().next().name();
+            // Resource should be named _Resource... to avoid conflicts
+            if (!domainLabel.equals("Resource")) {
+              writer
+                  .handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN,
+                      valueFactory.createIRI(BASE_VOCAB_NS, domainLabel)));
+            }
+            String rangeLabel = r.getEndNode().getLabels().iterator().next().name();
+            // Resource should be named _Resource... to avoid conflicts
+            if (!rangeLabel.equals("Resource")) {
+              writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE,
+                  valueFactory.createIRI(BASE_VOCAB_NS, rangeLabel)));
+            }
           }
 
           writer.endRDF();
