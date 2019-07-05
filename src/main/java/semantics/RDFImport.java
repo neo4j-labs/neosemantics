@@ -449,7 +449,7 @@ public class RDFImport {
     Iterable<IndexDefinition> indexes = db.schema().getIndexes();
     if (missing(indexes.iterator(), "Resource")) {
       throw new RDFImportPreRequisitesNotMet(
-          "The required index on :Resource(uri) could not be found");
+          "The following index is required for importing RDF. Please run 'CREATE INDEX ON :Resource(uri)' and then try again.");
     }
   }
 
