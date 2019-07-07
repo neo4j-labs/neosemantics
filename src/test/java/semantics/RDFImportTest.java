@@ -97,7 +97,8 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The required index on :Resource(uri) could not be found",
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -1827,7 +1828,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
@@ -1855,7 +1856,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
@@ -1893,7 +1894,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
           + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
@@ -1934,7 +1935,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
           "','RDF/XML')");
 
@@ -1968,7 +1969,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
@@ -1988,7 +1989,7 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importLargeOnto('" +
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
           "','RDF/XML')");
 

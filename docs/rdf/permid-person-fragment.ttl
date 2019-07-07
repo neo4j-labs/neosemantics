@@ -1,0 +1,19 @@
+@prefix vcard: <http://www.w3.org/2006/vcard/ns#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix permid: <https://permid.org/> .
+
+permid:1-34419230351
+  a vcard:Person ;
+  vcard:given-name "Keith"^^xsd:string .
+
+permid:1-34419198943
+  vcard:family-name "Peltz"^^xsd:string ;
+  vcard:given-name "Maxwell"^^xsd:string ;
+  vcard:additional-name "S"^^xsd:string ;
+  a vcard:Person .
+
+permid:1-34418273443
+  vcard:family-name "Benner"^^xsd:string ;
+  vcard:given-name "Thomas"^^xsd:string ;
+  a vcard:Person ;
+  vcard:friend-of <https://permid.org/1-34419230351> .
