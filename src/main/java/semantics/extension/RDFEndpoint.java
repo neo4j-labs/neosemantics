@@ -777,7 +777,7 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/rdfonto")
+  @Path("/ontonrdf")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix",
       "application/x-trig",
       "application/ld+json"})

@@ -547,7 +547,7 @@ public class RDFEndpointTest {
         .newServer()) {
 
       HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).GET(
-          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "rdfonto");
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "ontonrdf");
 
       String expected =
           "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
