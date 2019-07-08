@@ -97,7 +97,8 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The required index on :Resource(uri) could not be found",
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -942,7 +943,7 @@ public class RDFImportTest {
       assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
       assertEquals("http://example.org/vocab/show/P854", next.get("predicate"));
       assertEquals(
-          "https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%25u00e4",
+          "https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4",
           next.get("object"));
       assertEquals(false, next.get("isLiteral"));
     }
