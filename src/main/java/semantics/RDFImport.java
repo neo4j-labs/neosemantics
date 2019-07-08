@@ -80,10 +80,28 @@ public class RDFImport {
   public Log log;
 
   @Procedure(mode = Mode.WRITE)
-  @Description("Imports RDF and stores it in Neo4j as a property graph. Requires and index on :Resource(uri)")
+  @Description("Imports RDF from an url (file or http) and stores it in Neo4j as a property graph. "
+      + "Requires and index on :Resource(uri)")
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
+    return Stream.of(doImport(format, url, null, props));
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
+      + "graph. Requires and index on :Resource(uri)")
+  public Stream<ImportResults>  importRDFSnippet(@Name("rdf") String rdfFragment,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+
+    return Stream.of(doImport(format,null, rdfFragment, props));
+  }
+
+  private ImportResults doImport(@Name("format") String format, @Name("url") String url,
+      @Name("rdf") String rdfFragment,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
@@ -91,7 +109,12 @@ public class RDFImport {
     DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format, statementLoader);
+      if (rdfFragment != null) {
+        parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+            "http://neo4j.com/base/", format, statementLoader);
+      } else {
+        parseRDF(getInputStream(url, props), url, format, statementLoader);
+      }
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
@@ -106,7 +129,7 @@ public class RDFImport {
       importResults.setConfigSummary(conf.getConfigSummary());
 
     }
-    return Stream.of(importResults);
+    return importResults;
   }
 
   @Procedure(mode = Mode.WRITE)
