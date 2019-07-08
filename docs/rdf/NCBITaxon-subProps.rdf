@@ -24,4 +24,8 @@
     <rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/>
 </owl:AnnotationProperty>
 
+<owl:AnnotationProperty rdf:about="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty">
+    <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">synonym_type_property</rdfs:label>
+</owl:AnnotationProperty>
+
 </rdf:RDF>
