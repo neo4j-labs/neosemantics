@@ -54,6 +54,7 @@ This repository contains a set of stored procedures, user definded functions and
 | headerParams      | map {} | parameters to be passed in the HTTP GET request. <br> Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'} |
 | commitSize      | integer (25000) | commit a partial transaction every n triples |
 | nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB |
+| verifyUriSyntax      | boolean (true) | throw an exception and abort importing if invalid uri is encountered during parsing |
 
 
 #### Note on namespace prefixes
