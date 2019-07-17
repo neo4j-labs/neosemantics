@@ -104,6 +104,27 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testAbortIfNoIndicesImportSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          turtleFragment +
+          "','Turtle')");
+
+      Map<String, Object> singleResult = importResults1.single().asMap();
+
+      assertEquals(0L, singleResult.get("triplesLoaded"));
+      assertEquals("KO", singleResult.get("terminationStatus"));
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+          singleResult.get("extraInfo"));
+    }
+  }
+
+  @Test
   public void testImportJSONLD() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -130,6 +151,32 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testImportJSONLDImportSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          jsonLdFragment + "','JSON-LD',"
+          +
+          "{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, " +
+          "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+      assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+      assertEquals(1L,
+          session.run(
+              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              .next().get("count").asLong());
+    }
+  }
+
+  @Test
   public void testImportJSONLDShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -139,6 +186,27 @@ public class RDFImportTest {
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
+          +
+          "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
+      assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+      assertEquals(1L,
+          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
+              + "modified) RETURN count(n) AS count")
+              .next().get("count").asLong());
+
+      assertEquals("ns0",
+          session.run(
+              "MATCH (n:NamespacePrefixDefinition) RETURN n.`http://xmlns.com/foaf/0.1/` AS prefix")
+              .next().get("prefix").asString());
+
+      session.run("MATCH (n) DETACH DELETE n ;");
+
+      importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          jsonLdFragment + "','JSON-LD',"
           +
           "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
       assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
@@ -2087,6 +2155,253 @@ public class RDFImportTest {
     }
   }
 
+
+  @Test
+  public void testImportRDFDatasetTriG() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#John'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN n.graphUri AS graphUri ORDER BY graphUri");
+      List<Record> list = result.list();
+      assertEquals("http://www.example.org/exampleDocument#G1",
+          list.get(0).get("graphUri").asString());
+      assertEquals("http://www.example.org/exampleDocument#G2",
+          list.get(1).get("graphUri").asString());
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G1'})"
+          + "RETURN n.`http://www.example.org/vocabulary#created` AS created");
+      assertEquals(LocalDate.parse("2019-06-06"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G2'})"
+          + "RETURN n.`http://www.example.org/vocabulary#created` AS created");
+      assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
+          + "WHERE NOT EXISTS(n.graphUri)"
+          + "RETURN labels(n) AS labels");
+      Record record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("http://www.example.org/vocabulary#Person",
+          record.get("labels").asList().get(1));
+      result = session.run(
+          "MATCH (n {uri: 'http://www.example.org/exampleDocument#John', "
+              + "graphUri: 'http://www.example.org/exampleDocument#G3'})"
+              + "RETURN labels(n) AS labels");
+      record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("http://www.example.org/vocabulary#Person",
+          record.get("labels").asList().get(1));
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`http://www.example.org/vocabulary#friendOf`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertTrue(result.next().get("result").asBoolean());
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`http://www.example.org/vocabulary#knows`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertFalse(result.next().get("result").asBoolean());
+    }
+  }
+
+  @Test
+  public void testImportRDFDatasetNQuads() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+              .toURI()
+          + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#John'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN n.graphUri AS graphUri ORDER BY graphUri");
+      List<Record> list = result.list();
+      assertEquals("http://www.example.org/exampleDocument#G1",
+          list.get(0).get("graphUri").asString());
+      assertEquals("http://www.example.org/exampleDocument#G2",
+          list.get(1).get("graphUri").asString());
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G1'})"
+          + "RETURN n.`http://www.example.org/vocabulary#created` AS created");
+      assertEquals(LocalDate.parse("2019-06-06"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G2'})"
+          + "RETURN n.`http://www.example.org/vocabulary#created` AS created");
+      assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
+          + "WHERE NOT EXISTS(n.graphUri)"
+          + "RETURN labels(n) AS labels");
+      Record record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("http://www.example.org/vocabulary#Person",
+          record.get("labels").asList().get(1));
+      result = session.run(
+          "MATCH (n {uri: 'http://www.example.org/exampleDocument#John', "
+              + "graphUri: 'http://www.example.org/exampleDocument#G3'})"
+              + "RETURN labels(n) AS labels");
+      record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("http://www.example.org/vocabulary#Person",
+          record.get("labels").asList().get(1));
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`http://www.example.org/vocabulary#friendOf`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertTrue(result.next().get("result").asBoolean());
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`http://www.example.org/vocabulary#knows`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertFalse(result.next().get("result").asBoolean());
+    }
+  }
+
+  @Test
+  public void testDeleteRDFDatasetTriG() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
+    }
+  }
+
+  @Test
+  public void testDeleteRDFDatasetNQuads() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+              .toURI()
+          + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.nq")
+              .toURI()
+          + "', 'N-Quads', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
+    }
+  }
+
+  @Test
+  public void testRepetitiveDeletionRDFDataset() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+              .toURI()
+          + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(12, result.list().size());
+
+      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(9L, deleteResult.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n:Resource)"
+          + "RETURN n");
+      assertEquals(5, result.list().size());
+
+      deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+          RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
+              .toURI()
+          + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(0L, deleteResult.next().get("triplesDeleted").asLong());
+
+    }
+  }
 
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");

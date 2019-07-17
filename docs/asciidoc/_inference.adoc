@@ -1,4 +1,111 @@
 [[Inference]]
 == Inferencing/Reasoning
 
+=== Property hierarchies
+
+==== semantics.inference.getRels
+
+We can use `rdfs:subPropertyOf` to state that all resources related by one property are also related by another. The `semantics.inference.getRels` stored procedure uses this semantics to infer implicit relationships between nodes in the graph.
+
+Let's explain that with an example. The ncbitaxon ontology defines a number of `rdfs:subPropertyOf` relationships between annotation properties. For instance, it states that every `acronym` is a `synonym_type_property`. And it does it with this triple:
+
+[source,RDF]
+----
+...
+
+<owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/ncbitaxon#acronym">
+    <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">acronym</rdfs:label>
+    <rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/>
+</owl:AnnotationProperty>
+
+...
+----
+
+We'll start by loading the ontology (we have a fragment http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf[here])
+
+[source,Cypher]
+----
+call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML")
+----
+
+This should load a simple hierarchy of annotation properties like the one in this screen capture from the Neo4j browser.
+
+image::NCBITaxon-PropertyHierarchy.png[Fragment of NCBITaxon property hierarchy loaded into Neo4j]
+
+We can now add some instance data manually with a cypher script like this one:
+
+[source,Cypher]
+----
+match ... merge ...
+----
+
+
+[source,Cypher]
+----
+:param config: { relLabel: "owl__AnnotationProperty", relNameProp: "rdfs__label", subRelRel : "rdfs__subPropertyOf"}
+----
+
+[source,Cypher]
+----
+match (indiv:Individual { uri: "http://individual/12345"})
+call semantics.inference.getRels(indiv,"synonym_type_property",$config) yield rel, node
+return indiv, rel, node
+----
+
+Now we can use the `semantics.inference.getRels`
+
+load the full onto (Started streaming 1 records after 296988 ms and completed after 296989 ms.)
+
+╒═══════════════════╤═══════════════╤═══════════════╤══════════════════════════════════════════════════════════════════════╤═══════════╤═══════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"                                                          │"extraInfo"│"configSummary"│
+╞═══════════════════╪═══════════════╪═══════════════╪══════════════════════════════════════════════════════════════════════╪═══════════╪═══════════════╡
+│"OK"               │12581469       │12581469       │{"http://purl.org/dc/elements/1.1/":"dc","http://purl.org/dc/terms/":"│""         │{}             │
+│                   │               │               │dct","http://www.w3.org/1999/02/22-rdf-syntax-ns#":"rdf","http://purl.│           │               │
+│                   │               │               │obolibrary.org/obo/":"ns1","http://www.w3.org/2002/07/owl#":"owl","htt│           │               │
+│                   │               │               │p://www.geneontology.org/formats/oboInOwl#":"ns0","http://www.w3.org/2│           │               │
+│                   │               │               │004/02/skos/core#":"skos","http://schema.org/":"sch","http://www.w3.or│           │               │
+│                   │               │               │g/ns/shacl#":"sh","http://www.w3.org/2000/01/rdf-schema#":"rdfs","http│           │               │
+│                   │               │               │://purl.obolibrary.org/obo/ncbitaxon#":"ns2"}                         │           │               │
+└───────────────────┴───────────────┴───────────────┴──────────────────────────────────────────────────────────────────────┴───────────┴───────────────┘
+
+
+
+run it on a 35 level deep hierarchy...
+
+MATCH path = (n:owl__Class)-[:rdfs__subClassOf*35..]->() RETURN path LIMIT 1
+
+
+
+Import gene ontology (Started streaming 1 records after 10655 ms and completed after 10655 ms.)
+
+CALL semantics.importOntology("http://purl.obolibrary.org/obo/go/snapshot/go.owl","RDF/XML", { classLabel : 'Class', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+
+╒═══════════════════╤═══════════════╤═══════════════╤════════════╤═══════════╤══════════════════════════════════════════════════════════════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"│"extraInfo"│"configSummary"                                                       │
+╞═══════════════════╪═══════════════╪═══════════════╪════════════╪═══════════╪══════════════════════════════════════════════════════════════════════╡
+│"OK"               │180079         │1440102        │null        │""         │{"dataTypePropertyLabelName":"Prop","classLabelName":"Class","objectPr│
+│                   │               │               │            │           │opertyLabelName":"Rel"}                                               │
+└───────────────────┴───────────────┴───────────────┴────────────┴───────────┴──────────────────────────────────────────────────────────────────────┘
+
+
+
+
+
 ...work in progress...
+
+Prox
+
+"semantics.inference.getRels"	"semantics.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)"	"semantics.inference.getRels(node,'rel','>') - returns all outgoing relationships of type 'virtRel' or its subtypes along with the target nodes."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
+
+"semantics.inference.nodesInCategory"	"semantics.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node :: NODE?)"	"semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
+
+"semantics.inference.nodesLabelled"	"semantics.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)"	"semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
+
+
+UDFs
+
+"semantics.inference.hasLabel"	"semantics.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'."	["admin", "reader", "editor", "publisher", "architect"]
+
+"semantics.inference.inCategory"	"semantics.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category."	["admin", "reader", "editor", "publisher", "architect"]
+
+

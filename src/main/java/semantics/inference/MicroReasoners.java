@@ -136,7 +136,7 @@ public class MicroReasoners {
 
   @Procedure(mode = Mode.READ)
   @Description(
-      "semantics.inference.getRels(node,'rel','>') - returns all outgoing relationships of type 'virtRel' "
+      "semantics.inference.getRels(node,'rel','>') - returns all relationships of type 'virtRel' "
           +
           "or its subtypes along with the target nodes.")
   public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("rel") String virtRel,

@@ -441,11 +441,16 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_filtering_triples_by_language_tag">Filtering triples by language tag</a></li>
 <li><a href="#_handling_custom_data_types">Handling custom data types</a></li>
 <li><a href="#_classess_as_nodes_instead_of_labels">Classess as Nodes (instead of Labels)</a></li>
+<li><a href="#ImportRDFDataset">Handling named graphs (RDF Dataset)</a></li>
 <li><a href="#advancedfetching">Advanced settings for fetching RDF</a></li>
 <li><a href="#custom_ns">Defining custom prefixes for namespaces</a></li>
 </ul>
 </li>
-<li><a href="#DeleteRDF">Deleting imported RDF data</a></li>
+<li><a href="#DeleteRDF">Deleting imported RDF</a>
+<ul class="sectlevel2">
+<li><a href="#_deleting_imported_rdf_dataset_named_graphs">Deleting imported RDF dataset (named graphs)</a></li>
+</ul>
+</li>
 <li><a href="#OntoImport">Importing Ontologies</a></li>
 <li><a href="#Preview">Previewing RDF data</a>
 <ul class="sectlevel2">
@@ -470,7 +475,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_mappings_for_import">Mappings for import</a></li>
 </ul>
 </li>
-<li><a href="#Inference">Inferencing/Reasoning</a></li>
+<li><a href="#Inference">Inferencing/Reasoning</a>
+<ul class="sectlevel2">
+<li><a href="#_property_hierarchies">Property hierarchies</a></li>
+</ul>
+</li>
 <li><a href="#Reference">NSMNTX Reference</a>
 <ul class="sectlevel2">
 <li><a href="#_stored_procedures">Stored Procedures</a></li>
@@ -593,7 +602,7 @@ You can check that the extension is mounted by running</p>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">format</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, <strong>TriG and N-Quads</strong> (For named graphs)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
@@ -603,7 +612,7 @@ You can check that the extension is mounted by running</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>ssemantics.import</code> procedure will remind you with an error messsage.</p>
+<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>semantics.importRDF</code> procedure will remind you with an error messsage.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1112,6 +1121,135 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 </div>
 <div class="sect2">
+<h3 id="ImportRDFDataset"><a class="link" href="#ImportRDFDataset">Handling named graphs (RDF Dataset)</a></h3>
+<div class="paragraph">
+<p>You can also import RDF datasets using <code>semantics.importRDFDataset</code>. The only difference in comparision to <code>semantics.importRDF</code> is that you can import not just triples but also quadruples. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.</p>
+</div>
+<div class="paragraph">
+<p>Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.</p>
+</div>
+<div class="paragraph">
+<p>Similar to <code>semantics.importRDF</code> method <code>semantics.importRDFDataset</code> also takes the url string to access the RDF dataset and the serialisation format.
+Let&#8217;s say you&#8217;re trying to load the following set of quadruples into Neo4j.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://www.example.org/vocabulary#&gt; .
+@prefix exDoc: &lt;http://www.example.org/exampleDocument#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
+
+exDoc:Monica a ex:Person ;
+             ex:friendOf exDoc:John .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:name "Monica Murphy" ;
+              ex:homepage &lt;http://www.monicamurphy.org&gt; ;
+              ex:email &lt;mailto:monica@monicamurphy.org&gt; ;
+              ex:hasSkill ex:Management ,
+                                  ex:Programming .
+    exDoc:Monica ex:knows exDoc:John . }
+
+exDoc:G2 {
+    exDoc:Monica
+              ex:city "New York" ;
+              ex:country "USA" . }
+
+
+exDoc:G3 {
+    exDoc:John a ex:Person . }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>semantics.importRDFDataset</code> procedure will remind you with an error messsage.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CREATE INDEX ON :Resource(uri)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the beginning of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in <a href="docs/rdf/RDFDataset/RDFDataset.trig">this file</a>.</p>
+</div>
+<div class="paragraph">
+<p>You can use the following cypher snippet to import the set of quadruples from above:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDFDataset( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_merging_nodes_virtually"><a class="link" href="#_merging_nodes_virtually">Merging nodes virtually</a></h4>
+<div class="paragraph">
+<p>While importing the RDF dataset above NSMNTX will create a separate node for each instance of <code>exDoc:Monica</code>. That means you will have three nodes each representing a different graph. This might complicate things when you want to for example query everything about <code>exDoc:Monica</code> with the following cypher snippet:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
+RETURN monica</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As a result you will get three distinct nodes, which look like this in text mode:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════════════════════════════════════════════════════════════╕
+│"monica"                                                              │
+╞══════════════════════════════════════════════════════════════════════╡
+│{"http://www.example.org/vocabulary#name":["Monica Murphy"],"uri":"htt│
+│p://www.example.org/exampleDocument#Monica","graphUri":"http://www.exa│
+│mple.org/exampleDocument#G1"}                                         │
+├──────────────────────────────────────────────────────────────────────┤
+│{"http://www.example.org/vocabulary#city":["New York"],"http://www.exa│
+│mple.org/vocabulary#country":["USA"],"uri":"http://www.example.org/exa│
+│mpleDocument#Monica","graphUri":"http://www.example.org/exampleDocumen│
+│t#G2"}                                                                │
+├──────────────────────────────────────────────────────────────────────┤
+│{"uri":"http://www.example.org/exampleDocument#Monica"}               │
+└──────────────────────────────────────────────────────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>To avoid this, you can use <a href="https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse">APOC Nodes collapse</a>. <code>apoc.nodes.collapse</code> merges the set of nodes into a virtual node.</p>
+</div>
+<div class="paragraph">
+<p>Here is the cypher snippet showing how to do that with the <code>exDoc:Monica</code> example:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
+WITH collect(monica) AS nodes
+CALL apoc.nodes.collapse(nodes,{properties:'combine'}) YIELD from, rel, to
+RETURN DISTINCT from AS monica</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As a result you will get a single node which looks like this in text mode:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════════════════════════════════════════════════════════════╕
+│"monica"                                                              │
+╞══════════════════════════════════════════════════════════════════════╡
+│{"http://www.example.org/vocabulary#city":["New York"],"count":3,"http│
+│://www.example.org/vocabulary#country":["USA"],"uri":"http://www.examp│
+│le.org/exampleDocument#Monica","http://www.example.org/vocabulary#name│
+│":["Monica Murphy"],"graphUri":["http://www.example.org/exampleDocumen│
+│t#G2","http://www.example.org/exampleDocument#G1"]}                   │
+└──────────────────────────────────────────────────────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>You can find more information about the parameter configuration of <code>apoc.nodes.collapse</code> on <a href="https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse">APOC Nodes collapse</a>.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
 <h3 id="advancedfetching"><a class="link" href="#advancedfetching">Advanced settings for fetching RDF</a></h3>
 <div class="paragraph">
 <p>Sometimes the RDF data will be a static file, and other times it&#8217;ll be dynamically generated in response to an HTTP request (<code>GET</code> or <code>POST</code>) possibly containg parameters, even a SPARQL query.
@@ -1271,7 +1409,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 </div>
 <div class="sect1">
-<h2 id="DeleteRDF"><a class="link" href="#DeleteRDF">Deleting imported RDF data</a></h2>
+<h2 id="DeleteRDF"><a class="link" href="#DeleteRDF">Deleting imported RDF</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
 <p>The method to delete imported RDF data is <code>semantics.deleteRDF</code>. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
@@ -1299,7 +1437,7 @@ All delete procedures take the following three parameters, like the import proce
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">format</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">String</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, <strong>TriG and N-Quads</strong> (For named graphs)</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
@@ -1403,6 +1541,76 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 <div class="paragraph">
 <p><strong>Note</strong> that currently blank nodes cannot be deleted due to not having a persistent IRI.</p>
 </div>
+<div class="sect2">
+<h3 id="_deleting_imported_rdf_dataset_named_graphs"><a class="link" href="#_deleting_imported_rdf_dataset_named_graphs">Deleting imported RDF dataset (named graphs)</a></h3>
+<div class="paragraph">
+<p>You can also delete imported quadruples using <code>semantics.deleteRDFDataset</code> which takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a>.</p>
+</div>
+<div class="paragraph">
+<p><strong>Note</strong> that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.</p>
+</div>
+<div class="paragraph">
+<p>For this example we will use the same dataset which was used in <a href="#ImportRDFDataset">Handling named graphs (RDF Dataset)</a>.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s say you&#8217;re trying to delete the following set of quadruples from Neo4j after the import from the <a href="#ImportRDFDataset">Handling named graphs (RDF Dataset)</a> section:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://www.example.org/vocabulary#&gt; .
+@prefix exDoc: &lt;http://www.example.org/exampleDocument#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
+
+exDoc:Monica a ex:Person ;
+             ex:friendOf exDoc:John .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:name "Monica Murphy" ;
+              ex:email &lt;mailto:monica@monicamurphy.org&gt; ;
+              ex:hasSkill ex:Management ;
+              ex:knows exDoc:John . }
+
+exDoc:G2 {
+    exDoc:Monica
+              ex:city "New York" ;
+              ex:country "USA" . }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The <code>semantics.deleteRDFDataset</code> procedure takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a> at the beginning of the <a href="#DeleteRDF">Deleting imported RDF</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in <a href="docs/rdf/RDFDataset/RDFDataset.trig">this file</a>.</p>
+</div>
+<div class="paragraph">
+<p>Here is the cypher snippet showing how to do that:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.deleteRDFDataset("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>NSMNTX will delete the given quadruples in your Neo4j graph. After this deletion your RDF dataset will look like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix ex: &lt;http://www.example.org/vocabulary#&gt; .
+@prefix exDoc: &lt;http://www.example.org/exampleDocument#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:homepage &lt;http://www.monicamurphy.org&gt; ;
+              ex:hasSkill ex:Programming . }
+
+exDoc:G3 {
+    exDoc:John a ex:Person . }</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect1">
@@ -1434,7 +1642,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 <p>All other elments will be ignored by this loader.</p>
 </div>
 <div class="paragraph">
-<p>The <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the begining of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in <a href="docs/rdf/vw.owl">this file</a>.</p>
+<p>The <code>liteOntoImport</code> procedure takes the same generic params described in <a href="#common_params">[common_params]</a> at the beginning of the <a href="#Import">Importing RDF data</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in <a href="docs/rdf/vw.owl">this file</a>.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1729,6 +1937,12 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 </div>
 </div>
 <div class="paragraph">
+<p>"describe/uri/" + URLEncoder
+              .encode("http://www.example.org/exampleDocument#Monica",
+                  StandardCharsets.UTF_8.toString())
+              + "?graphuri=http://www.example.org/exampleDocument%23G1"</p>
+</div>
+<div class="paragraph">
 <p>Again, notice the URL enconding of the URI and the <code>format</code> parameter to specify the serialisation format. Here&#8217;s the output of the request:</p>
 </div>
 <div class="listingblock">
@@ -1758,6 +1972,14 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Additionally, you can provide a graph URI to specify the context of the given resource. Here is how you can do that on the RDF dataset we imported in <a href="#ImportRDFDataset">Handling named graphs (RDF Dataset)</a> section:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/uri/http%3A%2F%2Fwww.example.org%2FexampleDocument%23Monica?graphuri=http%3A%2F%2Fwww.example.org%2FexampleDocument%23G1&amp;format=TriG</code></pre>
 </div>
 </div>
 </div>
@@ -2513,8 +2735,141 @@ The combination of a mapping definition plus the use of the <code>handleVocabUri
 <div class="sect1">
 <h2 id="Inference"><a class="link" href="#Inference">Inferencing/Reasoning</a></h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_property_hierarchies"><a class="link" href="#_property_hierarchies">Property hierarchies</a></h3>
+<div class="sect3">
+<h4 id="_semantics_inference_getrels"><a class="link" href="#_semantics_inference_getrels">semantics.inference.getRels</a></h4>
+<div class="paragraph">
+<p>We can use <code>rdfs:subPropertyOf</code> to state that all resources related by one property are also related by another. The <code>semantics.inference.getRels</code> stored procedure uses this semantics to infer implicit relationships between nodes in the graph.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s explain that with an example. The ncbitaxon ontology defines a number of <code>rdfs:subPropertyOf</code> relationships between annotation properties. For instance, it states that every <code>acronym</code> is a <code>synonym_type_property</code>. And it does it with this triple:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">...
+
+&lt;owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/ncbitaxon#acronym"&gt;
+    &lt;rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string"&gt;acronym&lt;/rdfs:label&gt;
+    &lt;rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/&gt;
+&lt;/owl:AnnotationProperty&gt;
+
+...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We&#8217;ll start by loading the ontology (we have a fragment <a href="http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf">here</a>)</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This should load a simple hierarchy of annotation properties like the one in this screen capture from the Neo4j browser.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/NCBITaxon-PropertyHierarchy.png" alt="Fragment of NCBITaxon property hierarchy loaded into Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>We can now add some instance data manually with a cypher script like this one:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">match ... merge ...</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:param config: { relLabel: "owl__AnnotationProperty", relNameProp: "rdfs__label", subRelRel : "rdfs__subPropertyOf"}</code></pre>
+</div>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">match (indiv:Individual { uri: "http://individual/12345"})
+call semantics.inference.getRels(indiv,"synonym_type_property",$config) yield rel, node
+return indiv, rel, node</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now we can use the <code>semantics.inference.getRels</code></p>
+</div>
+<div class="paragraph">
+<p>load the full onto (Started streaming 1 records after 296988 ms and completed after 296989 ms.)</p>
+</div>
+<div class="paragraph">
+<p>╒═══════════════════╤═══════════════╤═══════════════╤══════════════════════════════════════════════════════════════════════╤═══════════╤═══════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"                                                          │"extraInfo"│"configSummary"│
+╞═══════════════════╪═══════════════╪═══════════════╪══════════════════════════════════════════════════════════════════════╪═══════════╪═══════════════╡
+│"OK"               │12581469       │12581469       │{"http://purl.org/dc/elements/1.1/":"dc","http://purl.org/dc/terms/":"│""         │{}             │
+│                   │               │               │dct","http://www.w3.org/1999/02/22-rdf-syntax-ns#":"rdf","http://purl.│           │               │
+│                   │               │               │obolibrary.org/obo/":"ns1","http://www.w3.org/2002/07/owl#":"owl","htt│           │               │
+│                   │               │               │p://www.geneontology.org/formats/oboInOwl#":"ns0","http://www.w3.org/2│           │               │
+│                   │               │               │004/02/skos/core#":"skos","http://schema.org/":"sch","http://www.w3.or│           │               │
+│                   │               │               │g/ns/shacl#":"sh","http://www.w3.org/2000/01/rdf-schema#":"rdfs","http│           │               │
+│                   │               │               │://purl.obolibrary.org/obo/ncbitaxon#":"ns2"}                         │           │               │
+└───────────────────┴───────────────┴───────────────┴──────────────────────────────────────────────────────────────────────┴───────────┴───────────────┘</p>
+</div>
+<div class="paragraph">
+<p>run it on a 35 level deep hierarchy&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>MATCH path = (n:owl<em>Class)-[:rdfs</em>subClassOf*35..]&#8594;() RETURN path LIMIT 1</p>
+</div>
+<div class="paragraph">
+<p>Import gene ontology (Started streaming 1 records after 10655 ms and completed after 10655 ms.)</p>
+</div>
+<div class="paragraph">
+<p>CALL semantics.importOntology("http://purl.obolibrary.org/obo/go/snapshot/go.owl","RDF/XML", { classLabel : 'Class', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</p>
+</div>
+<div class="paragraph">
+<p>╒═══════════════════╤═══════════════╤═══════════════╤════════════╤═══════════╤══════════════════════════════════════════════════════════════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"│"extraInfo"│"configSummary"                                                       │
+╞═══════════════════╪═══════════════╪═══════════════╪════════════╪═══════════╪══════════════════════════════════════════════════════════════════════╡
+│"OK"               │180079         │1440102        │null        │""         │{"dataTypePropertyLabelName":"Prop","classLabelName":"Class","objectPr│
+│                   │               │               │            │           │opertyLabelName":"Rel"}                                               │
+└───────────────────┴───────────────┴───────────────┴────────────┴───────────┴──────────────────────────────────────────────────────────────────────┘</p>
+</div>
 <div class="paragraph">
 <p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>Prox</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">"semantics.inference.getRels"	"semantics.inference.getRels(node </dt>
+<dd>
+<p>NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)"	"semantics.inference.getRels(node,'rel','&gt;') - returns all outgoing relationships of type 'virtRel' or its subtypes along with the target nodes."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.nodesInCategory"	"semantics.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node </dt>
+<dd>
+<p>NODE?)"	"semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.nodesLabelled"	"semantics.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node </dt>
+<dd>
+<p>NODE?)"	"semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>UDFs</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">"semantics.inference.hasLabel"	"semantics.inference.hasLabel(node </dt>
+<dd>
+<p>NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'."	["admin", "reader", "editor", "publisher", "architect"]</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.inCategory"	"semantics.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) </dt>
+<dd>
+<p>(BOOLEAN?)"	"semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category."	["admin", "reader", "editor", "publisher", "architect"]</p>
+</dd>
+</dl>
+</div>
+</div>
 </div>
 </div>
 </div>
