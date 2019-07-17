@@ -453,15 +453,16 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
 </ul>
 </li>
-<li><a href="#Export">Exporting RDF data</a>
-<ul class="sectlevel2">
-<li><a href="#_by_node_id">By node ID</a></li>
-<li><a href="#_by_uri">By URI</a></li>
-<li><a href="#_by_label_property_value">By Label + property value</a></li>
-<li><a href="#_using_cypher">Using Cypher</a></li>
-<li><a href="#_export_graph_ontology">Export Graph Ontology</a></li>
-</ul>
-</li>
+
+  <li><a href="#Export">Exporting RDF data</a>
+    <ul class="sectlevel2">
+      <li><a href="#_by_node_id">By node ID</a></li>
+      <li><a href="#_by_uri">By URI</a></li>
+      <li><a href="#_by_label_property_value">By Label + property value</a></li>
+      <li><a href="#_using_cypher">Using Cypher</a></li>
+    </ul>
+  </li>
+
 <li><a href="#Mapping">Mapping graph models</a>
 <ul class="sectlevel2">
 <li><a href="#_public_vocabularies_ontologies">Public Vocabularies/Ontologies</a></li>
@@ -503,17 +504,19 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <p>Copy the  the jar(s) in the &lt;NEO_HOME&gt;/plugins directory of your Neo4j instance. (<strong>note:</strong> If you&#8217;re going to use the JSON-LD serialisation format for RDF, you&#8217;ll need to include also <a href="https://neo4j-contrib.github.io/neo4j-apoc-procedures/">APOC</a>)</p>
 </li>
 <li>
-<p>Add the following line to your &lt;NEO_HOME&gt;/conf/neo4j.conf (notice that it is possible to modify where the extension is mounted by using an alternative name to <code>/rdf</code> below).</p>
+  <p>Add the following line to your &lt;NEO_HOME&gt;/conf/neo4j.conf (notice that it is possible to
+    modify where the extension is mounted by using an alternative name to <code>/rdf</code> below).
+  </p>
 </li>
 </ol>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>dbms.unmanaged_extension_classes=semantics.extension=/rdf</pre>
+  <pre>dbms.unmanaged_extension_classes=semantics.extension=/rdf</pre>
 </div>
 </div>
-<div class="olist arabic">
-<ol class="arabic">
+  <div class="olist arabic">
+    <ol class="arabic">
 <li>
 <p>Restart the server.</p>
 </li>
@@ -1579,6 +1582,88 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <h2 id="Export"><a class="link" href="#Export">Exporting RDF data</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
+
+  <p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on
+    how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF
+    any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
+</div>
+  <div class="paragraph">
+    <p>RDF is a W3C standard model for data interchange on the Web that represents data as a graph,
+      hence the seamless serialisation of graph data from Neo4j in RDF as we&#8217;ll see.</p>
+  </div>
+  <div class="paragraph">
+    <p>There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the
+      graph by its unique identifier (id or uri), selecting a group of nodes by Label + property
+      value and via Cypher. Let&#8217;s analyse each of them in detail.</p>
+  </div>
+  <div class="admonitionblock warning">
+    <table>
+      <tr>
+        <td class="icon">
+          <div class="title">Warning</div>
+        </td>
+        <td class="content">
+          The paths used in the following sections assume that NSMNTX is mounted at
+          <code>/rdf</code>. If you&#8217;ve mounted the extension under a different name
+          (instructions on how to do this can be found in the <a href="#install">[install]</a>
+          section) all you need to do is replace the <code>/rdf</code> bits in the urls in the
+          following examples with the name you&#8217;ve used.
+        </td>
+      </tr>
+    </table>
+  </div>
+  <div class="sect2">
+    <h3 id="_by_node_id"><a class="link" href="#_by_node_id">By node ID</a></h3>
+    <div class="sect3">
+      <h4 id="_rdf_describe_id"><a class="link" href="#_rdf_describe_id">/rdf/describe/id</a></h4>
+      <div class="paragraph">
+        <p>To explain how some this method works, we&#8217;ll use the Northwind Graph. You can
+          easily load it in your Neo4j instance by running <code>:play northwind-graph</code> in
+          your browser. This will bring up a guide with step by step instructions on how to create
+          it. I&#8217;ll assume the graph is now loaded.</p>
+      </div>
+      <div class="paragraph">
+        <p>The describe/id method emulates the SPARQL DESCRIBE operation. It takes the unique
+          identifier of an element in the graph and it produces an RDF serialisation of all
+          information available about it. This includes properties, labels, and relationships (both
+          incoming and outgoing).</p>
+      </div>
+      <div class="paragraph">
+        <p>The only required parameter is the id of the node. As you know any node in Neo4j has a
+          unique identifier that you can get via cypher using the <code>id</code> function.</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (p:Product) WHERE p.productName = "Queso Manchego La Pastora" RETURN ID(p)</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>In my case, the <code>ID</code> returned by the previous query is <code>11</code>, so if
+          I want NSMNTX to produce an RDF serialisation of this node, all I need to do is issue the
+          following HTTP request:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-HTTP" data-lang="HTTP">http://localhost:7474/rdf/describe/id/11</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>Or if you&#8217;re working on your Neo4j browser, you can run it like this too:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/id/11</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>And you will get a description for your node, serialised as Turtle RDF by default.
+          Something like this:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+<pre class="highlight"><code class="language-Turtle" data-lang="Turtle">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
+@prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
+
 <p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
 </div>
 <div class="paragraph">
@@ -1670,27 +1755,37 @@ neoind:255 neovoc:ORDERS neoind:11 .
 neoind:1066 neovoc:ORDERS neoind:11 .
 neoind:428 neovoc:ORDERS neoind:11 .
 neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>You can modify the output of the describe method as follows:
-* Change serialisation format by either by using the <code>accept</code> header param with any of the RDF media types: <code>"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig", "application/ld+json"</code> or the <code>format</code> request param using any of the following values: <code>Turtle, N-Triples, JSON-LD, TriG, RDF/XML</code>. The <code>format</code> request parameter if used will override the <code>accept</code> header param.
-* Exclude relationships and just return the properties and labels of the selected node by setting the request parameter <code>exculdeContext</code> to <code>true</code>.
-* Exclude unmapped elements by setting the request parameter <code>showOnlyMapped</code> to true. We&#8217;ll see in section <a href="#Mapping">Mapping graph models</a> how to define basic model mappings with NSMNTX.</p>
-</div>
-<div class="paragraph">
-<p>Here&#8217;s an example of using some of this modifiers. The following request (again simplified notation for the Neo4j browser):</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/id/11?format=RDF/XML&amp;excludeContext=true</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Would filter out relationships (RDF Object Properties) and set the serialisation format to <code>RDF/XML</code> to produce:</p>
-</div>
-<div class="listingblock">
-<div class="content">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>You can modify the output of the describe method as follows:
+          * Change serialisation format by either by using the <code>accept</code> header param with
+          any of the RDF media types: <code>"application/rdf+xml", "text/plain", "text/turtle",
+            "text/n3", "application/trix", "application/x-trig", "application/ld+json"</code> or the
+          <code>format</code> request param using any of the following values: <code>Turtle,
+            N-Triples, JSON-LD, TriG, RDF/XML</code>. The <code>format</code> request parameter if
+          used will override the <code>accept</code> header param.
+          * Exclude relationships and just return the properties and labels of the selected node by
+          setting the request parameter <code>exculdeContext</code> to <code>true</code>.
+          * Exclude unmapped elements by setting the request parameter <code>showOnlyMapped</code>
+          to true. We&#8217;ll see in section <a href="#Mapping">Mapping graph models</a> how to
+          define basic model mappings with NSMNTX.</p>
+      </div>
+      <div class="paragraph">
+        <p>Here&#8217;s an example of using some of this modifiers. The following request (again
+          simplified notation for the Neo4j browser):</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/id/11?format=RDF/XML&amp;excludeContext=true</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>Would filter out relationships (RDF Object Properties) and set the serialisation format
+          to <code>RDF/XML</code> to produce:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
 <pre class="highlight"><code class="language-RDF/XML" data-lang="RDF/XML">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
 	xmlns:neovoc="neo4j://vocabulary#"
@@ -1712,27 +1807,35 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
-</div>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_by_uri"><a class="link" href="#_by_uri">By URI</a></h3>
-<div class="sect3">
-<h4 id="_rdf_describe_uri"><a class="link" href="#_rdf_describe_uri">/rdf/describe/uri</a></h4>
-<div class="paragraph">
-<p>If you&#8217;ve imported an RDF dataset using NSMNTX (and you did NOT use the <code>IGNORE</code> option) now you can export it and generate exactly the same set of RDF triples that were originally ingested. You can do this in a very similar way to how you do it for any other Neo4j graph. The <code>/rdf/describe/uri</code> works exactly in the same way as the <code>/rdf/describe/id</code> but instead of taking a node&#8217;s ID, it takes it&#8217;s URI. Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a>:</p>
-</div>
-<div class="listingblock">
-<div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>Again, notice the URL enconding of the URI and the <code>format</code> parameter to specify the serialisation format. Here&#8217;s the output of the request:</p>
-</div>
-<div class="listingblock">
-<div class="content">
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sect2">
+    <h3 id="_by_uri"><a class="link" href="#_by_uri">By URI</a></h3>
+    <div class="sect3">
+      <h4 id="_rdf_describe_uri"><a class="link" href="#_rdf_describe_uri">/rdf/describe/uri</a>
+      </h4>
+      <div class="paragraph">
+        <p>If you&#8217;ve imported an RDF dataset using NSMNTX (and you did NOT use the <code>IGNORE</code>
+          option) now you can export it and generate exactly the same set of RDF triples that were
+          originally ingested. You can do this in a very similar way to how you do it for any other
+          Neo4j graph. The <code>/rdf/describe/uri</code> works exactly in the same way as the
+          <code>/rdf/describe/id</code> but instead of taking a node&#8217;s ID, it takes it&#8217;s
+          URI. Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a>:
+        </p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>Again, notice the URL enconding of the URI and the <code>format</code> parameter to
+          specify the serialisation format. Here&#8217;s the output of the request:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
 	xmlns:neovoc="neo4j://vocabulary#"
@@ -1758,6 +1861,76 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
+
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sect2">
+    <h3 id="_by_label_property_value"><a class="link" href="#_by_label_property_value">By Label +
+      property value</a></h3>
+    <div class="sect3">
+      <h4 id="_rdf_describe_find"><a class="link" href="#_rdf_describe_find">/rdf/describe/find/</a>
+      </h4>
+      <div class="paragraph">
+        <p>An alternative way to select he node (or set of nodes) to serialise as RDF is to do a
+          search by label and property. Let&#8217;s say in our Northwind Database example we want to
+          get the Suppliers in a given postal code. The label we&#8217;re interested in is <code>Supplier</code>
+          and the property is <code>postcode</code>. Here&#8217;s what a request of this type would
+          look like:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>In this request we are setting the serialisation to N-Triples format. Also notice that
+          the property value (EC1 4SD) needs to be URL Encoded. Here&#8217;s the output of the
+          request:</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;neo4j://com.neo4j/indiv#100&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;neo4j://com.neo4j/voc#Supplier&gt; .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#country&gt; "UK" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#contactTitle&gt; "Purchasing Manager" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#address&gt; "49 Gilbert St." .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#supplierID&gt; "1" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#phone&gt; "(171) 555-2222" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#city&gt; "London" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#contactName&gt; "Charlotte Cooper" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#companyName&gt; "Exotic Liquids" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#postalCode&gt; "EC1 4SD" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#region&gt; "NULL" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#fax&gt; "NULL" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#homePage&gt; "NULL" .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#SUPPLIES&gt; &lt;neo4j://com.neo4j/indiv#0&gt; .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#SUPPLIES&gt; &lt;neo4j://com.neo4j/indiv#1&gt; .
+&lt;neo4j://com.neo4j/indiv#100&gt; &lt;neo4j://com.neo4j/voc#SUPPLIES&gt; &lt;neo4j://com.neo4j/indiv#2&gt; .</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>By default property values are treated as strings which may or may not work depending on
+          the actual datatype stored in the node property in the Database. If you need to specify
+          the datatype, you&#8217;ll need the <code>valType</code> parameter. The following request
+          returns all products with a given price point.</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+          <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Product/unitPrice/15?valType=INTEGER&amp;excludeContext</code></pre>
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>Notice how we are being explicit about the datatype using the <code>valType</code>
+          request parameter. If we removed this parameter the request would return no results
+          because there is no Product in the Northwind Database with a <code>unitPrice</code> stored
+          as a string.
+          Here&#8217;s the ouptut produced (default serialisation is Turtle).</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
+@prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
 </div>
 </div>
 </div>
@@ -1815,6 +1988,7 @@ Here&#8217;s the ouptut produced (default serialisation is Turtle).</p>
 @prefix neoind: &lt;neo4j://individuals#&gt; .
 
 
+
 neoind:69 a neovoc:Product;
   neovoc:categoryID "1";
   neovoc:discontinued false;
@@ -1838,42 +2012,56 @@ neoind:72 a neovoc:Product;
   neovoc:unitPrice 1.5E1;
   neovoc:unitsInStock "101"^^&lt;http://www.w3.org/2001/XMLSchema#long&gt;;
   neovoc:unitsOnOrder "0"^^&lt;http://www.w3.org/2001/XMLSchema#long&gt; .</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>The different values that the <code>valType</code> request parameter can take are currently: <code>INTEGER</code>, <code>FLOAT</code> and <code>BOOLEAN</code>.</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_using_cypher"><a class="link" href="#_using_cypher">Using Cypher</a></h3>
-<div class="sect3">
-<h4 id="_rdf_cypher"><a class="link" href="#_rdf_cypher">/rdf/cypher</a></h4>
-<div class="paragraph">
-<p>Finally, the most powerful way of selecting the portion of the graph that we want to serialise as cypher would obviously be to use Cypher. That&#8217;s exactly what this method does. In this case it&#8217;s a POST request that takes as payload a JSON map with at least one <code>cypher</code> key having as its value the query returning the graph objects (nodes with their properties and relationships) to be serialised.</p>
-</div>
-<div class="paragraph">
-<p>Optionally, the JSON map may include the <code>format</code> key that can be used to override the default serialization format (Turtle) and also a <code>showOnlyMapped</code> key (default value is <code>false</code>). Whe present, the returned serialisation will exclude unmapped elements (same functionality explained in the <code>describe</code> methods). Here&#8217;s an example of use on the Northwind database. Note that your query needs to return graph elements: nodes, relationships or paths. Produces an RDF serialization of the nodes and relationships returned by the query.&lt;br&gt;</p>
-</div>
-<div class="listingblock">
-<div class="content">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>The different values that the <code>valType</code> request parameter can take are
+          currently: <code>INTEGER</code>, <code>FLOAT</code> and <code>BOOLEAN</code>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="sect2">
+    <h3 id="_using_cypher"><a class="link" href="#_using_cypher">Using Cypher</a></h3>
+    <div class="sect3">
+      <h4 id="_rdf_cypher"><a class="link" href="#_rdf_cypher">/rdf/cypher</a></h4>
+      <div class="paragraph">
+        <p>Finally, the most powerful way of selecting the portion of the graph that we want to
+          serialise as cypher would obviously be to use Cypher. That&#8217;s exactly what this
+          method does. In this case it&#8217;s a POST request that takes as payload a JSON map with
+          at least one <code>cypher</code> key having as its value the query returning the graph
+          objects (nodes with their properties and relationships) to be serialised.</p>
+      </div>
+      <div class="paragraph">
+        <p>Optionally, the JSON map may include the <code>format</code> key that can be used to
+          override the default serialization format (Turtle) and also a <code>showOnlyMapped</code>
+          key (default value is <code>false</code>). Whe present, the returned serialisation will
+          exclude unmapped elements (same functionality explained in the <code>describe</code>
+          methods). Here&#8217;s an example of use on the Northwind database. Note that your query
+          needs to return graph elements: nodes, relationships or paths. Produces an RDF
+          serialization of the nodes and relationships returned by the query.&lt;br&gt;</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypher
 { "cypher" : "MATCH path = (n:Customer { customerID : 'GROSR'})-[:PURCHASED]-&gt;(o)-[:ORDERS]-&gt;()-[:PART_OF]-&gt;(:Category { categoryName : 'Beverages'}) RETURN path " , "format": "RDF/XML" }</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>This is the subgraph (path) that we are serialising as RDF. We&#8217;re taking a customer by its <code>customerID</code> and getting all orders containing items in category <code>Beverages</code>. Nice path expression in Cypher :</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="docs/img/customer-order-product-neo4j.png" alt="Customer" width="order" height="product">
-</div>
-</div>
-<div class="paragraph">
-<p>And this is the generated RDF/XML.</p>
-</div>
-<div class="listingblock">
-<div class="content">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>This is the subgraph (path) that we are serialising as RDF. We&#8217;re taking a customer
+          by its <code>customerID</code> and getting all orders containing items in category <code>Beverages</code>.
+          Nice path expression in Cypher :</p>
+      </div>
+      <div class="imageblock">
+        <div class="content">
+          <img src="docs/img/customer-order-product-neo4j.png" alt="Customer" width="order"
+               height="product">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>And this is the generated RDF/XML.</p>
+      </div>
+      <div class="listingblock">
+        <div class="content">
 <pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
 	xmlns:neovoc="neo4j://vocabulary#"
@@ -1948,17 +2136,20 @@ neoind:72 a neovoc:Product;
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
-</div>
-</div>
-<div class="paragraph">
-<p>And here&#8217;s the graph visualisation produced by the <a href="https://www.w3.org/RDF/Validator/">W3C&#8217;s RDF validation service</a> for this RDF. Feel free to test the parsing of the generated RDF yourself. You can do it manually copy-pasting it in the form, or you can point directly to your Neo4j instance RDF endpoint if the URL is publicly accessible.</p>
-</div>
-<div class="imageblock">
-<div class="content">
-<img src="docs/img/customer-order-product-rdf.png" alt="RDF Graph visualisation generated by W3C RDF Validation service">
-</div>
-</div>
-<div class="paragraph">
+        </div>
+      </div>
+      <div class="paragraph">
+        <p>And here&#8217;s the graph visualisation produced by the <a
+            href="https://www.w3.org/RDF/Validator/">W3C&#8217;s RDF validation service</a>for this RDF. Feel
+          free to test the parsing of the generated RDF yourself. You can do it manually copy-pasting it in the form, or you can point directly to your Neo4j instance RDF endpoint if the URL is publicly accessible.</p>
+      </div>
+      <div class="imageblock">
+        <div class="content">
+          <img src="docs/img/customer-order-product-rdf.png"
+               alt="RDF Graph visualisation generated by W3C RDF Validation service">
+        </div>
+      </div>
+    <div class="paragraph">
 <p>It is possible to pass parameters to the query using the <code>cypherParams</code> parameter in the request. And you should be using params whenever possible. Here&#8217;s exactly the same request but passing the customerID as a parameter to the cypher.</p>
 </div>
 <div class="listingblock">
@@ -1968,18 +2159,31 @@ neoind:72 a neovoc:Product;
 </div>
 </div>
 </div>
+
+    <div class="sect3">
+      <h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
+      <div class="paragraph">
+        <p>And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and
+          of course if you did NOT use the <code>IGNORE</code> option), <code>rdf/cypheronrdf</code>
+          will work in exactly the same way as <code>rdf/cypher</code> but will use the namespace
+          information to generate exactly the same RDF triples that were originally ingested. The
+          parameters are identical to the previous case.Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
+      </div>
+      <div class="listingblock">
+
 <div class="sect3">
 <h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
 <div class="paragraph">
 <p>And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and of course if you did NOT use the <code>IGNORE</code> option), <code>rdf/cypheronrdf</code> will work in exactly the same way as <code>rdf/cypher</code> but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested. The parameters are identical to the previous case. Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
 </div>
 <div class="listingblock">
+
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypheronrdf { "cypher":"MATCH (neo4j:ns0__GraphPlatform)&lt;-[ro:ns0__runsOn]-(plugin:ns0__Neo4jPlugin) WHERE plugin.ns0__releaseDate = '03-06-2019' RETURN plugin, ro, neo4j " , "format" : "JSON-LD"}</code></pre>
 </div>
 </div>
-<div class="paragraph">
-<p>We can use this example to set the serialisation format to <code>JSON-LD</code>, which would produce the following RDF fragment:</p>
+<divclass="paragraph">
+        <p>We can use this example to set the serialisation format to <code>JSON-LD</code>, which would produce the following RDF fragment:</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2011,9 +2215,10 @@ neoind:72 a neovoc:Product;
 </div>
 </div>
 <div class="paragraph">
-<p>Run this cypher instead `MATCH (n:Resource)-[r]-(m) RETURN * ` and you&#8217;ll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.</p>
-</div>
-</div>
+<p>Run this cypher instead `MATCH (n:Resource)-[r]-(m)
+          RETURN * ` and you&#8217;ll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.</p>
+      </div>
+    </div>
 </div>
 <div class="sect2">
 <h3 id="_export_graph_ontology"><a class="link" href="#_export_graph_ontology">Export Graph Ontology</a></h3>

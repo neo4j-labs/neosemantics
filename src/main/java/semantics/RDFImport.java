@@ -1,5 +1,6 @@
 package semantics;
 
+import com.google.common.base.Preconditions;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -72,8 +73,7 @@ public class RDFImport {
       Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
-      RDFFormat.TURTLE,
-      RDFFormat.NTRIPLES, RDFFormat.TRIG};
+      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
   @Context
   public GraphDatabaseService db;
   @Context
@@ -134,6 +134,32 @@ public class RDFImport {
     } finally {
       importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
       importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+      importResults.setConfigSummary(conf.getConfigSummary());
+    }
+    return Stream.of(importResults);
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<ImportResults> importRDFDataset(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
+    RDFParserConfig conf = new RDFParserConfig(props);
+
+    ImportResults importResults = new ImportResults();
+
+    RDFDatasetDirectStatementLoader statementLoader = new RDFDatasetDirectStatementLoader(db, conf,
+        log);
+    try {
+      checkIndexesExist();
+      parseRDF(getInputStream(url, props), url, format, statementLoader);
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      importResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setNamespaces(statementLoader.getNamespaces());
       importResults.setConfigSummary(conf.getConfigSummary());
     }
     return Stream.of(importResults);
@@ -260,6 +286,37 @@ public class RDFImport {
     DeleteResults deleteResults = new DeleteResults();
 
     DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, conf, log);
+    try {
+      checkIndexesExist();
+
+      InputStream inputStream = getInputStream(url, props);
+      RDFParser rdfParser = Rio.createParser(getFormat(format));
+      rdfParser.setRDFHandler(statementDeleter);
+      rdfParser.parse(inputStream, url);
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      deleteResults.setTerminationKO(e.getMessage());
+      e.printStackTrace();
+    } finally {
+      deleteResults.setTriplesDeleted(
+          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+    }
+    return Stream.of(deleteResults);
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<DeleteResults> deleteRDFDataset(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
+    RDFParserConfig conf = new RDFParserConfig(props);
+    conf.setCommitSize(Long.MAX_VALUE);
+
+    DeleteResults deleteResults = new DeleteResults();
+
+    RDFDatasetDirectStatementDeleter statementDeleter = new RDFDatasetDirectStatementDeleter(db,
+        conf, log);
     try {
       checkIndexesExist();
 
