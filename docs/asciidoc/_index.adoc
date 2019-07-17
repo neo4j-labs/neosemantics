@@ -20,8 +20,9 @@ NSMNTX is an extension that enables the use of *RDF as a data exchange format* f
 * <<Export>>
 * <<Mapping>>
 * <<Inference>>
-* <<Examples>>
 * <<Reference>>
+* <<Examples>>
+
 ////
 
 include::_install.adoc[]
@@ -29,5 +30,6 @@ include::_import.adoc[]
 include::_export.adoc[]
 include::_mapping.adoc[]
 include::_inference.adoc[]
-include::_examples.adoc[]
 include::_reference.adoc[]
+include::_examples.adoc[]
+

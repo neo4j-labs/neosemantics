@@ -453,6 +453,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
 </ul>
 </li>
+
   <li><a href="#Export">Exporting RDF data</a>
     <ul class="sectlevel2">
       <li><a href="#_by_node_id">By node ID</a></li>
@@ -461,14 +462,16 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
       <li><a href="#_using_cypher">Using Cypher</a></li>
     </ul>
   </li>
-<li><a href="#Mapping">Mapping graph models</a></li>
-<li><a href="#Inference">Inferencing/Reasoning</a></li>
-<li><a href="#Examples">Examples of use</a>
+
+<li><a href="#Mapping">Mapping graph models</a>
 <ul class="sectlevel2">
-<li><a href="#_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query">Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.</a></li>
-<li><a href="#_enrich_your_model_with_dbpedia_data">Enrich your model with DBPedia data</a></li>
+<li><a href="#_public_vocabularies_ontologies">Public Vocabularies/Ontologies</a></li>
+<li><a href="#_defining_mappings">Defining mappings</a></li>
+<li><a href="#_mappings_for_export">Mappings for export</a></li>
+<li><a href="#_mappings_for_import">Mappings for import</a></li>
 </ul>
 </li>
+<li><a href="#Inference">Inferencing/Reasoning</a></li>
 <li><a href="#Reference">NSMNTX Reference</a>
 <ul class="sectlevel2">
 <li><a href="#_stored_procedures">Stored Procedures</a></li>
@@ -476,6 +479,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_extensions_http_endpoints">Extensions (HTTP endpoints)</a></li>
 </ul>
 </li>
+<li><a href="#Examples">Examples of use</a></li>
 </ul>
 </div>
 </div>
@@ -632,7 +636,7 @@ neo4ind:apoc3502 neo4voc:name "APOC" ;
 neo4ind:graphql3502 neo4voc:name "Neo4j-GraphQL" ;
          a neo4voc:Neo4jPlugin ;
          neo4voc:version "3.5.0.3" ;
-         neo4voc:releaseDate "05/05/19" ;
+         neo4voc:releaseDate "05-05-2019" ;
          neo4voc:runsOn neo4ind:neo4j355 .
 
 neo4ind:neo4j355 neo4voc:name "neo4j" ;
@@ -1437,7 +1441,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
 </div>
 </div>
 <div class="imageblock">
@@ -1481,7 +1485,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1578,6 +1582,7 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <h2 id="Export"><a class="link" href="#Export">Exporting RDF data</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
+
   <p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on
     how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF
     any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
@@ -1659,6 +1664,68 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <pre class="highlight"><code class="language-Turtle" data-lang="Turtle">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
 @prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
 
+<p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
+</div>
+<div class="paragraph">
+<p>RDF is a W3C standard model for data interchange on the Web that represents data as a graph, hence the seamless serialisation of graph data from Neo4j in RDF as we&#8217;ll see.</p>
+</div>
+<div class="paragraph">
+<p>There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the graph by its unique identifier (id or uri), selecting a group of nodes by Label + property value and via Cypher. Let&#8217;s analyse each of them in detail.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+The paths used in the following sections assume that NSMNTX is mounted at <code>/rdf</code>. If you&#8217;ve mounted the extension under a different name (instructions on how to do this can be found in the <a href="#install">[install]</a> section) all you need to do is replace the <code>/rdf</code> bits in the urls in the following examples with the name you&#8217;ve used.
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_by_node_id"><a class="link" href="#_by_node_id">By node ID</a></h3>
+<div class="sect3">
+<h4 id="_rdf_describe_id"><a class="link" href="#_rdf_describe_id">/rdf/describe/id</a></h4>
+<div class="paragraph">
+<p>To explain how some this method works, we&#8217;ll use the Northwind Graph. You can easily load it in your Neo4j instance by running <code>:play northwind-graph</code> in your browser. This will bring up a guide with step by step instructions on how to create it. I&#8217;ll assume the graph is now loaded.</p>
+</div>
+<div class="paragraph">
+<p>The describe/id method emulates the SPARQL DESCRIBE operation. It takes the unique identifier of an element in the graph and it produces an RDF serialisation of all information available about it. This includes properties, labels, and relationships (both incoming and outgoing).</p>
+</div>
+<div class="paragraph">
+<p>The only required parameter is the id of the node. As you know any node in Neo4j has a unique identifier that you can get via cypher using the <code>id</code> function.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (p:Product) WHERE p.productName = "Queso Manchego La Pastora" RETURN ID(p)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In my case, the <code>ID</code> returned by the previous query is <code>11</code>, so if I want NSMNTX to produce an RDF serialisation of this node, all I need to do is issue the following HTTP request:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-HTTP" data-lang="HTTP">http://localhost:7474/rdf/describe/id/11</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or if you&#8217;re working on your Neo4j browser, you can run it like this too:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/id/11</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And you will get a description for your node, serialised as Turtle RDF by default. Something like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Turtle" data-lang="Turtle">@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
 
 neoind:11 a neovoc:Product;
   neovoc:PART_OF neoind:83;
@@ -1721,12 +1788,12 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
         <div class="content">
 <pre class="highlight"><code class="language-RDF/XML" data-lang="RDF/XML">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
-	xmlns:neovoc="neo4j://com.neo4j/voc#"
-	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:neovoc="neo4j://vocabulary#"
+	xmlns:neoind="neo4j://individuals#"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#11"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#11"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Product"/&gt;
 	&lt;neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;0&lt;/neovoc:reorderLevel&gt;
 	&lt;neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;86&lt;/neovoc:unitsInStock&gt;
 	&lt;neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double"&gt;38.0&lt;/neovoc:unitPrice&gt;
@@ -1794,6 +1861,7 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
+
         </div>
       </div>
     </div>
@@ -1863,6 +1931,62 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
         <div class="content">
 <pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
 @prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_by_label_property_value"><a class="link" href="#_by_label_property_value">By Label + property value</a></h3>
+<div class="sect3">
+<h4 id="_rdf_describe_find"><a class="link" href="#_rdf_describe_find">/rdf/describe/find/</a></h4>
+<div class="paragraph">
+<p>An alternative way to select he node (or set of nodes) to serialise as RDF is to do a search by label and property. Let&#8217;s say in our Northwind Database example we want to get the Suppliers in a given postal code. The label we&#8217;re interested in is <code>Supplier</code> and the property is <code>postcode</code>. Here&#8217;s what a request of this type would look like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In this request we are setting the serialisation to N-Triples format. Also notice that the property value (EC1 4SD) needs to be URL Encoded. Here&#8217;s the output of the request:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;neo4j://individuals#100&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;neo4j://vocabulary#Supplier&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#country&gt; "UK" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#contactTitle&gt; "Purchasing Manager" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#address&gt; "49 Gilbert St." .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#supplierID&gt; "1" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#phone&gt; "(171) 555-2222" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#city&gt; "London" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#contactName&gt; "Charlotte Cooper" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#companyName&gt; "Exotic Liquids" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#postalCode&gt; "EC1 4SD" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#region&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#fax&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#homePage&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#0&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#1&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#2&gt; .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By default property values are treated as strings which may or may not work depending on the actual datatype stored in the node property in the Database. If you need to specify the datatype, you&#8217;ll need the <code>valType</code> parameter. The following request returns all products with a given price point.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Product/unitPrice/15?valType=INTEGER&amp;excludeContext</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Notice how we are being explicit about the datatype using the <code>valType</code> request parameter. If we removed this parameter the request would return no results because there is no Product in the Northwind Database with a <code>unitPrice</code> stored as a string.
+Here&#8217;s the ouptut produced (default serialisation is Turtle).</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
 
 
 neoind:69 a neovoc:Product;
@@ -1940,12 +2064,12 @@ neoind:72 a neovoc:Product;
         <div class="content">
 <pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
-	xmlns:neovoc="neo4j://com.neo4j/voc#"
-	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:neovoc="neo4j://vocabulary#"
+	xmlns:neoind="neo4j://individuals#"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#172"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Customer"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#172"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Customer"/&gt;
 	&lt;neovoc:country&gt;Venezuela&lt;/neovoc:country&gt;
 	&lt;neovoc:address&gt;5ª Ave. Los Palos Grandes&lt;/neovoc:address&gt;
 	&lt;neovoc:contactTitle&gt;Owner&lt;/neovoc:contactTitle&gt;
@@ -1959,8 +2083,8 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:region&gt;DF&lt;/neovoc:region&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#774"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Order"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#774"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Order"/&gt;
 	&lt;neovoc:shipCity&gt;Caracas&lt;/neovoc:shipCity&gt;
 	&lt;neovoc:orderID&gt;10785&lt;/neovoc:orderID&gt;
 	&lt;neovoc:freight&gt;1.51&lt;/neovoc:freight&gt;
@@ -1977,8 +2101,8 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:orderDate&gt;1997-12-18 00:00:00.000&lt;/neovoc:orderDate&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#74"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Product"/&gt;
 	&lt;neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;25&lt;/neovoc:reorderLevel&gt;
 	&lt;neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;125&lt;/neovoc:unitsInStock&gt;
 	&lt;neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double"&gt;7.75&lt;/neovoc:unitPrice&gt;
@@ -1991,24 +2115,24 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:unitsOnOrder rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;0&lt;/neovoc:unitsOnOrder&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#80"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Category"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#80"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Category"/&gt;
 	&lt;neovoc:description&gt;Soft drinks, coffees, teas, beers, and ales&lt;/neovoc:description&gt;
 	&lt;neovoc:categoryName&gt;Beverages&lt;/neovoc:categoryName&gt;
 	&lt;neovoc:picture&gt;0x151C2F00020000000D000E0014002100FFFFFFFF4269746D617020496D616765005061696E742E5069637475726500010500000200000007000000504272757368000000000000000000A0290000424D98290000000000005600000028000000AC00000078000000010004000000000000000000880B0000880B0000080000&lt;/neovoc:picture&gt;
 	&lt;neovoc:categoryID&gt;1&lt;/neovoc:categoryID&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#172"&gt;
-	&lt;neovoc:PURCHASED rdf:resource="neo4j://com.neo4j/indiv#774"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#172"&gt;
+	&lt;neovoc:PURCHASED rdf:resource="neo4j://individuals#774"/&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#774"&gt;
-	&lt;neovoc:ORDERS rdf:resource="neo4j://com.neo4j/indiv#74"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#774"&gt;
+	&lt;neovoc:ORDERS rdf:resource="neo4j://individuals#74"/&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
-	&lt;neovoc:PART_OF rdf:resource="neo4j://com.neo4j/indiv#80"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#74"&gt;
+	&lt;neovoc:PART_OF rdf:resource="neo4j://individuals#80"/&gt;
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
@@ -2016,8 +2140,8 @@ neoind:72 a neovoc:Product;
       </div>
       <div class="paragraph">
         <p>And here&#8217;s the graph visualisation produced by the <a
-            href="https://www.w3.org/RDF/Validator/">W3C&#8217;s RDF validation service</a>. Feel
-          free to test the generated RDF yourself.</p>
+            href="https://www.w3.org/RDF/Validator/">W3C&#8217;s RDF validation service</a>for this RDF. Feel
+          free to test the parsing of the generated RDF yourself. You can do it manually copy-pasting it in the form, or you can point directly to your Neo4j instance RDF endpoint if the URL is publicly accessible.</p>
       </div>
       <div class="imageblock">
         <div class="content">
@@ -2025,24 +2149,190 @@ neoind:72 a neovoc:Product;
                alt="RDF Graph visualisation generated by W3C RDF Validation service">
         </div>
       </div>
-    </div>
+    <div class="paragraph">
+<p>It is possible to pass parameters to the query using the <code>cypherParams</code> parameter in the request. And you should be using params whenever possible. Here&#8217;s exactly the same request but passing the customerID as a parameter to the cypher.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypher
+{ "cypher" : "MATCH path = (n:Customer { customerID : $custid })-[:PURCHASED]-&gt;(o)-[:ORDERS]-&gt;()-[:PART_OF]-&gt;(:Category { categoryName : 'Beverages'}) RETURN path " , "cypherParams" : { "custid": "GROSR" }, "format": "RDF/XML" }</code></pre>
+</div>
+</div>
+</div>
+
     <div class="sect3">
       <h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
       <div class="paragraph">
-        <p>If the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and
+        <p>And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and
           of course if you did NOT use the <code>IGNORE</code> option), <code>rdf/cypheronrdf</code>
           will work in exactly the same way as <code>rdf/cypher</code> but will use the namespace
           information to generate exactly the same RDF triples that were originally ingested. The
-          parameters are identical to the previous case.</p>
+          parameters are identical to the previous case.Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
       </div>
-      <div class="paragraph">
-        <p>Produces an RDF serialization of the nodes and relationships returned by the query. It
-          works on a model either imported from an RDF dataset via semantics.importRDF or built in a
-          way that nodes are labeled as :Resource and have an uri.&lt;br&gt; Example:&lt;br&gt;:POST
-          /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b)
-          RETURN a, r, b"}</p>
+      <div class="listingblock">
+
+<div class="sect3">
+<h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
+<div class="paragraph">
+<p>And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and of course if you did NOT use the <code>IGNORE</code> option), <code>rdf/cypheronrdf</code> will work in exactly the same way as <code>rdf/cypher</code> but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested. The parameters are identical to the previous case. Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
+</div>
+<div class="listingblock">
+
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypheronrdf { "cypher":"MATCH (neo4j:ns0__GraphPlatform)&lt;-[ro:ns0__runsOn]-(plugin:ns0__Neo4jPlugin) WHERE plugin.ns0__releaseDate = '03-06-2019' RETURN plugin, ro, neo4j " , "format" : "JSON-LD"}</code></pre>
+</div>
+</div>
+<divclass="paragraph">
+        <p>We can use this example to set the serialisation format to <code>JSON-LD</code>, which would produce the following RDF fragment:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">[ {
+  "@id" : "http://neo4j.org/ind#neo4j355",
+  "@type" : [ "http://neo4j.org/vocab/sw#GraphPlatform", "http://neo4j.org/vocab/sw#AwesomePlatform" ],
+  "http://neo4j.org/vocab/sw#name" : [ {
+    "@value" : "neo4j"
+  } ],
+  "http://neo4j.org/vocab/sw#version" : [ {
+    "@value" : "3.5.5"
+  } ]
+}, {
+  "@id" : "http://neo4j.org/ind#nsmntx3502",
+  "@type" : [ "http://neo4j.org/vocab/sw#Neo4jPlugin" ],
+  "http://neo4j.org/vocab/sw#name" : [ {
+    "@value" : "NSMNTX"
+  } ],
+  "http://neo4j.org/vocab/sw#releaseDate" : [ {
+    "@value" : "03-06-2019"
+  } ],
+  "http://neo4j.org/vocab/sw#runsOn" : [ {
+    "@id" : "http://neo4j.org/ind#neo4j355"
+  } ],
+  "http://neo4j.org/vocab/sw#version" : [ {
+    "@value" : "3.5.0.2"
+  } ]
+} ]</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Run this cypher instead `MATCH (n:Resource)-[r]-(m)
+          RETURN * ` and you&#8217;ll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.</p>
       </div>
     </div>
+</div>
+<div class="sect2">
+<h3 id="_export_graph_ontology"><a class="link" href="#_export_graph_ontology">Export Graph Ontology</a></h3>
+<div class="paragraph">
+<p>It is possible to export your Graph schema in the form of an OWL Ontology. The same output produced by the <code>db.schema()</code> procedure can be generated as RDF/OWL through the <code>/onto</code> method.</p>
+</div>
+<div class="sect3">
+<h4 id="_rdf_onto"><a class="link" href="#_rdf_onto">/rdf/onto</a></h4>
+<div class="paragraph">
+<p>The <code>/onto</code> method will run <code>db.schema()</code> on your Neo4j graph and will generate <code>owl:Class</code> definitions for each label found, and <code>owl:ObjectProperty</code> definitions for each relationship along with <code>rdfs:domain</code> and <code>rdfs:range</code> based on the labels of their start and end nodes. Here&#8217;s an example of the output for the Neo4j Movie database.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/onto</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>or</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">http://localhost:7474/rdf/onto</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And the ontology generated would be:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
+
+neovoc:Movie a owl:Class;
+  rdfs:label "Movie" .
+
+neovoc:Person a owl:Class;
+  rdfs:label "Person" .
+
+neovoc:ACTED_IN a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:REVIEWED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:PRODUCED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:WROTE a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:FOLLOWS a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Person .
+
+neovoc:DIRECTED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It is possible to set the serialisation format using the <code>accept</code> header param or the <code>format</code> request param. The following request would serialise the ontology as N-Triples.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">:GET /rdf/onto?format=N-Triples</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_rdf_ontonrdf"><a class="link" href="#_rdf_ontonrdf">/rdf/ontonrdf</a></h4>
+<div class="paragraph">
+<p>Similarly, if the Neo4j graph is the result of importing RDF via <code>semantics.importRDF</code>, the Ontology can be exported by running <code>ontonrdf</code>, which will take care of expanding the namespaces shortened in the import process.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/ontonrdf</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Which applied to the example dataset about neo4j plugins used in section <a href="#Import">Importing RDF data</a>, would produce the following ontology:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
+
+&lt;http://neo4j.org/vocab/sw#GraphPlatform&gt; a owl:Class;
+  rdfs:label "GraphPlatform" .
+
+&lt;http://neo4j.org/vocab/sw#Neo4jPlugin&gt; a owl:Class;
+  rdfs:label "Neo4jPlugin" .
+
+&lt;http://neo4j.org/vocab/sw#AwesomePlatform&gt; a owl:Class;
+  rdfs:label "AwesomePlatform" .
+
+&lt;http://neo4j.org/vocab/sw#runsOn&gt; a owl:ObjectProperty;
+  rdfs:domain &lt;http://neo4j.org/vocab/sw#Neo4jPlugin&gt;;
+  rdfs:label "runsOn";
+  rdfs:range &lt;http://neo4j.org/vocab/sw#AwesomePlatform&gt;, &lt;http://neo4j.org/vocab/sw#GraphPlatform&gt; .</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
@@ -2050,7 +2340,378 @@ neoind:72 a neovoc:Product;
 <h2 id="Mapping"><a class="link" href="#Mapping">Mapping graph models</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+<p>Mappings can be used for applying transformations to the RDF as it&#8217;s imported into Neo4j and they can also be used to transform the vocabulary used in a Neo4j graph as it&#8217;s exported through the different RDF export methods described in <a href="#Export">Exporting RDF data</a>.
+Mappings are based on terminology but they will not modify the structure of the graph. In other words, as we will see in this section, you will be able to use them to rename a property, a relationship or a label but not to change a property into a relationship.</p>
+</div>
+<div class="sect2">
+<h3 id="_public_vocabularies_ontologies"><a class="link" href="#_public_vocabularies_ontologies">Public Vocabularies/Ontologies</a></h3>
+<div class="paragraph">
+<p>A public graph model is also called an Ontology (or a schema, or a vocabulary). We will not go into the details of the subtle differences between each flavour in this manual. All we need to know is that a graph model normally defines a set of terms (categories, properties, relationships&#8230;&#8203;) and how they relate to each other. Some common examples are <a href="https://schema.org/">schema.org</a>, <a href="https://edmcouncil.org/page/aboutfiboreview">FIBO</a> or the <a href="http://geneontology.org/">Gene Ontology</a>. Public vocabularies like the ones mentioned, typically uniquely identify the terms in it by using namespaces, so roughly speaking, a namespace identifies a vocabulary (or at least a portion of it).</p>
+</div>
+<div class="paragraph">
+<p>To create a mapping with NSMNTX we need to do two things: first, create a reference to a public schema, and then use that reference to create individual mappings from elements in the Neo4j schema to elements in the public schema. Here&#8217;s how to do it:</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_defining_mappings"><a class="link" href="#_defining_mappings">Defining mappings</a></h3>
+<div class="paragraph">
+<p>Let&#8217;s say we want to map our movie database schema to the public schema.org vocabulary.
+First we&#8217;ll create a reference to the schema.org vocabulary passing the base URI and a prefix to be used in the RDF serialisation. You can use standard ones or a random accronym. Just make sure they&#8217;re both unique in your mapping definition.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addSchema("http://schema.org/","sch")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The call to create a reference to a public vocabulary will produce as output, the newly created reference, or alternatively an error message indicating what went wrong:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒════════╤════════════════════╕
+│"prefix"│"namespace"         │
+╞════════╪════════════════════╡
+│"sch"   │"http://schema.org/"│
+└────────┴────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We can create as many references to public vocabularies as needed, and there is also useful method (<code>mapping.addCommonSchemas</code>) that can be used to include a set of the most common schemas in one go:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addCommonSchemas()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>References to schemas can be removed using the <code>mapping.dropSchema</code> method and passing as single parameter the exact URI of the vocabulary we want to have deleted. Notice that this will remove both the schema and all element mappings defined on it.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.dropSchema("http://purl.org/dc/elements/1.1/")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And we can list the currently existing schemas by running <code>mapping.listSchemas</code>. This method takes an optional string parameter that can be used to filter the list to the ones that match a particular search string in the schema uri or in the prefix. If we run the following after running the <code>mapping.addCommonSchemas</code>:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listSchemas("rdf")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We would get the following results:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒════════╤═════════════════════════════════════════════╕
+│"prefix"│"namespace"                                  │
+╞════════╪═════════════════════════════════════════════╡
+│"rdfs"  │"http://www.w3.org/2000/01/rdf-schema#"      │
+├────────┼─────────────────────────────────────────────┤
+│"rdf"   │"http://www.w3.org/1999/02/22-rdf-syntax-ns#"│
+└────────┴─────────────────────────────────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Once we have defined a reference to a public vocabulary/schema, we can now create actual mappings for elements in our graph to elements in the public schemas. The <code>mapping.addMappingToSchema</code> procedure. This method takes three parameters, the URI of a public schema previously added via <code>mapping.addSchema</code> and a pair formed by the name of the element in our graph (a property name, a label or a relationship type) and the matching element in the public schema.</p>
+</div>
+<div class="paragraph">
+<p>The following example shows how to define a map from a <code>CHILD_CATEGORY</code> relationship type in a Neo4j graph to the <code>skos:narrower</code> relationship (or ObjectProperty in RDF terminology).</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Just like we did with schema references, we can list existing mappings using <code>mapping.listMappings</code> and filter the list with an optional search string parameter to return only mappings where either the graph element name or the schema element name match the search string.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listMappings()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Producing a listing with the following structure:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒══════════════════════════════════════╤══════════════╤═══════════════╤════════════════╕
+│"schemaNs"                            │"schemaPrefix"│"schemaElement"│"elemName"      │
+╞══════════════════════════════════════╪══════════════╪═══════════════╪════════════════╡
+│"http://www.w3.org/2004/02/skos/core#"│"skos"        │"narrower"     │"CHILD_CATEGORY"│
+└──────────────────────────────────────┴──────────────┴───────────────┴────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It is also possible to remove individual ones with <code>mapping.dropMapping</code> passing as single parameter the name of the graph model element on which the mapping is defined.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.dropMapping("CHILD_CATEGORY")</code></pre>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_mappings_for_export"><a class="link" href="#_mappings_for_export">Mappings for export</a></h3>
+<div class="paragraph">
+<p>Let&#8217;s look at the case where we want to publish a graph in Neo4j but we want to map it to our organisation&#8217;s canonical model, our Enterprise Ontology or any public vocabulary. For this example we&#8217;re going to use the Northwind database in Neo4j <code>:play northwind-graph</code> and the public <a href="https://schema.org/">schema.org</a> vocabulary.</p>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the script that defines the reference to the <code>schema.org</code> public vocabulary and a few individual mappings for elements in the Northwind database in Neo4j.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">//set parameter uri -&gt;   :param uri: "http://schema.org/"
+
+CALL semantics.mapping.addSchema($uri,"sch");
+CALL semantics.mapping.addMappingToSchema($uri,"Order","Order");
+CALL semantics.mapping.addMappingToSchema($uri,"orderID","orderNumber");
+CALL semantics.mapping.addMappingToSchema($uri,"orderDate","orderDate");
+
+CALL semantics.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
+
+CALL semantics.mapping.addMappingToSchema($uri,"Product","Product");
+CALL semantics.mapping.addMappingToSchema($uri,"productID","productID");
+CALL semantics.mapping.addMappingToSchema($uri,"productName","name");
+
+CALL semantics.mapping.addMappingToSchema($uri,"PART_OF","category");
+
+CALL semantics.mapping.addMappingToSchema($uri,"categoryName","name");</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After running the previous script, we can check that the mappings have been correctly defined with</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listMappings()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>That should return:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒════════════════════╤══════════════╤═══════════════╤══════════════╕
+│"schemaNs"          │"schemaPrefix"│"schemaElement"│"elemName"    │
+╞════════════════════╪══════════════╪═══════════════╪══════════════╡
+│"http://schema.org/"│"sch"         │"Order"        │"Order"       │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"orderNumber"  │"orderID"     │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"orderDate"    │"orderDate"   │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"orderedItem"  │"ORDERS"      │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"Product"      │"Product"     │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"productID"    │"productID"   │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"name"         │"productName" │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"category"     │"PART_OF"     │
+├────────────────────┼──────────────┼───────────────┼──────────────┤
+│"http://schema.org/"│"sch"         │"name"         │"categoryName"│
+└────────────────────┴──────────────┴───────────────┴──────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now we can see these mappings in action by running any of the RDF generating methods described in <a href="#Export">Exporting RDF data</a> (<code>/describe/id</code>, <code>/describe/find/</code> or <code>/cypher</code>). Let&#8217;s use the <code>/cypher</code> method to serialise as RDF an order given its <code>orderID</code>.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypher
+{ "cypher" : "MATCH path = (n:Order { orderID : '10785'})-[:ORDERS]-&gt;()-[:PART_OF]-&gt;(:Category { categoryName : 'Beverages'}) RETURN path " , "format": "RDF/XML" , "mappedElemsOnly" : true }</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>The Cypher query uses the elements in the Neo4j graph but the generated RDF uses schema.org vocabulary elements. The mapping we just defined is bridging the two. Note that the mapping is completely dynamic which means that any change to the mapping definition will be applied to any subsequent request.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+Elements for which no mapping has been defined will use the default Neo4j schema but we can specify that only mapped elements are to be exported by setting the <code>mappedElemsOnly</code> parameter to <code>true</code> in the request.
+</td>
+</tr>
+</table>
+</div>
+<div class="paragraph">
+<p>Here&#8217;s the output generated by the previous request:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;rdf:RDF
+	xmlns:neovoc="neo4j://com.neo4j/voc#"
+	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:sch="http://schema.org/"
+	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"&gt;
+
+&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#786"&gt;
+	&lt;rdf:type rdf:resource="http://schema.org/Order"/&gt;
+	&lt;sch:orderNumber&gt;10785&lt;/sch:orderNumber&gt;
+	&lt;sch:orderDate&gt;1997-12-18 00:00:00.000&lt;/sch:orderDate&gt;
+&lt;/rdf:Description&gt;
+
+&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
+	&lt;rdf:type rdf:resource="http://schema.org/Product"/&gt;
+	&lt;sch:productID&gt;75&lt;/sch:productID&gt;
+	&lt;sch:name&gt;Rhönbräu Klosterbier&lt;/sch:name&gt;
+&lt;/rdf:Description&gt;
+
+&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#80"&gt;
+	&lt;sch:name&gt;Beverages&lt;/sch:name&gt;
+&lt;/rdf:Description&gt;
+
+&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#786"&gt;
+	&lt;sch:orderedItem rdf:resource="neo4j://com.neo4j/indiv#74"/&gt;
+&lt;/rdf:Description&gt;
+
+&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
+	&lt;sch:category rdf:resource="neo4j://com.neo4j/indiv#80"/&gt;
+&lt;/rdf:Description&gt;
+
+&lt;/rdf:RDF&gt;</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>There&#8217;s another example of use of mappings for export in <a href="https://jbarrasa.com/2018/10/18/quickgraph7-creating-a-schema-org-linked-data-endpoint-on-neo4j-in/">this blog post</a>.</p>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_mappings_for_import"><a class="link" href="#_mappings_for_import">Mappings for import</a></h3>
+<div class="paragraph">
+<p>In this section we&#8217;ll see how to use mappings to apply changes to an RDF dataset on ingestion using the RDF import procedures described in <a href="#Import">Importing RDF data</a>.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s say we are importing into Neo4j the <a href="https://permid.org/download">the Open PermID dataset</a> from Thomson Reuters. Here is a small fragment of the 'Person' file:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix vcard: &lt;http://www.w3.org/2006/vcard/ns#&gt; .
+@prefix xsd: &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+@prefix permid: &lt;https://permid.org/&gt; .
+
+permid:1-34419230351
+  a vcard:Person ;
+  vcard:given-name "Keith"^^xsd:string .
+
+permid:1-34419198943
+  vcard:family-name "Peltz"^^xsd:string ;
+  vcard:given-name "Maxwell"^^xsd:string ;
+  vcard:additional-name "S"^^xsd:string ;
+  a vcard:Person .
+
+permid:1-34418273443
+  vcard:family-name "Benner"^^xsd:string ;
+  vcard:given-name "Thomas"^^xsd:string ;
+  a vcard:Person ;
+  vcard:friend-of &lt;https://permid.org/1-34419230351&gt; .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>As part of the import process, we want to drop the namespaces (as described in <a href="#Import">Importing RDF data</a>, this can be done using the <code>handleVocabUris: "IGNORE"</code> configuration) <strong>BUT</strong> in this case, we also want to create more neo4j-friendly names for properties. We want to get rid of the dashes in property names like <code>given-name</code> or <code>additional-name</code> and use 'camelCase' notation instead. The way to tell NSMNTX to do that is by defining a model mapping and setting the <code>handleVocabUris</code> parameter on import to <code>'MAP'</code>.</p>
+</div>
+<div class="paragraph">
+<p>We&#8217;ll start by defining a mapping like the one we defined for exporting RDF. Note that the properties we want to map are all in the same <code>vcard</code> vocabulary: <code><a href="http://www.w3.org/2006/vcard/ns#" class="bare">http://www.w3.org/2006/vcard/ns#</a></code>.  The following script should do the job:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">WITH
+[{ neoSchemaElem : "givenName", publicSchemaElem:	"given-name" },
+{ neoSchemaElem : "familyName", publicSchemaElem: "family-name" },
+{ neoSchemaElem : "additionalName", publicSchemaElem: "additional-name" },
+{ neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
+"http://www.w3.org/2006/vcard/ns#" AS vcardUri
+
+CALL semantics.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+UNWIND mappings as m
+CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
+RETURN count(schemaElement) AS mappingsDefined</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Just like we did in the previous section, we define a vocabulary with <code>mapping.addSchema</code> and then we add individual mappings for elements in the vocabulary with <code>mapping.addMappingToSchema</code>. If there were multiple vocabularies to map, we would just need repeat the process for each of them.</p>
+</div>
+<div class="paragraph">
+<p>Now we can check that the mappings are correctly defined by running:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.mapping.listMappings()</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>which produces:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒══════════════════════════════════╤══════════════╤═════════════════╤════════════════╕
+│"schemaNs"                        │"schemaPrefix"│"schemaElement"  │"elemName"      │
+╞══════════════════════════════════╪══════════════╪═════════════════╪════════════════╡
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"given-name"     │"givenName"     │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"family-name"    │"familyName"    │
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"additional-name"│"additionalName"│
+├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
+│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"friend-of"      │"FRIEND_OF"     │
+└──────────────────────────────────┴──────────────┴─────────────────┴────────────────┘</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Important to note that when using the option <code>handleVocabUris: "MAP"</code>, all non-mapped vocabulary elements will get the default treatment they get when the <code>'IGNORE'</code> option is selected.</p>
+</div>
+<div class="paragraph">
+<p>Once the mappings are defined, we can run the import process as described in <a href="#Import">Importing RDF data</a> with the mentioned config param <code>handleVocabUris: 'MAP'</code> as follows:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.previewRDF("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>After data load, we will be able to query the imported graph with a much more friendly cypher:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (n:Person) RETURN n.uri AS uri, n.familyName as familyName LIMIT 10</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>to get:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">╒══════════════════════════════════╤══════════════╕
+│"uri"                             │"familyName"  │
+╞══════════════════════════════════╪══════════════╡
+│"https://permid.org/1-34419230351"│null          │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34418273443"│"Benner"      │
+├──────────────────────────────────┼──────────────┤
+│"https://permid.org/1-34419198943"│"Peltz"       │
+└──────────────────────────────────┴──────────────┘</code></pre>
+</div>
+</div>
+<div class="admonitionblock note">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Note</div>
+</td>
+<td class="content">
+The combination of a mapping definition plus the use of the <code>handleVocabUris: 'MAP'</code> configuration can be applied not only to the <code>semantics.importRDF</code> procedure but also to the preview ones <code>semantics.previewRDF</code> and <code>semantics.previewRDFSnippet</code>.
+</td>
+</tr>
+</table>
+</div>
 </div>
 </div>
 </div>
@@ -2059,24 +2720,6 @@ neoind:72 a neovoc:Product;
 <div class="sectionbody">
 <div class="paragraph">
 <p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="Examples"><a class="link" href="#Examples">Examples of use</a></h2>
-<div class="sectionbody">
-<div class="paragraph">
-<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
-</div>
-<div class="sect2">
-<h3 id="_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query"><a class="link" href="#_use_nsmntx_to_visualise_in_neo4j_the_output_of_your_sparql_construct_query">Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.</a></h3>
-
-</div>
-<div class="sect2">
-<h3 id="_enrich_your_model_with_dbpedia_data"><a class="link" href="#_enrich_your_model_with_dbpedia_data">Enrich your model with DBPedia data</a></h3>
-<div class="paragraph">
-<p>===</p>
-</div>
 </div>
 </div>
 </div>
@@ -2261,10 +2904,31 @@ neoind:72 a neovoc:Product;
 </div>
 </div>
 </div>
+<div class="sect1">
+<h2 id="Examples"><a class="link" href="#Examples">Examples of use</a></h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>Some ideas:</p>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>Use NSMNTX to visualise in neo4j the output of your SPARQL CONSTRUCT query.</pre>
+</div>
+</div>
+<div class="literalblock">
+<div class="content">
+<pre>Enrich your model with DBPedia data</pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-06-13 22:19:15 BST
+Last updated 2019-07-03 16:14:55 BST
 </div>
 </div>
 </body>

@@ -60,8 +60,8 @@ import semantics.ContextResource;
 @Path("/")
 public class RDFEndpoint {
 
-  private static final String BASE_VOCAB_NS = "neo4j://com.neo4j/voc#";
-  private static final String BASE_INDIV_NS = "neo4j://com.neo4j/indiv#";
+  private static final String BASE_VOCAB_NS = "neo4j://vocabulary#";
+  private static final String BASE_INDIV_NS = "neo4j://individuals#";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
@@ -82,18 +82,23 @@ public class RDFEndpoint {
   public Response cypherOnPlainLPG(@Context GraphDatabaseService gds,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
-      Map<String, String> jsonMap = objectMapper
+      Map<String, Object> jsonMap = objectMapper
           .readValue(body,
-              new TypeReference<Map<String, String>>() {
+              new TypeReference<Map<String, Object>>() {
               });
-      try (Transaction tx = gds.beginTx(); Result result = gds.execute(jsonMap.get("cypher"))) {
-        final boolean onlyMapped = jsonMap.containsKey("showOnlyMapped");
+      try (Transaction tx = gds.beginTx(); Result result = gds
+          .execute((String) jsonMap.get("cypher"), (Map<String, Object>) jsonMap
+              .getOrDefault("cypherParams", new HashMap<String, Object>()))) {
+        final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
         Set<Long> serializedNodes = new HashSet<>();
         RDFWriter writer = Rio
-            .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
+            .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
                 outputStream);
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
         handleNamespaces(writer, gds);
+        writer.handleNamespace("rdf", RDF.NAMESPACE);
+        writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+        writer.handleNamespace("neoind", BASE_INDIV_NS);
         writer.startRDF();
         Map<String, String> mappings = getExportMappingsFromDB(gds);
         while (result.hasNext()) {
@@ -125,7 +130,8 @@ public class RDFEndpoint {
         }
         writer.endRDF();
       } catch (Exception e) {
-        handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
+        handleSerialisationError(outputStream, e, acceptHeaderParam,
+            (String) jsonMap.get("format"));
       }
     }).build();
   }
@@ -139,19 +145,25 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       Map<String, String> namespaces = getNamespacesFromDB(gds);
-      Map<String, String> jsonMap = objectMapper
+      Map<String, Object> jsonMap = objectMapper
           .readValue(body,
-              new TypeReference<Map<String, String>>() {
+              new TypeReference<Map<String, Object>>() {
               });
-      try (Transaction tx = gds.beginTx(); Result result = gds.execute(jsonMap.get("cypher"))) {
+      try (Transaction tx = gds.beginTx(); Result result = gds
+          .execute((String) jsonMap.get("cypher"), (Map<String, Object>) jsonMap
+              .getOrDefault("cypherParams", new HashMap<String, Object>()))) {
+        final boolean onlyMapped = jsonMap.containsKey("mappedElemsOnly");
 
         Set<ContextResource> serializedNodes = new HashSet<>();
         RDFWriter writer = Rio
-            .createWriter(getFormat(acceptHeaderParam, jsonMap.get("format")),
+            .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
                 outputStream);
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-        String baseVocabNS = "neo4j://vocabulary#";
-        writer.handleNamespace("neovoc", baseVocabNS);
+        writer.handleNamespace("owl", OWL.NAMESPACE);
+        writer.handleNamespace("rdfs", RDFS.NAMESPACE);
+        writer.handleNamespace("rdf", RDF.NAMESPACE);
+        writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+        writer.handleNamespace("neoind", BASE_INDIV_NS);
         writer.startRDF();
         while (result.hasNext()) {
           Map<String, Object> row = result.next();
@@ -167,12 +179,12 @@ public class RDFEndpoint {
                     n.hasProperty("graphUri") ?
                         n.getProperty("graphUri").toString() : null);
                 if (!serializedNodes.contains(currentContextResource)) {
-                  processNode(namespaces, writer, valueFactory, baseVocabNS, n);
+                  processNode(namespaces, writer, valueFactory, BASE_VOCAB_NS, n);
                   serializedNodes.add(currentContextResource);
                 }
               });
               path.relationships().forEach(
-                  r -> processRelationship(namespaces, writer, valueFactory, baseVocabNS, r));
+                  r -> processRelationship(namespaces, writer, valueFactory, BASE_VOCAB_NS, r));
             } else if (o instanceof Node) {
               Node node = (Node) o;
               ContextResource currentContextResource = new ContextResource(
@@ -183,18 +195,19 @@ public class RDFEndpoint {
               if (StreamSupport.stream(node.getLabels().spliterator(), false)
                   .anyMatch(name -> Label.label("Resource").equals(name)) &&
                   !serializedNodes.contains(currentContextResource)) {
-                processNode(namespaces, writer, valueFactory, baseVocabNS, node);
+                processNode(namespaces, writer, valueFactory, BASE_VOCAB_NS, node);
                 serializedNodes.add(currentContextResource);
               }
             } else if (o instanceof Relationship) {
-              processRelationship(namespaces, writer, valueFactory, baseVocabNS,
+              processRelationship(namespaces, writer, valueFactory, BASE_VOCAB_NS,
                   (Relationship) o);
             }
           }
         }
         writer.endRDF();
       } catch (Exception e) {
-        handleSerialisationError(outputStream, e, acceptHeaderParam, jsonMap.get("format"));
+        handleSerialisationError(outputStream, e, acceptHeaderParam,
+            (String) jsonMap.get("format"));
       }
 
     }).build();
@@ -367,8 +380,9 @@ public class RDFEndpoint {
 
         RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
         SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
-        String baseVocabNS = "neo4j://vocabulary#";
-        writer.handleNamespace("neovoc", baseVocabNS);
+        writer.handleNamespace("rdf", RDF.NAMESPACE);
+        writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+        writer.handleNamespace("neoind", BASE_INDIV_NS);
         writer.startRDF();
         boolean doneOnce = false;
         while (result.hasNext()) {
@@ -376,12 +390,12 @@ public class RDFEndpoint {
           Node node = (Node) row.get("x");
           if (!doneOnce) {
             //Output only once the props of the selected node as literal properties
-            processNode(namespaces, writer, valueFactory, baseVocabNS, node);
+            processNode(namespaces, writer, valueFactory, BASE_VOCAB_NS, node);
             doneOnce = true;
           }
           Relationship rel = (Relationship) row.get("r");
           if (rel != null) {
-            processRelationship(namespaces, writer, valueFactory, baseVocabNS, rel);
+            processRelationship(namespaces, writer, valueFactory, BASE_VOCAB_NS, rel);
           }
         }
         writer.endRDF();
@@ -462,7 +476,7 @@ public class RDFEndpoint {
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
@@ -470,6 +484,9 @@ public class RDFEndpoint {
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
       SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       handleNamespaces(writer, gds);
+      writer.handleNamespace("rdf", RDF.NAMESPACE);
+      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+      writer.handleNamespace("neoind", BASE_INDIV_NS);
       writer.startRDF();
       try (Transaction tx = gds.beginTx()) {
         Map<String, String> mappings = getExportMappingsFromDB(gds);
@@ -494,7 +511,7 @@ public class RDFEndpoint {
       @PathParam("property") String property, @PathParam("propertyValue") String propVal,
       @QueryParam("valType") String valType,
       @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("showOnlyMappedInfo") String onlyMappedInfo,
+      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
@@ -502,6 +519,9 @@ public class RDFEndpoint {
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
       SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       handleNamespaces(writer, gds);
+      writer.handleNamespace("rdf", RDF.NAMESPACE);
+      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+      writer.handleNamespace("neoind", BASE_INDIV_NS);
       writer.startRDF();
       try (Transaction tx = gds.beginTx()) {
         Map<String, String> mappings = getExportMappingsFromDB(gds);
@@ -622,35 +642,52 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
       SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+      writer.handleNamespace("owl", OWL.NAMESPACE);
+      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
+      writer.handleNamespace("rdf", RDF.NAMESPACE);
+      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+      writer.handleNamespace("neoind", BASE_INDIV_NS);
       writer.startRDF();
       try (Transaction tx = gds.beginTx()) {
         Result res = gds.execute("CALL db.schema() ");
-
+        Set<Statement> publishedStatements = new HashSet<>();
         Map<String, Object> next = res.next();
         List<Node> nodeList = (List<Node>) next.get("nodes");
         nodeList.forEach(node -> {
           String catName = node.getAllProperties().get("name").toString();
-          IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
-          writer.handleStatement(valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
-          writer.handleStatement(
-              valueFactory
-                  .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
+          // Resource and NamespacePrefix should be named _Resource... to avoid conflicts
+          if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+            IRI subject = valueFactory.createIRI(BASE_VOCAB_NS, catName);
+            publishStatement(publishedStatements, writer,
+                valueFactory.createStatement(subject, RDF.TYPE, OWL.CLASS));
+            publishStatement(publishedStatements, writer,
+                valueFactory
+                    .createStatement(subject, RDFS.LABEL, valueFactory.createLiteral(catName)));
+          }
         });
 
         List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
         for (Relationship r : relationshipList) {
           IRI relUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getType().name());
-          writer
-              .handleStatement(
-                  valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
-          IRI domainUri = valueFactory
-              .createIRI(BASE_VOCAB_NS,
-                  r.getStartNode().getLabels().iterator().next().name());
-          writer.handleStatement(valueFactory.createStatement(relUri, RDFS.DOMAIN, domainUri));
-          IRI rangeUri = valueFactory
-              .createIRI(BASE_VOCAB_NS,
-                  r.getEndNode().getLabels().iterator().next().name());
-          writer.handleStatement(valueFactory.createStatement(relUri, RDFS.RANGE, rangeUri));
+          publishStatement(publishedStatements, writer
+              , (
+                  valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY)));
+          String domainLabel =
+              r.getStartNode().getLabels().iterator().next().name();
+          // Resource should be named _Resource... to avoid conflicts
+          if (!domainLabel.equals("Resource")) {
+            publishStatement(publishedStatements, writer,
+                valueFactory.createStatement(relUri, RDFS.DOMAIN,
+                    valueFactory
+                        .createIRI(BASE_VOCAB_NS, domainLabel)));
+          }
+          String rangeLabel = r.getEndNode().getLabels().iterator().next().name();
+          // Resource should be named _Resource... to avoid conflicts
+          if (!rangeLabel.equals("Resource")) {
+            publishStatement(publishedStatements, writer,
+                valueFactory.createStatement(relUri, RDFS.RANGE,
+                    valueFactory.createIRI(BASE_VOCAB_NS, rangeLabel)));
+          }
         }
 
         writer.endRDF();
@@ -662,7 +699,7 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/rdfonto")
+  @Path("/ontonrdf")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response exportRdfOnto(@Context GraphDatabaseService gds,
@@ -674,6 +711,11 @@ public class RDFEndpoint {
 
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
       SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
+      writer.handleNamespace("owl", OWL.NAMESPACE);
+      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
+      writer.handleNamespace("rdf", RDF.NAMESPACE);
+      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+      writer.handleNamespace("neoind", BASE_INDIV_NS);
       writer.startRDF();
 
       try (Transaction tx = gds.beginTx()) {
