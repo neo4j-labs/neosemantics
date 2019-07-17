@@ -10,13 +10,13 @@ All import procedures take the following three parameters:
 |===
 | Parameter        | Type |  Description
 | url | String | URL of the dataset
-| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
+| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, *TriG and N-Quads* (For named graphs)
 | params | Map  | Set of parameters (see description in table below)
 |===
 
 
 
-**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `ssemantics.import` procedure will remind you with an error messsage.
+**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importRDF` procedure will remind you with an error messsage.
 
 [source,cypher]
 ----
@@ -424,6 +424,121 @@ image::miniontoandinstances.png[Connected ontology and instance data imported in
 
 More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
 
+[[ImportRDFDataset]]
+=== Handling named graphs (RDF Dataset)
+
+You can also import RDF datasets using `semantics.importRDFDataset`. The only difference in comparision to `semantics.importRDF` is that you can import not just triples but also quadruples. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.
+
+Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
+
+Similar to `semantics.importRDF` method `semantics.importRDFDataset` also takes the url string to access the RDF dataset and the serialisation format.
+Let's say you're trying to load the following set of quadruples into Neo4j.
+
+[source,RDF]
+----
+@prefix ex: <http://www.example.org/vocabulary#> .
+@prefix exDoc: <http://www.example.org/exampleDocument#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
+
+exDoc:Monica a ex:Person ;
+             ex:friendOf exDoc:John .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:name "Monica Murphy" ;
+              ex:homepage <http://www.monicamurphy.org> ;
+              ex:email <mailto:monica@monicamurphy.org> ;
+              ex:hasSkill ex:Management ,
+                                  ex:Programming .
+    exDoc:Monica ex:knows exDoc:John . }
+
+exDoc:G2 {
+    exDoc:Monica
+              ex:city "New York" ;
+              ex:country "USA" . }
+
+
+exDoc:G3 {
+    exDoc:John a ex:Person . }
+----
+
+**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importRDFDataset` procedure will remind you with an error messsage.
+
+[source,cypher]
+----
+CREATE INDEX ON :Resource(uri)
+----
+
+This procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
+
+You can use the following cypher snippet to import the set of quadruples from above:
+
+[source,cypher]
+----
+CALL semantics.importRDFDataset( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+----
+
+==== Merging nodes virtually
+
+While importing the RDF dataset above NSMNTX will create a separate node for each instance of `exDoc:Monica`. That means you will have three nodes each representing a different graph. This might complicate things when you want to for example query everything about `exDoc:Monica` with the following cypher snippet:
+
+[source,cypher]
+----
+MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
+RETURN monica
+----
+
+As a result you will get three distinct nodes, which look like this in text mode:
+
+[source, cypher]
+----
+╒══════════════════════════════════════════════════════════════════════╕
+│"monica"                                                              │
+╞══════════════════════════════════════════════════════════════════════╡
+│{"http://www.example.org/vocabulary#name":["Monica Murphy"],"uri":"htt│
+│p://www.example.org/exampleDocument#Monica","graphUri":"http://www.exa│
+│mple.org/exampleDocument#G1"}                                         │
+├──────────────────────────────────────────────────────────────────────┤
+│{"http://www.example.org/vocabulary#city":["New York"],"http://www.exa│
+│mple.org/vocabulary#country":["USA"],"uri":"http://www.example.org/exa│
+│mpleDocument#Monica","graphUri":"http://www.example.org/exampleDocumen│
+│t#G2"}                                                                │
+├──────────────────────────────────────────────────────────────────────┤
+│{"uri":"http://www.example.org/exampleDocument#Monica"}               │
+└──────────────────────────────────────────────────────────────────────┘
+----
+
+To avoid this, you can use link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse]. `apoc.nodes.collapse` merges the set of nodes into a virtual node.
+
+Here is the cypher snippet showing how to do that with the `exDoc:Monica` example:
+
+[source,cypher]
+----
+MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
+WITH collect(monica) AS nodes
+CALL apoc.nodes.collapse(nodes,{properties:'combine'}) YIELD from, rel, to
+RETURN DISTINCT from AS monica
+----
+
+As a result you will get a single node which looks like this in text mode:
+
+[source, cypher]
+----
+╒══════════════════════════════════════════════════════════════════════╕
+│"monica"                                                              │
+╞══════════════════════════════════════════════════════════════════════╡
+│{"http://www.example.org/vocabulary#city":["New York"],"count":3,"http│
+│://www.example.org/vocabulary#country":["USA"],"uri":"http://www.examp│
+│le.org/exampleDocument#Monica","http://www.example.org/vocabulary#name│
+│":["Monica Murphy"],"graphUri":["http://www.example.org/exampleDocumen│
+│t#G2","http://www.example.org/exampleDocument#G1"]}                   │
+└──────────────────────────────────────────────────────────────────────┘
+----
+
+You can find more information about the parameter configuration of `apoc.nodes.collapse` on link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse].
 
 [#advancedfetching]
 === Advanced settings for fetching RDF
@@ -565,7 +680,7 @@ And then when the namespace is detected during the ingestion of the RDF data, th
 Make sure you know what you're doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.
 
 [[DeleteRDF]]
-== Deleting imported RDF data
+== Deleting imported RDF
 
 The method to delete imported RDF data is `semantics.deleteRDF`. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
 All delete procedures take the following three parameters, like the import procedures:
@@ -575,7 +690,7 @@ All delete procedures take the following three parameters, like the import proce
 |===
 | Parameter        | Type |  Description
 | url | String | URL of the dataset
-| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, TriG, RDF/XML
+| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, *TriG and N-Quads* (For named graphs)
 | params | Map  | Set of parameters (see description in table below)
 |===
 
@@ -661,6 +776,68 @@ You *must* use for deletion the same set of parameters that you used during impo
 
 **Note** that currently blank nodes cannot be deleted due to not having a persistent IRI.
 
+=== Deleting imported RDF dataset (named graphs)
+
+You can also delete imported quadruples using `semantics.deleteRDFDataset` which takes the same generic params described in <<common_params_delete>>.
+
+*Note* that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
+
+For this example we will use the same dataset which was used in <<ImportRDFDataset>>.
+
+Let's say you're trying to delete the following set of quadruples from Neo4j after the import from the <<ImportRDFDataset>> section:
+
+[source,RDF]
+----
+@prefix ex: <http://www.example.org/vocabulary#> .
+@prefix exDoc: <http://www.example.org/exampleDocument#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
+
+exDoc:Monica a ex:Person ;
+             ex:friendOf exDoc:John .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:name "Monica Murphy" ;
+              ex:email <mailto:monica@monicamurphy.org> ;
+              ex:hasSkill ex:Management ;
+              ex:knows exDoc:John . }
+
+exDoc:G2 {
+    exDoc:Monica
+              ex:city "New York" ;
+              ex:country "USA" . }
+----
+
+The `semantics.deleteRDFDataset` procedure takes the same generic params described in <<common_params_delete>> at the beginning of the <<DeleteRDF>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
+
+
+Here is the cypher snippet showing how to do that:
+
+[source,cypher]
+----
+CALL semantics.deleteRDFDataset("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+----
+
+NSMNTX will delete the given quadruples in your Neo4j graph. After this deletion your RDF dataset will look like this:
+
+[source,RDF]
+----
+@prefix ex: <http://www.example.org/vocabulary#> .
+@prefix exDoc: <http://www.example.org/exampleDocument#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+exDoc:G1 ex:created "2019-06-06"^^xsd:date .
+
+exDoc:G1 {
+    exDoc:Monica
+              ex:homepage <http://www.monicamurphy.org> ;
+              ex:hasSkill ex:Programming . }
+
+exDoc:G3 {
+    exDoc:John a ex:Person . }
+----
 
 [[OntoImport]]
 == Importing Ontologies
@@ -675,7 +852,7 @@ Ontologies are serialised as RDF, so they can be imported using plain `importRDF
 
 All other elments will be ignored by this loader.
 
-The `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the begining of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
+The `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
 
 [source,cypher]
 ----
@@ -766,4 +943,3 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]->(to)
 === Previewing RDF data
 
 The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <<Preview>> section, both `previewRDF` and `previewRDFSnippet` are read only so will not persist anything in the graph. The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `previewRDFSnippet` takes an RDF fragment as text instead.
-
