@@ -330,7 +330,7 @@ public class RDFEndpointTest {
       Map<String, Object> map = new HashMap<>();
       map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
 
-      HTTP.Response response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+      HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
       String expected =
@@ -344,11 +344,11 @@ public class RDFEndpointTest {
               + "<neo4j://individuals#1> <neo4j://vocabulary#catName> \"Actor\" .\n";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
       map.put("mappedElemsOnly", "true");
-      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+      response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
       assertEquals(200, response.status());
@@ -363,31 +363,28 @@ public class RDFEndpointTest {
     // Given
     try (ServerControls server = getServerBuilder()
         .withExtension("/rdf", RDFEndpoint.class).withProcedure(MappingUtils.class)
-        .withFixture(new Function<GraphDatabaseService, Void>() {
-          @Override
-          public Void apply(GraphDatabaseService graphDatabaseService) throws RuntimeException {
-            try (Transaction tx = graphDatabaseService.beginTx()) {
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
 
-              String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-                  "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-                  "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-                  "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-                  "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967}) "
-                  + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
-              graphDatabaseService.execute(dataInsertion);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967}) "
+                + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
+            graphDatabaseService.execute(dataInsertion);
 
-              String mappingCreation =
-                  "CALL semantics.mapping.addSchema('http://schema.org/','sch') YIELD namespace  "
-                      + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','Actor','Person') YIELD elemName AS en1  "
-                      + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','born','dob') YIELD elemName AS en2 "
-                      + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','name','familyName') YIELD elemName AS en3 "
-                      + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','ACTED_IN','inMovie') YIELD elemName AS en4 "
-                      + "RETURN 'OK'";
-              graphDatabaseService.execute(mappingCreation);
-              tx.success();
-            }
-            return null;
+            String mappingCreation =
+                "CALL semantics.mapping.addSchema('http://schema.org/','sch') YIELD namespace  "
+                    + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','Actor','Person') YIELD elemName AS en1  "
+                    + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','born','dob') YIELD elemName AS en2 "
+                    + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','name','familyName') YIELD elemName AS en3 "
+                    + "CALL semantics.mapping.addMappingToSchema('http://schema.org/','ACTED_IN','inMovie') YIELD elemName AS en4 "
+                    + "RETURN 'OK'";
+            graphDatabaseService.execute(mappingCreation);
+            tx.success();
           }
+          return null;
         })
         .newServer()) {
 
@@ -419,7 +416,7 @@ public class RDFEndpointTest {
           .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
       map.put("mappedElemsOnly", "true");
-      response = HTTP.withHeaders(new String[]{"Accept", "text/plain"}).POST(
+      response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
       String expectedOnlyMapped =
@@ -429,8 +426,8 @@ public class RDFEndpointTest {
               + "<neo4j://individuals#0> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
 
       assertEquals(200, response.status());
-      assertEquals(true, ModelTestUtils
-          .comparemodels(expectedOnlyMapped, RDFFormat.NTRIPLES, response.rawContent(),
+      assertTrue(ModelTestUtils
+          .compareModels(expectedOnlyMapped, RDFFormat.NTRIPLES, response.rawContent(),
               RDFFormat.NTRIPLES));
 
 
@@ -444,14 +441,15 @@ public class RDFEndpointTest {
         .withExtension("/rdf", RDFEndpoint.class)
         .withFixture(graphDatabaseService -> {
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            String dataInsertion = "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
-                "CREATE (mtrx:Movie:Resource {title:'The Matrix', released:2001})\n" +
-                "CREATE (dir:Director:Resource {name:'Laurence Fishburne', born:1961})\n" +
-                "CREATE (cri:Critic:Resource {name:'Hugo Weaving', born:1960})\n" +
-                "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
-                "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
-                "CREATE (cri)-[:RATED]->(mtrx)\n" +
-                "RETURN *";
+            String dataInsertion =
+                "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
+                    "CREATE (mtrx:Movie:Resource {title:'The Matrix', released:2001})\n" +
+                    "CREATE (dir:Director:Resource {name:'Laurence Fishburne', born:1961})\n" +
+                    "CREATE (cri:Critic:Resource {name:'Hugo Weaving', born:1960})\n" +
+                    "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
+                    "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
+                    "CREATE (cri)-[:RATED]->(mtrx)\n" +
+                    "RETURN *";
             graphDatabaseService.execute(dataInsertion);
             tx.success();
           }
@@ -1662,7 +1660,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1712,7 +1710,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
                 + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1762,7 +1760,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1810,7 +1808,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1864,7 +1862,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
                 + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
