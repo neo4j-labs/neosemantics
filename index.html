@@ -470,7 +470,11 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_mappings_for_import">Mappings for import</a></li>
 </ul>
 </li>
-<li><a href="#Inference">Inferencing/Reasoning</a></li>
+<li><a href="#Inference">Inferencing/Reasoning</a>
+<ul class="sectlevel2">
+<li><a href="#_property_hierarchy_inferences">Property hierarchy inferences</a></li>
+</ul>
+</li>
 <li><a href="#Reference">NSMNTX Reference</a>
 <ul class="sectlevel2">
 <li><a href="#_stored_procedures">Stored Procedures</a></li>
@@ -2513,8 +2517,93 @@ The combination of a mapping definition plus the use of the <code>handleVocabUri
 <div class="sect1">
 <h2 id="Inference"><a class="link" href="#Inference">Inferencing/Reasoning</a></h2>
 <div class="sectionbody">
+<div class="sect2">
+<h3 id="_property_hierarchy_inferences"><a class="link" href="#_property_hierarchy_inferences">Property hierarchy inferences</a></h3>
+<div class="sect3">
+<h4 id="_semantics_inference_getrels"><a class="link" href="#_semantics_inference_getrels">semantics.inference.getRels</a></h4>
+<div class="paragraph">
+<p>We can use <code>rdfs:subPropertyOf</code> to state that all resources related by one property are also related by another. The <code>semantics.inference.getRels</code> stored procedure uses this semantics to infer implicit relationships between nodes in the graph.</p>
+</div>
+<div class="paragraph">
+<p>Let&#8217;s explain that with an example. The ncbitaxon ontology defines a number of <code>rdfs:subPropertyOf</code> relationships between annotation properties. For instance, it states that every <code>acronym</code> is a <code>synonym_type_property</code>. And it does it with this triple:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">...
+
+&lt;owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/ncbitaxon#acronym"&gt;
+    &lt;rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string"&gt;acronym&lt;/rdfs:label&gt;
+    &lt;rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/&gt;
+&lt;/owl:AnnotationProperty&gt;
+
+...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>We&#8217;ll start by loading the ontology (we have a fragment <a href="http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf">here</a>)</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML")</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>This should load a simple hierarchy of annotation properties like the one in this screen capture from the Neo4j browser.</p>
+</div>
+<div class="imageblock">
+<div class="content">
+<img src="docs/img/NCBITaxon-PropertyHierarchy.png" alt="Fragment of NCBITaxon property hierarchy loaded into Neo4j">
+</div>
+</div>
+<div class="paragraph">
+<p>We can now add some instance data manually with a cypher script like this one:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">match ... merge ...</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Now we can use the <code>semantics.inference.getRels</code></p>
+</div>
 <div class="paragraph">
 <p>&#8230;&#8203;work in progress&#8230;&#8203;</p>
+</div>
+<div class="paragraph">
+<p>Prox</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">"semantics.inference.getRels"	"semantics.inference.getRels(node </dt>
+<dd>
+<p>NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)"	"semantics.inference.getRels(node,'rel','&gt;') - returns all outgoing relationships of type 'virtRel' or its subtypes along with the target nodes."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.nodesInCategory"	"semantics.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node </dt>
+<dd>
+<p>NODE?)"	"semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.nodesLabelled"	"semantics.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node </dt>
+<dd>
+<p>NODE?)"	"semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels."	["reader", "editor", "publisher", "architect", "admin"]	"READ"</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>UDFs</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">"semantics.inference.hasLabel"	"semantics.inference.hasLabel(node </dt>
+<dd>
+<p>NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'."	["admin", "reader", "editor", "publisher", "architect"]</p>
+</dd>
+<dt class="hdlist1">"semantics.inference.inCategory"	"semantics.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) </dt>
+<dd>
+<p>(BOOLEAN?)"	"semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category."	["admin", "reader", "editor", "publisher", "architect"]</p>
+</dd>
+</dl>
+</div>
+</div>
 </div>
 </div>
 </div>
