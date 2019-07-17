@@ -856,7 +856,7 @@ The `liteOntoImport` procedure takes the same generic params described in <<comm
 
 [source,cypher]
 ----
-CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")
+CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")
 ---- 
 
 image::vwonto.png[VW ontology imported in Neo4j]
@@ -877,7 +877,7 @@ Here's an example of how to load an ontology using some of these parameters:
 
 [source,cypher]
 ----
-CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
 ---- 
 
 Finally, it's also possible to have imported nodes (both Classes and Properties/Relationships) labeled as `Resource` for compatibility with the importRDF procedure. This is done by setting the `addResourceLabels` parameter to `true`.

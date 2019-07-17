@@ -453,6 +453,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <li><a href="#_previewing_rdf_data">Previewing RDF data</a></li>
 </ul>
 </li>
+
   <li><a href="#Export">Exporting RDF data</a>
     <ul class="sectlevel2">
       <li><a href="#_by_node_id">By node ID</a></li>
@@ -461,6 +462,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
       <li><a href="#_using_cypher">Using Cypher</a></li>
     </ul>
   </li>
+
 <li><a href="#Mapping">Mapping graph models</a>
 <ul class="sectlevel2">
 <li><a href="#_public_vocabularies_ontologies">Public Vocabularies/Ontologies</a></li>
@@ -1439,7 +1441,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
 </div>
 </div>
 <div class="imageblock">
@@ -1483,7 +1485,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.liteOntoImport("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1580,6 +1582,7 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <h2 id="Export"><a class="link" href="#Export">Exporting RDF data</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
+
   <p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on
     how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF
     any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
@@ -1661,6 +1664,68 @@ MERGE (from)-[:CONNECTED_TO { id: predicate }]-&gt;(to)</code></pre>
 <pre class="highlight"><code class="language-Turtle" data-lang="Turtle">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
 @prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
 
+<p>In the previous section we covered how to ingest RDF into Neo4j, in this one we will focus on how to generate RDF from our Neo4j graph. We will see that it is possible to serialise in RDF any Neo4j graph, even in the case when the data in Neo4j is not the result of importing RDF.</p>
+</div>
+<div class="paragraph">
+<p>RDF is a W3C standard model for data interchange on the Web that represents data as a graph, hence the seamless serialisation of graph data from Neo4j in RDF as we&#8217;ll see.</p>
+</div>
+<div class="paragraph">
+<p>There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the graph by its unique identifier (id or uri), selecting a group of nodes by Label + property value and via Cypher. Let&#8217;s analyse each of them in detail.</p>
+</div>
+<div class="admonitionblock warning">
+<table>
+<tr>
+<td class="icon">
+<div class="title">Warning</div>
+</td>
+<td class="content">
+The paths used in the following sections assume that NSMNTX is mounted at <code>/rdf</code>. If you&#8217;ve mounted the extension under a different name (instructions on how to do this can be found in the <a href="#install">[install]</a> section) all you need to do is replace the <code>/rdf</code> bits in the urls in the following examples with the name you&#8217;ve used.
+</td>
+</tr>
+</table>
+</div>
+<div class="sect2">
+<h3 id="_by_node_id"><a class="link" href="#_by_node_id">By node ID</a></h3>
+<div class="sect3">
+<h4 id="_rdf_describe_id"><a class="link" href="#_rdf_describe_id">/rdf/describe/id</a></h4>
+<div class="paragraph">
+<p>To explain how some this method works, we&#8217;ll use the Northwind Graph. You can easily load it in your Neo4j instance by running <code>:play northwind-graph</code> in your browser. This will bring up a guide with step by step instructions on how to create it. I&#8217;ll assume the graph is now loaded.</p>
+</div>
+<div class="paragraph">
+<p>The describe/id method emulates the SPARQL DESCRIBE operation. It takes the unique identifier of an element in the graph and it produces an RDF serialisation of all information available about it. This includes properties, labels, and relationships (both incoming and outgoing).</p>
+</div>
+<div class="paragraph">
+<p>The only required parameter is the id of the node. As you know any node in Neo4j has a unique identifier that you can get via cypher using the <code>id</code> function.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (p:Product) WHERE p.productName = "Queso Manchego La Pastora" RETURN ID(p)</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In my case, the <code>ID</code> returned by the previous query is <code>11</code>, so if I want NSMNTX to produce an RDF serialisation of this node, all I need to do is issue the following HTTP request:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-HTTP" data-lang="HTTP">http://localhost:7474/rdf/describe/id/11</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Or if you&#8217;re working on your Neo4j browser, you can run it like this too:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/id/11</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And you will get a description for your node, serialised as Turtle RDF by default. Something like this:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Turtle" data-lang="Turtle">@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
 
 neoind:11 a neovoc:Product;
   neovoc:PART_OF neoind:83;
@@ -1723,12 +1788,12 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
         <div class="content">
 <pre class="highlight"><code class="language-RDF/XML" data-lang="RDF/XML">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
-	xmlns:neovoc="neo4j://com.neo4j/voc#"
-	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:neovoc="neo4j://vocabulary#"
+	xmlns:neoind="neo4j://individuals#"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#11"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#11"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Product"/&gt;
 	&lt;neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;0&lt;/neovoc:reorderLevel&gt;
 	&lt;neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;86&lt;/neovoc:unitsInStock&gt;
 	&lt;neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double"&gt;38.0&lt;/neovoc:unitPrice&gt;
@@ -1796,6 +1861,7 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
+
         </div>
       </div>
     </div>
@@ -1865,6 +1931,62 @@ neoind:104 neovoc:SUPPLIES neoind:11 .</code></pre>
         <div class="content">
 <pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neovoc: &lt;neo4j://com.neo4j/voc#&gt; .
 @prefix neoind: &lt;neo4j://com.neo4j/indiv#&gt; .
+</div>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_by_label_property_value"><a class="link" href="#_by_label_property_value">By Label + property value</a></h3>
+<div class="sect3">
+<h4 id="_rdf_describe_find"><a class="link" href="#_rdf_describe_find">/rdf/describe/find/</a></h4>
+<div class="paragraph">
+<p>An alternative way to select he node (or set of nodes) to serialise as RDF is to do a search by label and property. Let&#8217;s say in our Northwind Database example we want to get the Suppliers in a given postal code. The label we&#8217;re interested in is <code>Supplier</code> and the property is <code>postcode</code>. Here&#8217;s what a request of this type would look like:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>In this request we are setting the serialisation to N-Triples format. Also notice that the property value (EC1 4SD) needs to be URL Encoded. Here&#8217;s the output of the request:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;neo4j://individuals#100&gt; &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#type&gt; &lt;neo4j://vocabulary#Supplier&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#country&gt; "UK" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#contactTitle&gt; "Purchasing Manager" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#address&gt; "49 Gilbert St." .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#supplierID&gt; "1" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#phone&gt; "(171) 555-2222" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#city&gt; "London" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#contactName&gt; "Charlotte Cooper" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#companyName&gt; "Exotic Liquids" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#postalCode&gt; "EC1 4SD" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#region&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#fax&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#homePage&gt; "NULL" .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#0&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#1&gt; .
+&lt;neo4j://individuals#100&gt; &lt;neo4j://vocabulary#SUPPLIES&gt; &lt;neo4j://individuals#2&gt; .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>By default property values are treated as strings which may or may not work depending on the actual datatype stored in the node property in the Database. If you need to specify the datatype, you&#8217;ll need the <code>valType</code> parameter. The following request returns all products with a given price point.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/describe/find/Product/unitPrice/15?valType=INTEGER&amp;excludeContext</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Notice how we are being explicit about the datatype using the <code>valType</code> request parameter. If we removed this parameter the request would return no results because there is no Product in the Northwind Database with a <code>unitPrice</code> stored as a string.
+Here&#8217;s the ouptut produced (default serialisation is Turtle).</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
 
 
 neoind:69 a neovoc:Product;
@@ -1942,12 +2064,12 @@ neoind:72 a neovoc:Product;
         <div class="content">
 <pre class="highlight"><code class="language-RDF" data-lang="RDF">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;rdf:RDF
-	xmlns:neovoc="neo4j://com.neo4j/voc#"
-	xmlns:neoind="neo4j://com.neo4j/indiv#"
+	xmlns:neovoc="neo4j://vocabulary#"
+	xmlns:neoind="neo4j://individuals#"
 	xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#172"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Customer"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#172"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Customer"/&gt;
 	&lt;neovoc:country&gt;Venezuela&lt;/neovoc:country&gt;
 	&lt;neovoc:address&gt;5ª Ave. Los Palos Grandes&lt;/neovoc:address&gt;
 	&lt;neovoc:contactTitle&gt;Owner&lt;/neovoc:contactTitle&gt;
@@ -1961,8 +2083,8 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:region&gt;DF&lt;/neovoc:region&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#774"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Order"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#774"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Order"/&gt;
 	&lt;neovoc:shipCity&gt;Caracas&lt;/neovoc:shipCity&gt;
 	&lt;neovoc:orderID&gt;10785&lt;/neovoc:orderID&gt;
 	&lt;neovoc:freight&gt;1.51&lt;/neovoc:freight&gt;
@@ -1979,8 +2101,8 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:orderDate&gt;1997-12-18 00:00:00.000&lt;/neovoc:orderDate&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Product"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#74"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Product"/&gt;
 	&lt;neovoc:reorderLevel rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;25&lt;/neovoc:reorderLevel&gt;
 	&lt;neovoc:unitsInStock rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;125&lt;/neovoc:unitsInStock&gt;
 	&lt;neovoc:unitPrice rdf:datatype="http://www.w3.org/2001/XMLSchema#double"&gt;7.75&lt;/neovoc:unitPrice&gt;
@@ -1993,24 +2115,24 @@ neoind:72 a neovoc:Product;
 	&lt;neovoc:unitsOnOrder rdf:datatype="http://www.w3.org/2001/XMLSchema#long"&gt;0&lt;/neovoc:unitsOnOrder&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#80"&gt;
-	&lt;rdf:type rdf:resource="neo4j://com.neo4j/voc#Category"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#80"&gt;
+	&lt;rdf:type rdf:resource="neo4j://vocabulary#Category"/&gt;
 	&lt;neovoc:description&gt;Soft drinks, coffees, teas, beers, and ales&lt;/neovoc:description&gt;
 	&lt;neovoc:categoryName&gt;Beverages&lt;/neovoc:categoryName&gt;
 	&lt;neovoc:picture&gt;0x151C2F00020000000D000E0014002100FFFFFFFF4269746D617020496D616765005061696E742E5069637475726500010500000200000007000000504272757368000000000000000000A0290000424D98290000000000005600000028000000AC00000078000000010004000000000000000000880B0000880B0000080000&lt;/neovoc:picture&gt;
 	&lt;neovoc:categoryID&gt;1&lt;/neovoc:categoryID&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#172"&gt;
-	&lt;neovoc:PURCHASED rdf:resource="neo4j://com.neo4j/indiv#774"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#172"&gt;
+	&lt;neovoc:PURCHASED rdf:resource="neo4j://individuals#774"/&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#774"&gt;
-	&lt;neovoc:ORDERS rdf:resource="neo4j://com.neo4j/indiv#74"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#774"&gt;
+	&lt;neovoc:ORDERS rdf:resource="neo4j://individuals#74"/&gt;
 &lt;/rdf:Description&gt;
 
-&lt;rdf:Description rdf:about="neo4j://com.neo4j/indiv#74"&gt;
-	&lt;neovoc:PART_OF rdf:resource="neo4j://com.neo4j/indiv#80"/&gt;
+&lt;rdf:Description rdf:about="neo4j://individuals#74"&gt;
+	&lt;neovoc:PART_OF rdf:resource="neo4j://individuals#80"/&gt;
 &lt;/rdf:Description&gt;
 
 &lt;/rdf:RDF&gt;</code></pre>
@@ -2037,6 +2159,7 @@ neoind:72 a neovoc:Product;
 </div>
 </div>
 </div>
+
     <div class="sect3">
       <h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
       <div class="paragraph">
@@ -2047,6 +2170,14 @@ neoind:72 a neovoc:Product;
           parameters are identical to the previous case.Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
       </div>
       <div class="listingblock">
+
+<div class="sect3">
+<h4 id="_rdf_cypheronrdf"><a class="link" href="#_rdf_cypheronrdf">/rdf/cypheronrdf</a></h4>
+<div class="paragraph">
+<p>And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and of course if you did NOT use the <code>IGNORE</code> option), <code>rdf/cypheronrdf</code> will work in exactly the same way as <code>rdf/cypher</code> but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested. The parameters are identical to the previous case. Here&#8217;s an example on the graph we imported in section <a href="#import">[import]</a> that returns a plugin information given a <code>releaseDate</code>:</p>
+</div>
+<div class="listingblock">
+
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:POST /rdf/cypheronrdf { "cypher":"MATCH (neo4j:ns0__GraphPlatform)&lt;-[ro:ns0__runsOn]-(plugin:ns0__Neo4jPlugin) WHERE plugin.ns0__releaseDate = '03-06-2019' RETURN plugin, ro, neo4j " , "format" : "JSON-LD"}</code></pre>
 </div>
@@ -2088,6 +2219,120 @@ neoind:72 a neovoc:Product;
           RETURN * ` and you&#8217;ll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.</p>
       </div>
     </div>
+</div>
+<div class="sect2">
+<h3 id="_export_graph_ontology"><a class="link" href="#_export_graph_ontology">Export Graph Ontology</a></h3>
+<div class="paragraph">
+<p>It is possible to export your Graph schema in the form of an OWL Ontology. The same output produced by the <code>db.schema()</code> procedure can be generated as RDF/OWL through the <code>/onto</code> method.</p>
+</div>
+<div class="sect3">
+<h4 id="_rdf_onto"><a class="link" href="#_rdf_onto">/rdf/onto</a></h4>
+<div class="paragraph">
+<p>The <code>/onto</code> method will run <code>db.schema()</code> on your Neo4j graph and will generate <code>owl:Class</code> definitions for each label found, and <code>owl:ObjectProperty</code> definitions for each relationship along with <code>rdfs:domain</code> and <code>rdfs:range</code> based on the labels of their start and end nodes. Here&#8217;s an example of the output for the Neo4j Movie database.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/onto</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>or</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">http://localhost:7474/rdf/onto</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>And the ontology generated would be:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-RDF" data-lang="RDF">@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
+
+neovoc:Movie a owl:Class;
+  rdfs:label "Movie" .
+
+neovoc:Person a owl:Class;
+  rdfs:label "Person" .
+
+neovoc:ACTED_IN a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:REVIEWED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:PRODUCED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:WROTE a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .
+
+neovoc:FOLLOWS a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Person .
+
+neovoc:DIRECTED a owl:ObjectProperty;
+  rdfs:domain neovoc:Person;
+  rdfs:range neovoc:Movie .</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>It is possible to set the serialisation format using the <code>accept</code> header param or the <code>format</code> request param. The following request would serialise the ontology as N-Triples.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-shell" data-lang="shell">:GET /rdf/onto?format=N-Triples</code></pre>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_rdf_ontonrdf"><a class="link" href="#_rdf_ontonrdf">/rdf/ontonrdf</a></h4>
+<div class="paragraph">
+<p>Similarly, if the Neo4j graph is the result of importing RDF via <code>semantics.importRDF</code>, the Ontology can be exported by running <code>ontonrdf</code>, which will take care of expanding the namespaces shortened in the import process.</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">:GET /rdf/ontonrdf</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>Which applied to the example dataset about neo4j plugins used in section <a href="#Import">Importing RDF data</a>, would produce the following ontology:</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">@prefix owl: &lt;http://www.w3.org/2002/07/owl#&gt; .
+@prefix rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt; .
+@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+@prefix neovoc: &lt;neo4j://vocabulary#&gt; .
+@prefix neoind: &lt;neo4j://individuals#&gt; .
+
+
+&lt;http://neo4j.org/vocab/sw#GraphPlatform&gt; a owl:Class;
+  rdfs:label "GraphPlatform" .
+
+&lt;http://neo4j.org/vocab/sw#Neo4jPlugin&gt; a owl:Class;
+  rdfs:label "Neo4jPlugin" .
+
+&lt;http://neo4j.org/vocab/sw#AwesomePlatform&gt; a owl:Class;
+  rdfs:label "AwesomePlatform" .
+
+&lt;http://neo4j.org/vocab/sw#runsOn&gt; a owl:ObjectProperty;
+  rdfs:domain &lt;http://neo4j.org/vocab/sw#Neo4jPlugin&gt;;
+  rdfs:label "runsOn";
+  rdfs:range &lt;http://neo4j.org/vocab/sw#AwesomePlatform&gt;, &lt;http://neo4j.org/vocab/sw#GraphPlatform&gt; .</code></pre>
+</div>
+</div>
+</div>
 </div>
 </div>
 </div>
