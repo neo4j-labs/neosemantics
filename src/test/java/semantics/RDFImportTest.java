@@ -82,6 +82,27 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testAbortIfNoIndicesImportSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          turtleFragment +
+          "','Turtle')");
+
+      Map<String, Object> singleResult = importResults1.single().asMap();
+
+      assertEquals(0L, singleResult.get("triplesLoaded"));
+      assertEquals("KO", singleResult.get("terminationStatus"));
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+          singleResult.get("extraInfo"));
+    }
+  }
+
+  @Test
   public void testImportJSONLD() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
@@ -109,6 +130,32 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testImportJSONLDImportSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          jsonLdFragment + "','JSON-LD',"
+          +
+          "{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, " +
+          "headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+      assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+      assertEquals(1L,
+          session.run(
+              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              .next().get("count").asLong());
+    }
+  }
+
+  @Test
   public void testImportJSONLDShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
@@ -123,6 +170,27 @@ public class RDFImportTest {
           "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+      assertEquals(1L,
+          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
+              + "modified) RETURN count(n) AS count")
+              .next().get("count").asLong());
+
+      assertEquals("ns0",
+          session.run(
+              "MATCH (n:NamespacePrefixDefinition) RETURN n.`http://xmlns.com/foaf/0.1/` AS prefix")
+              .next().get("prefix").asString());
+
+      session.run("MATCH (n) DETACH DELETE n ;");
+
+      importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+          jsonLdFragment + "','JSON-LD',"
+          +
+          "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
+      assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
           session.run(
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
