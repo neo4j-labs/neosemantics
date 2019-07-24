@@ -2,7 +2,6 @@ package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
 import static semantics.RDFParserConfig.URL_SHORTEN;
-import static semantics.Util.loadNode;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -25,6 +24,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
 import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
@@ -36,7 +36,7 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor implements
+class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor implements
     Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
@@ -46,7 +46,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
   private long statementsWithbNodeCount;
   private String bNodeInfo;
 
-  RDFDatasetDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
@@ -80,7 +80,29 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
       Node tempNode = null;
       final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), loadNode(entry.getKey(), graphdb));
+        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
+          @Override
+          public Node call() {
+            Node node = null;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(entry.getKey().getUri(),
+                entry.getKey().getGraphUri(),
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + entry.getKey().getUri() +
+                        (entry.getKey().getGraphUri() == null ? "}" :
+                            ", graphUri: " + entry.getKey().getGraphUri() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
+            }
+            return node;
+          }
+        });
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -173,10 +195,29 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node fromNode = null;
       try {
-        ContextResource contextResource = new ContextResource(
-            st.getSubject().stringValue(),
-            st.getContext() != null ? st.getContext().stringValue() : null);
-        fromNode = nodeCache.get(from, loadNode(contextResource, graphdb));
+        fromNode = nodeCache.get(from, new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            Node node = null;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(st.getSubject().stringValue(),
+                st.getContext() != null ? st.getContext().stringValue() : null,
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + st.getSubject().stringValue() +
+                        (st.getContext() == null ? "}" :
+                            ", graphUri: " + st.getContext().stringValue() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
+            }
+            return node;
+          }
+        });
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }
@@ -184,11 +225,29 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node toNode = null;
       try {
-        ContextResource contextResource = new ContextResource(
-            st.getObject().stringValue(),
-            st.getContext() != null ? st.getContext().stringValue() : null
-        );
-        toNode = nodeCache.get(to, loadNode(contextResource, graphdb));
+        toNode = nodeCache.get(to, new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            Node node = null;
+            Map<String, Object> params = new HashMap<>();
+            String cypher = buildCypher(st.getObject().stringValue(),
+                st.getContext() != null ? st.getContext().stringValue() : null,
+                params);
+            Result result = graphdb.execute(cypher, params);
+            if (result.hasNext()) {
+              node = (Node) result.next().get("n");
+              if (result.hasNext()) {
+                String props =
+                    "{uri: " + st.getObject().stringValue() +
+                        (st.getContext() == null ? "}" :
+                            ", graphUri: " + st.getContext().stringValue() + "}");
+                throw new IllegalStateException(
+                    "There are multiple matching nodes for the given properties " + props);
+              }
+            }
+            return node;
+          }
+        });
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
       }

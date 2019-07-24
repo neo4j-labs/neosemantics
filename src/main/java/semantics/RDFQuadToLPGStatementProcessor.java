@@ -5,6 +5,7 @@ import static semantics.RDFImport.PROPERTY;
 import static semantics.RDFParserConfig.PROP_ARRAY;
 import static semantics.RDFParserConfig.PROP_OVERWRITE;
 
+import com.google.common.base.Preconditions;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -29,13 +30,13 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-abstract class RDFDatasetToLPGStatementProcessor extends RDFToLPGStatementProcessor implements
+abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor implements
     RDFHandler {
 
   Map<ContextResource, Map<String, Object>> resourceProps;
   Map<ContextResource, Set<String>> resourceLabels;
 
-  RDFDatasetToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf, l);
     resourceProps = new HashMap<>();
     resourceLabels = new HashMap<>();
@@ -80,6 +81,22 @@ abstract class RDFDatasetToLPGStatementProcessor extends RDFToLPGStatementProces
   }
 
   protected abstract void periodicOperation();
+
+  String buildCypher(String uri, String graphUri, Map<String, Object> params) {
+    Preconditions.checkNotNull(uri);
+    StringBuilder cypher = new StringBuilder();
+    params.put("uri", uri);
+    cypher.append("MATCH (n:Resource) ");
+    cypher.append("WHERE n.uri = $uri ");
+    if (graphUri != null) {
+      cypher.append("AND n.graphUri = $graphUri ");
+      params.put("graphUri", graphUri);
+    } else {
+      cypher.append("AND NOT EXISTS(n.graphUri) ");
+    }
+    cypher.append("RETURN n");
+    return cypher.toString();
+  }
 
   private boolean setProp(ContextResource contextResource, IRI propertyIRI,
       Literal propValueRaw) {

@@ -2204,14 +2204,14 @@ public class RDFImportTest {
 
 
   @Test
-  public void testImportRDFDatasetTriG() throws Exception {
+  public void testImportQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2276,14 +2276,14 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testImportRDFDatasetNQuads() throws Exception {
+  public void testImportQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2348,14 +2348,14 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testDeleteRDFDatasetTriG() throws Exception {
+  public void testDeleteQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2365,7 +2365,7 @@ public class RDFImportTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2380,14 +2380,14 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testDeleteRDFDatasetNQuads() throws Exception {
+  public void testDeleteQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2397,7 +2397,7 @@ public class RDFImportTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.nq")
               .toURI()
           + "', 'N-Quads', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2412,14 +2412,14 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testRepetitiveDeletionRDFDataset() throws Exception {
+  public void testRepetitiveDeletionQuadRDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDFDataset('" +
+      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2429,7 +2429,7 @@ public class RDFImportTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2440,7 +2440,7 @@ public class RDFImportTest {
           + "RETURN n");
       assertEquals(5, result.list().size());
 
-      deleteResult = session.run("CALL semantics.deleteRDFDataset('" +
+      deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");

@@ -109,8 +109,8 @@ public class Util {
    * @author Emre Arkan
    *
    * Created on 02.07.2019
-   * @see RDFDatasetDirectStatementLoader
-   * @see RDFDatasetDirectStatementDeleter
+   * @see RDFQuadDirectStatementLoader
+   * @see RDFQuadDirectStatementDeleter
    */
   static Callable<Node> loadNode(ContextResource key, GraphDatabaseService graphdb) {
     return () -> {

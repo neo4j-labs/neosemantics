@@ -1645,7 +1645,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testCypherOnRDFDatasetSerializeAsTriG() throws Exception {
+  public void testCypherOnQuadRDFSerializeAsTriG() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1660,7 +1660,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1695,7 +1695,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testCypherOnRDFDatasetSerializeAsNQuads() throws Exception {
+  public void testCypherOnQuadRDFSerializeAsNQuads() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1710,7 +1710,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
                 + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1745,7 +1745,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testNodeByUriOnRDFDataset() throws Exception {
+  public void testNodeByUriOnQuadRDF() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1760,7 +1760,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1793,7 +1793,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testNodeByUriWithGraphUriOnRDFDatasetTrig() throws Exception {
+  public void testNodeByUriWithGraphUriOnQuadRDFTrig() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1808,7 +1808,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
                 + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1847,7 +1847,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testNodeByUriWithGraphUriOnRDFDatasetNQuads() throws Exception {
+  public void testNodeByUriWithGraphUriOnQuadRDFNQuads() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1862,7 +1862,7 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
                 + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -1898,7 +1898,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testCypherOnRDFDatasetAfterDeleteRDFBNodes() throws Exception {
+  public void testCypherOnQuadRDFAfterDeleteRDFBNodes() throws Exception {
     // Given
     try (ServerControls server = getServerBuilder()
         .withProcedure(RDFImport.class)
@@ -1913,12 +1913,12 @@ public class RDFEndpointTest {
             fail(e.getMessage());
           }
           try (Transaction tx = graphDatabaseService.beginTx()) {
-            graphDatabaseService.execute("CALL semantics.importRDFDataset('" +
+            graphDatabaseService.execute("CALL semantics.importQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource(
                     "RDFDatasets/RDFDatasetBNodes.trig")
                     .toURI()
                 + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-            Result res = graphDatabaseService.execute("CALL semantics.deleteRDFDataset('" +
+            Result res = graphDatabaseService.execute("CALL semantics.deleteQuadRDF('" +
                 RDFImportTest.class.getClassLoader().getResource(
                     "RDFDatasets/RDFDatasetBNodesDelete.trig")
                     .toURI()

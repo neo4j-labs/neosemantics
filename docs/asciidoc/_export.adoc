@@ -128,11 +128,6 @@ If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE`
 :GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
 ----
 
-"describe/uri/" + URLEncoder
-              .encode("http://www.example.org/exampleDocument#Monica",
-                  StandardCharsets.UTF_8.toString())
-              + "?graphuri=http://www.example.org/exampleDocument%23G1"
-
 Again, notice the URL enconding of the URI and the `format` parameter to specify the serialisation format. Here's the output of the request:
 
 [source,Cypher]
@@ -164,7 +159,7 @@ Again, notice the URL enconding of the URI and the `format` parameter to specify
 </rdf:RDF>
 ----
 
-Additionally, you can provide a graph URI to specify the context of the given resource. Here is how you can do that on the RDF dataset we imported in <<ImportRDFDataset>> section:
+Additionally, you can provide a graph URI to specify the context of the given resource. Here is how you can do that on the RDF dataset we imported in <<ImportQuadRDF>> section:
 
 [source,Cypher]
 ----
