@@ -44,6 +44,37 @@ public class RDFImportTest {
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
       .withProcedure(MappingUtils.class);
+  private String jsonLdFragment = "{\n" +
+      "  \"@context\": {\n" +
+      "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+      "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+      "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+      "  },\n" +
+      "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+      "  \"name\": \"Markus Lanthaler\",\n" +
+      "  \"knows\": [\n" +
+      "    {\n" +
+      "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+      "      \"name\": \"Manu Sporny\"\n" +
+      "    },\n" +
+      "    {\n" +
+      "      \"name\": \"Dave Longley\",\n" +
+      "\t  \"modified\":\n" +
+      "\t    {\n" +
+      "\t      \"@value\": \"2010-05-29T14:17:39+02:00\",\n" +
+      "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
+      "\t    }\n" +
+      "    }\n" +
+      "  ]\n" +
+      "}";
+
+  private String turtleFragment = "@prefix show: <http://example.org/vocab/show/> .\n" +
+      "\n" +
+      "show:218 show:localName \"That Seventies Show\"@en .                 # literal with a language tag\n"
+      +
+      "show:218 show:localName \"Cette Série des Années Soixante-dix\"@fr . \n" +
+      "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
+
   private String wrongUriTtl = "@prefix pr: <http://example.org/vocab/show/> .\n" +
       "pr:ent" +
       "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4ten%2f003+studierende+nach+universit%u00e4ten.xml&toolbar=true> ;\n"
@@ -186,11 +217,11 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
 
-      importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+      importResults = session.run("CALL semantics.importRDFSnippet('" +
           jsonLdFragment + "','JSON-LD',"
           +
           "{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
-      assertEquals(6L, importResults1.next().get("triplesLoaded").asLong());
+      assertEquals(6L, importResults.next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
           session.run(
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
@@ -721,30 +752,6 @@ public class RDFImportTest {
             .toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
-
-      String jsonLdFragment = "{\n" +
-          "  \"@context\": {\n" +
-          "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
-          "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
-          "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
-          "  },\n" +
-          "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
-          "  \"name\": \"Markus Lanthaler\",\n" +
-          "  \"knows\": [\n" +
-          "    {\n" +
-          "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-          "      \"name\": \"Manu Sporny\"\n" +
-          "    },\n" +
-          "    {\n" +
-          "      \"name\": \"Dave Longley\",\n" +
-          "\t  \"modified\":\n" +
-          "\t    {\n" +
-          "\t      \"@value\": \"2010-05-29T14:17:39+02:00\",\n" +
-          "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
-          "\t    }\n" +
-          "    }\n" +
-          "  ]\n" +
-          "}";
       StatementResult importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
