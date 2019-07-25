@@ -10,6 +10,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -92,12 +94,11 @@ public class RDFImport {
   @Procedure(mode = Mode.WRITE)
   @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
       + "graph. Requires and index on :Resource(uri)")
-  public Stream<ImportResults>  importRDFSnippet(@Name("rdf") String rdfFragment,
+  public Stream<ImportResults> importRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-
-    return Stream.of(doImport(format,null, rdfFragment, props));
+    return Stream.of(doImport(format, null, rdfFragment, props));
   }
 
   private ImportResults doImport(@Name("format") String format, @Name("url") String url,
@@ -398,6 +399,10 @@ public class RDFImport {
       result = XMLSchema.DOUBLE.stringValue();
     } else if (literal instanceof Boolean) {
       result = XMLSchema.BOOLEAN.stringValue();
+    } else if (literal instanceof LocalDateTime) {
+      result = XMLSchema.DATETIME.stringValue();
+    } else if (literal instanceof LocalDate) {
+      result = XMLSchema.DATE.stringValue();
     } else {
       result = null;
     }

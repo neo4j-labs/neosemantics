@@ -19,6 +19,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
@@ -1267,19 +1268,28 @@ public class RDFImportTest {
 
       importResults = session.run("return semantics.getDataType('10000') AS val");
       next = importResults.next().asMap();
-      assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("val"));
+      assertEquals(XMLSchema.STRING.stringValue(), next.get("val"));
 
       importResults = session.run("return semantics.getDataType(10000) AS val");
       next = importResults.next().asMap();
-      assertEquals("http://www.w3.org/2001/XMLSchema#long", next.get("val"));
+      assertEquals(XMLSchema.LONG.stringValue(), next.get("val"));
 
       importResults = session.run("return semantics.getDataType(10000.0) AS val");
       next = importResults.next().asMap();
-      assertEquals("http://www.w3.org/2001/XMLSchema#double", next.get("val"));
+      assertEquals(XMLSchema.DOUBLE.stringValue(), next.get("val"));
 
       importResults = session.run("return semantics.getDataType(true) AS val");
       next = importResults.next().asMap();
-      assertEquals("http://www.w3.org/2001/XMLSchema#boolean", next.get("val"));
+      assertEquals(XMLSchema.BOOLEAN.stringValue(), next.get("val"));
+
+      importResults = session.run("return semantics.getDataType(date('1986-07-19')) AS val");
+      next = importResults.next().asMap();
+      assertEquals(XMLSchema.DATE.stringValue(), next.get("val"));
+
+      importResults = session
+          .run("return semantics.getDataType(localdatetime('1986-07-09T18:06:36')) AS val");
+      next = importResults.next().asMap();
+      assertEquals(XMLSchema.DATETIME.stringValue(), next.get("val"));
 
     }
   }
