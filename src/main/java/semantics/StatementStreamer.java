@@ -10,10 +10,10 @@ import semantics.result.StreamedStatement;
 
 public class StatementStreamer extends ConfiguredStatementHandler {
 
+  private final RDFParserConfig parserConfig;
   private List<StreamedStatement> statements;
-  protected final RDFParserConfig parserConfig;
 
-  public StatementStreamer(
+  StatementStreamer(
       RDFParserConfig pc) {
     parserConfig = pc;
   }

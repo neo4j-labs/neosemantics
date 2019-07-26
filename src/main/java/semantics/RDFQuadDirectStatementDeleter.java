@@ -36,7 +36,7 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor implements
+class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor implements
     Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
@@ -46,7 +46,7 @@ class RDFDatasetDirectStatementDeleter extends RDFDatasetToLPGStatementProcessor
   private long statementsWithbNodeCount;
   private String bNodeInfo;
 
-  RDFDatasetDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())

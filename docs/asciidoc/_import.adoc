@@ -424,14 +424,14 @@ image::miniontoandinstances.png[Connected ontology and instance data imported in
 
 More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
 
-[[ImportRDFDataset]]
-=== Handling named graphs (RDF Dataset)
+[[ImportQuadRDF]]
+=== Handling named graphs (RDF Quads)
 
-You can also import RDF datasets using `semantics.importRDFDataset`. The only difference in comparision to `semantics.importRDF` is that you can import not just triples but also quadruples. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.
+You can also import RDF datasets using `semantics.importQuadRDF`. The only difference in comparision to `semantics.importRDF` is that you can import not just triples but also quadruples. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.
 
 Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
 
-Similar to `semantics.importRDF` method `semantics.importRDFDataset` also takes the url string to access the RDF dataset and the serialisation format.
+Similar to `semantics.importRDF` method `semantics.importQuadRDF` also takes the url string to access the RDF dataset and the serialisation format.
 Let's say you're trying to load the following set of quadruples into Neo4j.
 
 [source,RDF]
@@ -465,7 +465,7 @@ exDoc:G3 {
     exDoc:John a ex:Person . }
 ----
 
-**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importRDFDataset` procedure will remind you with an error messsage.
+**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importQuadRDF` procedure will remind you with an error messsage.
 
 [source,cypher]
 ----
@@ -478,7 +478,7 @@ You can use the following cypher snippet to import the set of quadruples from ab
 
 [source,cypher]
 ----
-CALL semantics.importRDFDataset( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+CALL semantics.importQuadRDF( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
 ----
 
 ==== Merging nodes virtually
@@ -778,13 +778,13 @@ You *must* use for deletion the same set of parameters that you used during impo
 
 === Deleting imported RDF dataset (named graphs)
 
-You can also delete imported quadruples using `semantics.deleteRDFDataset` which takes the same generic params described in <<common_params_delete>>.
+You can also delete imported quadruples using `semantics.deleteQuadRDF` which takes the same generic params described in <<common_params_delete>>.
 
 *Note* that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
 
-For this example we will use the same dataset which was used in <<ImportRDFDataset>>.
+For this example we will use the same dataset which was used in <<ImportQuadRDF>>.
 
-Let's say you're trying to delete the following set of quadruples from Neo4j after the import from the <<ImportRDFDataset>> section:
+Let's say you're trying to delete the following set of quadruples from Neo4j after the import from the <<ImportQuadRDF>> section:
 
 [source,RDF]
 ----
@@ -810,14 +810,14 @@ exDoc:G2 {
               ex:country "USA" . }
 ----
 
-The `semantics.deleteRDFDataset` procedure takes the same generic params described in <<common_params_delete>> at the beginning of the <<DeleteRDF>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
+The `semantics.deleteQuadRDF` procedure takes the same generic params described in <<common_params_delete>> at the beginning of the <<DeleteRDF>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
 
 
 Here is the cypher snippet showing how to do that:
 
 [source,cypher]
 ----
-CALL semantics.deleteRDFDataset("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+CALL semantics.deleteQuadRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
 ----
 
 NSMNTX will delete the given quadruples in your Neo4j graph. After this deletion your RDF dataset will look like this:

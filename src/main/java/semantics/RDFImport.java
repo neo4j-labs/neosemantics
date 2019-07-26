@@ -10,7 +10,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -91,17 +94,19 @@ public class RDFImport {
   @Procedure(mode = Mode.WRITE)
   @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
       + "graph. Requires and index on :Resource(uri)")
-  public Stream<ImportResults>  importRDFSnippet(@Name("rdf") String rdfFragment,
+  public Stream<ImportResults> importRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-
-    return Stream.of(doImport(format,null, rdfFragment, props));
+    return Stream.of(doImport(format, null, rdfFragment, props));
   }
 
   private ImportResults doImport(@Name("format") String format, @Name("url") String url,
       @Name("rdf") String rdfFragment,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    Preconditions.checkArgument(
+        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
@@ -163,15 +168,17 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<ImportResults> importRDFDataset(@Name("url") String url,
+  public Stream<ImportResults> importQuadRDF(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
+    Preconditions.checkArgument(
+        format.equals(RDFFormat.TRIG.getName()) || format.equals(RDFFormat.NQUADS.getName()),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
 
-    RDFDatasetDirectStatementLoader statementLoader = new RDFDatasetDirectStatementLoader(db, conf,
+    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, conf,
         log);
     try {
       checkIndexesExist();
@@ -182,6 +189,7 @@ public class RDFImport {
       e.printStackTrace();
     } finally {
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
       importResults.setNamespaces(statementLoader.getNamespaces());
       importResults.setConfigSummary(conf.getConfigSummary());
     }
@@ -227,7 +235,9 @@ public class RDFImport {
       + "browser. No writing to the DB.")
   public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-
+    Preconditions.checkArgument(
+        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -254,6 +264,9 @@ public class RDFImport {
           + "language tag for Literal values. No writing to the DB.")
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+    Preconditions.checkArgument(
+        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
+        "Given input format is not supported!");
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
         .get("verifyUriSyntax") : true);
 
@@ -275,7 +288,9 @@ public class RDFImport {
   public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-
+    Preconditions.checkArgument(
+        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -302,7 +317,9 @@ public class RDFImport {
       + "semantics.importRDF(). Delete config must match the one used on import.")
   public Stream<DeleteResults> deleteRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-
+    Preconditions.checkArgument(
+        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -329,16 +346,17 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<DeleteResults> deleteRDFDataset(@Name("url") String url,
+  public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"));
+    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"),
+        "Given input format is not supported!");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
     DeleteResults deleteResults = new DeleteResults();
 
-    RDFDatasetDirectStatementDeleter statementDeleter = new RDFDatasetDirectStatementDeleter(db,
+    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db,
         conf, log);
     try {
       checkIndexesExist();
@@ -381,6 +399,10 @@ public class RDFImport {
       result = XMLSchema.DOUBLE.stringValue();
     } else if (literal instanceof Boolean) {
       result = XMLSchema.BOOLEAN.stringValue();
+    } else if (literal instanceof LocalDateTime) {
+      result = XMLSchema.DATETIME.stringValue();
+    } else if (literal instanceof LocalDate) {
+      result = XMLSchema.DATE.stringValue();
     } else {
       result = null;
     }
