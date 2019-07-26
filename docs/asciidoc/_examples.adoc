@@ -1,5 +1,11 @@
 [[Examples]]
-== Examples of use
+== Projects using NSMNTX
+
+https://medium.com/@nick.p.doyle[Nick Doyle] writes on using Neo4j to map your AWS Infrastructure and he uses NSMNTX to ingest the RDF produced by http://awless.io/[awless]. Read his post https://medium.com/@nick.p.doyle/using-neo4j-graph-database-to-map-your-aws-infrastructure-a81b1a49981b[here]
+
+Refinitiv in their https://developers.refinitiv.com/knowledge-graph/knowledge-graph-feed-api/learning?content=48179&type=learning_material_item[developers tutorials section] include a step by step description of how to import one of their public datasets into Neo4j using NSMNTX. 
+
+
 
 ...work in progress...
 

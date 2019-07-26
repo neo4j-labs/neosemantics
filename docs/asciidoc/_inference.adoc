@@ -1,36 +1,76 @@
 [[Inference]]
 == Inferencing/Reasoning
 
+something here
+
+=== Class hierarchies
+There are two main ways of categorising nodes in a graph, the first one is by using labels, the second
+is by creating a node representing the category and linking to it the node representing the individual
+ using some kind of `IN_CATEGORY` or `TYPE` relationship.
+
+==== semantics.inference.nodesLabelled
+
+
+==== semantics.inference.nodesInCategory
+
+
 === Property hierarchies
+
+We can use `rdfs:subPropertyOf` to create hierarchies of relationships, or in other words to state
+that all resources connected by one relationship are also implicitly connected by any parent
+relationship. If I state that `ACTED_IN` is a subproperty of `WORKED_IN`,
+when I find in the graph that Keanu Reeves `ACTED_IN` The Matrix, I can safely derive the fact that he
+also `WORKED_IN` that movie, even if there is not an explicit `WORKED_IN` relationship in the graph
+between Keanu and The Matrix.
+This is useful in situations where we want to be able to dynamically define relationships by composing
+existing ones.
+
+The `semantics.inference.getRels` stored procedure uses exactly these semantics to infer implicit
+relationships between nodes in the graph.
 
 ==== semantics.inference.getRels
 
-We can use `rdfs:subPropertyOf` to state that all resources related by one property are also related by another. The `semantics.inference.getRels` stored procedure uses this semantics to infer implicit relationships between nodes in the graph.
-
-Let's explain that with an example. The ncbitaxon ontology defines a number of `rdfs:subPropertyOf` relationships between annotation properties. For instance, it states that every `acronym` is a `synonym_type_property`. And it does it with this triple:
+Let's take the movie database. Remember you can have it loaded in Neo4j by running `:play movies` and
+following the instructions in the guide. Let's say we have http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl[a fragment of a movie ontology] that contains a definition
+of a relationship hierarchy. It does it by defining a number of `rdfs:subPropertyOf` statements
+between relationships.
+For instance, it states that every `ACTED_IN` relationship is also a `WORKED_IN` one. This is
+the triple in question:
 
 [source,RDF]
 ----
 ...
 
-<owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/ncbitaxon#acronym">
-    <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">acronym</rdfs:label>
-    <rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/>
-</owl:AnnotationProperty>
+neovoc:ACTED_IN a owl:ObjectProperty;
+  rdfs:label "ACTED_IN";
+  rdfs:subPropertyOf neovoc:WORKED_IN .
 
 ...
 ----
 
-We'll start by loading the ontology (we have a fragment http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf[here])
+To see this inferencing procedure in action, we'll start by loading the ontology.
+We can load it either using the `semantics.importOntology` or the `semantics.importRDF` methods
+described in the <<Import>> section.
+
+Let's say we
 
 [source,Cypher]
 ----
-call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML")
+CALL semantics.importOntology("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
+----
+
+[source,Cypher]
+----
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML", { handleVocabUris: "IGNORE" })
 ----
 
 This should load a simple hierarchy of annotation properties like the one in this screen capture from the Neo4j browser.
 
-image::NCBITaxon-PropertyHierarchy.png[Fragment of NCBITaxon property hierarchy loaded into Neo4j]
+onto load image
+movieDB-PropertyHierarchy-OntoLoad
+
+rdf load image
+image::movieDB-PropertyHierarchy.png[property hierarchy in a possible Movie Database Ontology loaded into Neo4j]
 
 We can now add some instance data manually with a cypher script like this one:
 
@@ -44,6 +84,67 @@ match ... merge ...
 ----
 :param config: { relLabel: "owl__AnnotationProperty", relNameProp: "rdfs__label", subRelRel : "rdfs__subPropertyOf"}
 ----
+
+
+IT DOES NOT NEED TO COME FROM AN ONTO, I CAN CREATE MY ONTO IN NEO4J
+
+[source,Cypher]
+----
+match (indiv:Individual { uri: "http://individual/12345"})
+call semantics.inference.getRels(indiv,"synonym_type_property",$config) yield rel, node
+return indiv, rel, node
+----
+
+Now we can use the `semantics.inference.getRels`
+
+
+
+
+
+
+Let's look at another example. The http://www.obofoundry.org/ontology/ncbitaxon.html[ncbitaxon ontology]
+defines a number of `rdfs:subPropertyOf` relationships between annotation properties.
+For instance, it states that every `acronym` is also a `synonym_type_property`. This is the triple in
+question:
+
+[source,RDF]
+----
+...
+
+<owl:AnnotationProperty rdf:about="http://purl.obolibrary.org/obo/ncbitaxon#acronym">
+    <rdfs:label rdf:datatype="http://www.w3.org/2001/XMLSchema#string">acronym</rdfs:label>
+    <rdfs:subPropertyOf rdf:resource="http://www.geneontology.org/formats/oboInOwl#SynonymTypeProperty"/>
+</owl:AnnotationProperty>
+
+...
+----
+
+To see this inferencing procedure in action, let's start by loading the ontology. We can load it all from the link above but for this example we will only load the small fragment available http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf[here])
+
+[source,Cypher]
+----
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/NCBITaxon-subProps.rdf","RDF/XML", { handleVocabUris: "IGNORE" })
+----
+
+This should load a simple hierarchy of annotation properties like the one in this screen capture from the Neo4j browser.
+
+image::movieDB-PropertyHierarchy.png[property hierarchy in a possible Movie Database Ontology loaded into Neo4j]
+
+We can now add some instance data manually with a cypher script like this one:
+
+[source,Cypher]
+----
+match ... merge ...
+----
+
+
+[source,Cypher]
+----
+:param config: { relLabel: "owl__AnnotationProperty", relNameProp: "rdfs__label", subRelRel : "rdfs__subPropertyOf"}
+----
+
+
+IT DOES NOT NEED TO COME FROM AN ONTO, I CAN CREATE MY ONTO IN NEO4J
 
 [source,Cypher]
 ----
