@@ -1,0 +1,24 @@
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix neovoc: <neo4j://vocabulary#> .
+@prefix neoind: <neo4j://individuals#> .
+
+neovoc:ACTED_IN a owl:ObjectProperty;
+  rdfs:label "ACTED_IN";
+  rdfs:subPropertyOf neovoc:WORKED_IN .
+
+neovoc:PRODUCED a owl:ObjectProperty;
+  rdfs:label "PRODUCED";
+  rdfs:subPropertyOf neovoc:WORKED_IN .
+
+neovoc:WROTE a owl:ObjectProperty;
+  rdfs:label "WROTE";
+  rdfs:subPropertyOf neovoc:WORKED_IN .
+
+neovoc:DIRECTED a owl:ObjectProperty;
+  rdfs:label "DIRECTED";
+  rdfs:subPropertyOf neovoc:WORKED_IN .
+
+neovoc:WORKED_IN a owl:ObjectProperty;
+  rdfs:label "WORKED_IN" .
