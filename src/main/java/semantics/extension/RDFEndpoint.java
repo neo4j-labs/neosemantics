@@ -713,6 +713,9 @@ public class RDFEndpoint {
             IRI relUri = valueFactory.createIRI(BASE_VOCAB_NS, r.getType().name());
             publishStatement(publishedStatements, writer, (
                 valueFactory.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY)));
+            publishStatement(publishedStatements, writer,
+                valueFactory.createStatement(relUri, RDFS.LABEL,
+                    valueFactory.createLiteral(r.getType().name())));
             String domainLabel = r.getStartNode().getLabels().iterator().next().name();
             // Resource should be named _Resource... to avoid conflicts
             if (!domainLabel.equals("Resource")) {

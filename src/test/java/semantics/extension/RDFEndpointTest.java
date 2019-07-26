@@ -490,12 +490,15 @@ public class RDFEndpointTest {
               + "<neo4j://vocabulary#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
               + "<neo4j://vocabulary#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n"
               + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+              + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n"
               + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Actor> .\n"
               + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n"
               + "<neo4j://vocabulary#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+              + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n"
               + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Critic> .\n"
               + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n"
               + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+              + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n"
               + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Director> .\n"
               + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n";
       assertEquals(200, response.status());
