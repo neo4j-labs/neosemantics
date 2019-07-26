@@ -30,13 +30,13 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-abstract class RDFDatasetToLPGStatementProcessor extends RDFToLPGStatementProcessor implements
+abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor implements
     RDFHandler {
 
   Map<ContextResource, Map<String, Object>> resourceProps;
   Map<ContextResource, Set<String>> resourceLabels;
 
-  RDFDatasetToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf, l);
     resourceProps = new HashMap<>();
     resourceLabels = new HashMap<>();
