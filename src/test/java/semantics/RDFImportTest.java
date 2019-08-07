@@ -9,17 +9,27 @@ import static org.neo4j.driver.v1.Values.NULL;
 import static org.neo4j.driver.v1.Values.ofNode;
 import static semantics.RDFImport.PREFIX_SEPARATOR;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.rio.RDFHandler;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.RioSetting;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
+import org.eclipse.rdf4j.rio.jsonld.GenericJSONParser;
+import org.eclipse.rdf4j.rio.jsonld.JSONLDParser;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
@@ -101,6 +111,52 @@ public class RDFImportTest {
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
           "','JSON-LD',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
+
+      Map<String, Object> singleResult = importResults
+          .single().asMap();
+
+      assertEquals(0L, singleResult.get("triplesLoaded"));
+      assertEquals("KO", singleResult.get("terminationStatus"));
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+          singleResult.get("extraInfo"));
+    }
+  }
+
+  @Test
+  public void testFullTextIndexesPresent() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      session.run("CALL db.index.fulltext.createNodeIndex(\"multiLabelIndex\","
+          + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
+
+      StatementResult importResults
+          = session.run("CALL semantics.importRDF('file:///fileDoesnotExist.txt','JSON-LD',{})");
+
+      Map<String, Object> singleResult = importResults
+          .single().asMap();
+
+      assertEquals(0L, singleResult.get("triplesLoaded"));
+      assertEquals("KO", singleResult.get("terminationStatus"));
+      assertEquals("The following index is required for importing RDF. Please run "
+              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+          singleResult.get("extraInfo"));
+    }
+  }
+
+  @Test
+  public void testCompositeIndexesPresent() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+
+      session.run("CREATE INDEX ON :Person(age, country)");
+
+      StatementResult importResults
+          = session.run("CALL semantics.importRDF('file:///fileDoesnotExist.txt','JSON-LD',{})");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -2538,4 +2594,272 @@ public class RDFImportTest {
   private void createIndices(GraphDatabaseService db) {
     db.execute("CREATE INDEX ON :Resource(uri)");
   }
+
+
+
+  @Test
+  public void testLoadJSONAsTreeEmptyJSON() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String jsonFragment = "";
+
+      StatementResult importResults
+          = session
+          .run("CREATE (n:Node)  WITH n "
+                  + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "')"
+              + " YIELD node RETURN node ");
+      assertFalse(importResults.hasNext());
+    }
+  }
+
+  @Test
+  public void testLoadJSONAsTreeListAtRoot() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      //String jsonFragment = "[]";
+      String jsonFragment = "[{\"menu\": {\n"
+          + "  \"id\": \"file\",\n"
+          + "  \"value\": \"File\",\n"
+          + "  \"popup\": {\n"
+          + "    \"menuitem\": [\n"
+          + "      {\"value\": \"New\", \"onclick\": \"CreateNewDoc()\"},\n"
+          + "      {\"value\": \"Open\", \"onclick\": \"OpenDoc()\"},\n"
+          + "      {\"value\": \"Close\", \"onclick\": \"CloseDoc()\"}\n"
+          + "    ]\n"
+          + "  }\n"
+          + "}}, { \"message\": \"hello!\"} ]";
+
+      StatementResult importResults
+          = session.run("CREATE (n:Node)  WITH n "
+          + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "','MY_JSON')"
+          + " YIELD node RETURN node ");
+      assertTrue(importResults.hasNext());
+      StatementResult queryresult = session
+          .run("match (n:Node)-[:MY_JSON]->(r) return count(r) as ct ");
+      assertEquals(2, queryresult.next().get("ct").asInt());
+      queryresult = session
+          .run("match (n:Node)-[:MY_JSON]->()-[:menu]->(thing)-[:popup]->() return thing ");
+      assertEquals("File", queryresult.next().get("thing").asNode().asMap().get("value"));
+      queryresult = session
+          .run("match (n:Node)-[:MY_JSON]->(thing) where not (thing)-->() "
+              + "return thing.message as msg ");
+      assertEquals("hello!", queryresult.next().get("msg").asString());
+    }
+  }
+
+
+  @Test
+  public void testLoadJSONAsTree() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String jsonFragment = "{\"menu\": {\n"
+          + "  \"id\": \"file\",\n"
+          + "  \"value\": \"File\",\n"
+          + "  \"popup\": {\n"
+          + "    \"menuitem\": [\n"
+          + "      {\"value\": \"New\", \"onclick\": \"CreateNewDoc()\"},\n"
+          + "      {\"value\": \"Open\", \"onclick\": \"OpenDoc()\"},\n"
+          + "      {\"value\": \"Close\", \"onclick\": \"CloseDoc()\"}\n"
+          + "    ]\n"
+          + "  }\n"
+          + "}}";
+
+      StatementResult importResults
+          = session
+          .run("CREATE (n:Node { id: 'record node'})  WITH n "
+              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " RETURN node ");
+      assertTrue(importResults.hasNext());
+      assertEquals("record node", importResults.next().get("node").asNode()
+          .get("id").asString());
+      StatementResult queryresult = session
+          .run("match (n:Node:Resource)-[:_jsonTree]->()-[:menu]->()-[:popup]->()"
+              + "-[:menuitem]->(mi { value: 'Open', onclick: 'OpenDoc()'}) return mi ");
+      assertEquals("Resource",
+          queryresult.next().get("mi").asNode().labels().iterator().next());
+    }
+  }
+
+
+  @Test
+  public void testLoadJSONAsTreeWithUrisAndContext() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String jsonFragment = "{\n"
+          + "  \"@context\": {\n"
+          + "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n"
+          + "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n"
+          + "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n"
+          + "  },\n"
+          + "  \"@id\": \"http://me.markus-lanthaler.com/\",\n"
+          + "  \"name\": \"Markus Lanthaler\",\n"
+          + "  \"knows\": [\n"
+          + "    {\n"
+          + "      \"@id\": \"http://manu.sporny.org/about#manu\",\n"
+          + "      \"name\": \"Manu Sporny\"\n"
+          + "    },\n"
+          + "    {\n"
+          + "      \"name\": \"Dave Longley\",\n"
+          + "\t  \"modified\":\n"
+          + "\t    {\n"
+          + "\t      \"@value\": \"2010-05-29T14:17:39+02:00\",\n"
+          + "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n"
+          + "\t    }\n"
+          + "    }\n"
+          + "  ]\n"
+          + "}";
+
+      StatementResult importResults
+          = session
+          .run("CREATE (n:Node { id: 'I\\'m the hook node'})  WITH n "
+              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " RETURN node ");
+      assertTrue(importResults.hasNext());
+      assertEquals("I'm the hook node",
+          importResults.next().get("node").asNode().get("id").asString());
+      StatementResult queryresult = session
+          .run("match (n:Node:Resource)-[l:_jsonTree]->"
+              + "(:Resource { uri: 'http://me.markus-lanthaler.com/'}) return l ");
+      assertTrue(queryresult.hasNext());
+      queryresult = session
+          .run("match (n:Node:Resource)-[:_jsonTree]->"
+              + "(:Resource { uri: 'http://me.markus-lanthaler.com/'})-[:knows]->"
+              + "(friend) return collect(friend.name) as friends ");
+      assertTrue(queryresult.hasNext());
+      List<Object> friends = queryresult.next().get("friends").asList();
+      assertTrue(friends.contains("Dave Longley"));
+      assertTrue(friends.contains("Manu Sporny"));
+      assertEquals(2,friends.size());
+    }
+  }
+
+  @Test
+  public void testLoadJSONAsTree2() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String jsonFragment = "{\"widget\": {\n"
+          + "    \"debug\": \"on\",\n"
+          + "    \"window\": {\n"
+          + "        \"title\": \"Sample Konfabulator Widget\",\n"
+          + "        \"name\": \"main_window\",\n"
+          + "        \"width\": 333,\n"
+          + "        \"height\": 500\n"
+          + "    },\n"
+          + "    \"image\": { \n"
+          + "        \"src\": \"Images/Sun.png\",\n"
+          + "        \"name\": \"sun1\",\n"
+          + "        \"hOffset\": 250,\n"
+          + "        \"vOffset\": 250,\n"
+          + "        \"alignment\": \"center\"\n"
+          + "    },\n"
+          + "    \"text\": {\n"
+          + "        \"data\": \"Click Here\",\n"
+          + "        \"size\": 36,\n"
+          + "        \"style\": \"bold\",\n"
+          + "        \"name\": \"text1\",\n"
+          + "        \"hOffset\": 250,\n"
+          + "        \"vOffset\": 100,\n"
+          + "        \"alignment\": \"center\",\n"
+          + "        \"onMouseUp\": \"sun1.opacity = (sun1.opacity / 100) * 90;\"\n"
+          + "    }\n"
+          + "}}    ";
+
+      StatementResult importResults
+          = session
+          .run("CREATE (n:Node)  WITH n "
+              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " RETURN node ");
+      assertTrue(importResults.hasNext());
+      StatementResult queryresult = session
+          .run("match (n:Node)-[:_jsonTree]->()-[:widget]->( { debug: 'on'})"
+              + "-[:window]->(w) return w.title as title, w.width as width ");
+      Record next = queryresult.next();
+      assertEquals("Sample Konfabulator Widget", next.get("title").asString());
+      assertEquals(333, next.get("width").asInt());
+
+      queryresult = session
+          .run("match (n:Node)-[:_jsonTree]->()-[:widget]->( { debug: 'on'})"
+              + "-->(w) return count(w) as ct ");
+      assertEquals(3, queryresult.next().get("ct").asInt());
+    }
+  }
+
+
+  @Test
+  public void testLoadJSONAsTree3() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+            .toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String jsonFragment = "{\"menu\": {\n"
+          + "    \"header\": \"SVG Viewer\",\n"
+          + "    \"items\": [\n"
+          + "        {\"id\": \"Open\"},\n"
+          + "        {\"id\": \"OpenNew\", \"label\": \"Open New\"},\n"
+          + "        null,\n"
+          + "        {\"id\": \"ZoomIn\", \"label\": \"Zoom In\"},\n"
+          + "        {\"id\": \"ZoomOut\", \"label\": \"Zoom Out\"},\n"
+          + "        {\"id\": \"OriginalView\", \"label\": \"Original View\"},\n"
+          + "        null,\n"
+          + "        {\"id\": \"Quality\"},\n"
+          + "        {\"id\": \"Pause\"},\n"
+          + "        {\"id\": \"Mute\"},\n"
+          + "        null,\n"
+          + "        {\"id\": \"Find\", \"label\": \"Find...\"},\n"
+          + "        {\"id\": \"FindAgain\", \"label\": \"Find Again\"},\n"
+          + "        {\"id\": \"Copy\"},\n"
+          + "        {\"id\": \"CopyAgain\", \"label\": \"Copy Again\"},\n"
+          + "        {\"id\": \"CopySVG\", \"label\": \"Copy SVG\"},\n"
+          + "        {\"id\": \"ViewSVG\", \"label\": \"View SVG\"},\n"
+          + "        {\"id\": \"ViewSource\", \"label\": \"View Source\"},\n"
+          + "        {\"id\": \"SaveAs\", \"label\": \"Save As\"},\n"
+          + "        null,\n"
+          + "        {\"id\": \"Help\"},\n"
+          + "        {\"id\": \"About\", \"label\": \"About Adobe CVG Viewer...\"}\n"
+          + "    ]\n"
+          + "}}";
+
+      StatementResult importResults
+          = session
+          .run("CREATE (n:Node)  WITH n "
+              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " RETURN node ");
+      assertTrue(importResults.hasNext());
+      StatementResult queryresult = session
+          .run("match (n:Node)-[:_jsonTree]->()-[:menu]->( { header: 'SVG Viewer'})"
+              + "-[:items]->(item) return count(item) as itemcount, "
+              + " count(distinct item.label) as labelcount ");
+      Record next = queryresult.next();
+      assertEquals(18, next.get("itemcount").asInt());
+      assertEquals(12, next.get("labelcount").asInt());
+
+      queryresult = session
+          .run("match (n:Node)-[:_jsonTree]->()-[:menu]->( { header: 'SVG Viewer'})"
+              + "-[:items]->(item { id: 'ViewSource'}) return item.label as label ");
+      assertEquals("View Source", queryresult.next().get("label").asString());
+    }
+  }
+
 }
