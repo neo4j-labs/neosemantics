@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -31,6 +32,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
+import org.eclipse.rdf4j.rio.jsonld.GenericJSONParser;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
@@ -47,6 +49,7 @@ import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.result.GraphResult;
 import semantics.result.NamespacePrefixesResult;
+import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
 
 /**
@@ -106,7 +109,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
@@ -173,7 +176,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         format.equals(RDFFormat.TRIG.getName()) || format.equals(RDFFormat.NQUADS.getName()),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
 
     ImportResults importResults = new ImportResults();
@@ -237,7 +240,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -266,7 +269,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Given input format is not supported!");
+        "Input format not supported");
     final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
         .get("verifyUriSyntax") : true);
 
@@ -290,7 +293,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -319,7 +322,7 @@ public class RDFImport {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(
         Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -350,7 +353,7 @@ public class RDFImport {
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"),
-        "Given input format is not supported!");
+        "Input format not supported");
     RDFParserConfig conf = new RDFParserConfig(props);
     conf.setCommitSize(Long.MAX_VALUE);
 
@@ -547,6 +550,44 @@ public class RDFImport {
 
   }
 
+  @Procedure(mode = Mode.WRITE)
+  @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
+      + "Requires a uniqueness constraint on :Resource(uri)")
+  public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
+      @Name("jsonpayload") String jsonPayload,
+      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) {
+
+
+    //emptystring, no parsing and return null
+    if (jsonPayload.isEmpty()) return null;
+
+    HashMap<String, Object> params = new HashMap<>();
+    params.put("handleVocabUris","IGNORE");
+    params.put("commitSize",Long.MAX_VALUE);
+    RDFParserConfig conf = new RDFParserConfig(params);
+
+    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, conf, log);
+    try {
+      checkIndexesExist();
+      String containerUri = (String)containerNode.getProperty("uri", null);
+      if (containerUri == null ){
+        containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
+        containerNode.setProperty("uri",containerUri);
+        containerNode.addLabel(Label.label("Resource"));
+      }
+      GenericJSONParser rdfParser = new GenericJSONParser();
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
+      rdfParser.setRDFHandler(plainJSONStatementLoader);
+      rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
+          "neo4j://voc#", containerUri,relName);
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      e.printStackTrace();
+
+    }
+    return Stream.of(new NodeResult(containerNode));
+  }
+
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
     Iterable<IndexDefinition> indexes = db.schema().getIndexes();
     if (missing(indexes.iterator(), "Resource")) {
@@ -558,7 +599,7 @@ public class RDFImport {
   private boolean missing(Iterator<IndexDefinition> iterator, String indexLabel) {
     while (iterator.hasNext()) {
       IndexDefinition indexDef = iterator.next();
-      if (indexDef.getLabel().name().equals(indexLabel) &&
+      if (!indexDef.isCompositeIndex() && indexDef.getLabels().iterator().next().name().equals(indexLabel) &&
           indexDef.getPropertyKeys().iterator().next().equals("uri")) {
         return false;
       }
