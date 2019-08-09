@@ -4,15 +4,117 @@
 something here
 
 === Class hierarchies
-There are two main ways of categorising nodes in a graph, the first one is by using labels, the second
-is by creating a node representing the category and linking to it the node representing the individual
- using some kind of `IN_CATEGORY` or `TYPE` relationship.
+
+When modelling a hierarchy of categories we'll typically find categories represented by nodes and
+related nodes connected through `SUBCAT_OF` or `NARROWER_THAN` relationships (or whatever your
+choice of name will be).
+
+Here's a sample categroy from http://id.loc.gov/authorities/subjects.html[the Library of Congress Subject Headings]:
+
+[source,Cypher]
+----
+CREATE (c:LCSHTopic { authoritativeLabel: "Crystallography", dbLabel: "Crystallography", identifier: "sh 85034498" })
+CREATE (po:LCSHTopic { authoritativeLabel: "Physical optics", dbLabel: "PhysicalOptics", identifier: "sh 85095187" })
+CREATE (s:LCSHTopic { authoritativeLabel: "Solids", dbLabel: "Solids", identifier: "sh 85124647" })
+CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Crystal optics", dbLabel: "CrystalOptics", identifier: "sh 85034488" })-[:NARROWER_THAN]->(po)
+CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Crystals", dbLabel: "Crystals", identifier: "sh 85034503" })-[:NARROWER_THAN]->(s)
+CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Dimorphism (Crystallography)", dbLabel: "DimorphismCrystallography", identifier: "sh 2007001101" })
+CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Isomorphism (Crystallography)", dbLabel: "IsomorphismCrystallography", identifier: "sh 85068653" })
+----
+
+In this example we use LCSHTopic to label the categories and the `NARROWER_THAN` to link them in a
+hierarchy that as we can see in this fragment does not necessarily need to be a tree (it the general
+case it will be a graph).
+
+image::crystallography-hierarchy.png[Topic hierarchy from the LCSH]
+
+Now when it comes to use the categories we have defined to tag individuals we have two main options:
+
+* We can link nodes representing individuals to the category (or categories) they belong to using
+a `TYPE` or `IN_CATEGORY` (or again whatever your preferred name for that relationship).
+* We can also use labels, and tag a node representing an individual with the category it belongs to.
+While this approach is preferable in many cases, it will be harder to navigate to nodes with related
+labels (by related in this case I mean super or sublabels).
+
+The following methods will help you leveraging explicit class hierarchies in your graph to run
+inferences whatever the modeling approach you follow from the ones described before.
+
+==== semantics.inference.nodesInCategory
+
+Let's look at the first way of annotating individuals. This script creates a few of them and links them
+to the categories defined before.
+
+[source,Cypher]
+----
+MATCH (co:LCSHTopic { authoritativeLabel: "Crystal optics"})
+MATCH (is:LCSHTopic { authoritativeLabel: "Isomorphism (Crystallography)"})
+MATCH (cr:LCSHTopic { authoritativeLabel: "Crystals"})
+
+CREATE (:Work { title: "Crystals and light", identifier: "2167673"})-[:HAS_SUBJECT]->(co)
+CREATE (:Work { title: "Optical crystallography", identifier: "11916857"})-[:HAS_SUBJECT]->(co)
+
+CREATE (:Work { title: "Isomorphism in minerals", identifier: "8096161"})-[:HAS_SUBJECT]->(is)
+
+CREATE (:Work { title: "Crystals and life", identifier: "12873809"})-[:HAS_SUBJECT]->(cr)
+CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576"})-[:HAS_SUBJECT]->(cr)
+----
+
+image::crystallography-with-instances[Topic hierarchy with instances]
+
+With this dataset I may want to know which are the nodes in a particular category. The `nodesInCategory`
+method can help:
+
+[source,Cypher]
+----
+MATCH (cat:LCSHTopic { authoritativeLabel: "Crystallography"})
+CALL semantics.inference.nodesInCategory(cat, { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}) yield node
+return node.title as work
+----
+
+[source,Cypher]
+----
+╒══════════════════════════════════╕
+│"work"                            │
+╞══════════════════════════════════╡
+│"Optical crystallography"         │
+├──────────────────────────────────┤
+│"Crystals and light"              │
+├──────────────────────────────────┤
+│"Isomorphism in minerals"         │
+├──────────────────────────────────┤
+│"Crystals and life"               │
+├──────────────────────────────────┤
+│"Highlights in applied mineralogy"│
+└──────────────────────────────────┘
+----
+
+==== semantics.inference.inCategory(node, category, {})
+something about this function
+
 
 ==== semantics.inference.nodesLabelled
 
 
-==== semantics.inference.nodesInCategory
+[source,Cypher]
+----
+CREATE (:CrystalOptics { title: "Crystals and light", identifier: "2167673"})
+CREATE (:CrystalOptics { title: "Optical crystallography", identifier: "11916857"})
 
+CREATE (:IsomorphismCrystallography { title: "Isomorphism in minerals", identifier: "8096161"})
+
+CREATE (:Crystals { title: "Crystals and life", identifier: "12873809"})
+CREATE (:Crystals { title: "Highlights in applied mineralogy", identifier: "20234576"})
+----
+
+
+[source,Cypher]
+----
+call semantics.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN"})
+----
+
+==== semantics.inference.hasLabel(node,label,{})
+
+function
 
 === Property hierarchies
 
