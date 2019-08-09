@@ -34,6 +34,7 @@ import org.eclipse.rdf4j.rio.helpers.StatementCollector;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.procedure.Context;
+import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
@@ -60,6 +61,8 @@ public class LiteOntologyImporter {
 
 
   @Procedure(mode = Mode.WRITE)
+  @Description(
+      "Deprecated. Use semantics.importOntology(...) instead")
   public Stream<ImportResults> liteOntoImport(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {

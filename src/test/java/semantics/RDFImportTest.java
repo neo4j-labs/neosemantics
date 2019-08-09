@@ -2136,12 +2136,21 @@ public class RDFImportTest {
 
       assertEquals(6L,
           session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(13L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(13L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+              .next().get("count").asLong());
+
     }
 
   }
 
   @Test
-  public void ontoImportWithCustomNamesAndResourceLabels() throws Exception {
+  public void ontoImportWithCustomNamesFilterLabels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
@@ -2150,10 +2159,11 @@ public class RDFImportTest {
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
-          + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', "
+          + "','RDF/XML', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
+          + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
           + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
-      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+      assertEquals(30L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(0L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -2177,6 +2187,15 @@ public class RDFImportTest {
       assertEquals(6L,
           session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
               .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+              .next().get("count").asLong());
+
     }
 
   }

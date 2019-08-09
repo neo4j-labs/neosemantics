@@ -62,43 +62,44 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
 
   @Override
   public void handleStatement(Statement st) {
-//    IRI predicate = st.getPredicate();
-//    Resource subject = st.getSubject();
-//    Value object = st.getObject();
 
-    if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDFS.CLASS) || st.getObject()
-        .equals(OWL.CLASS)) && st.getSubject() instanceof IRI) {
-      instantiate(((OntologyLoaderConfig) parserConfig).getClassLabelName(), (IRI) st.getSubject());
-    } else if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDF.PROPERTY) || st
-        .getObject().equals(OWL.OBJECTPROPERTY)) && st.getSubject() instanceof IRI) {
-      instantiate(((OntologyLoaderConfig) parserConfig).getObjectPropertyLabelName(),
-          (IRI) st.getSubject());
-    } else if (st.getPredicate().equals(RDF.TYPE) && st.getObject().equals(OWL.DATATYPEPROPERTY)
-        && st.getSubject() instanceof IRI) {
-      instantiate(((OntologyLoaderConfig) parserConfig).getDataTypePropertyLabelName(),
-          (IRI) st.getSubject());
-    } else if (st.getPredicate().equals(RDFS.SUBCLASSOF) && st.getObject() instanceof IRI && st
-        .getSubject() instanceof IRI) {
-      instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-      addStatement(st);
-    } else if (st.getPredicate().equals(RDFS.SUBPROPERTYOF) && st.getObject() instanceof IRI && st
-        .getSubject() instanceof IRI) {
-      instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-      addStatement(st);
-    } else if (st.getPredicate().equals(RDFS.DOMAIN) && st.getObject() instanceof IRI && st
-        .getSubject() instanceof IRI) {
-      instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-      addStatement(st);
-    } else if (st.getPredicate().equals(RDFS.RANGE) && st.getObject() instanceof IRI && st
-        .getSubject() instanceof IRI) {
-      instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-      addStatement(st);
-    } else if ((st.getPredicate().equals(RDFS.LABEL) || st.getPredicate().equals(RDFS.COMMENT))
-        && st.getSubject() instanceof IRI) {
-      extraStatements.add(st);
-      mappedTripleCounter++;
+    if (parserConfig.getPredicateExclusionList() == null || !parserConfig
+        .getPredicateExclusionList()
+        .contains(st.getPredicate().stringValue())) {
+      if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDFS.CLASS) || st.getObject()
+          .equals(OWL.CLASS)) && st.getSubject() instanceof IRI) {
+        instantiate(((OntologyLoaderConfig) parserConfig).getClassLabelName(),
+            (IRI) st.getSubject());
+      } else if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDF.PROPERTY) || st
+          .getObject().equals(OWL.OBJECTPROPERTY)) && st.getSubject() instanceof IRI) {
+        instantiate(((OntologyLoaderConfig) parserConfig).getObjectPropertyLabelName(),
+            (IRI) st.getSubject());
+      } else if (st.getPredicate().equals(RDF.TYPE) && st.getObject().equals(OWL.DATATYPEPROPERTY)
+          && st.getSubject() instanceof IRI) {
+        instantiate(((OntologyLoaderConfig) parserConfig).getDataTypePropertyLabelName(),
+            (IRI) st.getSubject());
+      } else if (st.getPredicate().equals(RDFS.SUBCLASSOF) && st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        addStatement(st);
+      } else if (st.getPredicate().equals(RDFS.SUBPROPERTYOF) && st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        addStatement(st);
+      } else if (st.getPredicate().equals(RDFS.DOMAIN) && st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        addStatement(st);
+      } else if (st.getPredicate().equals(RDFS.RANGE) && st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        addStatement(st);
+      } else if ((st.getPredicate().equals(RDFS.LABEL) || st.getPredicate().equals(RDFS.COMMENT))
+          && st.getSubject() instanceof IRI) {
+        extraStatements.add(st);
+        mappedTripleCounter++;
+      }
     }
-
     totalTriplesParsed++;
 
     if (parserConfig.getCommitSize() != Long.MAX_VALUE
@@ -201,7 +202,6 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
     resourceLabels.clear();
     resourceProps.clear();
 
-    //TODO what to return here? number of nodes and rels?
     return 0;
   }
 
