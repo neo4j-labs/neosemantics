@@ -30,8 +30,10 @@ import semantics.result.RelAndNodeResult;
 
 public class MicroReasoners {
 
-  private static final String sloInferenceFormatReturnClassNames ="CALL db.labels() YIELD label with collect(label) as labels \n"
-      + "MATCH (:`%1$s` { `%2$s`: $virtLabel })<-[:`%3$s`*]-(sl:`%1$s`) WHERE sl.`%2$s` in labels RETURN collect(distinct sl.`%2$s`) + $virtLabel  as l";
+  private static final String sloInferenceFormatReturnClassNames = "CALL db.labels() YIELD label "
+      + " WITH collect(label) as labels MATCH path = (c:`%1$s`)<-[:`%3$s`*]-(s:`%1$s`) "
+      + " WHERE s.`%2$s` in labels AND NOT (c)-[:`%3$s`]->() AND any(x in nodes (path) "
+      + " WHERE x.`%2$s` = $virtLabel ) RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
   private static final String subcatPathQuery = "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
       + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
   private static final String scoInferenceCypherTopDown = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
@@ -120,9 +122,8 @@ public class MicroReasoners {
 
   @Procedure(mode = Mode.READ)
   @Description(
-      "semantics.inference.getRels(node,'rel','>') - returns all relationships of type 'virtRel' "
-          +
-          "or its subtypes along with the target nodes.")
+      "semantics.inference.getRels(node,'rel', { relDir: '>'} ) - returns all relationships "
+          + "of type 'rel' or its subtypes along with the target nodes.")
   public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("rel") String virtRel,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -152,7 +153,8 @@ public class MicroReasoners {
 
 
   @UserFunction
-  @Description("semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'.")
+  @Description("semantics.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
+      + "implicitly labeled as 'label'.")
   public boolean hasLabel(
       @Name("node") Node individual,
       @Name("label") String label,
