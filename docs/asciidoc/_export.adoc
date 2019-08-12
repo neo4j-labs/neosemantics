@@ -128,12 +128,7 @@ If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE`
 :GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
 ----
 
-"describe/uri/" + URLEncoder
-              .encode("http://www.example.org/exampleDocument#Monica",
-                  StandardCharsets.UTF_8.toString())
-              + "?graphuri=http://www.example.org/exampleDocument%23G1"
-
-Again, notice the URL enconding of the URI and the `format` parameter to specify the serialisation format. Here's the output of the request:
+Again, notice the URL enconding of the URI (the clean URI is `http://neo4j.org/ind#neo4j355`) and the `format` parameter to specify the serialisation format. Here's the output of the request:
 
 [source,Cypher]
 ----
@@ -164,7 +159,10 @@ Again, notice the URL enconding of the URI and the `format` parameter to specify
 </rdf:RDF>
 ----
 
-Additionally, you can provide a graph URI to specify the context of the given resource. Here is how you can do that on the RDF dataset we imported in <<ImportRDFDataset>> section:
+Additionally, you can provide a graph URI to specify the context of the given resource using the `graphuri` parameter.
+Here is how you can serialise as RDF the resource identified by URI `http://www.example.org/exampleDocument#Monica`
+but only the statements in the named graph `http://www.example.org/exampleDocument#G1`. Normally such a model will
+ be the result of importing RDF Quads as described in the <<ImportQuadRDF>> section. Note that URIS are URL encoded:
 
 [source,Cypher]
 ----
@@ -398,7 +396,7 @@ We can use this example to set the serialisation format to `JSON-LD`, which woul
 } ]
 ----
 
-Run this cypher instead `MATCH (n:Resource)-[r]-(m) RETURN * ` and you'll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.
+Run this cypher instead `MATCH (n:Resource)-[r]-(m) RETURN *` and you'll be returning the whole dataset, or in other words, regenerating from Neo4j exactly the same RDF that we ingested in the first place.
 
 
 === Export Graph Ontology

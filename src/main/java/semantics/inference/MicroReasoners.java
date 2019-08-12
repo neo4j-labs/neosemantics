@@ -16,6 +16,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Result;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -29,8 +30,13 @@ import semantics.result.RelAndNodeResult;
 
 public class MicroReasoners {
 
-  private static final String sloInferenceFormatReturnClassNames = "RETURN $virtLabel as l UNION MATCH (:`%1$s` { `%2$s`: $virtLabel})<-[:`%3$s`*]-(sl:`%1$s`) RETURN distinct sl.`%2$s` as l";
-  private static final String scoInferenceCypher = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
+  private static final String sloInferenceFormatReturnClassNames = "CALL db.labels() YIELD label "
+      + " WITH collect(label) as labels MATCH path = (c:`%1$s`)<-[:`%3$s`*]-(s:`%1$s`) "
+      + " WHERE s.`%2$s` in labels AND NOT (c)-[:`%3$s`]->() AND any(x in nodes (path) "
+      + " WHERE x.`%2$s` = $virtLabel ) RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
+  private static final String subcatPathQuery = "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
+      + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
+  private static final String scoInferenceCypherTopDown = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
   private static final String scoInferenceCypherBottomUp = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(subcat) = $catId RETURN collect(DISTINCT id(cat)) AS catIds";
   private static final String sroInferenceFormatReturnRelNames = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
   private static final String DEFAULT_SLO_REL_NAME = "SLO";
@@ -64,25 +70,17 @@ public class MicroReasoners {
             : DEFAULT_CAT_NAME_PROP_NAME),
         (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : DEFAULT_SLO_REL_NAME)),
         params);
+
+    List<String> labelList = (List<String>)results.next().get("l");
+
     StringBuilder sb = new StringBuilder();
     sb.append("cypher runtime=slotted ");
-    boolean isFirstSubLabel = true;
-    while (results.hasNext()) {
-      Map<String, Object> result = results.next();
-      String subLabel = (String) result.get("l");
-      if (!isFirstSubLabel) {
-        sb.append(" UNION ");
-      } else {
-        isFirstSubLabel = false;
-      }
-      sb.append(" MATCH (x:`").append(subLabel).append("`) RETURN x as result ");
-    }
-    if (!sb.toString().equals("cypher runtime=slotted ")) {
-      return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result"))
+    sb.append("unwind [] as result return result ");
+    labelList.forEach( x  -> sb.append(" UNION MATCH (x:`").append(x).append("`) RETURN x as result ") );
+
+    return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result"))
           .map(NodeResult::new);
-    } else {
-      return null;
-    }
+
   }
 
   /* in this case the node representing the category exist in the graph and is explicitly linked to the instances of the category
@@ -97,34 +95,22 @@ public class MicroReasoners {
     final String subCatRelName = (props.containsKey("subCatRel") ? (String) props.get("subCatRel")
         : DEFAULT_SCO_REL_NAME);
 
-    List<Long> subcatIds = getSubcatIds(catNode, subCatRelName);
+
     Map<String, Object> params = new HashMap<>();
-    StringBuilder sb = new StringBuilder();
-    sb.append("cypher runtime=slotted ");
-    boolean isFirstSubLabel = true;
-    for (Long catId : subcatIds) {
-      if (!isFirstSubLabel) {
-        sb.append(" UNION ");
-      } else {
-        isFirstSubLabel = false;
-      }
-      sb.append(" MATCH (x)-[:`").append(inCatRelName).append("`]->(cat) WHERE ID(cat)=$cat_")
-          .append(catId).append(" RETURN x as result ");
-      params.put("cat_" + catId, catId);
-    }
-    if (!sb.toString().equals("cypher runtime=slotted ")) {
-      return db.execute(sb.toString(), params).stream().map(n -> (Node) n.get("result"))
+    params.put("catId", catNode.getId());
+
+    String cypher = "MATCH (rootCategory)<-[:" + subCatRelName + "*0..]-()<-[:" +
+        inCatRelName + "]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
+
+    return db.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
           .map(NodeResult::new);
-    } else {
-      return null;
-    }
   }
 
   private List<Long> getSubcatIds(Node catNode, String subCatRelName) {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("catId", catNode.getId());
-    return (List<Long>) db.execute((subCatRelName == null ? scoInferenceCypher
-        : scoInferenceCypher.replace("SCO", subCatRelName)), params).next().get("catIds");
+    return (List<Long>) db.execute((subCatRelName == null ? scoInferenceCypherTopDown
+        : scoInferenceCypherTopDown.replace("SCO", subCatRelName)), params).next().get("catIds");
   }
 
   private List<Long> getSuperCatIds(long catNodeId, String subCatRelName) {
@@ -136,9 +122,8 @@ public class MicroReasoners {
 
   @Procedure(mode = Mode.READ)
   @Description(
-      "semantics.inference.getRels(node,'rel','>') - returns all relationships of type 'virtRel' "
-          +
-          "or its subtypes along with the target nodes.")
+      "semantics.inference.getRels(node,'rel', { relDir: '>'} ) - returns all relationships "
+          + "of type 'rel' or its subtypes along with the target nodes.")
   public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("rel") String virtRel,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -168,29 +153,29 @@ public class MicroReasoners {
 
 
   @UserFunction
-  @Description("semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'.")
+  @Description("semantics.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
+      + "implicitly labeled as 'label'.")
   public boolean hasLabel(
       @Name("node") Node individual,
       @Name("label") String label,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Map<String, Object> params = new HashMap<String, Object>();
-    params.put("virtLabel", label);
-    Result results = db.execute(String.format(sloInferenceFormatReturnClassNames,
+
+    String queryString = String.format(subcatPathQuery,
         (props.containsKey("catLabel") ? (String) props.get("catLabel") : DEFAULT_CAT_LABEL_NAME),
         (props.containsKey("catNameProp") ? (String) props.get("catNameProp")
             : DEFAULT_CAT_NAME_PROP_NAME),
-        (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : DEFAULT_SLO_REL_NAME)),
-        params);
+        (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : DEFAULT_SLO_REL_NAME));
 
-    Set<String> sublabels = new HashSet<>();
-    sublabels.add(label);
-    while (results.hasNext()) {
-      sublabels.add((String) results.next().get("l"));
-    }
+    Map<String, Object> params = new HashMap<String, Object>();
+    params.put("virtLabel", label);
+
+
+
     Iterable<Label> labels = individual.getLabels();
     boolean is = false;
     for (Label l : labels) {
-      is |= sublabels.contains(l.name());
+      params.put("oneOfCats",l.name());
+      is |= (l.name().equals(label)?true:db.execute(queryString, params).next().get("isTrue").equals(true));
     }
 
     return is;

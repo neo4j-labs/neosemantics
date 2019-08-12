@@ -10,8 +10,8 @@ import java.util.Objects;
  * Created on 06.06.2019
  *
  * @author Emre Arkan
- * @see RDFDatasetDirectStatementLoader
- * @see RDFDatasetDirectStatementDeleter
+ * @see RDFQuadDirectStatementLoader
+ * @see RDFQuadDirectStatementDeleter
  */
 public class ContextResource {
 

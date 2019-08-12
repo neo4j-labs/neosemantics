@@ -1,55 +1,265 @@
 [[Reference]]
 == NSMNTX Reference 
 
-...work in progress...
+Complete list of all available stored procedures, functions and extensions in NSMNTX.
 
-### Stored Procedures
+=== Stored Procedures
 
+==== RDF Import
+
+[options="header"]
 |===
-| Stored Proc Name        | params           | Description and example usage  
-| semantics.mapping.addSchema      | <ul><li>URL of the schema/vocabulary/ontology</li><li>prefix to be used in serialisations</li></ul> | Creates a reference to a vocabulary. Needed to define mappings. <br>**Examples:**<br>call semantics.mapping.addSchema("http://schema.org/","sch") 
-| semantics.mapping.dropSchema      | <ul><li>URL of the schema/vocabulary/ontology</li>| Deletes a vocabulary reference and all associated mappings. <br>**Examples:**<br>call semantics.mapping.dropSchema("http://schema.org/") 
-| semantics.mapping.listSchemas      | <ul><li>[optional] search string to list only schemas containing the search string in their uri or in the associated prefix</li></ul> | Returns all vocabulary references. <br>**Examples:**<br>call semantics.mapping.listSchemas() <br> call semantics.mapping.listSchemas('schema') <br> Combining list and drop to delet a set of schemas by name: <br> CALL semantics.mapping.listSchemas("fibo") YIELD node AS schemaDef WITH schemaDef, schemaDef._ns AS schname CALL semantics.mapping.dropSchema(schemaDef._ns) YIELD output RETURN schname, output 
-| semantics.mapping.addCommonSchemas      | | Creates a references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc. <br>**Examples:**<br>call semantics.mapping.addCommonSchemas() 
-| semantics.mapping.addMappingToSchema      | <ul><li>The mapping reference node (can be retrieved by addSchema or listSchemas)</li><li>Neo4j DB schema element. It can be either a Label, property key or relationship type </li><li>Local name of the element in the selected schema (Class name, DataTypeProperty name or ObjectProperty name)</li></ul> | Creates a mapping for an element in the Neo4j DB schema to a vocabulary element. <br>**Examples:**<br> Getting a schema reference using listSchemas and creating a mapping for it: <br>call semantics.mapping.listSchemas("http://schema.org") yield node as sch <br> call semantics.mapping.addMappingToSchema(sch,"Movie","Movie") yield node as mapping return mapping 
-| semantics.mapping.dropMapping      | <ul><li>mapped DB element name to remove the mapping for</li></ul> | Returns an output text message indicating success/failure of the deletion. <br>**Examples:**<br>call semantics.mapping.dropMapping("Person") 
-| semantics.mapping.listMappings      | <ul><li>[optional]search string to list only mappings containing the search string in the DB element name</li></ul> | Returns a list with all the mappings. <br>**Examples:**<br>call semantics.mapping.listMappings() 
+| Procedure Name        | params           | Description and example usage
+|semantics.importRDF
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+|Fetches RDF from a url (file or http) and stores it in Neo4j as a property graph. This procedure requires and index on :Resource(uri)
+|semantics.importRDFSnippet
+a|
+* string containing a valid RDF fragment
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Imports an RDF snippet passed as parameter and stores it in Neo4j as a property graph. Requires and index on :Resource(uri)
+|semantics.importQuadRDF
+a|
+* URL of the dataset
+* serialization format (valid formats: TriG,N-Quads)
+* optional map with params from the table below
+| importRDF for RDF Quads
+|semantics.importOntology
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the *ontology import* table below
+| Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.
+|semantics.streamRDF
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Parses RDF and streams each triple as a record with <S,P,O> along with datatype and language tag for Literal values. No writing to the DB. This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.
+|semantics.previewRDF
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Parses RDF and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB. Notice that this is adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser.
+|semantics.previewRDFSnippet
+a|
+* string containing a valid RDF fragment
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Parses an RDF fragment passed as parameter (no retrieval from url) and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB
+|semantics.deleteRDF
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Deletes triples from Neo4j. Works on a graph resulted of importing RDF via semantics.importRDF(). Delete config must match the one used on import
+|semantics.deleteQuadRDF
+a|
+ * URL of the dataset
+ * serialization format (valid formats: TriG,N-Quads)
+ * optional map with params from the table below
+| Deletes quads from Neo4j. Works on a graph resulted of importing RDF quads via semantics.importQuadRDF(). Delete config must match the one used on import
 |===
 
+===== RDF Import Params
 
-Params
 
+[options="header"]
 |===
-| Param        | values(default)           | Description  
-| shortenUrls      | boolean (true) | when set to true, full urls are shortened using generated prefixes for both property names, relationship names and labels 
-| typesToLabels      | boolean (true) | when set to true, rdf:type statements are imported as node labels in Neo4j 
-| languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported  
-| headerParams      | map {} | parameters to be passed in the HTTP GET request. <br> Example: { authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'} 
-| commitSize      | integer (25000) | commit a partial transaction every n triples 
+| Param        | values(default)           | Description
+| handleVocabUris      | 'SHORTEN','IGNORE','MAP','KEEP' ('SHORTEN')
+a| * 'SHORTEN', full uris are shortened using prefixes for property names, relationship names and labels
+* 'IGNORE' uris are ignored and only local names are kept
+* 'MAP' vocabulary element mappings are applied on import
+* 'KEEP' uris are kept unchanged
+| applyNeo4jNaming | boolean (false)| when set to true and in combination with `handleVocabUris: 'IGNORE'`, Neo4j
+capitalisation is applied to vocabulary elements (all caps for relationship types, capital first for labels, etc.)
+| handleMultival | 'OVERWRITE', 'ARRAY' ('OVERWRITE')
+a| * 'OVERWRITE' property values are kept single valued. Multiple values in the imported RDF are overwriten (only the last one is kept)
+* 'ARRAY' properties are stored in an array enabling storage of multiple values. All of them unless `multivalPropList` is set.
+| multivalPropList | list of strings ([])| List of property names (full uri) to be stored as arrays. The rest are treated as 'OVERWRITE'.
+| keepLangTag | boolean (false) | when set to true, the language tag is kept along with the property value. Useful for multilingual datasets.
+Use helper function `getLangValue` to get specific values.
+| predicateExclusionList | list of strings ([]) | List  of predicates (full uri) that are to be ignored on parsing RDF and not stored in Neo4j.
+| typesToLabels      | boolean (true) | when set to true, rdf:type statements are imported as node labels in Neo4j
+| languageFilter      | ['en','fr','es',...] | when set, only literal properties with this language tag (or untagged ones) are imported
+| headerParams      | map {} | parameters to be passed in the HTTP GET request or `payload` if POST request. <br> Example: `{ authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}`
+| commitSize      | integer (25000) | commit a partial transaction every n triples
 | nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB
+| verifyUriSyntax | boolean (true) | by default, uri syntax is checked. This can be disable d by setting this parameter to `false`
 | keepCustomDataTypes | boolean(false) | when set to true, all properties containing a custom data type will be saved as a string followed by their custom data type IRIs
-| customDataTypedPropList| ['http://example.com/power'] | when set, only custom data types of literal properties in this list are imported
+| customDataTypedPropList| list of strings ([]) | when set, only custom data types of literal properties in this list are imported
 |===
 
 
-### Functions
+===== Ontology Import Params
 
+
+[options="header"]
 |===
-| Stored Proc Name        | params           | Description and example usage    
-| semantics.getIRILocalName      | **[function]**<ul><li>IRI string</li></ul> | Returns the local part of the IRI (stripping out the namespace) <br> **Example:**<br>RETURN semantics.getIRILocalName('http://schema.org/Person')  
-| semantics.getIRINamespace      | **[function]**<ul><li>IRI string</li></ul> | Returns the namespace part of the IRI (stripping out the local part) <br> **Example:**<br>RETURN semantics.getIRINamespace('http://schema.org/Person')  
+| Param        | values(default)           | Description
+| predicateExclusionList | list of strings ([]) | List  of predicates (full uri) that are to be ignored on parsing RDF and not stored in Neo4j.
+| headerParams      | map {} | parameters to be passed in the HTTP GET request or `payload` if POST request. <br> Example: `{ authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}`
+| commitSize      | integer (25000) | commit a partial transaction every n triples
+| nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB
+| verifyUriSyntax | boolean (true) | by default, uri syntax is checked. This can be disable d by setting this parameter to `false`
+| classLabelName      | string ('Class') |  Label for classes in the ontology
+| subClassOfRelName      | string ('SCO') |  Relationship name for `rdfs:subClassOf` statements
+| dataTypePropertyLabelName      | string ('Property') |  Label for DataTypeProperty definitions (attributes)
+| objectPropertyLabelName      | string ('Relationship') |  Label for ObjectProperty definitions (relationships)
+| subPropertyOfRelName      | string ('SPO') |  Relationship  for `rdfs:subPropertyOf` statements
+| domainRelName      | string ('DOMAIN') |  Domain relationship between Classes and DataTypeProperty/ObjectProperty
+| rangeRelName      | string ('RANGE') |  Range relationship between Classes and DataTypeProperty/ObjectProperty
+|===
+
+
+==== RDF Import Utils
+
+[options="header"]
+|===
+| Procedure Name        | params           | Description and example usage
+|semantics.addNamespacePrefix
+a|
+* prefix: string (like `owl`)
+* namespace: namespace part of a uri (like `http://www.w3.org/2002/07/owl#`)
+| Adds namespace - prefix pair definition to be used for RDF import
+|semantics.listNamespacePrefixes | params | Lists all currently defined namespace prefix definitions
+|===
+
+
+==== Model Mapping
+
+[options="header"]
+|===
+| Procedure Name        | params           | Description and example usage
+| semantics.mapping.addSchema
+a| * URL of the schema/vocabulary/ontology
+* prefix to be used in serialisations | Creates a reference to a vocabulary. Needed to define mappings.
+| semantics.mapping.dropSchema
+a|
+* URL of the schema/vocabulary/ontology| Deletes a vocabulary reference and all associated mappings.
+| semantics.mapping.listSchemas
+a| * optional filter string |  Returns all vocabulary references. When filter string is set, only schemas containing the search string in their uri or in the associated prefix are returned.
+| semantics.mapping.addCommonSchemas      | no prams | Creates references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc
+| semantics.mapping.addMappingToSchema
+a| * URL of the schema/voc/ontology
+* The name of the element in the Neo4j graph (a property name, a label or a relationship type)
+* The matching element (Class, DataTypeProperty or ObjectProperty) in the public schema. Only the local name of the element |
+Creates a mapping for an element in the Neo4j DB schema to a vocabulary element
+| semantics.mapping.dropMapping      |
+* mapped DB element name to remove the mapping |
+Returns an output text message indicating success/failure of the deletion
+| semantics.mapping.listMappings
+a|
+* optional filter string
+| Returns a list with all the currently defined mappings. Whe filter string is passed, only mappings containing the string in the
+DB element name or the schema element URI are returned
+|===
+
+==== Inferencing
+
+[options="header"]
+|===
+| Stored Proc Name        | params           | Description
+|semantics.inference.nodesLabelled
+a|
+* a string with a label name
+* parameters as described in table below | returns all nodes with label 'label' or its sublabels
+|semantics.inference.nodesInCategory
+a|
+* a node representing the category
+* parameters as described in table below  | returns all nodes connected to Node 'catNode' or its subcategories
+|semantics.inference.getRels
+a|
+* a start node
+* a (real or 'virtual') relationship type
+* parameters as described in table below | returns all relationships of type 'virtRel' or its subtypes along with the target nodes
+|semantics.inference.hasLabel *(function)*
+a| * a node
+* a label name as a string
+* parameters as described in table below | checks whether node is explicitly or implicitly labeled as 'label'
+|semantics.inference.inCategory *(function)*
+a|
+* a node representing an instance
+* a node representing a category
+* parameters as described in table below | checks whether node is explicitly or implicitly in a category
+|===
+
+
+=== Utility Functions
+[options="header"]
+|===
+| Function Name        | params           | Description
+| semantics.getIRILocalName      | URI string | Returns the local part of the URI (stripping out the namespace)
+| semantics.getIRINamespace      | URI string | Returns the namespace part of the URI (stripping out the local part)
+| semantics.getDataType | string (a property value) | Returns the XMLSchema (or custom) datatype of a property value when present
+| semantics.getLangValue | string (a property value) | Returns the value with the language tag passed as first argument or null if there's not a value for the provided language tag
+| semantics.getValue | string (a property value)| Returns the value of a datatype of a property after stripping out the datatype information or language tag  when present
+| semantics.shortFromUri | string (a URI)| Returns the shortened version of an IRI using the existing namespace definitions
+| semantics.uriFromShort | string (a shortened URI)| Returns the expanded (full) URI given a shortened one created in the load process with `semantics.importRDF`
+| semantics.importJSONAsTree
+a| * node to link the imported json to
+* the json fragment
+* (optional) relationship name linking the root node of the JSON to the node passed as first param | Imports a JSON payload by mapping it to nodes and relationships (JSON-LD style). Requires a uniqueness constraint on :Resource(uri)
 |===
 
 
 
-
-
-### Extensions (HTTP endpoints)
-
+=== Extensions (HTTP endpoints)
+[options="header"]
+[cols="15,5,45,35"]
 |===
-| Extension        | params           | Description and example usage  
-| /rdf/describe/id      | <ul><li><b>nodeid:</b>the id of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. The format will be determined by the **accept** parameter in the header. Default is JSON-LD <br> **Example:**<br>:GET /rdf/describe/id?nodeid=0&excludeContext 
-| /rdf/describe/uri      | <ul><li><b>nodeuri:</b>the uri of a node</li><li><b>excludeContext:</b>(optional) if present output will not include connected nodes, just selected one.</li></ul> | Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri. This property is the one used by this extension to lookup a node. [NOTE: URIs should be urlencoded. It's normally not a problem unless there are **hash signs in it** (escape them in the Neo4j browser with %23)] <br> **Example:**<br>:GET /rdf/describe/uri?nodeuri=http://dataset.com#id_1234  
-| /rdf/cypher      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li><li><b>showOnlyMapped:</b>(optional, default is false) if present output will exclude unmapped elements (labels,attributes, relationships)</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query.<br> **Example:**<br>:POST /rdf/cypher { "cypher" : "MATCH (n:Person { name : 'Keanu Reeves'})-[r]-(m:Movie) RETURN n,r,m " , "showOnlyMapped" : true }  
-| /rdf/cypheronrdf      | JSON map with the following keys: <ul><li><b>cypher:</b>the cypher query to run</li></ul> | Produces an RDF serialization of the nodes and relationships returned by the query. It works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a way that nodes are labeled as :Resource and have an uri.<br> **Example:**<br>:POST /rdf/cypheronrdf { "cypher":"MATCH (a:Resource {uri:'http://dataset/indiv#153'})-[r]-(b) RETURN a, r, b"}  
+| method| type| params| Description
+| /rdf/describe/id/<nodeid>
+|GET
+a|
+* nodeid: path parameter containing the id of a node
+* excludeContext: Optional named parameter. If present output will not include connected nodes, just selected one.
+* format: RDF serialisation format. When present, it overrides the header param *accept*.
+| Produces an RDF serialization of the selected node. The format will be determined by the *accept* parameter in the header. Default is Turtle
+| /rdf/describe/uri/<nodeuri>
+|GET
+a|
+* nodeuri: path parameter containing the (urlencoded) uri of a node.
+* excludeContext: (optional) if present output will not include connected nodes, just selected one.
+* graphuri: (optional) if present and the graph includes Quad information, only statements in the selected named graph are returned.The value  of the parameter is the (urlencoded) uri of a named graph.
+* format: RDF serialisation format. When present, it overrides the header param *accept*.
+| Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset
+via **semantics.importRDF**, **semantics.importQuadRDF** or built in a way that nodes are labeled as :Resource and have an uri.
+|/rdf/describe/find/<l>/<p>/<v>
+|GET
+a|
+* the method takes three parameters passed as path parameters in the URL: <l>/<p>/<v>. They represent respectively a label, a property name and a property value.
+* excludeContext: Optional named parameter. If present output will not include connected nodes, just selected one.
+* valType: required when the property value is not to be treated as a string. Valid values: INTEGER, FLOAT and BOOLEAN
+* format: RDF serialisation format. When present, it overrides the header param *accept*.
+| returns  nodes matching the filter on label and property value
+| /rdf/cypher
+| POST
+a| POST request taking as parameter a JSON map with the following keys:
+
+* cypher: the cypher query to run
+* cypherParams: parameters  for the cypher query
+* showOnlyMapped: (optional, default is false) if present output will exclude unmapped elements (see how to define mappings for labels,attributes, relationships)
+* format: RDF serialisation format. When present, it overrides the header param *accept*.
+| Produces an RDF serialization of the nodes and relationships returned by the Cypher query
+| /rdf/cypheronrdf
+| POST
+a| same parameters as `/rdf/cypher`
+| Same as `/rdf/cypher` but it works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a
+way that nodes are labeled as :Resource and have an uri.
+|/rdf/onto
+| GET
+a| * format: RDF serialisation format. When present, it overrides the header param *accept*.
+| returns an OWL ontology based on the graph schema
+|/rdf/ontonrdf
+| GET
+a| * format: RDF serialisation format. When present, it overrides the header param *accept*.
+| Same as  /rdf/onto but it works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a
+way that nodes are labeled as :Resource and have an uri.
 |===

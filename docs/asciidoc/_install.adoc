@@ -34,3 +34,8 @@ it will produce two jars
 2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add all third party dependencies (look at the pom.xml). 
   
 
+=== Feedback
+Please provide feedback and report bugs as GitHub issues or join the Neo4j Community Forum.
+
+=== Acknowledgements
+NSMNTX uses https://rdf4j.eclipse.org/[rdf4j] for parsing and serialising RDF. Eclipse rdf4j is a powerful Java framework for processing and handling RDF data.

@@ -30,14 +30,14 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-class RDFDatasetDirectStatementLoader extends RDFDatasetToLPGStatementProcessor implements
+class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implements
     Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
   private static final String[] EMPTY_ARRAY = new String[0];
   private Cache<ContextResource, Node> nodeCache;
 
-  RDFDatasetDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
 
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
