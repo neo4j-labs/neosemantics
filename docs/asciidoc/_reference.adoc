@@ -3,9 +3,9 @@
 
 Complete list of all available stored procedures, functions and extensions in NSMNTX.
 
-### Stored Procedures
+=== Stored Procedures
 
-#### RDF Import
+==== RDF Import
 
 [options="header"]
 |===
@@ -66,7 +66,7 @@ a|
 | Deletes quads from Neo4j. Works on a graph resulted of importing RDF quads via semantics.importQuadRDF(). Delete config must match the one used on import
 |===
 
-##### RDF Import Params
+===== RDF Import Params
 
 
 [options="header"]
@@ -97,7 +97,7 @@ Use helper function `getLangValue` to get specific values.
 |===
 
 
-##### Ontology Import Params
+===== Ontology Import Params
 
 
 [options="header"]
@@ -118,7 +118,7 @@ Use helper function `getLangValue` to get specific values.
 |===
 
 
-#### RDF Import Utils
+==== RDF Import Utils
 
 [options="header"]
 |===
@@ -132,7 +132,7 @@ a|
 |===
 
 
-#### Model Mapping
+==== Model Mapping
 
 [options="header"]
 |===
@@ -161,11 +161,40 @@ a|
 DB element name or the schema element URI are returned
 |===
 
+==== Inferencing
 
-### Utility Functions
 [options="header"]
 |===
-| Stored Proc Name        | params           | Description and example usage    
+| Stored Proc Name        | params           | Description
+|semantics.inference.nodesLabelled
+a|
+* a string with a label name
+* parameters as described in table below | returns all nodes with label 'label' or its sublabels
+|semantics.inference.nodesInCategory
+a|
+* a node representing the category
+* parameters as described in table below  | returns all nodes connected to Node 'catNode' or its subcategories
+|semantics.inference.getRels
+a|
+* a start node
+* a (real or 'virtual') relationship type
+* parameters as described in table below | returns all relationships of type 'virtRel' or its subtypes along with the target nodes
+|semantics.inference.hasLabel *(function)*
+a| * a node
+* a label name as a string
+* parameters as described in table below | checks whether node is explicitly or implicitly labeled as 'label'
+|semantics.inference.inCategory *(function)*
+a|
+* a node representing an instance
+* a node representing a category
+* parameters as described in table below | checks whether node is explicitly or implicitly in a category
+|===
+
+
+=== Utility Functions
+[options="header"]
+|===
+| Function Name        | params           | Description
 | semantics.getIRILocalName      | URI string | Returns the local part of the URI (stripping out the namespace)
 | semantics.getIRINamespace      | URI string | Returns the namespace part of the URI (stripping out the local part)
 | semantics.getDataType | string (a property value) | Returns the XMLSchema (or custom) datatype of a property value when present
@@ -173,22 +202,15 @@ DB element name or the schema element URI are returned
 | semantics.getValue | string (a property value)| Returns the value of a datatype of a property after stripping out the datatype information or language tag  when present
 | semantics.shortFromUri | string (a URI)| Returns the shortened version of an IRI using the existing namespace definitions
 | semantics.uriFromShort | string (a shortened URI)| Returns the expanded (full) URI given a shortened one created in the load process with `semantics.importRDF`
+| semantics.importJSONAsTree
+a| * node to link the imported json to
+* the json fragment
+* (optional) relationship name linking the root node of the JSON to the node passed as first param | Imports a JSON payload by mapping it to nodes and relationships (JSON-LD style). Requires a uniqueness constraint on :Resource(uri)
 |===
 
 
-#### Inferencing
-"semantics.importJSONAsTree"	"semantics.importJSONAsTree(containerNode :: NODE?, jsonpayload :: STRING?, connectingRel = _jsonTree :: STRING?) :: (node :: NODE?)"	"Imports a json payload and maps it to nodes and relationships (JSON-LD style). Requires a uniqueness constraint on :Resource(uri)"	["editor", "publisher", "architect", "admin"]	"WRITE"
-"semantics.inference.getRels"	"semantics.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)"	"semantics.inference.getRels(node,'rel','>') - returns all relationships of type 'virtRel' or its subtypes along with the target nodes."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
-"semantics.inference.nodesInCategory"	"semantics.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node :: NODE?)"	"semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
-"semantics.inference.nodesLabelled"	"semantics.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)"	"semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels."	["reader", "editor", "publisher", "architect", "admin"]	"READ"
 
-"semantics.inference.hasLabel"	"semantics.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.hasLabel(node,label,{}) - checks whether node is explicitly or implicitly labeled as 'label'."	["admin", "reader", "editor", "publisher", "architect"]
-"semantics.inference.inCategory"	"semantics.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)"	"semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category."	["admin", "reader", "editor", "publisher", "architect"]
-
-
-
-
-### Extensions (HTTP endpoints)
+=== Extensions (HTTP endpoints)
 [options="header"]
 [cols="15,5,45,35"]
 |===
