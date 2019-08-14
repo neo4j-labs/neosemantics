@@ -51,7 +51,7 @@ inferences whatever the modeling approach you follow from the ones described bef
 ==== semantics.inference.nodesLabelled
 
 Let's look at the first way of annotating individuals. This script creates a few publications (books) from the
-http://British National Library catalog[British National Library catalog] sets a label
+https://bnb.data.bl.uk/[British National Library catalog] sets a label
 on each of them. The labels match categories defined before.
 
 [source,Cypher]

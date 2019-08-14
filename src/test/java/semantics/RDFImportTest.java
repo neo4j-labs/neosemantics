@@ -1167,8 +1167,13 @@ public class RDFImportTest {
           = session.run("CALL semantics.streamRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI() + "','Turtle',{})");
-      assertFalse(importResults
+      assertTrue(importResults
           .hasNext());
+      Record next = importResults.next();
+      assertEquals("neo4j://error", next.get("subject").asString());
+      assertEquals("neo4j://message", next.get("predicate").asString());
+      assertTrue(next.get("object").asString().startsWith("Illegal percent encoding"));
+      assertEquals(true, next.get("isLiteral").asBoolean());
     }
   }
 

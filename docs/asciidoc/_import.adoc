@@ -559,17 +559,20 @@ We obviously need a query producing RDF so we can import it into Neo4j. I'm usin
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>" })
+CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>") })
 ----
 
-After running this you get a pretty poor graph, because the DESCRIBE query only returns the statements having 'The world of yesterday' (`<http://bnb.data.bl.uk/id/resource/018212405>`) as subject. But we can enrich it a bit by re-running it for every single URI connected to our book as follows:
+Notice that the Bristish Library service requires you to encode the SPARQL query. We do this with https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_overview_text_functions[APOC's apoc.text.urlencode function]. After running this you get a pretty poor graph, because the
+DESCRIBE query only returns the statements having 'The world of yesterday' (`<http://bnb.data.bl.uk/id/resource/018212405>`) as subject or object.
+But we can enrich it a bit by re-running it for a all of the URIs connected to our book as follows:
 
 [source,cypher]
 ----
-MATCH (:Book)-->(t) WITH t
-CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <" + t.uri + ">"}) yield triplesLoaded
-return t.uri, triplesLoaded 
+MATCH (:Book)-->(t) WITH DISTINCT t
+CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("CONSTRUCT {<" + t.uri + "> ?p ?o } { <" + t.uri + "> ?p ?o } LIMIT 10 ")}) yield triplesLoaded
+return t.uri, triplesLoaded
 ----
+
 
 Which returns: 
 
@@ -578,39 +581,35 @@ Which returns:
 ╒══════════════════════════════════════════════════════════════════════╤═══════════════╕
 │"t.uri"                                                               │"triplesLoaded"│
 ╞══════════════════════════════════════════════════════════════════════╪═══════════════╡
-│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │6              │
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │5              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │3              │
+│"http://rdaregistry.info/termList/RDACarrierType/1018"                │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │4              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │10             │
+│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │5              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/place/Europe"                               │9              │
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDACarrierType/1018"                │3              │
+│"http://bnb.data.bl.uk/id/place/Europe"                               │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │5              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
+│aphy"                                                                 │               │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
 │"http://bnb.data.bl.uk/id/resource/018212405/publicationevent/Placeofp│4              │
 │ublicationnotidentifiedPushkinPress2009"                              │               │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+│"http://rdaregistry.info/termList/RDAContentType/1020"                │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAContentType/1020"                │3              │
+│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │3              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │10             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │18             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │10             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
-│aphy"                                                                 │               │
+│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │5              │
 └──────────────────────────────────────────────────────────────────────┴───────────────┘
 ----
 
@@ -618,7 +617,8 @@ And produces this graph:
 
 image::worldofyesterday.png[Graph resulting of importing the data in the British National Library on 'The world of yesterday' by Stefan Zweig]
 
-Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPARQL savvy) reader.
+Of course you could do achieve this -or something similar- in different ways, in this case we are using a SPARQL CONSTRUCT query in order to be able to limit
+the number of triples returned for each resource as some of them are pretty dense.
 
 [#custom_ns]
 === Defining custom prefixes for namespaces
