@@ -59,4 +59,13 @@ public class StatementStreamer extends ConfiguredStatementHandler {
   RDFParserConfig getParserConfig() {
     return parserConfig;
   }
+
+  public void setErrorMsg(String errorMsg) {
+    if (this.statements == null){
+      this.statements = new ArrayList<>();
+    } else  {
+      this.statements.clear();
+    }
+    this.statements.add(new StreamedStatement("neo4j://error", "neo4j://message",errorMsg, true, null, null));
+  }
 }

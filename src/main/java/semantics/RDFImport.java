@@ -222,13 +222,13 @@ public class RDFImport {
         http.setRequestMethod(method.toString());
       }
       headerParams.forEach((k, v) -> urlConn.setRequestProperty(k, v));
-      if (props.containsKey("payload")) {
-        urlConn.setDoOutput(true);
-        BufferedWriter writer = new BufferedWriter(
-            new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
-        writer.write(props.get("payload").toString());
-        writer.close();
-      }
+    }
+    if (props.containsKey("payload")) {
+      urlConn.setDoOutput(true);
+      BufferedWriter writer = new BufferedWriter(
+          new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
+      writer.write(props.get("payload").toString());
+      writer.close();
     }
     return urlConn.getInputStream();
   }
@@ -278,8 +278,8 @@ public class RDFImport {
       parseRDF(getInputStream(url, props), url, format, statementStreamer);
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
+      statementStreamer.setErrorMsg(e.getMessage());
     }
-
     return statementStreamer.getStatements().stream();
 
 

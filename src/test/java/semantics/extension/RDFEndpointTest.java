@@ -20,12 +20,20 @@ import java.util.Set;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.junit.Rule;
 import org.junit.Test;
+import org.neo4j.driver.v1.Config;
+import org.neo4j.driver.v1.Driver;
+import org.neo4j.driver.v1.GraphDatabase;
+import org.neo4j.driver.v1.Session;
+import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.v1.types.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.ServerControls;
 import org.neo4j.harness.TestServerBuilder;
 import org.neo4j.harness.TestServerBuilders;
+import org.neo4j.harness.junit.Neo4jRule;
 import org.neo4j.kernel.configuration.ssl.LegacySslPolicyConfig;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.test.server.HTTP;
@@ -38,6 +46,11 @@ import semantics.mapping.MappingUtils;
  * Created by jbarrasa on 14/09/2016.
  */
 public class RDFEndpointTest {
+
+  @Rule
+  public Neo4jRule neo4j = new Neo4jRule()
+      .withProcedure(RDFImport.class).withFunction(RDFImport.class)
+      .withProcedure(MappingUtils.class);
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -105,6 +118,131 @@ public class RDFEndpointTest {
       assertEquals(200, response.status());
       assertTrue(ModelTestUtils
           .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+
+    }
+  }
+
+
+  @Test
+  public void ImportGetNodeById() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                "MERGE (a:Category {catName: 'Actor'})\n" +
+                "MERGE (d:Category {catName: 'Director'})\n" +
+                "MERGE (c:Category {catName: 'Critic'})\n" +
+                "CREATE (a)-[:SCO]->(p)\n" +
+                "CREATE (d)-[:SCO]->(p)\n" +
+                "CREATE (c)-[:SCO]->(p)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(ontoCreation);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+                "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+                "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
+          }
+          return null;
+        })
+        .newServer()) {
+      // When
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
+      Long id = (Long) result.next().get("id");
+      assertEquals(new Long(7), id);
+
+      try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+          Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+              .toConfig()); Session session = driver.session()) {
+        session.run("CREATE INDEX ON :Resource(uri)");
+        StatementResult importResults
+            = session.run("CALL semantics.importRDF('" +
+            HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "describe/id/"
+            + id.toString() +
+            "','Turtle',{ handleVocabUris: 'IGNORE', typesToLabels: true, commitSize: 500})");
+
+        Map<String, Object> singleResult = importResults
+            .single().asMap();
+
+        assertEquals(5L, singleResult.get("triplesLoaded"));
+        StatementResult postImport = session.run("MATCH (n:Critic) RETURN n");
+        Node criticPostImport = postImport.next().get("n").asNode();
+        result = server.graph().execute("MATCH (n:Critic) "
+            + "RETURN n.born as born, n.name as name");
+        Map<String, Object> criticPreImport = result.next();
+        assertEquals(criticPreImport.get("name"),criticPostImport.get("name").asString());
+        assertEquals(criticPreImport.get("born"),criticPostImport.get("born").asLong());
+
+      }
+
+    }
+  }
+
+
+  @Test
+  public void ImportGetCypher() throws Exception {
+    // Given
+    try (ServerControls server = getServerBuilder()
+        .withExtension("/rdf", RDFEndpoint.class)
+        .withFixture(graphDatabaseService -> {
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
+                "MERGE (a:Category {catName: 'Actor'})\n" +
+                "MERGE (d:Category {catName: 'Director'})\n" +
+                "MERGE (c:Category {catName: 'Critic'})\n" +
+                "CREATE (a)-[:SCO]->(p)\n" +
+                "CREATE (d)-[:SCO]->(p)\n" +
+                "CREATE (c)-[:SCO]->(p)\n" +
+                "RETURN *";
+            graphDatabaseService.execute(ontoCreation);
+            String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+                "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+                "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+                "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+                "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+                "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+                "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+            graphDatabaseService.execute(dataInsertion);
+            tx.success();
+          }
+          return null;
+        })
+        .newServer()) {
+      // When
+      Result result = server.graph().execute("MATCH (n:Critic) RETURN id(n) AS id ");
+      Long id = (Long) result.next().get("id");
+      assertEquals(new Long(7), id);
+
+      try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+          Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
+              .toConfig()); Session session = driver.session()) {
+        session.run("CREATE INDEX ON :Resource(uri)");
+
+        StatementResult importResults
+            = session.run("CALL semantics.importRDF('" +
+            HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher"  +
+            "','Turtle',{ handleVocabUris: 'IGNORE', "
+            + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
+
+        Map<String, Object> singleResult = importResults
+            .single().asMap();
+
+        assertEquals(3L, singleResult.get("triplesLoaded"));
+        StatementResult postImport = session.run("MATCH (n:Critic) RETURN n");
+        Node criticPostImport = postImport.next().get("n").asNode();
+        result = server.graph().execute("MATCH (n:Critic) "
+            + "RETURN n.born as born, n.name as name");
+        Map<String, Object> criticPreImport = result.next();
+        assertEquals(criticPreImport.get("name"),criticPostImport.get("name").asString());
+        assertEquals(criticPreImport.get("born"),criticPostImport.get("born").asLong());
+
+      }
 
     }
   }
