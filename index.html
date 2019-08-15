@@ -795,7 +795,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })</code></pre>
 </div>
 </div>
 </div>
@@ -818,7 +818,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -834,7 +834,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -864,7 +864,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/backup/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -935,7 +935,7 @@ ind:218 show:localName "Cette Série des Années Septante"@fr-be .</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -956,7 +956,7 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})</code></pre>
 </div>
 </div>
 </div>
@@ -1107,7 +1107,7 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1123,7 +1123,7 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1288,16 +1288,18 @@ The following two parameters will help in these situations:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;" })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;") })</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>After running this you get a pretty poor graph, because the DESCRIBE query only returns the statements having 'The world of yesterday' (<code><a href="http://bnb.data.bl.uk/id/resource/018212405" class="bare">http://bnb.data.bl.uk/id/resource/018212405</a></code>) as subject. But we can enrich it a bit by re-running it for every single URI connected to our book as follows:</p>
+<p>Notice that the Bristish Library service requires you to encode the SPARQL query. We do this with <a href="https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_overview_text_functions">APOC&#8217;s apoc.text.urlencode function</a>. After running this you get a pretty poor graph, because the
+DESCRIBE query only returns the statements having 'The world of yesterday' (<code><a href="http://bnb.data.bl.uk/id/resource/018212405" class="bare">http://bnb.data.bl.uk/id/resource/018212405</a></code>) as subject or object.
+But we can enrich it a bit by re-running it for a all of the URIs connected to our book as follows:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (:Book)--&gt;(t) WITH t
-CALL semantics.importRDF("http://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE &lt;" + t.uri + "&gt;"}) yield triplesLoaded
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (:Book)--&gt;(t) WITH DISTINCT t
+CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("CONSTRUCT {&lt;" + t.uri + "&gt; ?p ?o } { &lt;" + t.uri + "&gt; ?p ?o } LIMIT 10 ")}) yield triplesLoaded
 return t.uri, triplesLoaded</code></pre>
 </div>
 </div>
@@ -1309,39 +1311,35 @@ return t.uri, triplesLoaded</code></pre>
 <pre class="highlight"><code class="language-cypher" data-lang="cypher">╒══════════════════════════════════════════════════════════════════════╤═══════════════╕
 │"t.uri"                                                               │"triplesLoaded"│
 ╞══════════════════════════════════════════════════════════════════════╪═══════════════╡
-│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │6              │
+│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │5              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │3              │
+│"http://rdaregistry.info/termList/RDACarrierType/1018"                │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │4              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │10             │
+│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │5              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/place/Europe"                               │9              │
+│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDACarrierType/1018"                │3              │
+│"http://bnb.data.bl.uk/id/place/Europe"                               │3              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │5              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │1              │
+├──────────────────────────────────────────────────────────────────────┼───────────────┤
+│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
+│aphy"                                                                 │               │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
 │"http://bnb.data.bl.uk/id/resource/018212405/publicationevent/Placeofp│4              │
 │ublicationnotidentifiedPushkinPress2009"                              │               │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │132            │
+│"http://rdaregistry.info/termList/RDAContentType/1020"                │1              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAContentType/1020"                │3              │
+│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │3              │
 ├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │10             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │18             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │10             │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
-│aphy"                                                                 │               │
+│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │5              │
 └──────────────────────────────────────────────────────────────────────┴───────────────┘</code></pre>
 </div>
 </div>
@@ -1354,7 +1352,8 @@ return t.uri, triplesLoaded</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>Of course you could do achieve this -or something similar- in different ways, the most obvious one would be using a SPARQL CONSTRUCT query, but I leave that to the interested (and SPARQL savvy) reader.</p>
+<p>Of course you could do achieve this -or something similar- in different ways, in this case we are using a SPARQL CONSTRUCT query in order to be able to limit
+the number of triples returned for each resource as some of them are pretty dense.</p>
 </div>
 </div>
 <div class="sect2">
@@ -2705,7 +2704,7 @@ RETURN count(schemaElement) AS mappingsDefined</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.previewRDF("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.previewRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2818,7 +2817,7 @@ inferences whatever the modeling approach you follow from the ones described bef
 <h4 id="_semantics_inference_nodeslabelled"><a class="link" href="#_semantics_inference_nodeslabelled">semantics.inference.nodesLabelled</a></h4>
 <div class="paragraph">
 <p>Let&#8217;s look at the first way of annotating individuals. This script creates a few publications (books) from the
-<a href="http://British" class="bare">http://British</a> National Library catalog[British National Library catalog] sets a label
+<a href="https://bnb.data.bl.uk/">British National Library catalog</a> sets a label
 on each of them. The labels match categories defined before.</p>
 </div>
 <div class="listingblock">
@@ -4132,7 +4131,7 @@ way that nodes are labeled as :Resource and have an uri.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-07-03 11:14:55 EDT
+Last updated 2019-07-03 17:14:55 CEST
 </div>
 </div>
 </body>

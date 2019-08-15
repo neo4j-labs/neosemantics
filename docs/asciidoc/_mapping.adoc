@@ -292,7 +292,7 @@ Once the mappings are defined, we can run the import process as described in <<I
 
 [source,Cypher]
 ----
-CALL semantics.previewRDF("file:///Users/jesusbarrasa/Workspaces/tmpnsmntx/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })
+CALL semantics.previewRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })
 ----
 
 After data load, we will be able to query the imported graph with a much more friendly cypher:

@@ -153,7 +153,7 @@ Something you may need to do when importing RDF data into Neo4j is exclude certa
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })
 ----
 
 === Handling multivalued properties
@@ -173,7 +173,7 @@ NSMNTX default behavior is to keep only one value for literal properties and it 
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples")
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")
 ----
 
 Only the last value for the multivalued `altName` property will be kept. 
@@ -187,7 +187,7 @@ This makes things simple and will be perfect if your dataset does not have multi
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })
 ----
 
 Now all properties are stored as arrays in Neo4j. Even the ones that have one value only! But we can do better than that, let's have a look at another example. 
@@ -213,7 +213,7 @@ Here's teh import command that we need. Note that I'm combining the multivalued 
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/backup/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})
 ----
 
 And here's what the result of the import would look like:
@@ -265,7 +265,7 @@ By default, NSMNTX will strip out the language tags but if you want to keep them
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})
 ----
 
 When you import literal values keeping the language annotation, you'll see that string values have a suffix like `@fr` for French language, `@zh-cmn-Hant` for Mandarin Chinese traditional, and so on.
@@ -282,7 +282,7 @@ Language tags can also be used as a filter criteria. If we are only interested i
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
 ----
 
 === Handling custom data types
@@ -404,7 +404,7 @@ Here's an example: Let's say we want to load an ontology (notice that it's actua
 
 [source,cypher]
 ----
-call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/minionto.ttl","Turtle")
+call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minionto.ttl","Turtle")
 ----
 
 We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
@@ -415,7 +415,7 @@ Now we want to load the instance data and we want it to link to the ontology gra
 
 [source,cypher]
 ----
-call semantics.importRDF("file:///Users/jesusbarrasa/Workspaces/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })
+call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })
 ----
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
