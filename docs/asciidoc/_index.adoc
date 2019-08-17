@@ -7,9 +7,17 @@
 :toclevels: 2
 
 [[introduction]]
+image::nsmntx-block-diagram.png[NSMNTX diagram, 200,float="right",align="center"]
 == Introduction
 
-NSMNTX is an extension that enables the use of *RDF as a data exchange format* for graph data stored in Neo4j. It makes it also possible to *store RDF data in Neo4j* in a lossless manner (the imported RDF can be exported without losing a single triple in the process). Other features in NSMNTX include *model mapping* and *inferencing* on graph data stored in Neo4j.
+NSMNTX is a plugin that enables the *use of RDF in Neo4j*. https://www.w3.org/RDF/[RDF is a W3C standard model] for data interchange.
+This effectively means that NSMNTX makes it possible to
+
+* *Store RDF data in Neo4j* in a
+lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
+* On-demand *export property graph data* from Neo4j *as RDF*.
+
+Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
 
 ////
 === Documentation Overview

@@ -431,7 +431,7 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 <div id="toc" class="toc2">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
-<li><a href="#introduction">Introduction</a></li>
+<li><a href="#_introduction">Introduction</a></li>
 <li><a href="#Install">Installation</a>
 <ul class="sectlevel2">
 <li><a href="#_feedback">Feedback</a></li>
@@ -498,11 +498,35 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 </div>
 </div>
 <div id="content">
+<div id="preamble">
+<div class="sectionbody">
+<div id="introduction" class="imageblock" style="text-align: center;float: right">
+<div class="content">
+<img src="docs/img/nsmntx-block-diagram.png" alt="NSMNTX diagram" width="200">
+</div>
+</div>
+</div>
+</div>
 <div class="sect1">
-<h2 id="introduction"><a class="link" href="#introduction">Introduction</a></h2>
+<h2 id="_introduction"><a class="link" href="#_introduction">Introduction</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>NSMNTX is an extension that enables the use of <strong>RDF as a data exchange format</strong> for graph data stored in Neo4j. It makes it also possible to <strong>store RDF data in Neo4j</strong> in a lossless manner (the imported RDF can be exported without losing a single triple in the process). Other features in NSMNTX include <strong>model mapping</strong> and <strong>inferencing</strong> on graph data stored in Neo4j.</p>
+<p>NSMNTX is a plugin that enables the <strong>use of RDF in Neo4j</strong>. <a href="https://www.w3.org/RDF/">RDF is a W3C standard model</a> for data interchange.
+This effectively means that NSMNTX makes it possible to</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p><strong>Store RDF data in Neo4j</strong> in a
+lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).</p>
+</li>
+<li>
+<p>On-demand <strong>export property graph data</strong> from Neo4j <strong>as RDF</strong>.</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Other features in NSMNTX include <strong>model mapping</strong> and <strong>inferencing</strong> on Neo4j graphs.</p>
 </div>
 </div>
 </div>
@@ -826,7 +850,20 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher"></code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Person)
+RETURN n.ns0__name as name, n.ns0__altName as altName</code></pre>
+</div>
+</div>
+<div class="paragraph">
+<p>returns</p>
+</div>
+<div class="listingblock">
+<div class="content">
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">╒════════════╤═════════╕
+│"name"      │"altName"│
+╞════════════╪═════════╡
+│"J. Barrasa"│"Dr J"   │
+└────────────┴─────────┘</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -4131,7 +4168,7 @@ way that nodes are labeled as :Resource and have an uri.</p></td>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2019-07-03 17:14:55 CEST
+Last updated 2019-08-17 03:24:27 CEST
 </div>
 </div>
 </body>
