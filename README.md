@@ -9,9 +9,11 @@ lossless manner (imported RDF can subsequently be exported without losing a sing
 
 Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
 
-## ⇨ User Manual ⇦ 
+## ⇨ User Manual and Blog ⇦ 
 
 ⇨ Check out the complete **[user manual](http://jbarrasa.github.io/neosemantics/)** with examples of use. ⇦
+
+⇨ [Blog on NSMNTX](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
 ## Installation
  
