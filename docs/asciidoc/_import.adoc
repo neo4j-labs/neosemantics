@@ -180,7 +180,19 @@ Only the last value for the multivalued `altName` property will be kept.
 
 [source,cypher]
 ----
+MATCH (n:ns0__Person)
+RETURN n.ns0__name as name, n.ns0__altName as altName
+----
 
+returns
+
+[source,cypher]
+----
+╒════════════╤═════════╕
+│"name"      │"altName"│
+╞════════════╪═════════╡
+│"J. Barrasa"│"Dr J"   │
+└────────────┴─────────┘
 ----
 
 This makes things simple and will be perfect if your dataset does not have multivalued properties. It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough. There will be other cases though, where we do need to keep all the values, and here's where the config parameter `handleMultival` will help. Here's how:
