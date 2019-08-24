@@ -602,7 +602,7 @@ You can check that the extension is mounted by running</p>
 <div class="sect2">
 <h3 id="_feedback"><a class="link" href="#_feedback">Feedback</a></h3>
 <div class="paragraph">
-<p>Please provide feedback and report bugs as GitHub issues or join the Neo4j Community Forum.</p>
+<p>Please provide feedback and report bugs as <a href="https://github.com/jbarrasa/neosemantics/issues">GitHub issues</a> or join the <a href="https://community.neo4j.com/">Neo4j Community</a> forum.</p>
 </div>
 </div>
 <div class="sect2">
@@ -767,23 +767,23 @@ The first great thing about getting your RDF data into Neo4j is that now you can
 <tr>
 <td class="tableblock halign-left valign-top"><div><div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-sparql" data-lang="sparql">@prefix neovoc: &lt;http://neo4j.org/voc/sw#&gt; .
-@prefix neoind: &lt;http://neo4j.org/ind#&gt; .
-@prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt; .
+<pre class="highlight"><code class="language-sparql" data-lang="sparql">prefix neovoc: &lt;http://neo4j.org/vocab/sw#&gt;
+prefix neoind: &lt;http://neo4j.org/ind#&gt;
+prefix rdf: &lt;http://www.w3.org/1999/02/22-rdf-syntax-ns#&gt;
 
-SELECT ?nm as pluginName,
-       (MAX(?ver) as ?version)
+SELECT ?pluginName
+       (MAX(?ver) as ?latestVersion)
 WHERE {
 
 	?plugin rdf:type neovoc:Neo4jPlugin ;
 		    neovoc:runsOn ?neosrv ;
-		    neovoc:name ?nm ;
+		    neovoc:name ?pluginName ;
 		    neovoc:version ?ver .
 
 	?neosrv rdf:type neovoc:GraphPlatform ;
 			neovoc:name "neo4j"
 }
-GROUP BY ?plugin</code></pre>
+GROUP BY ?pluginName</code></pre>
 </div>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><div><div class="listingblock">
