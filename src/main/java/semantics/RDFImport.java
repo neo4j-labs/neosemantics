@@ -53,10 +53,14 @@ import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
 
 /**
- * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instancdes of DatatypeProperties
- * become node attributes 2. rdf:type relationships are transformed either into labels or
- * relationships to nodes representing the class 3. Instances of ObjectProperties become
- * relationships ( See https://jbarrasa.com/2016/06/07/importing-rdf-data-into-neo4j/ )
+ * RDF importer based on: 1. Instances of DatatypeProperties become node attributes 2. rdf:type
+ * relationships are transformed either into labels or relationships to nodes representing the class
+ * 3. Instances of ObjectProperties become relationships ( See https://jbarrasa.com/2016/06/07/importing-rdf-data-into-neo4j/
+ * )
+ *
+ * Created on 21/03/2016
+ *
+ * @author Jesús Barrasa
  */
 public class RDFImport {
 
@@ -170,6 +174,16 @@ public class RDFImport {
     return Stream.of(importResults);
   }
 
+  /**
+   * User-defined procedure to import quadruples. Analog to {@link #importRDF(String, String, Map)}
+   * but utilizes {@link RDFQuadDirectStatementLoader} to import quadruples
+   *
+   * @param url the url or the path to the RDF dataset to be imported
+   * @param format the format of the given RDF dataset
+   * @param props the map of properties containing the configuration for the import
+   * @return {@link Stream<ImportResults>} containing information about the results of the import
+   * process
+   */
   @Procedure(mode = Mode.WRITE)
   public Stream<ImportResults> importQuadRDF(@Name("url") String url,
       @Name("format") String format,
@@ -315,6 +329,16 @@ public class RDFImport {
 
   }
 
+  /**
+   * User-defined procedure to delete triples. Analog to {@link #importRDF(String, String, Map)} but
+   * utilizes {@link DirectStatementDeleter} to delete triples.
+   *
+   * @param url the url or the path to the RDF dataset to be deleted
+   * @param format the format of the given RDF dataset
+   * @param props the map of properties containing the configuration for the deletion
+   * @return {@link Stream<DeleteResults>} containing information about the results of the deletion
+   * process
+   */
   @Procedure(mode = Mode.WRITE)
   @Description("Deletes triples from Neo4j. Works on a graph resulted of importing RDF via "
       + "semantics.importRDF(). Delete config must match the one used on import.")
@@ -342,12 +366,22 @@ public class RDFImport {
     } finally {
       deleteResults.setTriplesDeleted(
           statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
-      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setExtraInfo(statementDeleter.getBNodeInfo());
       deleteResults.setNamespaces(statementDeleter.getNamespaces());
     }
     return Stream.of(deleteResults);
   }
 
+  /**
+   * User-defined procedure to delete quadruples. Analog to {@link #deleteRDF(String, String, Map)}
+   * but utilizes {@link RDFQuadDirectStatementDeleter} to delete quadruples.
+   *
+   * @param url the url or the path to the RDF dataset to be deleted
+   * @param format the format of the given RDF dataset
+   * @param props the map of properties containing the configuration for the deletion
+   * @return {@link Stream<DeleteResults>} containing information about the results of the deletion
+   * process
+   */
   @Procedure(mode = Mode.WRITE)
   public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
       @Name("format") String format,
@@ -374,14 +408,21 @@ public class RDFImport {
     } finally {
       deleteResults.setTriplesDeleted(
           statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
-      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      deleteResults.setExtraInfo(statementDeleter.getBNodeInfo());
       deleteResults.setNamespaces(statementDeleter.getNamespaces());
     }
     return Stream.of(deleteResults);
   }
 
+  /**
+   * User-defined function to retrieve the data type of a literal
+   *
+   * @param literal whose data type is to return
+   * @return a {@code String} containing the custom data type IRI or the XSD data type IRI if given,
+   * {@code null} otherwise
+   */
   @UserFunction
-  @Description("Returns the XMLSchema or custom datatype of a property when present")
+  @Description("Returns the XMLSchema or custom data type of a property when present")
   public String getDataType(@Name("literal") Object literal) {
 
     String result;
@@ -413,6 +454,13 @@ public class RDFImport {
     return result;
   }
 
+  /**
+   * User-defined function to retrieve the value of a literal
+   *
+   * @param literal whose value is to return
+   * @return a {@code String} containing the value of the literal, which is stripped out using
+   * regular expressions. If not applicable, original value in {@param literal}
+   */
   @UserFunction
   @Description("Returns the value of a datatype of a property after stripping out the datatype "
       + "information when present")
@@ -557,29 +605,30 @@ public class RDFImport {
       @Name("jsonpayload") String jsonPayload,
       @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) {
 
-
     //emptystring, no parsing and return null
-    if (jsonPayload.isEmpty()) return null;
+    if (jsonPayload.isEmpty()) {
+      return null;
+    }
 
     HashMap<String, Object> params = new HashMap<>();
-    params.put("handleVocabUris","IGNORE");
-    params.put("commitSize",Long.MAX_VALUE);
+    params.put("handleVocabUris", "IGNORE");
+    params.put("commitSize", Long.MAX_VALUE);
     RDFParserConfig conf = new RDFParserConfig(params);
 
     PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
-      String containerUri = (String)containerNode.getProperty("uri", null);
-      if (containerUri == null ){
+      String containerUri = (String) containerNode.getProperty("uri", null);
+      if (containerUri == null) {
         containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
-        containerNode.setProperty("uri",containerUri);
+        containerNode.setProperty("uri", containerUri);
         containerNode.addLabel(Label.label("Resource"));
       }
       GenericJSONParser rdfParser = new GenericJSONParser();
       rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
       rdfParser.setRDFHandler(plainJSONStatementLoader);
       rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
-          "neo4j://voc#", containerUri,relName);
+          "neo4j://voc#", containerUri, relName);
 
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       e.printStackTrace();
@@ -599,7 +648,8 @@ public class RDFImport {
   private boolean missing(Iterator<IndexDefinition> iterator, String indexLabel) {
     while (iterator.hasNext()) {
       IndexDefinition indexDef = iterator.next();
-      if (!indexDef.isCompositeIndex() && indexDef.getLabels().iterator().next().name().equals(indexLabel) &&
+      if (!indexDef.isCompositeIndex() && indexDef.getLabels().iterator().next().name()
+          .equals(indexLabel) &&
           indexDef.getPropertyKeys().iterator().next().equals("uri")) {
         return false;
       }
@@ -651,6 +701,12 @@ public class RDFImport {
 
   }
 
+  /**
+   * Analog to {@link ImportResults}, however modified for methods for deletion
+   *
+   * @see #deleteRDF(String, String, Map)
+   * @see #deleteQuadRDF(String, String, Map)
+   */
   public static class DeleteResults {
 
     public String terminationStatus = "OK";
@@ -658,18 +714,30 @@ public class RDFImport {
     public Map<String, String> namespaces;
     public String extraInfo = "";
 
+    /**
+     * @param triplesDeleted number of deleted triples
+     */
     public void setTriplesDeleted(long triplesDeleted) {
       this.triplesDeleted = triplesDeleted;
     }
 
+    /**
+     * @param extraInfo for the additional information column
+     */
     public void setExtraInfo(String extraInfo) {
       this.extraInfo = extraInfo;
     }
 
+    /**
+     * @param namespaces in the database after the deletion
+     */
     public void setNamespaces(Map<String, String> namespaces) {
       this.namespaces = namespaces;
     }
 
+    /**
+     * @param message termination message, set if process was aborted
+     */
     public void setTerminationKO(String message) {
       this.terminationStatus = "KO";
       this.extraInfo = message;

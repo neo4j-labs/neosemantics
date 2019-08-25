@@ -38,9 +38,21 @@ import org.neo4j.logging.Log;
 
 
 /**
- * Created by jbarrasa on 15/04/2019.
+ * An RDF handler which is the superclass to various RDF handlers
+ *
+ * @see DirectStatementLoader
+ * @see OntologyImporter
+ * @see StatementPreviewer
+ * @see PlainJsonStatementLoader
+ * @see DirectStatementDeleter
+ * @see RDFQuadToLPGStatementProcessor
+ * @see RDFQuadDirectStatementLoader
+ * @see RDFQuadDirectStatementDeleter
+ *
+ * Created on 15/04/2019.
+ *
+ * @author Jesús Barrasa
  */
-
 abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   protected final Log log;
@@ -124,12 +136,18 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
   /**
-   * Processing for literals as follows Mapping according to this figure:
-   * https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes String -> String Each sub-category of
-   * integer -> long decimal, float, and double -> double boolean -> boolean Custom data type ->
-   * String (value + CUSTOM_DATA_TYPE_SEPERATOR + custom DT IRI)
+   * Processing for literals with a mapping according to this figure:
+   * https://www.w3.org/TR/xmlschema11-2/#built-in-datatypes
    *
-   * @return processed literal
+   * String -> String
+   * Al sub-categories of integer -> long
+   * decimal, float, and double -> double
+   * boolean -> boolean
+   * Custom data type -> String (value + CUSTOM_DATA_TYPE_SEPERATOR + custom data type IRI)
+   *
+   * @param propertyIRI predicate IRI of the statement
+   * @param object literal value of the statement
+   * @return processed literal value
    */
   Object getObjectValue(IRI propertyIRI, Literal object) {
     IRI datatype = object.getDatatype();
@@ -188,11 +206,21 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return object.stringValue();
   }
 
+  /**
+   * @param datatype to be classified
+   * @return {@code boolean} true if, the data type IRI should be mapped as {@code double}, false
+   * otherwise
+   */
   private boolean typeMapsToDouble(IRI datatype) {
     return datatype.equals(XMLSchema.DECIMAL) || datatype.equals(XMLSchema.DOUBLE) ||
         datatype.equals(XMLSchema.FLOAT);
   }
 
+  /**
+   * @param datatype to be classified
+   * @return {@code boolean} true if, the data type IRI should be mapped as {@code long}, false
+   * otherwise
+   */
   private boolean typeMapsToLongType(IRI datatype) {
     return datatype.equals(XMLSchema.INTEGER) || datatype.equals(XMLSchema.LONG) || datatype
         .equals(XMLSchema.INT) ||

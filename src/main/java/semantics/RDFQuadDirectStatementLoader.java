@@ -25,11 +25,12 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
+ * This class implements an RDF handler to statement-wise imported RDF quadruples.
+ *
  * Created on 06/06/2019.
  *
  * @author Emre Arkan
  */
-
 class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implements
     Callable<Integer> {
 
@@ -38,68 +39,79 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
   private Cache<ContextResource, Node> nodeCache;
 
   RDFQuadDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
-
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
   }
 
+  /**
+   * Analog to endRDF in {@link DirectStatementLoader}
+   *
+   * Executed at the end of each commit to inform the user of the current state of the import
+   * process.
+   */
   @Override
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
-      // Namespaces are only persisted at the end of each periodic commit.
-      // This makes importRDF not thread safe when using url shortening. TODO: fix this.
       persistNamespaceNode();
     }
-
     log.info("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }
 
+  /**
+   * Analog to persistNamespaceNode in {@link DirectStatementLoader}
+   */
   private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
+  /**
+   * Analog to call in {@link DirectStatementLoader}, however strongly modified to process
+   * quadruples rather than triples.
+   *
+   * {@link #resourceLabels}, {@link #resourceProps}, and {@link #statements}, which contain the
+   * statements to be imported are processed respectively. If a statement already exist in the
+   * database, it is ignored.
+   *
+   * @return An obligatory return, which is always 0, since the overridden method must return an
+   * Integer
+   */
   @Override
   public Integer call() throws Exception {
-    int count = 0;
-
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
 
-      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-        @Override
-        public Node call() {
-          Node node = null;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(entry.getKey().getUri(),
-              entry.getKey().getGraphUri(),
-              params);
-          Result result = graphdb.execute(cypher, params);
+      final Node node = nodeCache.get(entry.getKey(), () -> {
+        Node searched_node = null;
+        Map<String, Object> params = new HashMap<>();
+        String cypher = buildCypher(entry.getKey().getUri(),
+            entry.getKey().getGraphUri(),
+            params);
+        Result result = graphdb.execute(cypher, params);
+        if (result.hasNext()) {
+          searched_node = (Node) result.next().get("n");
           if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + entry.getKey().getUri() +
-                      (entry.getKey().getGraphUri() == null ? "}" :
-                          ", graphUri: " + entry.getKey().getGraphUri() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
+            String props =
+                "{uri: " + entry.getKey().getUri() +
+                    (entry.getKey().getGraphUri() == null ? "}" :
+                        ", graphUri: " + entry.getKey().getGraphUri() + "}");
+            throw new IllegalStateException(
+                "There are multiple matching nodes for the given properties " + props);
           }
-          if (node == null) {
-            node = graphdb.createNode(RESOURCE);
-            node.setProperty("uri", entry.getKey().getUri());
-            if (entry.getKey().getGraphUri() != null) {
-              node.setProperty("graphUri", entry.getKey().getGraphUri());
-            }
-          }
-          return node;
         }
+        if (searched_node == null) {
+          searched_node = graphdb.createNode(RESOURCE);
+          searched_node.setProperty("uri", entry.getKey().getUri());
+          if (entry.getKey().getGraphUri() != null) {
+            searched_node.setProperty("graphUri", entry.getKey().getGraphUri());
+          }
+        }
+        return searched_node;
       });
 
       entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
@@ -113,12 +125,10 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
               Object[] properties = (Object[]) currentValue;
               for (int i = 0; i < properties.length; i++) {
                 ((List) v).add(properties[i]);
-                //here an exception can be raised if types are conflicting
               }
             } else {
               ((List) v).add(node.getProperty(k));
             }
-            //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
             node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
           }
         } else {
@@ -130,65 +140,58 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
     for (Statement st : statements) {
       ContextResource from = new ContextResource(st.getSubject().stringValue(),
           st.getContext() != null ? st.getContext().stringValue() : null);
-      final Node fromNode = nodeCache.get(from, new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          Node node;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(st.getSubject().stringValue(),
-              st.getContext() != null ? st.getContext().stringValue() : null,
-              params);
-          Result result = graphdb.execute(cypher, params);
+      final Node fromNode = nodeCache.get(from, () -> {
+        Node node;
+        Map<String, Object> params = new HashMap<>();
+        String cypher = buildCypher(st.getSubject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null,
+            params);
+        Result result = graphdb.execute(cypher, params);
+        if (result.hasNext()) {
+          node = (Node) result.next().get("n");
           if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + st.getSubject().stringValue() +
-                      (st.getContext() == null ? "}" :
-                          ", graphUri: " + st.getContext().stringValue() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
-          } else {
-            throw new NoSuchElementException(
-                "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                    + " and \"graphUri\": " + st.getContext().stringValue());
+            String props =
+                "{uri: " + st.getSubject().stringValue() +
+                    (st.getContext() == null ? "}" :
+                        ", graphUri: " + st.getContext().stringValue() + "}");
+            throw new IllegalStateException(
+                "There are multiple matching nodes for the given properties " + props);
           }
-          return node;
+        } else {
+          throw new NoSuchElementException(
+              "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                  + " and \"graphUri\": " + st.getContext().stringValue());
         }
+        return node;
       });
       ContextResource to = new ContextResource(st.getObject().stringValue(),
           st.getContext() != null ? st.getContext().stringValue() : null);
-      final Node toNode = nodeCache.get(to, new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          Node node;
-          Map<String, Object> params = new HashMap<>();
-          String cypher = buildCypher(st.getObject().stringValue(),
-              st.getContext() != null ? st.getContext().stringValue() : null,
-              params);
-          Result result = graphdb.execute(cypher, params);
+      final Node toNode = nodeCache.get(to, () -> {
+        Node node;
+        Map<String, Object> params = new HashMap<>();
+        String cypher = buildCypher(st.getObject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null,
+            params);
+        Result result = graphdb.execute(cypher, params);
+        if (result.hasNext()) {
+          node = (Node) result.next().get("n");
           if (result.hasNext()) {
-            node = (Node) result.next().get("n");
-            if (result.hasNext()) {
-              String props =
-                  "{uri: " + st.getObject().stringValue() +
-                      (st.getContext() == null ? "}" :
-                          ", graphUri: " + st.getContext().stringValue() + "}");
-              throw new IllegalStateException(
-                  "There are multiple matching nodes for the given properties " + props);
-            }
-          } else {
-            throw new NoSuchElementException(
-                "There exists no node with \"uri\": " + st.getSubject().stringValue()
-                    + " and \"graphUri\": " + st.getContext().stringValue());
+            String props =
+                "{uri: " + st.getObject().stringValue() +
+                    (st.getContext() == null ? "}" :
+                        ", graphUri: " + st.getContext().stringValue() + "}");
+            throw new IllegalStateException(
+                "There are multiple matching nodes for the given properties " + props);
           }
-          return node;
+        } else {
+          throw new NoSuchElementException(
+              "There exists no node with \"uri\": " + st.getSubject().stringValue()
+                  + " and \"graphUri\": " + st.getContext().stringValue());
         }
+        return node;
       });
 
-      // check if the rel is already present. If so, don't recreate.
-      // explore the node with the lowest degree
+      // Check if the relationship is already present. If so, don't recreate.
       boolean found = false;
       if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
           Direction.OUTGOING) <
@@ -219,15 +222,15 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
             RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)));
       }
     }
-
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-
-    //TODO what to return here? number of nodes and rels?
     return 0;
   }
 
+  /**
+   * Analog to periodicOperation in {@link DirectStatementLoader}
+   */
   @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
@@ -236,7 +239,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
     persistNamespaceNode();
   }
 
-  // Stolen from APOC :)
+  // Adapted from APOC
   private Object toPropertyValue(Object value) {
     Iterable it = (Iterable) value;
     Object first = Iterables.firstOrNull(it);

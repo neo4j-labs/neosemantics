@@ -7,7 +7,7 @@ import java.util.Objects;
  * <p>
  * It is used as Key for the Maps containing labels and properties.
  *
- * Created on 06.06.2019
+ * Created on 06/06/2019
  *
  * @author Emre Arkan
  * @see RDFQuadDirectStatementLoader

@@ -1830,7 +1830,7 @@ public class RDFEndpointTest {
               + "describe/uri/" + URLEncoder
               .encode("http://www.example.org/exampleDocument#Monica",
                   StandardCharsets.UTF_8.toString())
-              + "?graphuri=http://www.example.org/exampleDocument%23G1");
+              + "?graphUri=http://www.example.org/exampleDocument%23G1");
 
       String expected = "<http://www.example.org/exampleDocument#G1> {\n"
           + "  <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name>\n"
@@ -1884,7 +1884,7 @@ public class RDFEndpointTest {
               + "describe/uri/" + URLEncoder
               .encode("http://www.example.org/exampleDocument#Monica",
                   StandardCharsets.UTF_8.toString())
-              + "?graphuri=http://www.example.org/exampleDocument%23G1");
+              + "?graphUri=http://www.example.org/exampleDocument%23G1");
       String expected =
           "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
               + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"

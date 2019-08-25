@@ -1,7 +1,6 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -10,7 +9,6 @@ import com.google.common.collect.Iterators;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -28,7 +26,7 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * This class implements an RDF handler to statement-wise delete imported RDF data
+ * This class implements an RDF handler to statement-wise delete imported RDF triples.
  *
  * Created on 03/06/2019.
  *
@@ -37,42 +35,60 @@ import org.neo4j.logging.Log;
 class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
-
   private final Cache<String, Node> nodeCache;
-
   private long notDeletedStatementCount;
   private long statementsWithBNodeCount;
-  private String bNodeInfo;
+  private String BNodeInfo;
 
   DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
-
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    bNodeInfo = "";
+    BNodeInfo = "";
     notDeletedStatementCount = 0;
     statementsWithBNodeCount = 0;
   }
 
+  /**
+   * Analog to endRDF in {@link DirectStatementLoader}, however modified for deletion.
+   *
+   * Executed at the end of each commit to inform the user of the current state of the deletion
+   * process.
+   */
   @Override
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
-      persistNamespaceNode();
-    }
-
     log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
         "Total number of triples deleted is " + totalTriplesMapped + " out of "
         + totalTriplesParsed + " parsed.");
   }
 
+  /**
+   * Analog to call in {@link DirectStatementLoader}, however strongly modified to delete nodes
+   * rather than creating or updating.
+   *
+   * {@link #resourceLabels}, {@link #resourceProps}, and {@link #statements}, which contain the
+   * statements to be deleted, are processed respectively. If a statement does not exist in the
+   * database, {@link #notDeletedStatementCount} is increased to inform the user of not deleted
+   * statement count.
+   *
+   * {@link #statementsWithBNodeCount} counts the number of statements, which could not be deleted
+   * due to containing a blank node.
+   *
+   * {@link #deleteNodeIfEmpty(Node)} is called for each {@code Node} processed, to check and delete
+   * it, if applicable.
+   *
+   * @return An obligatory return, which is always 0, since the overridden method must return an
+   * Integer
+   */
   @Override
   public Integer call() throws Exception {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().startsWith("genid")) {
+        //if the node represents a blank node
         statementsWithBNodeCount += entry.getValue().size() + 1;
         continue;
       }
@@ -87,6 +103,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       node = tempNode;
       entry.getValue().forEach(l -> {
         if (node != null && node.hasLabel(Label.label(l))) {
+          //if node exist in the database and has the label to be deleted
           node.removeLabel(Label.label(l));
         } else {
           notDeletedStatementCount++;
@@ -170,17 +187,15 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       }
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        });
+        fromNode = nodeCache.get(st.getSubject().stringValue(),
+            () -> graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue()));
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
       Node toNode = null;
       try {
-        toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        });
+        toNode = nodeCache.get(st.getObject().stringValue(),
+            () -> graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue()));
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
@@ -214,19 +229,23 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       deleteNodeIfEmpty(toNode);
       deleteNodeIfEmpty(fromNode);
     }
-
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
     if (statementsWithBNodeCount > 0) {
-      setbNodeInfo(statementsWithBNodeCount
+      setBNodeInfo(statementsWithBNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
-
-    //TODO what to return here? number of nodes and rels?
     return 0;
   }
 
+  /**
+   * Analog to periodicOperation in {@link DirectStatementLoader}, however modified for the
+   * deletion
+   *
+   * After each partial commit, a short information about the current state of the deletion process
+   * is logged.
+   */
   @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
@@ -236,18 +255,33 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     mappedTripleCounter = 0;
   }
 
+  /**
+   * @return amount of not deleted statement count and statements with blank node count
+   */
   long getNotDeletedStatementCount() {
     return notDeletedStatementCount + statementsWithBNodeCount;
   }
 
-  String getbNodeInfo() {
-    return bNodeInfo;
+  /**
+   * @return information about statement not deleted due to containing a blank node
+   */
+  String getBNodeInfo() {
+    return BNodeInfo;
   }
 
-  private void setbNodeInfo(String bNodeInfo) {
-    this.bNodeInfo = bNodeInfo;
+  /*
+   * Called in {@link DirectStatementDeleter#call()} after the deletion process is done
+   * @param BNodeInfo information about statement not deleted due to containing a blank node
+   */
+  private void setBNodeInfo(String BNodeInfo) {
+    this.BNodeInfo = BNodeInfo;
   }
 
+  /**
+   * Deletes a given {@code node}, if all conditions are met. Call in the {@link #call()} method.
+   *
+   * @param node to be deleted
+   */
   private void deleteNodeIfEmpty(Node node) {
     int nodePropertyCount = node.getAllProperties().size();
     int labelCount = Iterators.size(node.getLabels().iterator());
@@ -259,13 +293,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     }
   }
 
-  private void persistNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
-  }
-
-  // Adapted from APOC :)
+  // Adapted from APOC
   private Object toPropertyValue(Object value) {
     if (value instanceof Iterable) {
       Iterable it = (Iterable) value;
