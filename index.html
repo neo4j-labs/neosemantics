@@ -2999,7 +2999,7 @@ CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576
 </div>
 <div class="imageblock">
 <div class="content">
-<img src="docs/img/crystallography-with-instances" alt="Topic hierarchy with instances">
+<img src="docs/img/crystallography-with-instances.png" alt="Topic hierarchy with instances">
 </div>
 </div>
 <div class="paragraph">
@@ -3094,16 +3094,17 @@ produce the following result:</p>
 <div class="sect3">
 <h4 id="_a_real_world_example"><a class="link" href="#_a_real_world_example">A real  world example</a></h4>
 <div class="paragraph">
-<p>We can use the <code>semantics.importOntology</code> procedure to import the NCBI Taxon ontology.</p>
+<p>We can use the <code>semantics.importOntology</code> procedure to import <a href="http://www.obofoundry.org/ontology/ncbitaxon.html">the NCBI Taxon ontology</a>.
+This is an ontology representation of the National Center for Biotechnology Information (NCBI) organismal taxonomy.
+It contains 1.8 million classes (<code>Class</code>) and 3.6 million subClass of (<code>SCO</code>) relationships.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.importOntology("http://purl.obolibrary.org/obo/go/snapshot/go.owl","RDF/XML")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.importOntology("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML")</code></pre>
 </div>
 </div>
 <div class="paragraph">
-<p>In just over a couple of minutes it will load into Neo4j the 1.8 million classes (<code>Class</code>) and the 3.6 million
-subClass of (<code>SCO</code>) relationships in the ontology.</p>
+<p>It takes just over a couple of minutes to load it into Neo4j.</p>
 </div>
 <div class="listingblock">
 <div class="content">
