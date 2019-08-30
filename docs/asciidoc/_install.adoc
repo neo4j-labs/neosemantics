@@ -40,7 +40,7 @@ Please provide feedback and report bugs as GitHub issues or join the Neo4j Commu
 === Acknowledgements
 NSMNTX uses https://rdf4j.eclipse.org/[rdf4j] for parsing and serialising RDF. Eclipse rdf4j is a powerful Java framework for processing and handling RDF data.
 
-The following functionalities have been developed by https://github.com/ArkanEmre[Emre Arkan] in cooperation with https://www.eccenca.com/en/index.html[eccenca GmbH] and https://www.th-brandenburg.de[Brandenburg University of Applied Sciences]:
+The following functionalities have been developed by https://github.com/ArkanEmre[Emre Arkan] in the context of his bachelor thesis in cooperation with https://www.eccenca.com/en/index.html[eccenca GmbH] and https://www.th-brandenburg.de[Brandenburg University of Applied Sciences]:
 
 * Import (<<ImportQuadRDF>>) and Export of Quadruples
 * Preservation of custom data types (<<CustomDataTypes>>)
