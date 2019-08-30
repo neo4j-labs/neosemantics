@@ -160,9 +160,7 @@ Again, notice the URL enconding of the URI (the clean URI is `http://neo4j.org/i
 ----
 
 Additionally, you can provide a graph URI to specify the context of the given resource using the `graphUri` parameter.
-Here is how you can serialise as RDF the resource identified by URI `http://www.example.org/exampleDocument#Monica`
-but only the statements in the named graph `http://www.example.org/exampleDocument#G1`. Normally such a model will
- be the result of importing RDF Quads as described in the <<ImportQuadRDF>> section. Note that URIS are URL encoded:
+Here is how you can serialise the resource identified by URI `http://www.example.org/exampleDocument#Monica` as RDF in TriG format, but only the statements in the named graph `http://www.example.org/exampleDocument#G1` are included, which was imported in the <<ImportQuadRDF>> section.
 
 [source,Cypher]
 ----
