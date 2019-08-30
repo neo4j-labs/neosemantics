@@ -54,11 +54,11 @@ neo4ind:neo4j355 neo4voc:name "neo4j" ;
 
 ----
 
-You can save them to your local drive or access them directly https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/src/docs/rdf/nsmntx.ttl[here]. All you'll need to provide to NSMNTX is the location (`file://` or `http://`) and the serialisation used, `Turtle` in this case.
+You can save them to your local drive or access them directly https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl[here]. All you'll need to provide to NSMNTX is the location (`file://` or `http://`) and the serialisation used, `Turtle` in this case.
 
 [source,cypher]
 ----
-CALL semantics.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/src/docs/rdf/nsmntx.ttl","Turtle")
+CALL semantics.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl","Turtle")
 ----
 
 ////
