@@ -171,7 +171,7 @@ CREATE (:Work { title: "Crystals and life", identifier: "12873809"})-[:HAS_SUBJE
 CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576"})-[:HAS_SUBJECT]->(cr)
 ----
 
-image::crystallography-with-instances[Topic hierarchy with instances]
+image::crystallography-with-instances.png[Topic hierarchy with instances]
 
 In this case, the query to get the nodes in a particular category will make use of
  the `semantics.inference.nodesInCategory` procedure. This procedure takes as
@@ -254,14 +254,15 @@ produce the following result:
 
 ==== A real  world example
 
-We can use the `semantics.importOntology` procedure to import the NCBI Taxon ontology.
+We can use the `semantics.importOntology` procedure to import http://www.obofoundry.org/ontology/ncbitaxon.html[the NCBI Taxon ontology].
+This is an ontology representation of the National Center for Biotechnology Information (NCBI) organismal taxonomy.
+It contains 1.8 million classes (`Class`) and 3.6 million subClass of (`SCO`) relationships.
 
 [source,Cypher]
 ----
-CALL semantics.importOntology("http://purl.obolibrary.org/obo/go/snapshot/go.owl","RDF/XML")
+CALL semantics.importOntology("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML")
 ----
-In just over a couple of minutes it will load into Neo4j the 1.8 million classes (`Class`) and the 3.6 million
-subClass of (`SCO`) relationships in the ontology.
+It takes just over a couple of minutes to load it into Neo4j.
 
 [source,Cypher]
 ----
