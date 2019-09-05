@@ -277,7 +277,7 @@ By default, NSMNTX will strip out the language tags but if you want to keep them
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})
 ----
 
 When you import literal values keeping the language annotation, you'll see that string values have a suffix like `@fr` for French language, `@zh-cmn-Hant` for Mandarin Chinese traditional, and so on.
@@ -294,7 +294,7 @@ Language tags can also be used as a filter criteria. If we are only interested i
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})
+CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { languageFilter: 'es'})
 ----
 
 === Handling custom data types
