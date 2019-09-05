@@ -972,7 +972,7 @@ ind:218 show:localName "Cette Série des Années Septante"@fr-be .</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -993,7 +993,7 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.nt","Turtle", { languageFilter: 'es'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { languageFilter: 'es'})</code></pre>
 </div>
 </div>
 </div>
