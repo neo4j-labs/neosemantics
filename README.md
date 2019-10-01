@@ -1,5 +1,5 @@
 # NSMNTX
-![NSMNTX Logo](http://jbarrasa.github.io/neosemantics/docs/img/nsmntx-logo.png)
+![NSMNTX Logo](http://neo4j-labs.github.io/neosemantics/docs/img/nsmntx-logo.png)
 NSMNTX is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
 This effectively means that NSMNTX makes it possible to
 
@@ -11,13 +11,13 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 
 ## ⇨ User Manual and Blog ⇦ 
 
-⇨ Check out the complete **[user manual](http://jbarrasa.github.io/neosemantics/)** with examples of use. ⇦
+⇨ Check out the complete **[user manual](http://neo4j-labs.github.io/neosemantics/)** with examples of use. ⇦
 
 ⇨ [Blog on NSMNTX](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
 ## Installation
  
-You can either download a prebuilt jar from the [releases area](https://github.com/jbarrasa/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
+You can either download a prebuilt jar from the [releases area](https://github.com/neo4j-labs/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
 
 1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. (**note:** If you're going to use the JSON-LD serialisation format for RDF, you'll need to include also [APOC](https://neo4j-contrib.github.io/neo4j-apoc-procedures/))
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
@@ -44,7 +44,7 @@ This will produce two jars :
   
 
 ## What's in this repository
-This repository contains a set of stored procedures, user definded functions and extensions sumarised in [the reference section of the user manual](http://jbarrasa.github.io/neosemantics/#Reference).
+This repository contains a set of stored procedures, user definded functions and extensions sumarised in [the reference section of the user manual](http://neo4j-labs.github.io/neosemantics/#Reference).
 
 ## Contributing
 
