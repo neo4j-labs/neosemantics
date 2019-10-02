@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d:toc xmlns:d="http://docbook.org/ns/docbook" xmlns="http://www.w3.org/1999/xhtml" role="chunk-toc">
+
+  <d:tocentry linkend="apoc"><?dbhtml filename="index.html"?>
+
+    <d:tocentry linkend="intro"><?dbhtml filename="introduction/index.html"?>
+    </d:tocentry>
+
+
+    <d:tocentry linkend="Install"><?dbhtml filename="install/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Import"><?dbhtml filename="import/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Export"><?dbhtml filename="export/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Inference"><?dbhtml filename="inference/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Mapping"><?dbhtml filename="mapping/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Reference"><?dbhtml filename="reference/index.html"?>
+    </d:tocentry>
+
+
+    <d:tocentry linkend="Examples"><?dbhtml filename="examples/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="DeleteRDF"><?dbhtml filename="deleting-rdf/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="OntoImport"><?dbhtml filename="importing-ontologies/index.html"?>
+    </d:tocentry>
+
+
+    <d:tocentry linkend="Preview"><?dbhtml filename="previewing-rdf/index.html"?>
+    </d:tocentry>
+
+  </d:tocentry>
+
+</d:toc>
+<!-- vim: set ts=2 sw=2: -->
