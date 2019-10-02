@@ -71,7 +71,7 @@ file:///d:/datasets/myfile.ttl
 
 NSMNTX will import the RDF data and persist it into your Neo4j graph as the following structure
 
-image::nsmntx-annotated.png[RDF data imported in Neo4j]
+image::nsmntx-annotated.png[RDF data imported in Neo4j,scaledwidth="100%"]
 
 
 The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
@@ -90,7 +90,7 @@ CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "I
 
 The imported graph will look something like the following one, in which the names for labels, properties and relationships are more of the kind you're use to work with in Neo4j:
 
-image::nsmntx-ignore-annotated.png[RDF data imported in Neo4j ignoring namespaces]
+image::nsmntx-ignore-annotated.png[RDF data imported in Neo4j ignoring namespaces, scaledwidth="100%"]
 
 
 [IMPORTANT]
@@ -141,7 +141,7 @@ We've seen how to shorten RDF uris into more readable names using namespace pref
 CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "KEEP" })
 ----
 
-image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces]
+image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces,scaledwidth="100%"]
 
 The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.
 
@@ -230,7 +230,7 @@ CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multiv
 
 And here's what the result of the import would look like:
 
-image::multivalued1.png[Multivalued properties loaded as arrays in Neo4j]
+image::multivalued1.png[Multivalued properties loaded as arrays in Neo4j,scaledwidth="100%"]
 
 When we analyse the result in the Neo4j browser we realise that there's only one node for the nine triples imported! Yes, keep in mind that all triples in our RDF fragment are datatype properties, or in other words, properties with literal values, which are stored in Neo4j as node properties. All the statements are there, *no data is lost*, it's just stored as the internal structure of the node. We can see all properties on the table view on the left hand side of the image. 
 
@@ -407,7 +407,7 @@ RETURN semantics.getValue(n.ns0__power)
 
 The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
 
-=== Classess as Nodes (instead of Labels)
+=== Classes as Nodes (instead of Labels)
 
 The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you'll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes. 
 If you want `rdf:type` statements (triples) to be imported in this way, all you have to do is set the `typesToLabels` parameter to `false`.
@@ -421,7 +421,7 @@ call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minion
 
 We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
 
-image::minionto.png[Ontology imported in Neo4j]
+image::minionto.png[Ontology imported in Neo4j,scaledwidth="100%"]
 
 Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming `rdf:type` statements into Property Graph labels. We can achieve this by setting the `typesToLabels` to `false`.
 
@@ -432,7 +432,7 @@ call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniin
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
 
-image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j]
+image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j,scaledwidth="100%"]
 
 More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
 
@@ -627,7 +627,7 @@ Which returns:
 
 And produces this graph:
 
-image::worldofyesterday.png[Graph resulting of importing the data in the British National Library on 'The world of yesterday' by Stefan Zweig]
+image::worldofyesterday.png[Graph resulting of importing the data in the British National Library on 'The world of yesterday' by Stefan Zweig, scaledwidth="100%"]
 
 Of course you could do achieve this -or something similar- in different ways, in this case we are using a SPARQL CONSTRUCT query in order to be able to limit
 the number of triples returned for each resource as some of them are pretty dense.
@@ -871,7 +871,7 @@ The `liteOntoImport` procedure takes the same generic params described in <<comm
 CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")
 ---- 
 
-image::vwonto.png[VW ontology imported in Neo4j]
+image::vwonto.png[VW ontology imported in Neo4j, scaledwidth="100%"]
 
 As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively. Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
 
@@ -916,7 +916,7 @@ It will produce a stream of records, each one representing a triple parsed. So y
 
 In the previous example the output would look something like this:
 
-image::streamRDF.png[RDF parsed and streamed in Neo4j]
+image::streamRDF.png[RDF parsed and streamed in Neo4j, scaledwidth="100%"]
 
 The procedure is read-only and nothing is written to the graph, however, it is possible to use cypher on the output of the procedure to analyse the triples returned like in this first example:
 

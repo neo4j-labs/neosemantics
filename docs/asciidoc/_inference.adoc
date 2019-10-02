@@ -34,7 +34,7 @@ In this example we use LCSHTopic to label the categories and the `NARROWER_THAN`
 hierarchy that as we can see in this fragment does not necessarily need to be a tree (it the general
 case it will be a graph).
 
-image::crystallography-hierarchy.png[Topic hierarchy from the LCSH]
+image::crystallography-hierarchy.png[Topic hierarchy from the LCSH, scaledwidth="100%"]
 
 We have defined a hierarchy of categories and now we'll want to annotate individuals with the categories defined.
 To do this we have two main options:
@@ -171,7 +171,7 @@ CREATE (:Work { title: "Crystals and life", identifier: "12873809"})-[:HAS_SUBJE
 CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576"})-[:HAS_SUBJECT]->(cr)
 ----
 
-image::crystallography-with-instances.png[Topic hierarchy with instances]
+image::crystallography-with-instances.png[Topic hierarchy with instances, scaledwidth="100%"]
 
 In this case, the query to get the nodes in a particular category will make use of
  the `semantics.inference.nodesInCategory` procedure. This procedure takes as
@@ -407,7 +407,7 @@ We should get a simple hierarchy of properties like the one in this screen captu
 browser.
 
 
-image::movieDB-PropertyHierarchy-OntoLoad.png[property hierarchy in a possible Movie Database Ontology loaded into Neo4j]
+image::movieDB-PropertyHierarchy-OntoLoad.png[property hierarchy in a possible Movie Database Ontology loaded into Neo4j, scaledwidth="100%"]
 
 Writing a query that returns all nodes connected to the movie The Matrix through the 'virtual' `WORKED_IN` relationship
 is an easy task with the `semantics.inference.getRels` procedure.
