@@ -1,7 +1,6 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -29,52 +28,71 @@ import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 /**
- * This class implements an RDF handler to statement-wise delete imported RDF data sets
+ * /** This class implements an RDF handler to statement-wise delete imported RDF quadruples.
  *
  * Created on 18/06/2019.
  *
  * @author Emre Arkan
  */
-
 class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor implements
     Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
-
   private Cache<ContextResource, Node> nodeCache;
   private long notDeletedStatementCount;
-  private long statementsWithbNodeCount;
-  private String bNodeInfo;
+  private long statementsWithBNodeCount;
+  private String BNodeInfo;
 
   RDFQuadDirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
     super(db, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
-    bNodeInfo = "";
+    BNodeInfo = "";
     notDeletedStatementCount = 0;
-    statementsWithbNodeCount = 0;
+    statementsWithBNodeCount = 0;
   }
 
+  /**
+   * Analog to endRDF in {@link DirectStatementDeleter}
+   *
+   * Executed at the end of each commit to inform the user of the current state of the deletion
+   * process.
+   */
   @Override
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
-      persistNamespaceNode();
-    }
-
     log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
         "Total number of triples deleted is " + totalTriplesMapped + " out of "
         + totalTriplesParsed + " parsed.");
   }
 
+  /**
+   * Analog to call in {@link DirectStatementDeleter}, however modified to delete quadruples rather
+   * than triples
+   *
+   * {@link #resourceLabels}, {@link #resourceProps}, and {@link #statements}, which contain the
+   * statements to be deleted, are processed respectively. If a statement does not exist in the
+   * database, {@link #notDeletedStatementCount} is increased to inform the user of not deleted
+   * statement count
+   *
+   * {@link #statementsWithBNodeCount} counts the number of statements, which could not be deleted
+   * due to containing a blank node.
+   *
+   * {@link #deleteNodeIfEmpty(Node)} is called for each {@code Node} processed, to check and delete
+   * it, if applicable
+   *
+   * @return An obligatory return, which is always 0, since the overridden method must return an
+   * Integer
+   */
   @Override
   public Integer call() throws Exception {
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
       if (entry.getKey().getUri().startsWith("genid")) {
-        statementsWithbNodeCount += entry.getValue().size() + 1;
+        //if the node represents a blank node
+        statementsWithBNodeCount += entry.getValue().size() + 1;
         continue;
       }
       Node tempNode = null;
@@ -109,6 +127,7 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
       node = tempNode;
       entry.getValue().forEach(l -> {
         if (node != null && node.hasLabel(Label.label(l))) {
+          //if node exist in the database and has the label to be deleted
           node.removeLabel(Label.label(l));
         } else {
           notDeletedStatementCount++;
@@ -186,7 +205,7 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
 
     for (Statement st : statements) {
       if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
-        statementsWithbNodeCount++;
+        statementsWithBNodeCount++;
       }
       if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
         continue;
@@ -195,28 +214,25 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node fromNode = null;
       try {
-        fromNode = nodeCache.get(from, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getSubject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = graphdb.execute(cypher, params);
+        fromNode = nodeCache.get(from, () -> {
+          Node node = null;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getSubject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
             if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getSubject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
+              String props =
+                  "{uri: " + st.getSubject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
             }
-            return node;
           }
+          return node;
         });
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
@@ -225,28 +241,25 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
           st.getContext() != null ? st.getContext().stringValue() : null);
       Node toNode = null;
       try {
-        toNode = nodeCache.get(to, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getObject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = graphdb.execute(cypher, params);
+        toNode = nodeCache.get(to, () -> {
+          Node node = null;
+          Map<String, Object> params = new HashMap<>();
+          String cypher = buildCypher(st.getObject().stringValue(),
+              st.getContext() != null ? st.getContext().stringValue() : null,
+              params);
+          Result result = graphdb.execute(cypher, params);
+          if (result.hasNext()) {
+            node = (Node) result.next().get("n");
             if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getObject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
+              String props =
+                  "{uri: " + st.getObject().stringValue() +
+                      (st.getContext() == null ? "}" :
+                          ", graphUri: " + st.getContext().stringValue() + "}");
+              throw new IllegalStateException(
+                  "There are multiple matching nodes for the given properties " + props);
             }
-            return node;
           }
+          return node;
         });
       } catch (InvalidCacheLoadException | IllegalStateException e) {
         e.printStackTrace();
@@ -255,7 +268,6 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
         notDeletedStatementCount++;
         continue;
       }
-
       // find relationship if it exists
       if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
           Direction.OUTGOING) <
@@ -282,19 +294,19 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
       deleteNodeIfEmpty(toNode);
       deleteNodeIfEmpty(fromNode);
     }
-
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-    if (statementsWithbNodeCount > 0) {
-      setbNodeInfo(statementsWithbNodeCount
+    if (statementsWithBNodeCount > 0) {
+      setBNodeInfo(statementsWithBNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
     }
-
-    //TODO what to return here? number of nodes and rels?
     return 0;
   }
 
+  /**
+   * Analog to periodicOperation in {@link DirectStatementDeleter}
+   */
   @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
@@ -304,18 +316,43 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
     mappedTripleCounter = 0;
   }
 
+  /**
+   * Analog to getNotDeletedStatementCount in {@link DirectStatementDeleter}
+   *
+   * @return amount of not deleted statement count and statements with blank node count
+   */
   long getNotDeletedStatementCount() {
-    return notDeletedStatementCount + statementsWithbNodeCount;
+    return notDeletedStatementCount + statementsWithBNodeCount;
   }
 
-  String getbNodeInfo() {
-    return bNodeInfo;
+  /**
+   * Analog to getBNodeInfo in {@link DirectStatementDeleter}
+   *
+   * @return information about statement not deleted due to containing a blank node
+   */
+  String getBNodeInfo() {
+    return BNodeInfo;
   }
 
-  private void setbNodeInfo(String bNodeInfo) {
-    this.bNodeInfo = bNodeInfo;
+  /**
+   * Analog to setBNodeInfo in {@link DirectStatementDeleter}
+   *
+   * Called in {@link DirectStatementDeleter#call()} after the deletion process is done
+   *
+   * @param BNodeInfo information about statement not deleted due to containing a blank node
+   */
+  private void setBNodeInfo(String BNodeInfo) {
+    this.BNodeInfo = BNodeInfo;
   }
 
+  /**
+   * Analog to deleteNode in {@link DirectStatementDeleter}, however slightly modified to delete
+   * quadruples as well.
+   *
+   * Deletes a given {@code node}, if all conditions are met. Call in the {@link #call()} method.
+   *
+   * @param node node to be deleted
+   */
   private void deleteNodeIfEmpty(Node node) {
     int nodePropertyCount = node.getAllProperties().size();
     int labelCount = Iterators.size(node.getLabels().iterator());
@@ -329,13 +366,7 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
     }
   }
 
-  private void persistNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
-  }
-
-  // Adapted from APOC :)
+  // Adapted from APOC
   private Object toPropertyValue(Object value) {
     if (value instanceof Iterable) {
       Iterable it = (Iterable) value;

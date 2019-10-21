@@ -19,19 +19,18 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.rio.RDFHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.logging.Log;
 
 
 /**
+ * This class extends {@link RDFToLPGStatementProcessor} to process RDF quadruples.
+ *
  * Created on 06/06/2019.
  *
  * @author Emre Arkan
  */
-
-abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor implements
-    RDFHandler {
+abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor {
 
   Map<ContextResource, Map<String, Object>> resourceProps;
   Map<ContextResource, Set<String>> resourceLabels;
@@ -42,6 +41,12 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
     resourceLabels = new HashMap<>();
   }
 
+  /**
+   * Analog to handleStatement in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * @param st statement to be handled
+   */
   @Override
   public void handleStatement(Statement st) {
     Resource context = st.getContext();
@@ -80,8 +85,14 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
     }
   }
 
-  protected abstract void periodicOperation();
-
+  /**
+   * Constructs a Cypher query to find a specific node defined by its uri and optionally graphUri
+   *
+   * @param uri of the node that is searched
+   * @param graphUri of the node that is searched, can be {@code null}
+   * @param params parameters of the Cypher query
+   * @return constructed Cypher query
+   */
   String buildCypher(String uri, String graphUri, Map<String, Object> params) {
     Preconditions.checkNotNull(uri);
     StringBuilder cypher = new StringBuilder();
@@ -98,14 +109,23 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
     return cypher.toString();
   }
 
+  /**
+   * Analog to setProp in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Adds a given predicate-literal pair to {@link #resourceProps} of a given {@link
+   * ContextResource}
+   *
+   * @param contextResource, to which the property belongs
+   * @param propertyIRI, predicate IRI of the statement
+   * @param propValueRaw literal value
+   * @return true if property value is not {@code null}, false otherwise
+   */
   private boolean setProp(ContextResource contextResource, IRI propertyIRI,
       Literal propValueRaw) {
     Map<String, Object> props;
-
     String propName = handleIRI(propertyIRI, PROPERTY);
-
     Object propValue = getObjectValue(propertyIRI, propValueRaw);
-
     if (propValue != null) {
       if (!resourceProps.containsKey(contextResource)) {
         props = initialiseProps(contextResource);
@@ -114,8 +134,6 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
         props = resourceProps.get(contextResource);
       }
       if (parserConfig.getHandleMultival() == PROP_OVERWRITE) {
-        // Ok for single valued props. If applied to multivalued ones
-        // only the last value read is kept.
         props.put(propName, propValue);
       } else if (parserConfig.getHandleMultival() == PROP_ARRAY) {
         if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList()
@@ -123,7 +141,6 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);
             propVals.add(propValue);
-
             // If multiple datatypes are tried to be stored in the same List, a java.lang
             // .ArrayStoreException arises
           } else {
@@ -132,7 +149,6 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
             props.put(propName, propVals);
           }
         } else {
-          //if handleMultival set to ARRAY but prop not in list, then default to overwrite.
           props.put(propName, propValue);
         }
       }
@@ -140,6 +156,15 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
     return propValue != null;
   }
 
+  /**
+   * Analog to setLabel in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Adds a given label to {@link #resourceLabels} of a given {@link ContextResource}.
+   *
+   * @param contextResource, to which the label belongs
+   * @param label to be added to {@link #resourceLabels} of the given {@link ContextResource}
+   */
   private void setLabel(ContextResource contextResource, String label) {
     Set<String> labels;
     if (!resourceLabels.containsKey(contextResource)) {
@@ -151,23 +176,61 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
     labels.add(label);
   }
 
+  /**
+   * Analog to addResource in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Adds a given {@link ContextResource} as a resource.
+   *
+   * @param contextResource which is to be added as a resource, if not already existent
+   */
   private void addResource(ContextResource contextResource) {
     if (!resourceLabels.containsKey(contextResource)) {
       initialise(contextResource);
     }
   }
 
+  /**
+   * Analog to initialise in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Calls {@link #initialiseProps(ContextResource)} and {@link #initialiseLabels(ContextResource)}
+   * for the given {@link ContextResource} to initialize these.
+   *
+   * @param contextResource whose {@link #resourceProps} and {@link #resourceLabels} are to be
+   * initialized
+   */
   private void initialise(ContextResource contextResource) {
     initialiseProps(contextResource);
     initialiseLabels(contextResource);
   }
 
+  /**
+   * Analog to initialiseLabels in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Initializes the {@link Set<String>} of a {@link ContextResource} that contains the labels
+   * (Object IRI) of the given {@link ContextResource}.
+   *
+   * @param contextResource whose label set is to be initialized
+   * @return {@link Set<String>} for the label {@link Set} of the current {@link ContextResource}
+   */
   private Set<String> initialiseLabels(ContextResource contextResource) {
     Set<String> labels = new HashSet<>();
     resourceLabels.put(contextResource, labels);
     return labels;
   }
 
+  /**
+   * Analog to initialiseProps in {@link RDFToLPGStatementProcessor}, however modified for {@link
+   * ContextResource}.
+   *
+   * Initializes the {@link HashMap} of the given {@link ContextResource} that contains {@link
+   * String} as key (predicate IRI) and {@link Object} as value (literal).
+   *
+   * @param contextResource whose property map is to be initialized
+   * @return {@link HashMap} for the predicate-literal pairs of the given {@link ContextResource}
+   */
   private HashMap<String, Object> initialiseProps(ContextResource contextResource) {
     HashMap<String, Object> props = new HashMap<>();
     resourceProps.put(contextResource, props);

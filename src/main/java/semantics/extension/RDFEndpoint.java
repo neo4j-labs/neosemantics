@@ -55,7 +55,11 @@ import org.neo4j.logging.Log;
 import semantics.ContextResource;
 
 /**
- * Created by jbarrasa on 08/09/2016.
+ * This class implements an RDF endpoint to export data in various RDF serializations from Neo4j.
+ *
+ * Created on 08/09/2016.
+ *
+ * @author Jesús Barrasa
  */
 @Path("/")
 public class RDFEndpoint {
@@ -136,6 +140,15 @@ public class RDFEndpoint {
     }).build();
   }
 
+  /**
+   * This method processes a {@link POST} request. It executes the given Cypher query, if the result
+   * set is not empty, LPG nodes and relationships are converted into RDF statements in the chosen
+   * serialization accordingly
+   *
+   * @param body {@link Map} containing Cypher query, optional query parameters and the desired
+   * export serialization
+   * @return HTTP response containing the created RDF
+   */
   @POST
   @Path("/cypheronrdf")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
@@ -213,18 +226,26 @@ public class RDFEndpoint {
     }).build();
   }
 
+  /**
+   * Processes an LPG relationship and if all conditions are met, an RDF statement is created.
+   *
+   * @param namespaces in the database
+   * @param writer to export RDF statements in a given serialization
+   * @param valueFactory to construct statements from LPG relationships
+   * @param rel relationship to be processed
+   */
   private void processRelationship(Map<String, String> namespaces, RDFWriter writer,
       SimpleValueFactory valueFactory, String baseVocabNS, Relationship rel) {
-    Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString(),
+    Resource subject = createResourceOrBNode(rel.getStartNode().getProperty("uri").toString(),
         valueFactory);
     IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, rel.getType().name(), namespaces));
-    Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString(),
+    Resource object = createResourceOrBNode(rel.getEndNode().getProperty("uri").toString(),
         valueFactory);
     Resource context = null;
     if (rel.getStartNode().hasProperty("graphUri") && rel.getEndNode().hasProperty("graphUri")) {
       if (rel.getStartNode().getProperty("graphUri").toString()
           .equals(rel.getEndNode().getProperty("graphUri").toString())) {
-        context = buildSubjectOrContext(rel.getStartNode().getProperty("graphUri").toString(),
+        context = createResourceOrBNode(rel.getStartNode().getProperty("graphUri").toString(),
             valueFactory);
       } else {
         throw new IllegalStateException(
@@ -238,6 +259,14 @@ public class RDFEndpoint {
     writer.handleStatement(valueFactory.createStatement(subject, predicate, object, context));
   }
 
+  /**
+   * Processes an LPG node and creates RDF statements from imported statements stored in the node.
+   *
+   * @param namespaces in the database
+   * @param writer to export RDF statements in a given serialization
+   * @param valueFactory to construct statements from LPG relationships
+   * @param node node to be processed
+   */
   private void processNode(Map<String, String> namespaces, RDFWriter writer,
       SimpleValueFactory valueFactory,
       String baseVocabNS, Node node) {
@@ -249,7 +278,7 @@ public class RDFEndpoint {
         writer.handleStatement(
             valueFactory
                 .createStatement(
-                    buildSubjectOrContext(node.getProperty("uri").toString(), valueFactory),
+                    createResourceOrBNode(node.getProperty("uri").toString(), valueFactory),
                     RDF.TYPE,
                     valueFactory.createIRI(buildURI(baseVocabNS, label.name(), namespaces)),
                     node.hasProperty("graphUri") ? valueFactory
@@ -260,12 +289,12 @@ public class RDFEndpoint {
     Map<String, Object> allProperties = node.getAllProperties();
     for (String key : allProperties.keySet()) {
       if (!key.equals("uri") && !key.equals("graphUri")) {
-        Resource subject = buildSubjectOrContext(node.getProperty("uri").toString(), valueFactory);
+        Resource subject = createResourceOrBNode(node.getProperty("uri").toString(), valueFactory);
         IRI predicate = valueFactory.createIRI(buildURI(baseVocabNS, key, namespaces));
         Object propertyValueObject = allProperties.get(key);
         Resource context = null;
         if (node.hasProperty("graphUri")) {
-          context = buildSubjectOrContext(node.getProperty("graphUri").toString(), valueFactory);
+          context = createResourceOrBNode(node.getProperty("graphUri").toString(), valueFactory);
         }
         if (propertyValueObject instanceof long[]) {
           for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
@@ -325,7 +354,14 @@ public class RDFEndpoint {
     }
   }
 
-  private Resource buildSubjectOrContext(String id, ValueFactory vf) {
+  /**
+   * Creates an IRI or a blank node from a given resource.
+   *
+   * @param id IRI of the resource
+   * @param vf ValueFactory to create the resource
+   * @return created resource or blank node
+   */
+  private Resource createResourceOrBNode(String id, ValueFactory vf) {
     Resource result;
     try {
       result = vf.createIRI(id);
@@ -336,14 +372,25 @@ public class RDFEndpoint {
     return result;
   }
 
-
+  /**
+   * This method processes a {@link GET} request. It searches for a given LPG node representing a
+   * resource with an optional context, if found statements stored in the node are converted into
+   * RDF statements in the chosen serialization.
+   *
+   * @param uriParam IRI of the resource to export
+   * @param graphUriParam graph IRI of the resource to export
+   * @param excludeContextParam parameter to include or exclude incoming or outgoing relationships
+   * from the node representing the resource
+   * @param format RDF serialization format for the export
+   * @return HTTP response containing the created RDF
+   */
   @GET
-  @Path("/describe/uri/{nodeuri}")
+  @Path("/describe/uri/{nodeUri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodebyuri(@Context GraphDatabaseService gds,
-      @PathParam("nodeuri") String uriParam,
-      @QueryParam("graphuri") String graphUriParam,
+  public Response nodeByUri(@Context GraphDatabaseService gds,
+      @PathParam("nodeUri") String uriParam,
+      @QueryParam("graphUri") String graphUriParam,
       @QueryParam("excludeContext") String excludeContextParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
@@ -356,14 +403,14 @@ public class RDFEndpoint {
       params.put("uri", uriParam);
       if (graphUriParam == null || graphUriParam.equals("")) {
         queryWithContext = "MATCH (x:Resource {uri:{uri}}) " +
-            "WHERE NOT EXISTS(x.graphUri)\n" +
+            "WHERE NOT exists(x.graphUri)\n" +
             "OPTIONAL MATCH (x)-[r]-(val:Resource) " +
             "WHERE exists(val.uri)\n" +
-            "AND NOT EXISTS(val.graphUri)\n" +
+            "AND NOT exists(val.graphUri)\n" +
             "RETURN x, r, val.uri AS value";
 
         queryNoContext = "MATCH (x:Resource {uri:{uri}}) " +
-            "WHERE NOT EXISTS(x.graphUri)\n" +
+            "WHERE NOT exists(x.graphUri)\n" +
             "RETURN x, null AS r, null AS value";
       } else {
         queryWithContext = "MATCH (x:Resource {uri:{uri}, graphUri:{graphUri}}) " +
@@ -447,6 +494,14 @@ public class RDFEndpoint {
 
   }
 
+  /**
+   * This method constructs a literal with its data type IRI, if existent from a shortened data type
+   * IRI.
+   *
+   * @param literal a {@link String} containing the literal
+   * @param namespaces a {@link Map} containing the namespaces in the database
+   * @return literal + data type IRI if it exists, the initial literal value otherwise
+   */
   private String buildCustomDTFromShortURI(String literal, Map<String, String> namespaces) {
     Matcher matcher = customDataTypedLiteralShortenedURIPattern.matcher(literal);
     if (matcher.matches()) {
@@ -813,6 +868,14 @@ public class RDFEndpoint {
     return result;
   }
 
+  /**
+   * Creates a literal, including language tag or data type IRI if existent.
+   *
+   * @param value literal with data type or language tag
+   * @param vf ValueFactory to create the literal
+   * @return created Literal, with a language tag or a custom data type or with neither, if not
+   * existent
+   */
   private Literal getLiteralWithTagOrDTIfPresent(String value, ValueFactory vf) {
     Matcher langTag = langTagPattern.matcher(value);
     Matcher customDT = customDataTypePattern.matcher(value);
