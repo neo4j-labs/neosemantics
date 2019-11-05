@@ -29,7 +29,6 @@ import org.neo4j.logging.Log;
 class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
-  private static final String[] EMPTY_ARRAY = new String[0];
   private Cache<String, Node> nodeCache;
 
   DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
@@ -58,16 +57,6 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
-  }
-
-  // Stolen from APOC :)
-  private Object toPropertyValue(Object value) {
-    Iterable it = (Iterable) value;
-    Object first = Iterables.firstOrNull(it);
-    if (first == null) {
-      return EMPTY_ARRAY;
-    }
-    return Iterables.asArray(first.getClass(), it);
   }
 
   @Override

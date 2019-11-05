@@ -265,13 +265,4 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
     graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
-  // Adapted from APOC :)
-  private Object toPropertyValue(Object value) {
-    if (value instanceof Iterable) {
-      Iterable it = (Iterable) value;
-      Object first = Iterables.firstOrNull(it);
-      return Iterables.asArray(first.getClass(), it);
-    }
-    return value;
-  }
 }

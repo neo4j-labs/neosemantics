@@ -236,13 +236,4 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
     persistNamespaceNode();
   }
 
-  // Stolen from APOC :)
-  private Object toPropertyValue(Object value) {
-    Iterable it = (Iterable) value;
-    Object first = Iterables.firstOrNull(it);
-    if (first == null) {
-      return EMPTY_ARRAY;
-    }
-    return Iterables.asArray(first.getClass(), it);
-  }
 }

@@ -3,10 +3,14 @@ package semantics;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -50,13 +54,22 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    // take away the unused extra triples
-    totalTriplesMapped -= extraStatements.size();
+    // take away the unused extra triples (maybe too much for just returning a counter?)
+    int unusedExtra = 0;
+    for(Entry<String, Map<String, Object>> entry:resourceProps.entrySet()){
+      for(Entry<String, Object> values:entry.getValue().entrySet()){
+        if (values.getValue() instanceof List){
+          unusedExtra+= ((List)values.getValue()).size();
+        } else {
+          unusedExtra++;
+        }
+      }
+    }
+    totalTriplesMapped -= unusedExtra;
 
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
-    extraStatements.clear();
 
   }
 
@@ -96,7 +109,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
         addStatement(st);
       } else if ((st.getPredicate().equals(RDFS.LABEL) || st.getPredicate().equals(RDFS.COMMENT))
           && st.getSubject() instanceof IRI) {
-        extraStatements.add(st);
+        setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
         mappedTripleCounter++;
       }
     }
@@ -128,23 +141,52 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   public Integer call() throws Exception {
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
-      final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-        @Override
-        public Node call() {
-          Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
-          if (node == null) {
-            node = graphdb.createNode(RESOURCE);
-            node.setProperty("uri", entry.getKey());
+      if (!entry.getValue().isEmpty()){
+        // if the uri is for an element for which we have not parsed the
+        // onto element type (class, property, rel) then it's an extra-statement
+        // and should be processed when the element in question is parsed
+
+        final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
+          @Override
+          public Node call() {
+            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+            if (node == null) {
+              node = graphdb.createNode(RESOURCE);
+              node.setProperty("uri", entry.getKey());
+            }
+            return node;
           }
-          return node;
-        }
-      });
+        });
 
-      entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
+        entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
 
-      resourceProps.get(entry.getKey()).forEach((k, v) -> {
-        node.setProperty(k, v);
-      });
+        resourceProps.get(entry.getKey()).forEach((k, v) -> {
+          //node.setProperty(k, v);
+          if (v instanceof List) {
+            Object currentValue = node.getProperty(k, null);
+            if (currentValue == null) {
+              node.setProperty(k, toPropertyValue(v));
+            } else {
+              if (currentValue.getClass().isArray()) {
+                Object[] properties = (Object[]) currentValue;
+                for (Object property : properties) {
+                  ((List) v).add(property);
+                  //here an exception can be raised if types are conflicting
+                }
+              } else {
+                ((List) v).add(node.getProperty(k));
+              }
+              //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+              node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+            }
+          } else {
+            node.setProperty(k, v);
+          }
+        });
+        //and after processing the props for all uris, then we clear them from resourceProps
+        resourceProps.remove(entry.getKey());
+
+      }
     }
 
     for (Statement st : statements) {
@@ -196,28 +238,11 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
       }
     }
 
-    extraStatements.removeIf(s -> persistedStatementCanBeRemoved(s));
 
     statements.clear();
     resourceLabels.clear();
-    resourceProps.clear();
 
     return 0;
-  }
-
-
-  private boolean persistedStatementCanBeRemoved(Statement st) {
-    final Node fromNode = graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-
-    if (fromNode == null) {
-      //resource not loaded, keep in list just in case
-      return false;
-    } else {
-      //add property and delete from list
-      fromNode.setProperty(st.getPredicate().getLocalName(), st.getObject().stringValue());
-      return true;
-    }
-
   }
 
   private String translateRelName(IRI iri) {

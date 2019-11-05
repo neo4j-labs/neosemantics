@@ -34,6 +34,7 @@ import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
+import org.neo4j.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 
@@ -44,6 +45,7 @@ import org.neo4j.logging.Log;
 abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   protected final Log log;
+  private static final String[] EMPTY_ARRAY = new String[0];
   final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
   protected GraphDatabaseService graphdb;
@@ -263,9 +265,9 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
       //differentiate between map/shorten and keep_long urls?
       loadNamespaces();
-      log.info("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
+      log.debug("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
     } else {
-      log.info("URIs will be ignored. Only local names will be kept.");
+      log.debug("URIs will be ignored. Only local names will be kept.");
     }
 
   }
@@ -299,7 +301,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return props;
   }
 
-  private boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
+  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
     Map<String, Object> props;
 
     String propName = handleIRI(propertyIRI, PROPERTY);
@@ -407,6 +409,16 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   Map<String, String> getNamespaces() {
     return namespaces;
+  }
+
+  // Stolen from APOC :)
+  protected Object toPropertyValue(Object value) {
+    Iterable it = (Iterable) value;
+    Object first = Iterables.firstOrNull(it);
+    if (first == null) {
+      return EMPTY_ARRAY;
+    }
+    return Iterables.asArray(first.getClass(), it);
   }
 
   protected abstract void periodicOperation();

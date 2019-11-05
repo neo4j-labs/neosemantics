@@ -146,6 +146,9 @@ public class RDFImport {
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
+    //url handling settings will be ignored
+    props.put("handleVocabUris","IGNORE");
+
     OntologyLoaderConfig conf = new OntologyLoaderConfig(props);
 
     ImportResults importResults = new ImportResults();

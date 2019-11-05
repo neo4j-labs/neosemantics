@@ -2092,7 +2092,7 @@ public class RDFImportTest {
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
-      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+      assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(2L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -2120,7 +2120,7 @@ public class RDFImportTest {
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
-      assertEquals(56L, importResults.next().get("triplesLoaded").asLong());
+      assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(0L,
           session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
@@ -2277,6 +2277,82 @@ public class RDFImportTest {
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
     }
+  }
+
+  @Test
+  public void ontoImportMultilabel() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontologyMultilabel.owl").toURI()
+          + "','RDF/XML', { keepLangTag: true, handleMultival: 'ARRAY' } )");
+
+      assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      Record singleRecord = session.run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("Movie@en") &&
+          singleRecord.get("label").asList().contains("Pelicula@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("A film@en") &&
+          singleRecord.get("comment").asList().contains("Una pelicula@es"));
+      assertEquals("Movie", singleRecord.get("label_en").asString());
+      assertEquals("Pelicula", singleRecord.get("label_es").asString());
+      assertEquals("A film", singleRecord.get("comment_en").asString());
+      assertEquals("Una pelicula", singleRecord.get("comment_es").asString());
+
+
+      singleRecord = session.run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("PRODUCED@en") &&
+          singleRecord.get("label").asList().contains("PRODUCE@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("Producer produced film@en") &&
+          singleRecord.get("comment").asList().contains("productor de una pelicula@es"));
+      assertEquals("PRODUCED", singleRecord.get("label_en").asString());
+      assertEquals("PRODUCE", singleRecord.get("label_es").asString());
+      assertEquals("Producer produced film", singleRecord.get("comment_en").asString());
+      assertEquals("productor de una pelicula", singleRecord.get("comment_es").asString());
+
+
+      singleRecord = session.run("MATCH (n:Property { uri: 'http://neo4j.com/voc/movies#title'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("title@en") &&
+          singleRecord.get("label").asList().contains("titulo@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("The title of a film@en") &&
+          singleRecord.get("comment").asList().contains("El titulo de una pelicula@es"));
+      assertEquals("title", singleRecord.get("label_en").asString());
+      assertEquals("titulo", singleRecord.get("label_es").asString());
+      assertEquals("The title of a film", singleRecord.get("comment_en").asString());
+      assertEquals("El titulo de una pelicula", singleRecord.get("comment_es").asString());
+
+    }
+
   }
 
   @Test
