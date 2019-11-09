@@ -1268,8 +1268,8 @@ public class RDFImportTest {
       importResults
           = session.run(
           "match (n:Thing) return semantics.hasLangTag('en-US',n.prop[0]) as enus_tag, "
-              + "semantics.hasLangTag('fr-custom-tag'n.prop[1]) as frcust_tag, "
-              + "semantics.hasLangTag('es'n.prop[1]) as frcust_tag_no, "
+              + "semantics.hasLangTag('fr-custom-tag',n.prop[1]) as frcust_tag, "
+              + "semantics.hasLangTag('es',n.prop[1]) as frcust_tag_no, "
               + "semantics.hasLangTag('zh-Hans-CN',n.prop[2]) as cn_tag");
       next = importResults
           .next().asMap();
