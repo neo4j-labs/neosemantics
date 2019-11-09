@@ -1,5 +1,11 @@
 package semantics;
 
+import static semantics.Params.PREFIX_SEPARATOR;
+import static semantics.Params.DATATYPE_SHORTENED_PATTERN;
+import static semantics.Params.DATATYPE_REGULAR_PATTERN;
+import static semantics.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
+import static semantics.Params.SHORTENED_URI_PATTERN;
+
 import com.google.common.base.Preconditions;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -60,23 +66,10 @@ import semantics.result.StreamedStatement;
  */
 public class RDFImport {
 
-  public static final String PREFIX_SEPARATOR = "__";
-  public static final String CUSTOM_DATA_TYPE_SEPERATOR = "^^";
   static final int RELATIONSHIP = 0;
   static final int LABEL = 1;
   static final int PROPERTY = 2;
   static final int DATATYPE = 3;
-  private static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
-      "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "((\\w+)" +
-          Pattern.quote(PREFIX_SEPARATOR) + "(.+))$");
-  private static final Pattern DATATYPE_REGULAR_PATTERN = Pattern.compile(
-      "(.+?)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "([a-zA-Z]+:(.+))");
-
-  private static final Pattern SHORTENED_URI_PATTERN =
-      Pattern.compile("^(\\w+)__(\\w+)$");
-
-  private static final Pattern LANGUAGE_TAGGED_VALUE_PATTERN =
-      Pattern.compile("^(.*)@([a-zA-Z\\-]+)$");
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
@@ -448,8 +441,8 @@ public class RDFImport {
   }
 
   @UserFunction
-  @Description("Returns the value with the language tag passed as first argument or null if "
-      + "there's not a value for the provided language tag")
+  @Description("Returns the first value with the language tag passed as first argument or null if "
+      + "there's not a value for the provided tag")
   public String getLangValue(@Name("lang") String lang, @Name("values") Object values) {
 
     if (values instanceof List) {
@@ -476,6 +469,32 @@ public class RDFImport {
       }
     }
     return null;
+  }
+
+  @UserFunction
+  @Description("Returns the language tag of a value. Returns null if the value is not a string or"
+      + "if the string has no language tag")
+  public String getLangTag(@Name("value") Object value) {
+
+    if (value instanceof String) {
+      Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) value);
+      if (m.matches()) {
+        return m.group(2);
+      }
+    }
+    return null;
+  }
+
+  @UserFunction
+  @Description("Returns false if the value is not a string or if the string is not tagged with the "
+      + " given language tag")
+  public Boolean hasLangTag(@Name("lang") String lang, @Name("value") Object value) {
+
+    if (value instanceof String) {
+      Matcher m = LANGUAGE_TAGGED_VALUE_PATTERN.matcher((String) value);
+       return m.matches() && m.group(2).equals(lang);
+    }
+    return false;
   }
 
   @UserFunction

@@ -5,7 +5,7 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.neo4j.helpers.collection.Iterators.count;
 import static org.neo4j.server.ServerTestUtils.getSharedTestTemporaryFolder;
-import static semantics.RDFImport.PREFIX_SEPARATOR;
+import static semantics.Params.PREFIX_SEPARATOR;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;

@@ -1,7 +1,7 @@
 package semantics.extension;
 
-import static semantics.RDFImport.CUSTOM_DATA_TYPE_SEPERATOR;
-import static semantics.RDFImport.PREFIX_SEPARATOR;
+import static semantics.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.Params.PREFIX_SEPARATOR;
 import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;

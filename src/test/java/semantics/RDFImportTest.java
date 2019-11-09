@@ -7,29 +7,21 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.driver.v1.Values.NULL;
 import static org.neo4j.driver.v1.Values.ofNode;
-import static semantics.RDFImport.PREFIX_SEPARATOR;
+import static semantics.Params.PREFIX_SEPARATOR;
 
-import java.io.IOException;
+
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.eclipse.rdf4j.rio.RDFHandler;
-import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.eclipse.rdf4j.rio.RioSetting;
-import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
-import org.eclipse.rdf4j.rio.jsonld.GenericJSONParser;
-import org.eclipse.rdf4j.rio.jsonld.JSONLDParser;
+
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
@@ -104,8 +96,7 @@ public class RDFImportTest {
   @Test
   public void testAbortIfNoIndices() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -126,8 +117,7 @@ public class RDFImportTest {
   @Test
   public void testFullTextIndexesPresent() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       session.run("CALL db.index.fulltext.createNodeIndex(\"multiLabelIndex\","
           + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
@@ -149,8 +139,7 @@ public class RDFImportTest {
   @Test
   public void testCompositeIndexesPresent() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
 
       session.run("CREATE INDEX ON :Person(age, country)");
@@ -193,8 +182,7 @@ public class RDFImportTest {
   @Test
   public void testImportJSONLD() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -246,8 +234,7 @@ public class RDFImportTest {
   @Test
   public void testImportJSONLDShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -299,8 +286,7 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXML() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -330,8 +316,7 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -367,8 +352,7 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinition() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -412,8 +396,7 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinitionOneTriple() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -444,8 +427,7 @@ public class RDFImportTest {
   @Test
   public void testImportBadUrisTtl() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -471,8 +453,7 @@ public class RDFImportTest {
   @Test
   public void testImportTtlBadUrisException() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -497,8 +478,7 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLBadUris() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -524,8 +504,7 @@ public class RDFImportTest {
   @Test
   public void testImportLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -600,8 +579,7 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalLangTag() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
@@ -629,8 +607,7 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalWithMultivalList() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
@@ -667,8 +644,7 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalWithExclusionList() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
@@ -702,8 +678,7 @@ public class RDFImportTest {
   @Test
   public void testImportTurtle() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -737,8 +712,7 @@ public class RDFImportTest {
   @Test
   public void testImportTurtle02() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       session.run("CREATE (rdf:NamespacePrefixDefinition {" +
@@ -763,8 +737,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetPassWrongUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -784,8 +757,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetFailWrongUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -805,8 +777,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       StatementResult importResults
@@ -825,8 +796,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -861,8 +831,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -883,8 +852,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromBadUriFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -906,8 +874,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromBadUriFileFail() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -928,8 +895,7 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromFileLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -960,8 +926,7 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileWithMapping() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1005,8 +970,7 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileIgnoreNs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1036,8 +1000,7 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileIgnoreNsApplyNeoNaming() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1067,8 +1030,7 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileWithPredFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1112,8 +1074,7 @@ public class RDFImportTest {
   @Test
   public void testStreamFromFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1135,8 +1096,7 @@ public class RDFImportTest {
   @Test
   public void testStreamFromBadUriFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1158,8 +1118,7 @@ public class RDFImportTest {
   @Test
   public void testStreamFromBadUriFileFail() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1178,10 +1137,9 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testGetLangUDF() throws Exception {
+  public void testGetLangValUDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1243,10 +1201,89 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testGetLangTagUDF() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults
+          = session.run("return semantics.getLangTag('The Hague@en') as val_en,"
+              + "semantics.getLangTag('Den Haag@nl') as val_nl, "
+              + "semantics.getLangTag('La Haye@fr') as val_fr,"
+          + "semantics.getLangTag('That Seventies Show@en-US') as val_us,"
+          + "semantics.getLangTag([2, 45, 3]) as val_array,"
+          + "semantics.getLangTag('hello') as val_no_tag");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals("en", next.get("val_en"));
+      assertEquals("fr", next.get("val_fr"));
+      assertEquals("nl", next.get("val_nl"));
+      assertEquals("en-US", next.get("val_us"));
+      assertNull(next.get("val_array"));
+      assertNull(next.get("val_no_tag"));
+
+
+      session.run(
+          "create (n:Thing { prop: [\"That Seventies Show@en-US\", \"Cette Série des Années Soixante-dix@fr-custom-tag\", \"你好@zh-Hans-CN\"] })");
+      importResults
+          = session.run(
+          "match (n:Thing) return semantics.getLangTag(n.prop[0]) as enus_tag, "
+              + "semantics.getLangTag(n.prop[1]) as frcust_tag, semantics.getLangTag(n.prop[2]) as cn_tag");
+      next = importResults
+          .next().asMap();
+      assertEquals("fr-custom-tag", next.get("frcust_tag"));
+      assertEquals("en-US", next.get("enus_tag"));
+      assertEquals("zh-Hans-CN", next.get("cn_tag"));
+    }
+  }
+
+
+  @Test
+  public void testHasLangTagUDF() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      StatementResult importResults
+          = session.run("return semantics.hasLangTag('en','The Hague@en') as val_en,"
+          + "semantics.hasLangTag('nl','Den Haag@nl') as val_nl, "
+          + "semantics.hasLangTag('en','La Haye@fr') as val_fr_no,"
+          + "semantics.hasLangTag('en-US','That Seventies Show@en-US') as val_us,"
+          + "semantics.hasLangTag('it',[2, 45, 3]) as val_array,"
+          + "semantics.hasLangTag('ru','hello') as val_no_tag");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals(true, next.get("val_en"));
+      assertEquals(false, next.get("val_fr_no"));
+      assertEquals(true, next.get("val_nl"));
+      assertEquals(true, next.get("val_us"));
+      assertEquals(false, next.get("val_array"));
+      assertEquals(false, next.get("val_no_tag"));
+
+
+      session.run(
+          "create (n:Thing { prop: [\"That Seventies Show@en-US\", \"Cette Série des Années Soixante-dix@fr-custom-tag\", \"你好@zh-Hans-CN\"] })");
+      importResults
+          = session.run(
+          "match (n:Thing) return semantics.hasLangTag('en-US',n.prop[0]) as enus_tag, "
+              + "semantics.hasLangTag('fr-custom-tag'n.prop[1]) as frcust_tag, "
+              + "semantics.hasLangTag('es'n.prop[1]) as frcust_tag_no, "
+              + "semantics.hasLangTag('zh-Hans-CN',n.prop[2]) as cn_tag");
+      next = importResults
+          .next().asMap();
+      assertEquals(true, next.get("frcust_tag"));
+      assertEquals(false, next.get("frcust_tag_no"));
+      assertEquals(true, next.get("enus_tag"));
+      assertEquals(true, next.get("cn_tag"));
+    }
+  }
+
+  @Test
   public void testGetUriFromShortAndShortFromUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1271,8 +1308,7 @@ public class RDFImportTest {
   @Test
   public void testAddNamespacePrefixInitial() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       StatementResult res = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
       assertTrue(res.hasNext());
@@ -1286,8 +1322,7 @@ public class RDFImportTest {
   @Test
   public void testAddNamespacePrefixExisting() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       StatementResult res1 = session.run("CALL semantics.importRDF('" +
@@ -1312,8 +1347,7 @@ public class RDFImportTest {
   @Test
   public void testGetDataType() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1358,8 +1392,7 @@ public class RDFImportTest {
   @Test
   public void testGetValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1386,8 +1419,7 @@ public class RDFImportTest {
   @Test
   public void testCustomDataTypesKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1427,8 +1459,7 @@ public class RDFImportTest {
   @Test
   public void testCustomDataTypesShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1468,8 +1499,7 @@ public class RDFImportTest {
   @Test
   public void testImportMultiValAfterImportSingelVal() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
@@ -1503,8 +1533,7 @@ public class RDFImportTest {
   @Test
   public void testReificationImport() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1538,8 +1567,7 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadMultivaluesInArray() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1571,8 +1599,7 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadNamespaces() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1618,8 +1645,7 @@ public class RDFImportTest {
   @Test
   public void testLoadNamespacesWithCustomPredefined() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1657,8 +1683,7 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadArrayOnPreviouslyAtomicValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1690,8 +1715,7 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadAtomicValueOnPreviouslyArray() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1720,8 +1744,7 @@ public class RDFImportTest {
   @Test
   public void testLargerFileManyTransactions() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1738,8 +1761,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1779,8 +1801,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteRelationshipShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1820,8 +1841,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteLiteralKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1855,8 +1875,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteLiteralShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1890,8 +1909,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteTypeFromResource() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1926,8 +1944,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteAllTriplesRelatedToResource() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -1957,8 +1974,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteMultiLiteral() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2011,8 +2027,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteSubjectNode() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2046,8 +2061,7 @@ public class RDFImportTest {
   @Test
   public void testRepetitiveDeletion() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2447,8 +2461,7 @@ public class RDFImportTest {
   @Test
   public void testImportQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2519,8 +2532,7 @@ public class RDFImportTest {
   @Test
   public void testImportQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2591,8 +2603,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2623,8 +2634,7 @@ public class RDFImportTest {
   @Test
   public void testDeleteQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2655,8 +2665,7 @@ public class RDFImportTest {
   @Test
   public void testRepetitiveDeletionQuadRDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2700,8 +2709,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTreeEmptyJSON() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2719,8 +2727,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTreeListAtRoot() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2759,8 +2766,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2796,8 +2802,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTreeWithUrisAndContext() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2852,8 +2857,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree2() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
@@ -2908,8 +2912,7 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree3() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE)
-            .toConfig()); Session session = driver.session()) {
+        Config.build().toConfig()); Session session = driver.session()) {
 
       createIndices(neo4j.getGraphDatabaseService());
 
