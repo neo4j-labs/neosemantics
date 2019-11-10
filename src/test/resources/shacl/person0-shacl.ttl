@@ -1,0 +1,23 @@
+@prefix neo4j: <http://neo4j.com/myvoc#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+neo4j:PersonShape
+	a sh:NodeShape ;
+	sh:targetClass neo4j:Person ;
+	sh:property [
+		sh:path neo4j:name ;
+		sh:pattern "^\w[\s\w\.]*$" ;
+		sh:maxCount 1 ;
+        sh:datatype xsd:string ;
+	] ;
+    sh:property [
+    		sh:path neo4j:ACTED_IN ;
+    		sh:class neo4j:Movie ;
+    		sh:nodeKind sh:IRI ;
+    	] ;
+	sh:property [
+    		sh:path neo4j:born ;
+    		sh:minInclusive 1950 ;
+    		sh:maxInclusive 2019 ;
+    	].
+
