@@ -77,7 +77,7 @@ image::nsmntx-annotated.png[RDF data imported in Neo4j,scaledwidth="100%"]
 The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
 You will also notice a terminology/vocabulary transformation applied by default. The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher. 
 
-In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0\_\_name` (notice the double underscore separator used between the prefix and teh local name in the URI). Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf\_\_type` and so on...
+In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0\_\_name` (notice the double underscore separator used between the prefix and the local name in the URI). Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf\_\_type` and so on...
 
 Prefixes for custom namespaces are assigned sequentially (`ns0`, `ns1`, etc) as they appear in the imported RDF. This is the default behavior but we'll see later on that it is possible to control that, and use custom prefixes. More details in section <<custom_ns>>.
 
@@ -221,7 +221,7 @@ The following Turtle RDF fragment with the description of a news article. The ar
 
 We want to make sure we keep all values for the `nyt:keyword` property. The natural way to do this in Neo4j is storing them in an array, so we'll instruct NSMNTX to do that by setting the `handleMultival` to `'ARRAY'` and the `multivalPropList` to the list of property types that are multivalued and we want stored as arrays of values. In the example the list will only contain `'http://nyt.com/voc/keyword'`. 
 
-Here's teh import command that we need. Note that I'm combining the multivalued property config setting with the `handleVocabUris` set to false (the interested reader can try to drop this config and get URIS shortened with prefixes instead):
+Here's the import command that we need. Note that I'm combining the multivalued property config setting with the `handleVocabUris` set to false (the interested reader can try to drop this config and get URIS shortened with prefixes instead):
 
 [source,cypher]
 ----
