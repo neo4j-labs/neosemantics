@@ -1527,6 +1527,87 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testAddNamespacePrefixFromTest() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      String turtle = "@prefix tr-common: <http://permid.org/ontology/common/> . \n"
+          + "@prefix fibo-be-le-cb: <http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/> . \n"
+          + "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> . \n"
+          + "@prefix vcard: <http://www.w3.org/2006/vcard/ns#> . \n"
+          + "@prefix tr-org: <http://permid.org/ontology/organization/> . \n";
+
+      Map <String, String> validPairs = new HashMap<>();
+      validPairs.put("tr_common","http://permid.org/ontology/common/");
+      validPairs.put("fibo_be_le_cb","http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/");
+      validPairs.put("xsd","http://www.w3.org/2001/XMLSchema#");
+      validPairs.put("vcard","http://www.w3.org/2006/vcard/ns#");
+      validPairs.put("tr_org","http://permid.org/ontology/organization/");
+
+
+      checkValidPrefixesCreated(session, validPairs, turtle);
+
+      session.run("match  (n) detach delete n");
+
+      String rdfxml = "<rdf:RDF xml:base=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
+          + "         xmlns:afn=\"http://jena.apache.org/ARQ/function#\"\n"
+          + "         xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n"
+          + "         xmlns:fibo-be-corp-corp=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
+          + "         xmlns:fibo-be-le-cb=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/\"\n"
+          + "         xmlns:fibo-be-le-fbo=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/\"\n"
+          + "         xmlns:grddl=\"http://www.w3.org/2003/g/data-view#\"\n"
+          + "         xmlns:sm=\"http://www.omg.org/techprocess/ab/SpecificationMetadata/\"\n"
+          + "         xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\">\n";
+
+      validPairs.clear();
+      validPairs.put("afn","http://jena.apache.org/ARQ/function#");
+      validPairs.put("dc","http://purl.org/dc/elements/1.1/");
+      validPairs.put("fibo_be_corp_corp","https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
+      validPairs.put("fibo_be_le_cb","https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/");
+      validPairs.put("fibo_be_le_fbo","https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/");
+      validPairs.put("grddl","http://www.w3.org/2003/g/data-view#");
+      validPairs.put("sm","http://www.omg.org/techprocess/ab/SpecificationMetadata/");
+      validPairs.put("xsd","http://www.w3.org/2001/XMLSchema#");
+
+      checkValidPrefixesCreated(session, validPairs, rdfxml);
+
+      session.run("match  (n) detach delete n");
+
+      String sparql = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>        \n"
+          + "PREFIX type: <http://dbpedia.org/class/yago/>\n"
+          + "PREFIX prop: <http://dbpedia.org/property/>\n";
+
+      validPairs.clear();
+      validPairs.put("rdfs","http://www.w3.org/2000/01/rdf-schema#");
+      validPairs.put("type","http://dbpedia.org/class/yago/");
+      validPairs.put("prop","http://dbpedia.org/property/");
+
+      checkValidPrefixesCreated(session, validPairs, sparql);
+
+    }
+  }
+
+  private void checkValidPrefixesCreated(Session session, Map<String, String> validPairs,
+      String textFragment) {
+    StatementResult res;
+    int resultCount;
+    res = session.run("CALL semantics.addNamespacePrefixesFromText('" + textFragment + "')");
+    assertTrue(res.hasNext());
+    resultCount = 0;
+    while(res.hasNext()) {
+      Record next = res.next();
+      assertTrue(isExpectedPair(validPairs, next.get("prefix").asString(),
+          next.get("namespace").asString()));
+      resultCount++;
+    }
+    assertEquals(validPairs.size(), resultCount);
+  }
+
+  private boolean isExpectedPair(Map <String, String> validPairs, String prefix, String namespace) {
+    return validPairs.get(prefix).equals(namespace);
+  }
+
+  @Test
   public void testGetDataType() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {

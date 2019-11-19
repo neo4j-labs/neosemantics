@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
@@ -26,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -622,20 +624,43 @@ public class RDFImport {
   }
 
   @Procedure(mode = Mode.WRITE)
-  @Description("Adds namespace - prefix pair definition")
-  public Stream<NamespacePrefixesResult> addNamespacePrefixesFromText(@Name("prefix") String prefix,
-      @Name("ns") String ns) {
+  @Description("Adds namespaces from a prefix declaration header fragment")
+  public Stream<NamespacePrefixesResult> addNamespacePrefixesFromText(@Name("prefix") String textFragment) {
 
-    Map<String, Object> params = new HashMap<>();
-    params.put("prefix", prefix);
+    //Try Turtle fragment
+    Pattern turtleNamespaceDefinitionRegex =
+        Pattern.compile("(?i)@prefix (\\S+)\\:\\s+<(\\S*)>", Pattern.MULTILINE);
+    if (tryExtractNsDefinitions(textFragment, turtleNamespaceDefinitionRegex)){
+      return listNamespacePrefixes();
+    }
 
-    return db
-        .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
-            + "WITH n UNWIND keys(n) as ns\n"
-            + "RETURN n[ns] as prefix, ns as namespace", ns), params).stream().map(
-            n -> new NamespacePrefixesResult((String) n.get("prefix"),
-                (String) n.get("namespace")));
+    //Try RDF/XML fragment
+    Pattern rdfxmlNamespaceDefinitionRegex =
+        Pattern.compile("xmlns:(\\S+)\\s*=\\s*\\\"(\\S*)\\\"", Pattern.MULTILINE);
+    if (tryExtractNsDefinitions(textFragment, rdfxmlNamespaceDefinitionRegex)){
+      return listNamespacePrefixes();
+    }
+    //try sparql
+    Pattern sparqlNamespaceDefinitionRegex =
+        Pattern.compile("(?i)prefix\\s+(\\S+)\\:\\s+<(\\S*)>", Pattern.MULTILINE);
+    if (tryExtractNsDefinitions(textFragment, sparqlNamespaceDefinitionRegex)){
+      return listNamespacePrefixes();
+    }
 
+    // unclear how to make it safe with jsonld while keeping it simple
+
+    return listNamespacePrefixes();
+
+  }
+
+  private boolean tryExtractNsDefinitions(@Name("prefix") String textFragment,
+      Pattern pattern) {
+    Matcher m;
+    m = pattern.matcher(textFragment);
+    while (m.find()) {
+      addNamespacePrefix(m.group(1).replace("-", "_"), m.group(2));
+    }
+    return m.matches();
   }
 
   @Procedure(mode = Mode.READ)
