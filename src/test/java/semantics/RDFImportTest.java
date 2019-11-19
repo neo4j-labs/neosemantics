@@ -1276,6 +1276,35 @@ public class RDFImportTest {
   }
 
   @Test
+  public void testStreamFromString() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String rdf = "<rdf:RDF xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n"
+          + "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n"
+          + "         xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n"
+          + "         xmlns:voc=\"http://neo4j.com/voc/\">\n"
+          + "         <rdf:Description rdf:about=\"http://neo4j.com/invividual/JB\">\n"
+          + "            <voc:name>JB</voc:name>\n"
+          + "         </rdf:Description>\n"
+          + "</rdf:RDF>";
+
+      StatementResult importResults
+          = session.run("CALL semantics.streamRDFSnippet('" + rdf + "','RDF/XML',{})");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals("http://neo4j.com/invividual/JB", next.get("subject"));
+      assertEquals("http://neo4j.com/voc/name", next.get("predicate"));
+      assertEquals("JB", next.get("object"));
+      assertEquals(true, next.get("isLiteral"));
+      assertEquals("http://www.w3.org/2001/XMLSchema#string", next.get("literalType"));
+      assertNull(next.get("literalLang"));
+    }
+  }
+
+  @Test
   public void testStreamFromBadUriFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
@@ -1286,6 +1315,30 @@ public class RDFImportTest {
           = session.run("CALL semantics.streamRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI() + "','Turtle',{verifyUriSyntax: false})");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
+      assertEquals("http://example.org/vocab/show/P854", next.get("predicate"));
+      assertEquals(
+          "https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4",
+          next.get("object"));
+      assertEquals(false, next.get("isLiteral"));
+    }
+  }
+
+  @Test
+  public void testStreamFromBadUriString() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String rdf = "@prefix pr: <http://example.org/vocab/show/> .\n"
+          + "pr:ent\n"
+          + "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4> ;\n"
+          + "      pr:name \"test name\" .";
+      StatementResult importResults
+          = session.run("CALL semantics.streamRDFSnippet('" + rdf + "','Turtle',{verifyUriSyntax: false})");
       Map<String, Object> next = importResults
           .next().asMap();
       assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
@@ -2101,6 +2154,73 @@ public class RDFImportTest {
     }
   }
 
+
+  @Test
+  public void testDeleteRelationshipShortenURIsFromString() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String rdf = "@prefix ex: <http://example.org/> .\n"
+          + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+          + "\n"
+          + "ex:Resource1\n"
+          + "  a ex:TestResource ;\n"
+          + "  ex:Predicate1 \"100\"^^ex:CDT ;\n"
+          + "  ex:Predicate2 \"test\";\n"
+          + "  ex:Predicate3 ex:Resource2 ;\n"
+          + "  ex:Predicate4 \"val1\" ;\n"
+          + "  ex:Predicate4 \"val2\" ;\n"
+          + "  ex:Predicate4 \"val3\" ;\n"
+          + "  ex:Predicate4 \"val4\" .\n"
+          + "\n"
+          + "ex:Resource2\n"
+          + "  a ex:TestResource ;\n"
+          + "  ex:Predicate1 \"test\";\n"
+          + "  ex:Predicate2 ex:Resource3 ;\n"
+          + "  ex:Predicate3 \"100\"^^xsd:long ;\n"
+          + "  ex:Predicate3 \"200\"^^xsd:long ;\n"
+          + "  ex:Predicate4 \"300.0\"^^xsd:double ;\n"
+          + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
+          + "\n";
+
+      StatementResult importResults = session.run("CALL semantics.importRDFSnippet('" +
+          rdf
+          + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      Record record = result.next();
+      assertEquals("ns0__Predicate3", record.get("type").asString());
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+      String deleteRdf1 = "@prefix ex: <http://example.org/> .\n"
+          + "\n"
+          + "ex:Resource1\n"
+          + "  ex:Predicate3 ex:Resource2 .\n";
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
+          deleteRdf1
+          + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+          + "(m {uri: 'http://example.org/Resource2'})"
+          + "OPTIONAL MATCH (n)-[r]->(m) "
+          + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
+      record = result.next();
+      assertEquals(NULL, record.get("type"));
+      assertEquals("http://example.org/Resource1", record.get("nUri").asString());
+      assertEquals("http://example.org/Resource2", record.get("mUri").asString());
+
+    }
+  }
+
   @Test
   public void testDeleteLiteralKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -2157,6 +2277,67 @@ public class RDFImportTest {
 
       StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete2.ttl").toURI()
+          + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
+
+      assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
+
+      result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.ns0__Predicate2 AS nP2");
+      record = result.next();
+      assertEquals(NULL, record.get("nP2"));
+
+    }
+  }
+
+  @Test
+  public void testDeleteLiteralShortenURIsFromString() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().toConfig()); Session session = driver.session()) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+
+      String rdf = "@prefix ex: <http://example.org/> .\n"
+          + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+          + "\n"
+          + "ex:Resource1\n"
+          + "  a ex:TestResource ;\n"
+          + "  ex:Predicate1 \"100\"^^ex:CDT ;\n"
+          + "  ex:Predicate2 \"test\";\n"
+          + "  ex:Predicate3 ex:Resource2 ;\n"
+          + "  ex:Predicate4 \"val1\" ;\n"
+          + "  ex:Predicate4 \"val2\" ;\n"
+          + "  ex:Predicate4 \"val3\" ;\n"
+          + "  ex:Predicate4 \"val4\" .\n"
+          + "\n"
+          + "ex:Resource2\n"
+          + "  a ex:TestResource ;\n"
+          + "  ex:Predicate1 \"test\";\n"
+          + "  ex:Predicate2 ex:Resource3 ;\n"
+          + "  ex:Predicate3 \"100\"^^xsd:long ;\n"
+          + "  ex:Predicate3 \"200\"^^xsd:long ;\n"
+          + "  ex:Predicate4 \"300.0\"^^xsd:double ;\n"
+          + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
+          + "\n";
+
+      StatementResult importResults = session.run("CALL semantics.importRDFSnippet('" +
+          rdf
+          + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+
+      assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
+      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+          + "RETURN n.ns0__Predicate2 AS nP2");
+
+      Record record = result.next();
+      assertEquals(1, record.get("nP2").asList().size());
+      assertTrue(record.get("nP2").asList().contains("test"));
+
+      String deleteRdf = "@prefix ex: <http://example.org/> .\n"
+          + "\n"
+          + "ex:Resource1\n"
+          + "  ex:Predicate2 \"test\" .\n";
+
+      StatementResult deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
+          deleteRdf
           + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
       assertEquals(1L, deleteResults.next().get("triplesDeleted").asLong());
