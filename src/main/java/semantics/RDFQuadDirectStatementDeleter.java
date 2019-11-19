@@ -64,7 +64,7 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
       persistNamespaceNode();
     }
 
-    log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
+    log.debug("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
         "Total number of triples deleted is " + totalTriplesMapped + " out of "
         + totalTriplesParsed + " parsed.");
   }
@@ -299,7 +299,7 @@ class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor imple
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
+    log.debug("Successful partial commit of " + mappedTripleCounter + " triples. " +
         (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
     mappedTripleCounter = 0;
   }

@@ -55,7 +55,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
       persistNamespaceNode();
     }
 
-    log.info("Import complete: " + totalTriplesMapped + "  triples ingested out of "
+    log.debug("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }
 

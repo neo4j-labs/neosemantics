@@ -49,7 +49,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
       persistNamespaceNode();
     }
 
-    log.info("Import complete: " + totalTriplesMapped + "  triples ingested out of "
+    log.debug("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }
 

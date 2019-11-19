@@ -84,6 +84,188 @@ public class RDFImportTest {
       +
       "      pr:P813 \"2017-10-11T00:00:00Z\"^^xsd:dateTime .\n";
 
+  private String turtleOntology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+      + "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies>\n"
+      + "  a owl:Ontology ;\n"
+      + "  rdfs:comment \"A basic OWL ontology for Neo4j's movie database\", \"\"\"Simple ontology providing basic vocabulary and domain+range axioms\n"
+      + "            for the movie database.\"\"\" ;\n"
+      + "  rdfs:label \"Neo4j's Movie Ontology\" .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#Person>\n"
+      + "  a owl:Class ;\n"
+      + "  rdfs:label \"Person\"@en ;\n"
+      + "  rdfs:comment \"Individual involved in the film industry\"@en .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#Movie>\n"
+      + "  a owl:Class ;\n"
+      + "  rdfs:label \"Movie\"@en ;\n"
+      + "  rdfs:comment \"A film\"@en .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#name>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"name\"@en ;\n"
+      + "  rdfs:comment \"A person's name\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#born>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"born\"@en ;\n"
+      + "  rdfs:comment \"A person's date of birth\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#title>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"title\"@en ;\n"
+      + "  rdfs:comment \"The title of a film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#released>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"released\"@en ;\n"
+      + "  rdfs:comment \"A film's release date\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#tagline>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"tagline\"@en ;\n"
+      + "  rdfs:comment \"Tagline for a film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#ACTED_IN>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"ACTED_IN\"@en ;\n"
+      + "  rdfs:comment \"Actor had a role in film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#DIRECTED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"DIRECTED\"@en ;\n"
+      + "  rdfs:comment \"Director directed film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#PRODUCED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"PRODUCED\"@en ;\n"
+      + "  rdfs:comment \"Producer produced film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#REVIEWED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"REVIEWED\"@en ;\n"
+      + "  rdfs:comment \"Critic reviewed film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#FOLLOWS>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"FOLLOWS\"@en ;\n"
+      + "  rdfs:comment \"Critic follows another critic\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#WROTE>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"WROTE\"@en ;\n"
+      + "  rdfs:comment \"Screenwriter wrote screenplay of\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .";
+
+  private String turtleMultilangOntology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
+      + "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies>\n"
+      + "  a owl:Ontology ;\n"
+      + "  rdfs:comment \"A basic OWL ontology for Neo4j's movie database\", \"\"\"Simple ontology providing basic vocabulary and domain+range axioms\n"
+      + "            for the movie database.\"\"\" ;\n"
+      + "  rdfs:label \"Neo4j's Movie Ontology\" .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#Person>\n"
+      + "  a owl:Class ;\n"
+      + "  rdfs:label \"Person\"@en, \"Persona\"@es ;\n"
+      + "  rdfs:comment \"Individual involved in the film industry\"@en, \"Individuo relacionado con la industria del cine\"@es .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#Movie>\n"
+      + "  a owl:Class ;\n"
+      + "  rdfs:label \"Movie\"@en, \"Pelicula\"@es ;\n"
+      + "  rdfs:comment \"A film\"@en, \"Una pelicula\"@es .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#name>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"name\"@en, \"nombre\"@es ;\n"
+      + "  rdfs:comment \"A person's name\"@en, \"El nombre de una persona\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#born>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"born\"@en, \"fechaNacimiento\"@es ;\n"
+      + "  rdfs:comment \"A person's date of birth\"@en, \"La fecha de nacimiento de una persona\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#title>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"title\"@en, \"titulo\"@es ;\n"
+      + "  rdfs:comment \"The title of a film\"@en, \"El titulo de una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#released>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"released\"@en, \"estreno\"@es ;\n"
+      + "  rdfs:comment \"A film's release date\"@en, \"La fecha de estreno de una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#tagline>\n"
+      + "  a owl:DatatypeProperty ;\n"
+      + "  rdfs:label \"tagline\"@en, \"lema\"@es ;\n"
+      + "  rdfs:comment \"Tagline for a film\"@en, \"El lema o eslogan de una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#ACTED_IN>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"ACTED_IN\"@en, \"ACTUA_EN\"@es ;\n"
+      + "  rdfs:comment \"Actor had a role in film\"@en, \"Actor con un papel en una pelicula a role in film\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#DIRECTED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"DIRECTED\"@en, \"DIRIGE\"@es ;\n"
+      + "  rdfs:comment \"Director directed film\"@en ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#PRODUCED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"PRODUCED\"@en, \"PRODUCE\"@es ;\n"
+      + "  rdfs:comment \"Producer produced film\"@en, \"productor de una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#REVIEWED>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"REVIEWED\"@en, \"HACE_CRITICA\"@es ;\n"
+      + "  rdfs:comment \"Critic reviewed film\"@en, \"critico que publica una critica sobre una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#FOLLOWS>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"FOLLOWS\"@en, \"SIGUE\"@es ;\n"
+      + "  rdfs:comment \"Critic follows another critic\"@en, \"Un critico que sigue a otro (en redes sociales)\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Person> .\n"
+      + "\n"
+      + "<http://neo4j.com/voc/movies#WROTE>\n"
+      + "  a owl:ObjectProperty ;\n"
+      + "  rdfs:label \"WROTE\"@en, \"ESCRIBE\"@es ;\n"
+      + "  rdfs:comment \"Screenwriter wrote screenplay of\"@en, \"escribe el guion de una pelicula\"@es ;\n"
+      + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
+      + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .";
+
   private static URI file(String path) {
     try {
       return RDFImportTest.class.getClassLoader().getResource(path).toURI();
@@ -2123,6 +2305,36 @@ public class RDFImportTest {
   }
 
   @Test
+  public void ontoSnippetImportTest() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      Map<String,Object> params = new HashMap<>();
+      params.put("rdf",this.turtleOntology);
+
+      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,'Turtle')",
+          params);
+
+      assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+    }
+
+  }
+
+  @Test
   public void ontoImportWithCustomNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
@@ -2133,6 +2345,55 @@ public class RDFImportTest {
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop)-[:DOMAIN]->(:Category)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(13L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(13L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+              .next().get("count").asLong());
+
+    }
+
+  }
+
+  @Test
+  public void ontoSnippetImportWithCustomNames() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      Map<String,Object> params = new HashMap<>();
+      params.put("rdf",this.turtleOntology);
+
+      StatementResult importResults = session.run("CALL semantics.importOntologySnippet("
+          + "$rdf, 'Turtle', { classLabel : 'Category', objectPropertyLabel: 'Rel', "
+          + "dataTypePropertyLabel: 'Prop'})",  params );
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
@@ -2181,6 +2442,59 @@ public class RDFImportTest {
           + "','RDF/XML', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
           + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
+
+      assertEquals(30L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Category:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Prop:Resource)-[:DOMAIN]->(:Category)  RETURN count(n) AS count")
+              .next()
+              .get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Rel:Resource) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+              .next().get("count").asLong());
+
+      assertEquals(0L,
+          session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+              .next().get("count").asLong());
+
+    }
+
+  }
+
+  @Test
+  public void ontoSnippetImportWithCustomNamesFilterLabels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      Map<String,Object> params = new HashMap<>();
+      params.put("rdf",this.turtleOntology);
+
+      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,"
+          + "'Turtle', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
+          + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})", params);
 
       assertEquals(30L, importResults.next().get("triplesLoaded").asLong());
 
@@ -2304,6 +2618,85 @@ public class RDFImportTest {
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontologyMultilabel.owl").toURI()
           + "','RDF/XML', { keepLangTag: true, handleMultival: 'ARRAY' } )");
+
+      assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+              .get("count").asLong());
+
+      assertEquals(6L,
+          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+              .asLong());
+
+      Record singleRecord = session.run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("Movie@en") &&
+          singleRecord.get("label").asList().contains("Pelicula@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("A film@en") &&
+          singleRecord.get("comment").asList().contains("Una pelicula@es"));
+      assertEquals("Movie", singleRecord.get("label_en").asString());
+      assertEquals("Pelicula", singleRecord.get("label_es").asString());
+      assertEquals("A film", singleRecord.get("comment_en").asString());
+      assertEquals("Una pelicula", singleRecord.get("comment_es").asString());
+
+
+      singleRecord = session.run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("PRODUCED@en") &&
+          singleRecord.get("label").asList().contains("PRODUCE@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("Producer produced film@en") &&
+          singleRecord.get("comment").asList().contains("productor de una pelicula@es"));
+      assertEquals("PRODUCED", singleRecord.get("label_en").asString());
+      assertEquals("PRODUCE", singleRecord.get("label_es").asString());
+      assertEquals("Producer produced film", singleRecord.get("comment_en").asString());
+      assertEquals("productor de una pelicula", singleRecord.get("comment_es").asString());
+
+
+      singleRecord = session.run("MATCH (n:Property { uri: 'http://neo4j.com/voc/movies#title'}) "
+          + " RETURN n.label as label, n.comment as comment, "
+          + " semantics.getLangValue('en',n.label) as label_en, "
+          + " semantics.getLangValue('es',n.label) as label_es, "
+          + " semantics.getLangValue('en',n.comment) as comment_en, "
+          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      assertTrue(singleRecord.get("label").asList().contains("title@en") &&
+          singleRecord.get("label").asList().contains("titulo@es"));
+      assertTrue( singleRecord.get("comment").asList().contains("The title of a film@en") &&
+          singleRecord.get("comment").asList().contains("El titulo de una pelicula@es"));
+      assertEquals("title", singleRecord.get("label_en").asString());
+      assertEquals("titulo", singleRecord.get("label_es").asString());
+      assertEquals("The title of a film", singleRecord.get("comment_en").asString());
+      assertEquals("El titulo de una pelicula", singleRecord.get("comment_es").asString());
+
+    }
+
+  }
+
+
+  @Test
+  public void ontoSnippetImportMultilabel() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      createIndices(neo4j.getGraphDatabaseService());
+      Session session = driver.session();
+
+      Map<String,Object> params = new HashMap<>();
+      params.put("rdf",this.turtleMultilangOntology);
+
+      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,'Turtle',"
+          + " { keepLangTag: true, handleMultival: 'ARRAY' } )", params);
 
       assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
 
