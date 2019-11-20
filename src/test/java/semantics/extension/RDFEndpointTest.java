@@ -485,7 +485,17 @@ public class RDFEndpointTest {
       assertTrue(ModelTestUtils
           .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
+      // request passing serialisation format as request param
+      map.put("format","RDF/XML");
+      response = HTTP.withHeaders("Accept", "text/plain").POST(
+          HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
+
+      assertEquals(200, response.status());
+      assertTrue(ModelTestUtils
+          .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.RDFXML));
+
       map.put("mappedElemsOnly", "true");
+      map.remove("format");
       response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 
