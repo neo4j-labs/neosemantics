@@ -118,7 +118,7 @@ public class SHACLValidation {
   @Context
   public Log log;
 
-  @Procedure(mode = Mode.READ)
+  //@Procedure(mode = Mode.READ)
   @Description("semantics.validation.shaclValidateTx() - runs SHACL validation on selected nodes")
   public Stream<ValidationResult> shaclValidateTx(@Name("nodeList") List<Node> touchedNodes,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -127,7 +127,7 @@ public class SHACLValidation {
   }
 
 
-  @Procedure(mode = Mode.READ)
+  //@Procedure(mode = Mode.READ)
   @Description("semantics.validation.shaclValidate() - runs SHACL validation on the whole graph.")
   public Stream<ValidationResult> shaclValidate(
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -135,19 +135,7 @@ public class SHACLValidation {
     return runValidations(null);
   }
 
-//  @Procedure(mode = Mode.READ)
-//  @Description("semantics.validation.listActiveShaclShapes() - lists SHACL shapes.")
-//  public Stream<SHACLShape> listShaclShapes(
-//      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-//
-//    return listShapes();
-//  }
-//
-//  private Stream<SHACLShape> listShapes() {
-//    return Stream.empty();
-//  }
-
-  @Procedure(mode = Mode.READ)
+  //@Procedure(mode = Mode.READ)
   @Description("semantics.validation.triggerSHACLValidateTx() - runs SHACL validation in trigger context.")
   public Stream<ValidationResult> shaclValidateTxForTrigger(
       @Name("createdNodes") Object createdNodes,
