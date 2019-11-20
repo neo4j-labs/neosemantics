@@ -139,8 +139,10 @@ Use helper function `getLangValue` to get specific values.
 a|
 * prefix: string (like `owl`)
 * namespace: namespace part of a uri (like `http://www.w3.org/2002/07/owl#`)
-| Adds namespace - prefix pair definition to be used for RDF import
-|semantics.listNamespacePrefixes | params | Lists all currently defined namespace prefix definitions
+| Adds namespace - prefix pair definition to be used for RDF import/export
+|semantics.listNamespacePrefixes | - | Lists all currently defined namespace prefix definitions
+|semantics.addNamespacePrefixesFromText | String | [EXPERIMENTAL] Extracts namespace prefix definitions from the text
+passed as input (SPARQL, RDF/XML, Turtle) and adds each namespace-prefix pair so it can be used for RDF import/export
 |===
 
 
@@ -224,10 +226,7 @@ a|
 |===
 
 ====== Parameters for method semantics.inference.getRels
-relDir: '>',
-relLabel: 'ObjectProperty',
-relNameProp: 'opName',
-subRelRel: 'SubPropertyOf'}
+
 [options="header"]
 |===
 | Param        | values(default)           | Description
@@ -239,6 +238,7 @@ subRelRel: 'SubPropertyOf'}
 
 
 === Utility Functions
+
 [options="header"]
 |===
 | Function Name        | params           | Description
@@ -246,6 +246,9 @@ subRelRel: 'SubPropertyOf'}
 | semantics.getIRINamespace      | URI string | Returns the namespace part of the URI (stripping out the local part)
 | semantics.getDataType | string (a property value) | Returns the XMLSchema (or custom) datatype of a property value when present
 | semantics.getLangValue | string (a property value) | Returns the value with the language tag passed as first argument or null if there's not a value for the provided language tag
+| semantics.getLangTag | string (a property value)| Returns the  language tag associated with the property value (when present) and null when no language tag is present.
+| semantics.hasLangTag  a| * String (lang-tag)
+* String (a property value)| Returns true if the value has the language tag passed as first argument false if not
 | semantics.getValue | string (a property value)| Returns the value of a datatype of a property after stripping out the datatype information or language tag  when present
 | semantics.shortFromUri | string (a URI)| Returns the shortened version of an IRI using the existing namespace definitions
 | semantics.uriFromShort | string (a shortened URI)| Returns the expanded (full) URI given a shortened one created in the load process with `semantics.importRDF`
