@@ -289,6 +289,58 @@ The following Cypher fragment returns the french version of a property and when 
 MATCH (n:Resource) RETURN coalesce(semantics.getLangValue("fr",n.ns0__localName), semantics.getLangValue("en",n.ns0__localName))
 ----
 
+There are two additional functions for handling language-tagged property values: `semantics.hasLangTag` and `semantics.getLangTag`.
+
+* `semantics.getLangTag` returns the language tag (when present) from a property value.
+* `semantics.hasLangTag` returns true if a property value is tagged with a given language tag or false if not.
+
+Here is an example of both functions:
+
+First we create a node with a multivalued  property where each value is language-tagged:
+[source,cypher]
+----
+CREATE (n:Thing { prop: ["That Seventies Show@en-US", "Cette Série des Années Soixante-dix@fr-custom-tag", "你好@zh-Hans-CN"] });
+----
+
+We can use `semantics.getLanguageTag` to get the language tag for any specific value
+[source,cypher]
+----
+MATCH (n:Thing) RETURN semantics.getLangTag(n.prop[0]) AS tag;
+
+╒═══════╕
+│"tag"  │
+╞═══════╡
+│"en-US"│
+└───────┘
+----
+
+or for all of them:
+
+[source,cypher]
+----
+MATCH (n:Thing) RETURN [x in n.prop | semantics.getLangTag(x)] AS tags;
+
+╒══════════════════════════════════════╕
+│"tags"                                │
+╞══════════════════════════════════════╡
+│["en-US","fr-custom-tag","zh-Hans-CN"]│
+└──────────────────────────────────────┘
+----
+
+And similarly, we can use `semantics.hasLangTag` to check whether the first value matches a given language tag:
+[source,cypher]
+----
+match (n:Thing) return semantics.getValue(n.prop[0]) as val, semantics.hasLangTag("es",n.prop[0]) as isSpanish;
+
+╒═════════════════════╤═══════════╕
+│"val"                │"isSpanish"│
+╞═════════════════════╪═══════════╡
+│"That Seventies Show"│false      │
+└─────────────────────┴───────────┘
+----
+
+
+
 === Filtering triples by language tag
 Language tags can also be used as a filter criteria. If we are only interested in a particular language when loading a multilingual dataset, we can set a filter so only literal values with a given language tag (or untagged ones) are imported into Neo4j. The configuration parameter that does it is `languageFilter` and you'll need to set it to the relevant tag, for instance 'es' for literals in Spanish language. Here's what such a configuration would look like:
 
@@ -691,6 +743,22 @@ And then when the namespace is detected during the ingestion of the RDF data, th
 
 Make sure you know what you're doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.
 
+Sometimes we have an RDF header with a bunch of prefix definitions. This can come from a SPARQL query, from a Turtle document header or from an RDF/XML document root.
+You can grab this fragment from your RDF document and pass it to the (experimental) `addNamespacePrefixesFromText` method and it will try to extract the namespace definitions and add
+each of them individually by invoking `addNamespacePrefix`. Here's an example of how it works:
+
+[source,cypher]
+----
+WITH '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+         xmlns:foaf="http://xmlns.com/foaf/0.1/"
+         xmlns:cert="http://www.w3.org/ns/auth/cert#"
+         xmlns:dc="http://purl.org/dc/terms/">' as txt
+call semantics.addNamespacePrefixesFromText(txt) yield prefix, namespace
+return prefix, namespace
+----
+
+
+
 [[DeleteRDF]]
 == Deleting RDF
 
@@ -786,7 +854,28 @@ ex:Resource1
 [IMPORTANT]
 You *must* use for deletion the same set of parameters that you used during import, otherwise you will not get the expected results.
 
-**Note** that currently blank nodes cannot be deleted due to not having a persistent IRI.
+**Note** that currently blank nodes cannot be deleted using `semantics.deleteRDF` because we assume that blank node ids are not kept during parsing.
+
+It is also possible to delete triples passed as text (as opposed to passing them by url like in the previous methods).
+The `semantics.deleteRDFSnippet` procedure can be used for that purpose. `semantics.deleteRDFSnippet` takes the same parameters  and  operates in exactly
+the same manner as `semantics.deleteRDF`. Here is an example of usage:
+
+A first call to `importRDFSnippet` reates a node in Neo4j based on a set of triples...
+[source,cypher]
+----
+CALL semantics.importRDFSnippet('<http://ind#123> a <http://voc#Type> ; <http://voc#property1> "Value"@en, "Valeur"@fr, "Valor"@es ; <http://voc#property2> 123 .',"Turtle", { handleMultival: 'ARRAY', keepLangTag: true })
+----
+The previous example stores all values of property `property1` in an array keeping the language annotaion. Notice that this import
+could have equally been carried out using `importRDF`.
+
+Now we can delete a triples by passing them as text to the `deleteRDFSnippet` procedure. In this example we are removing the value of the property `property1`
+tagged as english ('en').
+
+[source,cypher]
+----
+CALL semantics.deleteRDFSnippet('<http://ind#123> <http://voc#property1> "Value"@en .',"Turtle",{ handleMultival: 'ARRAY', keepLangTag: true })
+----
+
 
 === Handling named graphs (RDF Quads)
 
@@ -873,7 +962,7 @@ CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/v
 
 image::vwonto.png[VW ontology imported in Neo4j, scaledwidth="100%"]
 
-As we see in the ingested graph, by default, classes will be persissted as nodes with label `Class` with two properties: uri and name and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively. Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
+We can see in the ingested graph that by default, classes are persissted as nodes with label `Class` with two properties: `uri` and `name` and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively. Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
 
 These graph model elements can be overriden by using the following configuration params:
 
@@ -892,8 +981,24 @@ Here's an example of how to load an ontology using some of these parameters:
 CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
 ---- 
 
-Finally, it's also possible to have imported nodes (both Classes and Properties/Relationships) labeled as `Resource` for compatibility with the importRDF procedure. This is done by setting the `addResourceLabels` parameter to `true`.
+Imported nodes (both Classes and Properties/Relationships) can be labeled as `Resource` for compatibility/consistency with the importRDF procedure.
+This is done by setting the `addResourceLabels` parameter to `true`.
 
+
+Finally, it is possible to pass the ontology as text instead of by reference (url), the `importOntologySnippet` procedure works in this  mode. Here's an example:
+
+We first import a public vocabulary...
+[source,cypher]
+----
+CALL semantics.importOntology("http://www.nsmntx.org/2019/10/clothingMaterials","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+----
+and then we extend it with some additiona statements (triples) passed as text to the `importOntologySnippet` procedure
+[source,cypher]
+----
+CALL semantics.importOntologySnippet("<http://www.nsmntx.org/2019/10/clothingMaterials#Leather> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://www.nsmntx.org/customCats#AnimalBasedMaterial2>","N-Triples", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})
+----
+
+Check <<Reference>> for a complete list of available parameters.
 
 [[Preview]]
 == Previewing RDF data
@@ -950,6 +1055,18 @@ MERGE (from:Thing { id: subject})
 MERGE (to:Thing { id: object })
 MERGE (from)-[:CONNECTED_TO { id: predicate }]->(to)
 ----
+
+There is also a `streamRDFSnippet` procedure identical to `streamRDF` but taking the RDF input (first parameter) in the form of a string, here's an example of how can it be used:
+
+[source,cypher]
+----
+WITH '<http://ind#123> <http://voc#property1> "Value"@en, "Valeur"@fr, "Valor"@es ; <http://voc#property2> 123 .' as rdfPayload
+CALL semantics.streamRDFSnippet(rdfPayload,"Turtle")
+YIELD subject, predicate, object, isLiteral, literalType, literalLang
+WHERE predicate = 'http://voc#property1' AND literalLang = "es"
+CREATE (:Thing { uri: subject, prop: object })
+----
+
 
 
 === Previewing RDF data

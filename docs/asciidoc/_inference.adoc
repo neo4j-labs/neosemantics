@@ -11,6 +11,9 @@ as loans).
 
 This kind of reasoning/inferencing is what this set of procedures will help you with.
 
+The examples in this section will help understand how the different procedures and functions for inferencing
+work but check the <<Reference>> section for a complete list of methods and configuration parameters.
+
 === Hierarchies of Categories
 
 To model a hierarchy of categories we'll typically use nodes in the graph to represent the categories and
@@ -147,6 +150,8 @@ produce the following result:
 └──────────┴─────────────────────────┴────────────────────────┘
 ----
 
+Check the <<Reference>> section for a complete list of methods and configuration parameters for these methods and functions.
+
 ==== semantics.inference.nodesInCategory
 
 Now let's look at the second way of annotating individuals.
@@ -251,6 +256,8 @@ produce the following result:
 │"11916857"│"Optical crystallography"│
 └──────────┴─────────────────────────┘
 ----
+
+Remember to check the <<Reference>> section for a complete list of methods and configuration parameters for these methods and functions.
 
 ==== A real  world example
 

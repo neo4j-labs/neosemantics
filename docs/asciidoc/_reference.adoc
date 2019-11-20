@@ -40,6 +40,12 @@ a|
 * serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
 * optional map with params from the table below
 | Parses RDF and streams each triple as a record with <S,P,O> along with datatype and language tag for Literal values. No writing to the DB. This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.
+|semantics.streamRDFSnippet
+a|
+* string containing a valid RDF fragment
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Parses RDF snippet passed as text and streams each triple as a record with <S,P,O> along with datatype and language tag for Literal values. No writing to the DB. See also `streamRDF`.
 |semantics.previewRDF
 a|
 * URL of the dataset
@@ -58,6 +64,12 @@ a|
 * serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
 * optional map with params from the table below
 | Deletes triples from Neo4j. Works on a graph resulted of importing RDF via semantics.importRDF(). Delete config must match the one used on import
+|semantics.deleteRDFSnippet
+a|
+* String containing a valid RDF fragment
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+* optional map with params from the table below
+| Deletes from Neo4j the triples passed as first parameter. Works in the same way and takes the same parameters as `deleteRDF`.
 |semantics.deleteQuadRDF
 a|
  * URL of the dataset
@@ -188,6 +200,41 @@ a|
 * a node representing an instance
 * a node representing a category
 * parameters as described in table below | checks whether node is explicitly or implicitly in a category
+|===
+
+===== Inferencing Params
+
+====== Parameters for method semantics.inference.nodesLabelled and function semantics.inference.hasLabel
+
+[options="header"]
+|===
+| Param        | values(default)           | Description
+| catLabel | String ('Label') | Label used for nodes describing categories.
+| catNameProp | String ('name') | property name containing the name of the category.
+| subCatRel | String ('SLO') | relationship type connecting a child category to its parent
+|===
+
+====== Parameters for method semantics.inference.nodesInCategory and function semantics.inference.inCategory
+
+[options="header"]
+|===
+| Param        | values(default)           | Description
+| inCatRel | String ('IN_CAT') | relationship type connecting an instance node to the category node.
+| subCatRel | String ('SCO') | relationship type connecting a child category to its parent.
+|===
+
+====== Parameters for method semantics.inference.getRels
+relDir: '>',
+relLabel: 'ObjectProperty',
+relNameProp: 'opName',
+subRelRel: 'SubPropertyOf'}
+[options="header"]
+|===
+| Param        | values(default)           | Description
+| relLabel | String ('Relationship') | Label used for nodes describing relationships.
+| relNameProp | String ('name') | property name containing the name of the relationship.
+| subRelRel | String ('SRO') | relationship type connecting a child relationship to its parent. (Thing are getting pretty meta, right? I hope the examples will help)
+| relDir | '<','>' ('') | direction of the relationship. '>' for outgoing, '<' for incoming and default (none) for both.
 |===
 
 

@@ -1580,7 +1580,7 @@ public class RDFImportTest {
   }
 
   @Test
-  public void testAddNamespacePrefixFromTest() throws Exception {
+  public void testAddNamespacePrefixFromText() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
