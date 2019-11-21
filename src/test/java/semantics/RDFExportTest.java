@@ -32,7 +32,7 @@ public class RDFExportTest {
 
       StatementResult res
           = session
-          .run(" CALL semantics.streamGraphAsRDF(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
+          .run(" CALL semantics.cypherResultsAsRDF(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
       assertTrue(res.hasNext());
       while (res.hasNext()) {
         System.out.println(res.next());

@@ -21,8 +21,9 @@ public class RDFExport {
   public Log log;
 
   @Procedure(mode = Mode.READ)
-  @Description(".")
-  public Stream<StreamedStatement> streamGraphAsRDF(@Name("cypher") String cypher,
+  @Description("[Experimental] Executes a cypher query returning graph elements (nodes,rels) and serialises "
+      + "the output as triples.")
+  public Stream<StreamedStatement> cypherResultsAsRDF(@Name("cypher") String cypher,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
     LPGToRDFProcesssor processor = new LPGToRDFProcesssor(db);
