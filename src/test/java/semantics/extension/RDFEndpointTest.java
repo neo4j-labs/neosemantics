@@ -56,6 +56,13 @@ public class RDFEndpointTest {
 
   private static final CollectionType collectionType = TypeFactory
       .defaultInstance().constructCollectionType(Set.class, Map.class);
+  private String emptyJsonLd = "{\n"
+      + "  \"@context\" : {\n"
+      + "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n"
+      + "    \"neovoc\" : \"neo4j://vocabulary#\",\n"
+      + "    \"neoind\" : \"neo4j://individuals#\"\n"
+      + "  }\n"
+      + "}";
 
   @Test
   public void testGetNodeById() throws Exception {
@@ -392,7 +399,7 @@ public class RDFEndpointTest {
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/find/WrongLabel/wrongProperty/someValue");
 
-      assertEquals("[ ]", response.rawContent());
+      assertEquals(emptyJsonLd, response.rawContent());
       assertEquals(200, response.status());
 
       response = HTTP.withHeaders("Accept", "application/ld+json").GET(
@@ -414,7 +421,7 @@ public class RDFEndpointTest {
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location()
               + "describe/uri/9999999");
 
-      assertEquals("[ ]", response.rawContent());
+      assertEquals(emptyJsonLd, response.rawContent());
       assertEquals(200, response.status());
 
     }

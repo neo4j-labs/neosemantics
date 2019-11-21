@@ -136,8 +136,8 @@ public class LPGToRDFProcesssor {
     return result.stream();
   }
 
-  public Stream<Statement>  streamNodes(String label, String property, String propVal, String valType,
-      boolean includeContext) {
+  public Stream<Statement>  streamNodesBySearch(String label, String property, String propVal,
+      String valType, boolean includeContext) {
     Set<Statement> result = new HashSet<>();
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
     ResourceIterator<Node> nodes = graphdb.findNodes(Label.label(label), property,

@@ -1,5 +1,7 @@
 package semantics.extension;
 
+import static semantics.Params.BASE_INDIV_NS;
+import static semantics.Params.BASE_VOCAB_NS;
 import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
@@ -24,6 +26,8 @@ import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.helpers.JSONLDMode;
+import org.eclipse.rdf4j.rio.helpers.JSONLDSettings;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -36,8 +40,6 @@ import semantics.LPGToRDFProcesssor;
 @Path("/")
 public class RDFEndpoint {
 
-  private static final String BASE_VOCAB_NS = "neo4j://vocabulary#";
-  private static final String BASE_INDIV_NS = "neo4j://individuals#";
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
@@ -67,11 +69,7 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
-      RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
       try (Transaction tx = gds.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
@@ -79,7 +77,7 @@ public class RDFEndpoint {
 
         proc.streamNodeById(idParam, excludeContextParam==null).forEach(writer::handleStatement);
 
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
@@ -99,18 +97,14 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
-      RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
       try (Transaction tx = gds.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
-        proc.streamNodes(label, property, propVal, valType, excludeContextParam==null).forEach(
+        proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam==null).forEach(
             writer::handleStatement);
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
@@ -129,23 +123,15 @@ public class RDFEndpoint {
               new TypeReference<Map<String, Object>>() {
               });
       try (Transaction tx = gds.beginTx()) {
-        RDFWriter writer = Rio
-            .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
-                outputStream);
-        writer.handleNamespace("rdf", RDF.NAMESPACE);
-        writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-        writer.handleNamespace("neoind", BASE_INDIV_NS);
-        writer.startRDF();
+        RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), jsonMap.containsKey("mappedElemsOnly"));
-        proc
-            .streamTriplesFromCypher((String) jsonMap.get("cypher"),
+        proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
                 (Map<String, Object>) jsonMap
                     .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
             writer::handleStatement);
-
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam,
             (String) jsonMap.get("format"));
@@ -161,21 +147,12 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
 
     return Response.ok().entity((StreamingOutput) outputStream -> {
-      RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      writer.handleNamespace("owl", OWL.NAMESPACE);
-      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
       try (Transaction tx = gds.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds);
-        proc
-            .streamLocalImplicitOntology().forEach(writer::handleStatement);
-
-        writer.endRDF();
-
+        proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
@@ -194,19 +171,13 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
-      RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      writer.handleNamespace("owl", OWL.NAMESPACE);
-      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
 
       try (Transaction tx = gds.beginTx()) {
 
         final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
         proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
@@ -224,15 +195,7 @@ public class RDFEndpoint {
       Map<String, Object> jsonMap = objectMapper
           .readValue(body, new TypeReference<Map<String, Object>>() {});
 
-      RDFWriter writer = Rio
-          .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
-              outputStream);
-      writer.handleNamespace("owl", OWL.NAMESPACE);
-      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, true);
 
       try (Transaction tx = gds.beginTx()) {
 
@@ -241,7 +204,7 @@ public class RDFEndpoint {
             (Map<String, Object>) jsonMap
                 .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
             writer::handleStatement);
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam,
             (String) jsonMap.get("format"));
@@ -262,23 +225,40 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
-      RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      writer.handleNamespace("rdf", RDF.NAMESPACE);
-      writer.handleNamespace("neovoc", BASE_VOCAB_NS);
-      writer.handleNamespace("neoind", BASE_INDIV_NS);
-      writer.startRDF();
+      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
 
       try (Transaction tx = gds.beginTx()) {
 
         LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
         proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam!= null).forEach(
             writer::handleStatement);
-        writer.endRDF();
+        endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
 
     }).build();
+  }
+
+  private RDFWriter startRdfWriter(RDFFormat format, OutputStream os, boolean addVocNamespaces) {
+    RDFWriter writer = Rio.createWriter(format, os);
+    //some general config (valid for specific serialisations)
+    writer.set(JSONLDSettings.JSONLD_MODE, JSONLDMode.COMPACT);
+    writer.set(JSONLDSettings.OPTIMIZE, true);
+
+    writer.handleNamespace("rdf", RDF.NAMESPACE);
+    writer.handleNamespace("neovoc", BASE_VOCAB_NS);
+    writer.handleNamespace("neoind", BASE_INDIV_NS);
+    if (addVocNamespaces){
+      writer.handleNamespace("owl", OWL.NAMESPACE);
+      writer.handleNamespace("rdfs", RDFS.NAMESPACE);
+    }
+    writer.startRDF();
+    return writer;
+  }
+
+  private void endRDFWriter(RDFWriter writer) {
+    writer.endRDF();
   }
 
   private void handleSerialisationError(OutputStream outputStream, Exception e,

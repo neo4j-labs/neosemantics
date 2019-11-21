@@ -1,9 +1,9 @@
 package semantics;
 
-import static semantics.Params.PREFIX_SEPARATOR;
-import static semantics.Params.DATATYPE_SHORTENED_PATTERN;
 import static semantics.Params.DATATYPE_REGULAR_PATTERN;
+import static semantics.Params.DATATYPE_SHORTENED_PATTERN;
 import static semantics.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
+import static semantics.Params.PREFIX_SEPARATOR;
 import static semantics.Params.SHORTENED_URI_PATTERN;
 
 import com.google.common.base.Preconditions;
@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
-import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
