@@ -59,7 +59,6 @@ public class LPGToRDFProcesssor {
   }
 
   public Stream<Statement> streamLocalImplicitOntology(){
-    final ValueFactory vf = SimpleValueFactory.getInstance();
     Result res = graphdb.execute("CALL db.schema() ");
     Set<Statement> statements = new HashSet<>();
     Map<String, Object> next = res.next();
@@ -100,7 +99,6 @@ public class LPGToRDFProcesssor {
   }
 
   public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params){
-    final ValueFactory vf = SimpleValueFactory.getInstance();
 
     return this.graphdb.execute(buildOntoQuery(params)).stream().map(
         triple ->
