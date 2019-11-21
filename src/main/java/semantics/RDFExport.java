@@ -21,18 +21,20 @@ public class RDFExport {
   public Log log;
 
   @Procedure(mode = Mode.READ)
-  @Description( "." )
+  @Description(".")
   public Stream<StreamedStatement> streamGraphAsRDF(@Name("cypher") String cypher,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
     LPGToRDFProcesssor processor = new LPGToRDFProcesssor(db);
     return processor.streamTriplesFromCypher(cypher,
-        (props.containsKey("cypherParams")?(Map<String, Object>) props.get("cypherParams"):
-            new HashMap<>())).map( st  -> new StreamedStatement(
+        (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :
+            new HashMap<>())).map(st -> new StreamedStatement(
         st.getSubject().stringValue(), st.getPredicate().stringValue(),
         st.getObject().stringValue(), st.getObject() instanceof Literal,
-        (st.getObject() instanceof Literal?((Literal)st.getObject()).getDatatype().stringValue():null),
-        (st.getObject() instanceof Literal?((Literal)st.getObject()).getLanguage().orElse(null):null)
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
+            : null),
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getLanguage().orElse(null)
+            : null)
     ));
 
 

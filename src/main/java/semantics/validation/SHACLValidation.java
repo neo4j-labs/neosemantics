@@ -12,9 +12,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
-import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
-import org.neo4j.procedure.Procedure;
 
 public class SHACLValidation {
 
@@ -23,51 +21,64 @@ public class SHACLValidation {
   private static final String CYPHER_DATATYPE_V_PREF = "MATCH (focus:%s) WHERE ";
   private static final String CYPHER_DATATYPE_V_SUFF =
       " NOT all(x in [] +  focus.`%s` where %s x %s = x) RETURN id(focus) as nodeId, " +
-          "'%s' as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
+          "'%s' as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+          + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_RANGETYPE1_V_PREF = "MATCH (focus:%s)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_RANGETYPE1_V_SUFF = "NOT x:`%s` RETURN id(focus) as nodeId, " +
-      "'%s' as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT + "' as propertyShape, 'nodeid: ' + id(x) as offendingValue, '%s' as propertyName, '%s' as severity ";
+      "'%s' as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
+      + "' as propertyShape, 'nodeid: ' + id(x) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_RANGETYPE2_V_PREF = "MATCH (focus:%s) WHERE ";
   private static final String CYPHER_RANGETYPE2_V_SUFF =
       "exists(focus.`%s`) RETURN id(focus) as nodeId, " +
-          "'%s' as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity";
+          "'%s' as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
+          + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity";
   private static final String CYPHER_REGEX_V_PREF = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_REGEX_V_SUFF =
       "NOT all(x in [] +  focus.`%s` where toString(x) =~ params.theRegex )  RETURN id(focus) as nodeId, "
-          + "'%s' as nodeType, '%s' as shapeId, '"+ SHACL.PATTERN_CONSTRAINT_COMPONENT.stringValue() +"' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + "'%s' as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
+          .stringValue()
+          + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_VALRANGE_V_PREF = "WITH $`%s` as params MATCH (focus:%s) WHERE ";
   private static final String CYPHER_VALRANGE_V_SUFF =
       "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN id(focus) as nodeId, "
-          + "'%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT.stringValue() + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + "'%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
+          .stringValue()
+          + "' as propertyShape, focus.`%s` as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_CARDINALITY1_V_PREF = "WITH $`%s` as params MATCH (focus:%s) WHERE ";
-//  private static final String CYPHER_CARDINALITY1_V_SUFF =
+  //  private static final String CYPHER_CARDINALITY1_V_SUFF =
 //      "NOT %s size((focus)-[:`%s`]->()) %s RETURN id(focus) as nodeId, "
 //          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.NAMESPACE + "MinMaxCountConstraintComponent" + "' as propertyShape,  'value count: ' + size((focus)-[:`%s`]->()) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_MIN_CARDINALITY1_V_SUFF =
       "NOT %s size((focus)-[:`%s`]->()) RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape,  'value count: ' + size((focus)-[:`%s`]->()) as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape,  'value count: ' + size((focus)-[:`%s`]->()) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_MAX_CARDINALITY1_V_SUFF =
       "NOT size((focus)-[:`%s`]->()) %s  RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape,  'value count: ' + size((focus)-[:`%s`]->()) as offendingValue, '%s' as propertyName, '%s' as severity ";
-//  private static final String CYPHER_CARDINALITY1_INVERSE_V_SUFF =
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape,  'value count: ' + size((focus)-[:`%s`]->()) as offendingValue, '%s' as propertyName, '%s' as severity ";
+  //  private static final String CYPHER_CARDINALITY1_INVERSE_V_SUFF =
 //      "NOT %s size((focus)<-[:`%s`]-()) %s RETURN id(focus) as nodeId, "
 //          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.NAMESPACE + "MinMaxCountConstraintComponent" + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_CARDINALITY2_V_PREF = " WITH $`%s` as params MATCH (focus:%s) WHERE ";
   private static final String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF =
       "NOT %s size((focus)<-[:`%s`]-()) RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF =
       "NOT size((focus)<-[:`%s`]-()) %s RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, '%s' as propertyName, '%s' as severity ";
-//  private static final String CYPHER_CARDINALITY2_V_SUFF =
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, '%s' as propertyName, '%s' as severity ";
+  //  private static final String CYPHER_CARDINALITY2_V_SUFF =
 //      " NOT %s size([] + focus.`%s`) %s RETURN id(focus) as nodeId, "
 //          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.NAMESPACE + "MinMaxCountConstraintComponent" + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_MIN_CARDINALITY2_V_SUFF =
       " NOT %s size([] + focus.`%s`) RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_MAX_CARDINALITY2_V_SUFF =
       " NOT size([] + focus.`%s`) %s RETURN id(focus) as nodeId, "
-          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, '%s' as propertyName, '%s' as severity ";
+          + " '%s' as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+          + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, '%s' as propertyName, '%s' as severity ";
   private static final String CYPHER_STRLEN_V_PREF = "WITH $`%s` as params MATCH (focus:%s) WHERE ";
   private static final String CYPHER_STRLEN_V_SUFF =
       "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN id(focus) as nodeId, "
@@ -77,31 +88,33 @@ public class SHACLValidation {
       "UNWIND [ x in [(focus)-[r]->()| type(r)] where not x in params.allAllowedProps] + [ x in keys(focus)  where not x in params.allAllowedProps] as noProp\n"
       +
       "WITH focus, collect(distinct noProp) as noProps\n" +
-      "RETURN  id(focus) as nodeId , '%s' as nodeType, '%s' as shapeId, '" + SHACL.CLOSED_CONSTRAINT_COMPONENT.stringValue() + "' as propertyShape, 'exists' as offendingValue, "
+      "RETURN  id(focus) as nodeId , '%s' as nodeType, '%s' as shapeId, '"
+      + SHACL.CLOSED_CONSTRAINT_COMPONENT.stringValue()
+      + "' as propertyShape, 'exists' as offendingValue, "
       +
       "reduce(result='', x in noProps | result + ' ' + x ) as propertyName, '%s' as severity";
 
   //A property shape is a shape in the shapes graph that is the subject of a triple that has sh:path as its predicate.
   private static final String CYPHER_PROP_VALIDATIONS =
       "MATCH (ps:Resource)-[:sh__path]->()-[inv:sh__inversePath*0..1]->(rel) "
-      + "WHERE NOT (rel)-->() "
-      + "OPTIONAL MATCH (ps)-[:sh__class]->(rangeClass) "
-      + "OPTIONAL MATCH (ps)-[:sh__nodeKind]->(rangeKind) "
-      + "OPTIONAL MATCH (ps)-[:sh__datatype]->(datatype) "
-      + "OPTIONAL MATCH (ps)-[:sh__severity]->(severity) "
-      + "OPTIONAL MATCH (targetClass)<-[:sh__targetClass]-(ns)-[:sh__property]->(ps) "
-      + "OPTIONAL MATCH (nsAsTarget:rdfs__Class)-[:sh__property]->(ps) "
-      + "RETURN semantics.getIRILocalName(rel.uri) AS item, inv <> []  AS inverse, "
-      + "       semantics.getIRILocalName(coalesce(rangeClass.uri,'#')) AS rangeType, "
-      + "       semantics.getIRILocalName(coalesce(rangeKind.uri,'#')) AS rangeKind, "
-      + "       datatype.uri AS dataType, "
-      + "       semantics.getIRILocalName(coalesce(coalesce(targetClass.uri, nsAsTarget.uri),'#'))  AS appliesToCat,"
-      + "       ps.sh__pattern AS pattern,"
-      + "       ps.sh__maxCount AS maxCount,"
-      + "       ps.sh__minCount AS minCount, ps.sh__minInclusive AS minInc, "
-      + "       ps.sh__maxInclusive AS maxInc, ps.sh__minExclusive AS minExc, ps.sh__maxExclusive AS maxExc,"
-      + "       ps.sh__minLength AS minStrLen, ps.sh__maxLength AS maxStrLen , ps.uri AS propShapeUid ,"
-      + "       coalesce(severity.uri,'http://www.w3.org/ns/shacl#Violation') AS severity";
+          + "WHERE NOT (rel)-->() "
+          + "OPTIONAL MATCH (ps)-[:sh__class]->(rangeClass) "
+          + "OPTIONAL MATCH (ps)-[:sh__nodeKind]->(rangeKind) "
+          + "OPTIONAL MATCH (ps)-[:sh__datatype]->(datatype) "
+          + "OPTIONAL MATCH (ps)-[:sh__severity]->(severity) "
+          + "OPTIONAL MATCH (targetClass)<-[:sh__targetClass]-(ns)-[:sh__property]->(ps) "
+          + "OPTIONAL MATCH (nsAsTarget:rdfs__Class)-[:sh__property]->(ps) "
+          + "RETURN semantics.getIRILocalName(rel.uri) AS item, inv <> []  AS inverse, "
+          + "       semantics.getIRILocalName(coalesce(rangeClass.uri,'#')) AS rangeType, "
+          + "       semantics.getIRILocalName(coalesce(rangeKind.uri,'#')) AS rangeKind, "
+          + "       datatype.uri AS dataType, "
+          + "       semantics.getIRILocalName(coalesce(coalesce(targetClass.uri, nsAsTarget.uri),'#'))  AS appliesToCat,"
+          + "       ps.sh__pattern AS pattern,"
+          + "       ps.sh__maxCount AS maxCount,"
+          + "       ps.sh__minCount AS minCount, ps.sh__minInclusive AS minInc, "
+          + "       ps.sh__maxInclusive AS maxInc, ps.sh__minExclusive AS minExc, ps.sh__maxExclusive AS maxExc,"
+          + "       ps.sh__minLength AS minStrLen, ps.sh__maxLength AS maxStrLen , ps.uri AS propShapeUid ,"
+          + "       coalesce(severity.uri,'http://www.w3.org/ns/shacl#Violation') AS severity";
 
   private static final String CYPHER_NODE_VALIDATIONS =
       "MATCH (ns:Resource { sh__closed : true })\n" +
@@ -155,7 +168,7 @@ public class SHACLValidation {
             + "CALL semantics.validation.shaclValidateTx(touchedNodes) YIELD nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName\n"
             + "RETURN {nodeId: nodeId, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, propertyName:propertyName} AS validationResult ",
         params);
-    if(validationResults.hasNext()){
+    if (validationResults.hasNext()) {
       throw new SHACLValidationException(validationResults.next().toString());
     }
 
@@ -194,11 +207,13 @@ public class SHACLValidation {
             nodeList != null);
       }
       if (validation.get("minCount") != null) {
-        addMinCardinalityValidations(allParams, cypherUnion, focusLabel, propOrRel, severity, validation,
+        addMinCardinalityValidations(allParams, cypherUnion, focusLabel, propOrRel, severity,
+            validation,
             nodeList != null);
       }
       if (validation.get("maxCount") != null) {
-        addMaxCardinalityValidations(allParams, cypherUnion, focusLabel, propOrRel, severity, validation,
+        addMaxCardinalityValidations(allParams, cypherUnion, focusLabel, propOrRel, severity,
+            validation,
             nodeList != null);
       }
       if (validation.get("minStrLen") != null || validation.get("maxStrLen") != null) {
@@ -207,7 +222,8 @@ public class SHACLValidation {
       }
       if (validation.get("minInc") != null || validation.get("maxInc") != null
           || validation.get("minExc") != null || validation.get("maxExc") != null) {
-        addValueRangeValidations(allParams, cypherUnion, focusLabel, propOrRel, severity, validation,
+        addValueRangeValidations(allParams, cypherUnion, focusLabel, propOrRel, severity,
+            validation,
             nodeList != null);
       }
 
@@ -215,13 +231,13 @@ public class SHACLValidation {
 
     Result nodeValidations = db.execute(CYPHER_NODE_VALIDATIONS);
 
-
     while (nodeValidations.hasNext()) {
       Map<String, Object> validation = nodeValidations.next();
       String focusLabel = (String) validation.get("target");
       //String severity = (String) validation.get("severity");
       //AFAIK there's no way to set severity on these type of constraints??? TODO: confirm
-      addNodeStructureValidations(allParams, cypherUnion, focusLabel, "http://www.w3.org/ns/shacl#Violation", validation, nodeList != null);
+      addNodeStructureValidations(allParams, cypherUnion, focusLabel,
+          "http://www.w3.org/ns/shacl#Violation", validation, nodeList != null);
     }
 
     return db.execute(cypherUnion.toString(), allParams).stream().map(ValidationResult::new);
@@ -245,7 +261,8 @@ public class SHACLValidation {
   }
 
   private void addValueRangeValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     String paramSetId = validation.get("propShapeUid") + "_" + SHACL.MIN_EXCLUSIVE.stringValue();
     Map<String, Object> params = addParams(allParams, paramSetId);
@@ -263,7 +280,8 @@ public class SHACLValidation {
   }
 
   private void addStrLenValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     String paramSetId = validation.get("propShapeUid") + "_" + SHACL.MIN_LENGTH.stringValue();
     Map<String, Object> params = addParams(allParams, paramSetId);
@@ -309,17 +327,19 @@ public class SHACLValidation {
 //    }
 //  }
 
-  private void addMinCardinalityValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+  private void addMinCardinalityValidations(Map<String, Object> allParams,
+      StringBuilder cypherUnion,
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     String paramSetId = validation.get("propShapeUid") + "_" + SHACL.MIN_COUNT.stringValue();
     Map<String, Object> params = addParams(allParams, paramSetId);
     params.put("minCount", validation.get("minCount"));
 
-    if(!(boolean)validation.get("inverse")) {
+    if (!(boolean) validation.get("inverse")) {
 
       addCypher(cypherUnion, getMinCardinality1ViolationQuery(tx), paramSetId, appliesToCat,
-          " params.minCount <= " ,
+          " params.minCount <= ",
           item,
           appliesToCat, (String) validation.get("propShapeUid"), item, item, severity);
       addCypher(cypherUnion, getMinCardinality2ViolationQuery(tx), paramSetId, appliesToCat,
@@ -336,14 +356,16 @@ public class SHACLValidation {
     }
   }
 
-  private void addMaxCardinalityValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+  private void addMaxCardinalityValidations(Map<String, Object> allParams,
+      StringBuilder cypherUnion,
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     String paramSetId = validation.get("propShapeUid") + "_" + SHACL.MAX_COUNT.stringValue();
     Map<String, Object> params = addParams(allParams, paramSetId);
     params.put("maxCount", validation.get("maxCount"));
 
-    if(!(boolean)validation.get("inverse")) {
+    if (!(boolean) validation.get("inverse")) {
 
       addCypher(cypherUnion, getMaxCardinality1ViolationQuery(tx), paramSetId, appliesToCat,
           item,
@@ -364,7 +386,8 @@ public class SHACLValidation {
   }
 
   private void addRegexValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
     String paramSetId = validation.get("propShapeUid") + "_" + SHACL.PATTERN.stringValue();
     Map<String, Object> params = addParams(allParams, paramSetId);
     params.put("theRegex", validation.get("pattern"));
@@ -373,7 +396,8 @@ public class SHACLValidation {
   }
 
   private void addRangeTypeValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     addCypher(cypherUnion, getRangeType1ViolationQuery(tx), appliesToCat, item,
         (String) validation.get("rangeType"),
@@ -383,7 +407,8 @@ public class SHACLValidation {
   }
 
   private void addDataTypeValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
-      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
+      String appliesToCat, String item, String severity, Map<String, Object> validation,
+      boolean tx) {
 
     //TODO: this will be safer via APOC? maybe exclude some of them? and log the ignored ones?
     addCypher(cypherUnion, getDataTypeViolationQuery(tx), appliesToCat, item,

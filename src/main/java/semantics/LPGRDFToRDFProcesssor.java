@@ -49,10 +49,10 @@ public class LPGRDFToRDFProcesssor {
   public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb) {
     this.graphdb = graphdb;
     this.namespaces = getNamespacesFromDB(graphdb);
- }
+  }
 
 
-  public Stream<Statement> streamLocalImplicitOntology(){
+  public Stream<Statement> streamLocalImplicitOntology() {
     Set<Statement> statements = new HashSet<>();
     Result res = graphdb.execute("CALL db.schema() ");
 
@@ -64,7 +64,7 @@ public class LPGRDFToRDFProcesssor {
         IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
-                vf.createLiteral(subject.getLocalName())));
+            vf.createLiteral(subject.getLocalName())));
       }
     });
 
@@ -74,7 +74,7 @@ public class LPGRDFToRDFProcesssor {
           .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
       statements.add(vf.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
       statements.add(vf.createStatement(relUri, RDFS.LABEL,
-              vf.createLiteral(relUri.getLocalName())));
+          vf.createLiteral(relUri.getLocalName())));
       String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
       if (!domainClassStr.equals("Resource")) {
         IRI domainUri = vf
@@ -89,7 +89,7 @@ public class LPGRDFToRDFProcesssor {
       }
     }
 
-    return  statements.stream();
+    return statements.stream();
   }
 
 
@@ -135,6 +135,7 @@ public class LPGRDFToRDFProcesssor {
   }
 
   private class MissingNamespacePrefixDefinition extends RDFHandlerException {
+
     MissingNamespacePrefixDefinition(String msg) {
       super("RDF Serialization ERROR: ".concat(msg));
     }
@@ -142,7 +143,7 @@ public class LPGRDFToRDFProcesssor {
 
 
   public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
-    Set<Statement>  statementResults = new HashSet<>();
+    Set<Statement> statementResults = new HashSet<>();
     final Result result = this.graphdb.execute(cypher, params);
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
 
@@ -217,12 +218,10 @@ public class LPGRDFToRDFProcesssor {
       params.put("graphUri", graphId);
     }
 
-    Set<Statement>  statementResults = new HashSet<>();
+    Set<Statement> statementResults = new HashSet<>();
 
     Result result = graphdb
         .execute((excludeContext ? queryNoContext : queryWithContext), params);
-
-
 
     boolean doneOnce = false;
     while (result.hasNext()) {
@@ -238,11 +237,11 @@ public class LPGRDFToRDFProcesssor {
         statementResults.addAll(processRelationship(rel));
       }
     }
-    return  statementResults.stream();
+    return statementResults.stream();
   }
 
   private Set<Statement> processRelationship(Relationship rel) {
-    Set<Statement>  result = new HashSet<>();
+    Set<Statement> result = new HashSet<>();
     Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString());
     IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, rel.getType().name(), namespaces));
     Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString());
@@ -266,18 +265,18 @@ public class LPGRDFToRDFProcesssor {
   }
 
   private Set<Statement> processNode(Node node) {
-    Set<Statement>  result = new HashSet<>();
+    Set<Statement> result = new HashSet<>();
     Iterable<Label> nodeLabels = node.getLabels();
     for (Label label : nodeLabels) {
       //Exclude the URI, Resource and Bnode categories created by the importer to emulate RDF
       if (!(label.name().equals("Resource") || label.name().equals("URI") ||
           label.name().equals("BNode"))) {
         result.add(vf.createStatement(
-                buildSubjectOrContext(node.getProperty("uri").toString()),
-                RDF.TYPE,
-                vf.createIRI(buildURI(BASE_VOCAB_NS, label.name(), namespaces)),
-                node.hasProperty("graphUri") ? vf
-                    .createIRI(node.getProperty("graphUri").toString()) : null));
+            buildSubjectOrContext(node.getProperty("uri").toString()),
+            RDF.TYPE,
+            vf.createIRI(buildURI(BASE_VOCAB_NS, label.name(), namespaces)),
+            node.hasProperty("graphUri") ? vf
+                .createIRI(node.getProperty("graphUri").toString()) : null));
 
       }
     }
@@ -324,7 +323,8 @@ public class LPGRDFToRDFProcesssor {
           }
         } else if (propertyValueObject instanceof Object[]) {
           for (int i = 0; i < ((Object[]) propertyValueObject).length; i++) {
-            Literal object = createTypedLiteral((buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i])));
+            Literal object = createTypedLiteral(
+                (buildCustomDTFromShortURI((String) ((Object[]) propertyValueObject)[i])));
             result.add(
                 vf.createStatement(subject, predicate, object, context));
           }
@@ -369,7 +369,7 @@ public class LPGRDFToRDFProcesssor {
     return result;
   }
 
-  public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params){
+  public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params) {
     final ValueFactory vf = SimpleValueFactory.getInstance();
 
     return null;

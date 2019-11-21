@@ -181,10 +181,10 @@ public class RDFEndpointTest {
         StatementResult postImport = session.run("MATCH (n:Critic) RETURN n");
         Node criticPostImport = postImport.next().get("n").asNode();
         result = server.graph().execute("MATCH (n:Critic) "
-            + "RETURN n.born as born, n.name as name");
+            + "RETURN n.born AS born, n.name AS name");
         Map<String, Object> criticPreImport = result.next();
-        assertEquals(criticPreImport.get("name"),criticPostImport.get("name").asString());
-        assertEquals(criticPreImport.get("born"),criticPostImport.get("born").asLong());
+        assertEquals(criticPreImport.get("name"), criticPostImport.get("name").asString());
+        assertEquals(criticPreImport.get("born"), criticPostImport.get("born").asLong());
 
       }
 
@@ -233,7 +233,7 @@ public class RDFEndpointTest {
 
         StatementResult importResults
             = session.run("CALL semantics.importRDF('" +
-            HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher"  +
+            HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher" +
             "','Turtle',{ handleVocabUris: 'IGNORE', "
             + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
@@ -244,10 +244,10 @@ public class RDFEndpointTest {
         StatementResult postImport = session.run("MATCH (n:Critic) RETURN n");
         Node criticPostImport = postImport.next().get("n").asNode();
         result = server.graph().execute("MATCH (n:Critic) "
-            + "RETURN n.born as born, n.name as name");
+            + "RETURN n.born AS born, n.name AS name");
         Map<String, Object> criticPreImport = result.next();
-        assertEquals(criticPreImport.get("name"),criticPostImport.get("name").asString());
-        assertEquals(criticPreImport.get("born"),criticPostImport.get("born").asLong());
+        assertEquals(criticPreImport.get("name"), criticPostImport.get("name").asString());
+        assertEquals(criticPreImport.get("born"), criticPostImport.get("born").asLong());
 
       }
 
@@ -493,7 +493,7 @@ public class RDFEndpointTest {
           .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
 
       // request passing serialisation format as request param
-      map.put("format","RDF/XML");
+      map.put("format", "RDF/XML");
       response = HTTP.withHeaders("Accept", "text/plain").POST(
           HTTP.GET(server.httpURI().resolve("rdf").toString()).location() + "cypher", map);
 

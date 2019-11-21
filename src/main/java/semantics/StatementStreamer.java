@@ -61,11 +61,12 @@ public class StatementStreamer extends ConfiguredStatementHandler {
   }
 
   public void setErrorMsg(String errorMsg) {
-    if (this.statements == null){
+    if (this.statements == null) {
       this.statements = new ArrayList<>();
-    } else  {
+    } else {
       this.statements.clear();
     }
-    this.statements.add(new StreamedStatement("neo4j://error", "neo4j://message",errorMsg, true, null, null));
+    this.statements
+        .add(new StreamedStatement("neo4j://error", "neo4j://message", errorMsg, true, null, null));
   }
 }

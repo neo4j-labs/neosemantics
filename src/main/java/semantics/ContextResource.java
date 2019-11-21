@@ -3,9 +3,8 @@ package semantics;
 import java.util.Objects;
 
 /**
- * ContextResource represents a Resource with an optional graph (context) uri.
- * <p>
- * It is used as Key for the Maps containing labels and properties.
+ * ContextResource represents a Resource with an optional graph (context) uri. <p> It is used as Key
+ * for the Maps containing labels and properties.
  *
  * Created on 06.06.2019
  *

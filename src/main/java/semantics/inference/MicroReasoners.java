@@ -16,7 +16,6 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.ResourceIterable;
 import org.neo4j.graphdb.Result;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -34,8 +33,9 @@ public class MicroReasoners {
       + " WITH collect(label) as labels MATCH path = (c:`%1$s`)<-[:`%3$s`*]-(s:`%1$s`) "
       + " WHERE s.`%2$s` in labels AND NOT (c)-[:`%3$s`]->() AND any(x in nodes (path) "
       + " WHERE x.`%2$s` = $virtLabel ) RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
-  private static final String subcatPathQuery = "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
-      + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
+  private static final String subcatPathQuery =
+      "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
+          + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
   private static final String scoInferenceCypherTopDown = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
   private static final String scoInferenceCypherBottomUp = "MATCH (cat)<-[:SCO*0..]-(subcat) WHERE id(subcat) = $catId RETURN collect(DISTINCT id(cat)) AS catIds";
   private static final String sroInferenceFormatReturnRelNames = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
@@ -71,15 +71,16 @@ public class MicroReasoners {
         (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : DEFAULT_SLO_REL_NAME)),
         params);
 
-    List<String> labelList = (List<String>)results.next().get("l");
+    List<String> labelList = (List<String>) results.next().get("l");
 
     StringBuilder sb = new StringBuilder();
     sb.append("cypher runtime=slotted ");
     sb.append("unwind [] as result return result ");
-    labelList.forEach( x  -> sb.append(" UNION MATCH (x:`").append(x).append("`) RETURN x as result ") );
+    labelList
+        .forEach(x -> sb.append(" UNION MATCH (x:`").append(x).append("`) RETURN x as result "));
 
     return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result"))
-          .map(NodeResult::new);
+        .map(NodeResult::new);
 
   }
 
@@ -95,7 +96,6 @@ public class MicroReasoners {
     final String subCatRelName = (props.containsKey("subCatRel") ? (String) props.get("subCatRel")
         : DEFAULT_SCO_REL_NAME);
 
-
     Map<String, Object> params = new HashMap<>();
     params.put("catId", catNode.getId());
 
@@ -103,7 +103,7 @@ public class MicroReasoners {
         inCatRelName + "]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
 
     return db.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
-          .map(NodeResult::new);
+        .map(NodeResult::new);
   }
 
   private List<Long> getSubcatIds(Node catNode, String subCatRelName) {
@@ -153,8 +153,9 @@ public class MicroReasoners {
 
 
   @UserFunction
-  @Description("semantics.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
-      + "implicitly labeled as 'label'.")
+  @Description(
+      "semantics.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
+          + "implicitly labeled as 'label'.")
   public boolean hasLabel(
       @Name("node") Node individual,
       @Name("label") String label,
@@ -169,13 +170,12 @@ public class MicroReasoners {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("virtLabel", label);
 
-
-
     Iterable<Label> labels = individual.getLabels();
     boolean is = false;
     for (Label l : labels) {
-      params.put("oneOfCats",l.name());
-      is |= (l.name().equals(label)?true:db.execute(queryString, params).next().get("isTrue").equals(true));
+      params.put("oneOfCats", l.name());
+      is |= (l.name().equals(label) ? true
+          : db.execute(queryString, params).next().get("isTrue").equals(true));
     }
 
     return is;

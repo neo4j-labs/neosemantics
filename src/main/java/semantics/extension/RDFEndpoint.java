@@ -48,7 +48,6 @@ public class RDFEndpoint {
   public Log log;
 
 
-
   @GET
   @Path("/ping")
   public Response ping() throws IOException {
@@ -75,7 +74,7 @@ public class RDFEndpoint {
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
 
-        proc.streamNodeById(idParam, excludeContextParam==null).forEach(writer::handleStatement);
+        proc.streamNodeById(idParam, excludeContextParam == null).forEach(writer::handleStatement);
 
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -102,8 +101,9 @@ public class RDFEndpoint {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
-        proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam==null).forEach(
-            writer::handleStatement);
+        proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
+            .forEach(
+                writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
@@ -123,13 +123,14 @@ public class RDFEndpoint {
               new TypeReference<Map<String, Object>>() {
               });
       try (Transaction tx = gds.beginTx()) {
-        RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
+        RDFWriter writer = startRdfWriter(
+            getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), jsonMap.containsKey("mappedElemsOnly"));
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
-                (Map<String, Object>) jsonMap
-                    .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
+            (Map<String, Object>) jsonMap
+                .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
             writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -158,7 +159,6 @@ public class RDFEndpoint {
       }
     }).build();
   }
-
 
   /////////  RDF graph on LPG /////
 
@@ -193,9 +193,11 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       Map<String, Object> jsonMap = objectMapper
-          .readValue(body, new TypeReference<Map<String, Object>>() {});
+          .readValue(body, new TypeReference<Map<String, Object>>() {
+          });
 
-      RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, true);
+      RDFWriter writer = startRdfWriter(
+          getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, true);
 
       try (Transaction tx = gds.beginTx()) {
 
@@ -230,7 +232,7 @@ public class RDFEndpoint {
       try (Transaction tx = gds.beginTx()) {
 
         LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
-        proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam!= null).forEach(
+        proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam != null).forEach(
             writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -249,7 +251,7 @@ public class RDFEndpoint {
     writer.handleNamespace("rdf", RDF.NAMESPACE);
     writer.handleNamespace("neovoc", BASE_VOCAB_NS);
     writer.handleNamespace("neoind", BASE_INDIV_NS);
-    if (addVocNamespaces){
+    if (addVocNamespaces) {
       writer.handleNamespace("owl", OWL.NAMESPACE);
       writer.handleNamespace("rdfs", RDFS.NAMESPACE);
     }
@@ -270,7 +272,6 @@ public class RDFEndpoint {
     writer.handleComment(e.getMessage());
     writer.endRDF();
   }
-
 
 
   private RDFFormat getFormat(String mimetype, String formatParam) {

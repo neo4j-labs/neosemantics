@@ -56,10 +56,10 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
     totalTriplesMapped += mappedTripleCounter;
     // take away the unused extra triples (maybe too much for just returning a counter?)
     int unusedExtra = 0;
-    for(Entry<String, Map<String, Object>> entry:resourceProps.entrySet()){
-      for(Entry<String, Object> values:entry.getValue().entrySet()){
-        if (values.getValue() instanceof List){
-          unusedExtra+= ((List)values.getValue()).size();
+    for (Entry<String, Map<String, Object>> entry : resourceProps.entrySet()) {
+      for (Entry<String, Object> values : entry.getValue().entrySet()) {
+        if (values.getValue() instanceof List) {
+          unusedExtra += ((List) values.getValue()).size();
         } else {
           unusedExtra++;
         }
@@ -141,7 +141,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   public Integer call() throws Exception {
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
-      if (!entry.getValue().isEmpty()){
+      if (!entry.getValue().isEmpty()) {
         // if the uri is for an element for which we have not parsed the
         // onto element type (class, property, rel) then it's an extra-statement
         // and should be processed when the element in question is parsed
@@ -237,7 +237,6 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
             RelationshipType.withName(translateRelName(st.getPredicate())));
       }
     }
-
 
     statements.clear();
     resourceLabels.clear();

@@ -8,8 +8,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.junit.Rule;
-import org.junit.Test;
 import org.neo4j.driver.v1.Config;
 import org.neo4j.driver.v1.Driver;
 import org.neo4j.driver.v1.GraphDatabase;
@@ -132,7 +130,7 @@ public class SHACLValidationTest {
       StatementResult validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
           + "call semantics.validation.shaclValidateTxForTrigger(nodes,[], {}, {}, {}) "
           + "yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
-              + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName");
+          + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName");
 
       try {
         assertEquals(true, validationResults.hasNext());
@@ -140,7 +138,7 @@ public class SHACLValidationTest {
         //Should not get here
         assertTrue(false);
 
-      } catch (Exception e){
+      } catch (Exception e) {
         //This is expected
         assertTrue(e.getMessage().contains("SHACLValidationException"));
       }
@@ -150,7 +148,7 @@ public class SHACLValidationTest {
 
 
   //@Test
-  public void testRunTestSuite() throws Exception{
+  public void testRunTestSuite() throws Exception {
     testRunIndividualTestInTestSuite("core/complex", "personexample", null);
     testRunIndividualTestInTestSuite("core/path", "path-inverse-001", null);
     testRunIndividualTestInTestSuite("core/property", "datatype-001",
@@ -163,10 +161,9 @@ public class SHACLValidationTest {
 
 
   public void testRunIndividualTestInTestSuite(String testGroupName, String testName,
-      String cypherScript ) throws Exception{
+      String cypherScript) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
-
 
       Session session = driver.session();
 
@@ -176,36 +173,39 @@ public class SHACLValidationTest {
       //load shapes
       session.run("CREATE INDEX ON :Resource(uri) ");
       session.run("call semantics.importRDF('" + SHACLValidationTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName +"/" + testName + "-data.ttl")
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
           .toURI() + "','Turtle', { handleVocabUris: 'IGNORE', handleMultival: 'ARRAY' })");
 
       //load data
       session.run("call semantics.importRDF('" + SHACLValidationTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName +"/" + testName + "-shapes.ttl")
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
           .toURI() + "','Turtle')");
 
       //Run any additional change to modify the imported RDF into LPG
-      if (cypherScript != null ) {
+      if (cypherScript != null) {
         session.run(cypherScript);
       }
 
       // run validation
-      StatementResult actualValidationResults = session.run("CALL semantics.validation.shaclValidate() ");
+      StatementResult actualValidationResults = session
+          .run("CALL semantics.validation.shaclValidate() ");
 
       // print out validation results
       //System.out.println("actual: ");
       Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
-      while(actualValidationResults.hasNext()){
+      while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
         Map<String, Object> params = new HashMap<String, Object>();
-        params.put("id",validationResult.get("nodeId"));
-        String focusNode = session.run("MATCH (n) WHERE ID(n) = $id RETURN n.uri as uri ", params).next()
+        params.put("id", validationResult.get("nodeId"));
+        String focusNode = session.run("MATCH (n) WHERE ID(n) = $id RETURN n.uri as uri ", params)
+            .next()
             .get("uri").asString();
         String nodeType = validationResult.get("nodeType").asString();
         String propertyName = validationResult.get("propertyName").asString();
         String severity = validationResult.get("severity").asString();
         String constraint = validationResult.get("propertyShape").asString();
-        actualResults.add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint));
+        actualResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint));
 
 //        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
 //            propertyName + ", severity: " + severity + ", constraint: " + constraint);
@@ -214,7 +214,7 @@ public class SHACLValidationTest {
 
       //load expected results
       session.run("call semantics.importRDF('" + SHACLValidationTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName +"/" + testName + "-results.ttl")
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 
       // query them in the graph and flatten the list
@@ -223,7 +223,7 @@ public class SHACLValidationTest {
       //print them out
       //System.out.println("expected: ");
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
-      while(expectedValidationResults.hasNext()){
+      while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
         String focusNode = validationResult.get("focus").asString();
         String nodeType = validationResult.get("targetClass").asString();
@@ -231,22 +231,23 @@ public class SHACLValidationTest {
         String severity = validationResult.get("sev").asString();
         String constraint = validationResult.get("constraint").asString();
 
-        expectedResults.add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint));
+        expectedResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint));
 
 //        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
 //            propertyName + ", severity: " + severity + ", constraint: " + constraint);
       }
 
-      assertEquals(expectedResults.size(),actualResults.size());
+      assertEquals(expectedResults.size(), actualResults.size());
 
-      for (ValidationResult x:expectedResults) {
+      for (ValidationResult x : expectedResults) {
         //System.out.println("about to compare: " + x );
-        assertTrue(contains(actualResults,x));
+        assertTrue(contains(actualResults, x));
       }
 
-      for (ValidationResult x:actualResults) {
+      for (ValidationResult x : actualResults) {
         //System.out.println("about to compare: " + x );
-        assertTrue(contains(expectedResults,x));
+        assertTrue(contains(expectedResults, x));
       }
 
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
@@ -254,22 +255,22 @@ public class SHACLValidationTest {
     }
 
 
-
   }
 
   private boolean contains(Set<ValidationResult> set, ValidationResult res) {
     boolean contained = false;
-    for (ValidationResult vr:set) {
-      contained |= reasonablyEqual(vr,res);
+    for (ValidationResult vr : set) {
+      contained |= reasonablyEqual(vr, res);
     }
     if (!contained) {
-      System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set );
+      System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set);
     }
     return contained;
   }
 
   private boolean reasonablyEqual(ValidationResult x, ValidationResult res) {
-    return x.nodeId.equals(res.nodeId) && x.severity.equals(res.severity) && x.nodeType.equals(res.nodeType) && x.propertyShape.equals(res.propertyShape);
+    return x.nodeId.equals(res.nodeId) && x.severity.equals(res.severity) && x.nodeType
+        .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape);
   }
 
 

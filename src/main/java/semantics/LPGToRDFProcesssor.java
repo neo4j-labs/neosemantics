@@ -58,7 +58,7 @@ public class LPGToRDFProcesssor {
 
   }
 
-  public Stream<Statement> streamLocalImplicitOntology(){
+  public Stream<Statement> streamLocalImplicitOntology() {
     Result res = graphdb.execute("CALL db.schema() ");
     Set<Statement> statements = new HashSet<>();
     Map<String, Object> next = res.next();
@@ -70,7 +70,7 @@ public class LPGToRDFProcesssor {
         IRI subject = vf.createIRI(BASE_VOCAB_NS, catName);
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf
-                .createStatement(subject, RDFS.LABEL, vf.createLiteral(catName)));
+            .createStatement(subject, RDFS.LABEL, vf.createLiteral(catName)));
       }
     });
 
@@ -79,48 +79,51 @@ public class LPGToRDFProcesssor {
       IRI relUri = vf.createIRI(BASE_VOCAB_NS, r.getType().name());
       statements.add(vf.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
       statements.add(vf.createStatement(relUri, RDFS.LABEL,
-              vf.createLiteral(r.getType().name())));
+          vf.createLiteral(r.getType().name())));
       String domainLabel =
           r.getStartNode().getLabels().iterator().next().name();
       // Resource should be named _Resource... to avoid conflicts
       if (!domainLabel.equals("Resource")) {
         statements.add(vf.createStatement(relUri, RDFS.DOMAIN,
-                vf
-                    .createIRI(BASE_VOCAB_NS, domainLabel)));
+            vf
+                .createIRI(BASE_VOCAB_NS, domainLabel)));
       }
       String rangeLabel = r.getEndNode().getLabels().iterator().next().name();
       // Resource should be named _Resource... to avoid conflicts
       if (!rangeLabel.equals("Resource")) {
         statements.add(vf.createStatement(relUri, RDFS.RANGE,
-                vf.createIRI(BASE_VOCAB_NS, rangeLabel)));
+            vf.createIRI(BASE_VOCAB_NS, rangeLabel)));
       }
     }
     return statements.stream();
   }
 
-  public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params){
+  public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params) {
 
     return this.graphdb.execute(buildOntoQuery(params)).stream().map(
         triple ->
-          vf.createStatement(vf.createIRI((String) triple.get("subject")),
-              vf.createIRI((String) triple.get("predicate")),
-              vf.createIRI((String) triple.get("object")))
+            vf.createStatement(vf.createIRI((String) triple.get("subject")),
+                vf.createIRI((String) triple.get("predicate")),
+                vf.createIRI((String) triple.get("object")))
     );
   }
 
   private String buildOntoQuery(Map<String, Object> params) {
     // TODO: this query has to be modified to use customized terms
-    return " MATCH (rel)-[:DOMAIN]->(domain) RETURN '" + BASE_VOCAB_NS +"' + rel.name AS subject, '"
-        + RDFS.DOMAIN + "' AS predicate, '" + BASE_VOCAB_NS +"' + domain.name AS object "
+    return " MATCH (rel)-[:DOMAIN]->(domain) RETURN '" + BASE_VOCAB_NS
+        + "' + rel.name AS subject, '"
+        + RDFS.DOMAIN + "' AS predicate, '" + BASE_VOCAB_NS + "' + domain.name AS object "
         + " UNION "
-        + " MATCH (rel)-[:RANGE]->(range) RETURN '" + BASE_VOCAB_NS +"' + rel.name AS subject, '"
-        + RDFS.RANGE + "' AS predicate, '" + BASE_VOCAB_NS +"' + range.name AS object "
+        + " MATCH (rel)-[:RANGE]->(range) RETURN '" + BASE_VOCAB_NS + "' + rel.name AS subject, '"
+        + RDFS.RANGE + "' AS predicate, '" + BASE_VOCAB_NS + "' + range.name AS object "
         + " UNION "
-        + " MATCH (child)-[:SCO]->(parent) RETURN '" + BASE_VOCAB_NS +"' + child.name AS subject, '"
-        + RDFS.SUBCLASSOF + "' AS predicate, '" + BASE_VOCAB_NS +"' + parent.name AS object "
+        + " MATCH (child)-[:SCO]->(parent) RETURN '" + BASE_VOCAB_NS
+        + "' + child.name AS subject, '"
+        + RDFS.SUBCLASSOF + "' AS predicate, '" + BASE_VOCAB_NS + "' + parent.name AS object "
         + "  UNION "
-        + " MATCH (child)-[:SPO]->(parent) RETURN '" + BASE_VOCAB_NS +"' + child.name AS subject, '"
-        + RDFS.SUBPROPERTYOF + "' AS predicate, '" + BASE_VOCAB_NS +"' + parent.name AS object " ;
+        + " MATCH (child)-[:SPO]->(parent) RETURN '" + BASE_VOCAB_NS
+        + "' + child.name AS subject, '"
+        + RDFS.SUBPROPERTYOF + "' AS predicate, '" + BASE_VOCAB_NS + "' + parent.name AS object ";
   }
 
   public Stream<Statement> streamNodeById(Long nodeId, boolean streamContext) {
@@ -136,7 +139,7 @@ public class LPGToRDFProcesssor {
     return result.stream();
   }
 
-  public Stream<Statement>  streamNodesBySearch(String label, String property, String propVal,
+  public Stream<Statement> streamNodesBySearch(String label, String property, String propVal,
       String valType, boolean includeContext) {
     Set<Statement> result = new HashSet<>();
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
@@ -168,7 +171,7 @@ public class LPGToRDFProcesssor {
     }
   }
 
-  public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params){
+  public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
 
     final Result result = this.graphdb.execute(cypher, params);
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
@@ -182,7 +185,7 @@ public class LPGToRDFProcesssor {
       List<Relationship> rels = new ArrayList<>();
       List<Path> paths = new ArrayList<>();
 
-      for (Entry<String, Object> entry:entries) {
+      for (Entry<String, Object> entry : entries) {
         Object o = entry.getValue();
         if (o instanceof Node) {
           nodes.add((Node) o);
@@ -194,44 +197,44 @@ public class LPGToRDFProcesssor {
         //if it's not a node, a  rel or a path then it cannot be converted to triples so we ignore it
       }
 
-      for(Node node:nodes){
-          if (!serializedNodeIds.contains(node.getId())) {
-            serializedNodeIds.add(node.getId());
-            rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
-          }
+      for (Node node : nodes) {
+        if (!serializedNodeIds.contains(node.getId())) {
+          serializedNodeIds.add(node.getId());
+          rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
+        }
       }
 
-      for(Relationship rel:rels){
-          rowResult.add(processRelOnLPG(rel, ontologyEntitiesUris));
-        }
+      for (Relationship rel : rels) {
+        rowResult.add(processRelOnLPG(rel, ontologyEntitiesUris));
+      }
 
-      for(Path p:paths){
-          p.iterator().forEachRemaining(propertyContainer -> {
-                if (propertyContainer instanceof Node) {
-                  Node node = (Node) propertyContainer;
-                  if (!serializedNodeIds.contains(node.getId())) {
-                    serializedNodeIds.add(node.getId());
-                    rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
-                  }
-                } else if (propertyContainer instanceof Relationship) {
-                  rowResult.add(
-                      processRelOnLPG((Relationship) propertyContainer, ontologyEntitiesUris));
+      for (Path p : paths) {
+        p.iterator().forEachRemaining(propertyContainer -> {
+              if (propertyContainer instanceof Node) {
+                Node node = (Node) propertyContainer;
+                if (!serializedNodeIds.contains(node.getId())) {
+                  serializedNodeIds.add(node.getId());
+                  rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
                 }
+              } else if (propertyContainer instanceof Relationship) {
+                rowResult.add(
+                    processRelOnLPG((Relationship) propertyContainer, ontologyEntitiesUris));
               }
-            );
-        }
+            }
+        );
+      }
 
-        return rowResult.stream();
+      return rowResult.stream();
 
     });
   }
 
   private Statement processRelOnLPG(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
 
-    Statement statement =  null;
+    Statement statement = null;
 
     if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
-        rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")){
+        rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
       //if it's  an ontlogy rel, it must apply to an ontology entity
       //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
       statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),
@@ -268,29 +271,29 @@ public class LPGToRDFProcesssor {
     }
   }
 
-  private Set<Statement> processNodeInLPG(Node node, Map<Long, IRI>  ontologyEntitiesUris) {
-    Set<Statement> statements =  new HashSet<>();
+  private Set<Statement> processNodeInLPG(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+    Set<Statement> statements = new HashSet<>();
     List<Label> nodeLabels = new ArrayList<>();
-    node.getLabels().forEach( l -> nodeLabels.add(l));
+    node.getLabels().forEach(l -> nodeLabels.add(l));
     IRI subject;
 
-    if (nodeLabels.contains(Label.label("Class"))||nodeLabels.contains(Label.label("Relationship"))||
-        nodeLabels.contains(Label.label("Property"))){
+    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
+        .contains(Label.label("Relationship")) ||
+        nodeLabels.contains(Label.label("Property"))) {
       // it's an ontology element (for now we're not dealing with ( name: "a")-[:DOMAIN]->( name: "b")
-      subject = vf.createIRI(BASE_VOCAB_NS, (String)node.getProperty("name","unnamedEntity"));
-      ontologyEntitiesUris.put(node.getId(),subject);
-    } else{
+      subject = vf.createIRI(BASE_VOCAB_NS, (String) node.getProperty("name", "unnamedEntity"));
+      ontologyEntitiesUris.put(node.getId(), subject);
+    } else {
       subject = vf.createIRI(BASE_INDIV_NS, String.valueOf(node.getId()));
     }
 
-
     for (Label label : nodeLabels) {
       if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
-        if(label.equals(Label.label("Class"))) {
+        if (label.equals(Label.label("Class"))) {
           statements.add(vf.createStatement(subject, RDF.TYPE, RDFS.CLASS));
-        } else if(label.equals(Label.label("Property"))) {
+        } else if (label.equals(Label.label("Property"))) {
           statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
-        } else if(label.equals(Label.label("Relationship"))) {
+        } else if (label.equals(Label.label("Relationship"))) {
           statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
         } else {
           statements.add(vf.createStatement(subject,
@@ -301,22 +304,22 @@ public class LPGToRDFProcesssor {
       }
     }
 
-
     Map<String, Object> allProperties = node.getAllProperties();
-    if (nodeLabels.contains(Label.label("Class"))||nodeLabels.contains(Label.label("Relationship"))||
-        nodeLabels.contains(Label.label("Property"))){
+    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
+        .contains(Label.label("Relationship")) ||
+        nodeLabels.contains(Label.label("Property"))) {
       //TODO: this assumes property 'name' exists. This is true for imported ontos but
       // maybe we should define default in case it's not present?
       statements.add(vf.createStatement(subject,
           vf.createIRI("neo4j://neo4j.org/rdfs/1#", "name"),
-          vf.createLiteral((String)allProperties.get("name"))));
+          vf.createLiteral((String) allProperties.get("name"))));
       allProperties.remove("name");
     }
 
     for (String key : allProperties.keySet()) {
       if (!exportOnlyMappedElems || exportMappings.containsKey(key)) {
-        IRI predicate = (exportMappings.containsKey(key)? vf.createIRI(exportMappings.get(key)):
-                    vf.createIRI(BASE_VOCAB_NS,key));
+        IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
+            vf.createIRI(BASE_VOCAB_NS, key));
         Object propertyValueObject = allProperties.get(key);
         if (propertyValueObject instanceof Object[]) {
           for (Object o : (Object[]) propertyValueObject) {

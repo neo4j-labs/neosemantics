@@ -9,7 +9,6 @@ import static org.neo4j.driver.v1.Values.NULL;
 import static org.neo4j.driver.v1.Values.ofNode;
 import static semantics.Params.PREFIX_SEPARATOR;
 
-
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
@@ -21,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
@@ -322,7 +320,6 @@ public class RDFImportTest {
   public void testCompositeIndexesPresent() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
-
 
       session.run("CREATE INDEX ON :Person(age, country)");
 
@@ -1338,7 +1335,8 @@ public class RDFImportTest {
           + "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4> ;\n"
           + "      pr:name \"test name\" .";
       StatementResult importResults
-          = session.run("CALL semantics.streamRDFSnippet('" + rdf + "','Turtle',{verifyUriSyntax: false})");
+          = session
+          .run("CALL semantics.streamRDFSnippet('" + rdf + "','Turtle',{verifyUriSyntax: false})");
       Map<String, Object> next = importResults
           .next().asMap();
       assertEquals("http://example.org/vocab/show/ent", next.get("subject"));
@@ -1444,8 +1442,8 @@ public class RDFImportTest {
 
       StatementResult importResults
           = session.run("return semantics.getLangTag('The Hague@en') as val_en,"
-              + "semantics.getLangTag('Den Haag@nl') as val_nl, "
-              + "semantics.getLangTag('La Haye@fr') as val_fr,"
+          + "semantics.getLangTag('Den Haag@nl') as val_nl, "
+          + "semantics.getLangTag('La Haye@fr') as val_fr,"
           + "semantics.getLangTag('That Seventies Show@en-US') as val_us,"
           + "semantics.getLangTag([2, 45, 3]) as val_array,"
           + "semantics.getLangTag('hello') as val_no_tag");
@@ -1457,7 +1455,6 @@ public class RDFImportTest {
       assertEquals("en-US", next.get("val_us"));
       assertNull(next.get("val_array"));
       assertNull(next.get("val_no_tag"));
-
 
       session.run(
           "create (n:Thing { prop: [\"That Seventies Show@en-US\", \"Cette Série des Années Soixante-dix@fr-custom-tag\", \"你好@zh-Hans-CN\"] })");
@@ -1496,7 +1493,6 @@ public class RDFImportTest {
       assertEquals(true, next.get("val_us"));
       assertEquals(false, next.get("val_array"));
       assertEquals(false, next.get("val_no_tag"));
-
 
       session.run(
           "create (n:Thing { prop: [\"That Seventies Show@en-US\", \"Cette Série des Années Soixante-dix@fr-custom-tag\", \"你好@zh-Hans-CN\"] })");
@@ -1590,37 +1586,41 @@ public class RDFImportTest {
           + "@prefix vcard: <http://www.w3.org/2006/vcard/ns#> . \n"
           + "@prefix tr-org: <http://permid.org/ontology/organization/> . \n";
 
-      Map <String, String> validPairs = new HashMap<>();
-      validPairs.put("tr_common","http://permid.org/ontology/common/");
-      validPairs.put("fibo_be_le_cb","http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/");
-      validPairs.put("xsd","http://www.w3.org/2001/XMLSchema#");
-      validPairs.put("vcard","http://www.w3.org/2006/vcard/ns#");
-      validPairs.put("tr_org","http://permid.org/ontology/organization/");
-
+      Map<String, String> validPairs = new HashMap<>();
+      validPairs.put("tr_common", "http://permid.org/ontology/common/");
+      validPairs.put("fibo_be_le_cb",
+          "http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/");
+      validPairs.put("xsd", "http://www.w3.org/2001/XMLSchema#");
+      validPairs.put("vcard", "http://www.w3.org/2006/vcard/ns#");
+      validPairs.put("tr_org", "http://permid.org/ontology/organization/");
 
       checkValidPrefixesCreated(session, validPairs, turtle);
 
       session.run("match  (n) detach delete n");
 
-      String rdfxml = "<rdf:RDF xml:base=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
-          + "         xmlns:afn=\"http://jena.apache.org/ARQ/function#\"\n"
-          + "         xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n"
-          + "         xmlns:fibo-be-corp-corp=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
-          + "         xmlns:fibo-be-le-cb=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/\"\n"
-          + "         xmlns:fibo-be-le-fbo=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/\"\n"
-          + "         xmlns:grddl=\"http://www.w3.org/2003/g/data-view#\"\n"
-          + "         xmlns:sm=\"http://www.omg.org/techprocess/ab/SpecificationMetadata/\"\n"
-          + "         xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\">\n";
+      String rdfxml =
+          "<rdf:RDF xml:base=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
+              + "         xmlns:afn=\"http://jena.apache.org/ARQ/function#\"\n"
+              + "         xmlns:dc=\"http://purl.org/dc/elements/1.1/\"\n"
+              + "         xmlns:fibo-be-corp-corp=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
+              + "         xmlns:fibo-be-le-cb=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/\"\n"
+              + "         xmlns:fibo-be-le-fbo=\"https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/\"\n"
+              + "         xmlns:grddl=\"http://www.w3.org/2003/g/data-view#\"\n"
+              + "         xmlns:sm=\"http://www.omg.org/techprocess/ab/SpecificationMetadata/\"\n"
+              + "         xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\">\n";
 
       validPairs.clear();
-      validPairs.put("afn","http://jena.apache.org/ARQ/function#");
-      validPairs.put("dc","http://purl.org/dc/elements/1.1/");
-      validPairs.put("fibo_be_corp_corp","https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
-      validPairs.put("fibo_be_le_cb","https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/");
-      validPairs.put("fibo_be_le_fbo","https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/");
-      validPairs.put("grddl","http://www.w3.org/2003/g/data-view#");
-      validPairs.put("sm","http://www.omg.org/techprocess/ab/SpecificationMetadata/");
-      validPairs.put("xsd","http://www.w3.org/2001/XMLSchema#");
+      validPairs.put("afn", "http://jena.apache.org/ARQ/function#");
+      validPairs.put("dc", "http://purl.org/dc/elements/1.1/");
+      validPairs.put("fibo_be_corp_corp",
+          "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/");
+      validPairs.put("fibo_be_le_cb",
+          "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/");
+      validPairs.put("fibo_be_le_fbo",
+          "https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/");
+      validPairs.put("grddl", "http://www.w3.org/2003/g/data-view#");
+      validPairs.put("sm", "http://www.omg.org/techprocess/ab/SpecificationMetadata/");
+      validPairs.put("xsd", "http://www.w3.org/2001/XMLSchema#");
 
       checkValidPrefixesCreated(session, validPairs, rdfxml);
 
@@ -1631,9 +1631,9 @@ public class RDFImportTest {
           + "PREFIX prop: <http://dbpedia.org/property/>\n";
 
       validPairs.clear();
-      validPairs.put("rdfs","http://www.w3.org/2000/01/rdf-schema#");
-      validPairs.put("type","http://dbpedia.org/class/yago/");
-      validPairs.put("prop","http://dbpedia.org/property/");
+      validPairs.put("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
+      validPairs.put("type", "http://dbpedia.org/class/yago/");
+      validPairs.put("prop", "http://dbpedia.org/property/");
 
       checkValidPrefixesCreated(session, validPairs, sparql);
 
@@ -1647,7 +1647,7 @@ public class RDFImportTest {
     res = session.run("CALL semantics.addNamespacePrefixesFromText('" + textFragment + "')");
     assertTrue(res.hasNext());
     resultCount = 0;
-    while(res.hasNext()) {
+    while (res.hasNext()) {
       Record next = res.next();
       assertTrue(isExpectedPair(validPairs, next.get("prefix").asString(),
           next.get("namespace").asString()));
@@ -1656,7 +1656,7 @@ public class RDFImportTest {
     assertEquals(validPairs.size(), resultCount);
   }
 
-  private boolean isExpectedPair(Map <String, String> validPairs, String prefix, String namespace) {
+  private boolean isExpectedPair(Map<String, String> validPairs, String prefix, String namespace) {
     return validPairs.get(prefix).equals(namespace);
   }
 
@@ -2574,11 +2574,12 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      Map<String,Object> params = new HashMap<>();
-      params.put("rdf",this.turtleOntology);
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
 
-      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,'Turtle')",
-          params);
+      StatementResult importResults = session
+          .run("CALL semantics.importOntologySnippet($rdf,'Turtle')",
+              params);
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
@@ -2650,12 +2651,12 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      Map<String,Object> params = new HashMap<>();
-      params.put("rdf",this.turtleOntology);
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
 
       StatementResult importResults = session.run("CALL semantics.importOntologySnippet("
           + "$rdf, 'Turtle', { classLabel : 'Category', objectPropertyLabel: 'Rel', "
-          + "dataTypePropertyLabel: 'Prop'})",  params );
+          + "dataTypePropertyLabel: 'Prop'})", params);
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
@@ -2750,8 +2751,8 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      Map<String,Object> params = new HashMap<>();
-      params.put("rdf",this.turtleOntology);
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
 
       StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,"
           + "'Turtle', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
@@ -2878,7 +2879,8 @@ public class RDFImportTest {
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
-          LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontologyMultilabel.owl").toURI()
+          LiteOntologyImporterTest.class.getClassLoader()
+              .getResource("moviesontologyMultilabel.owl").toURI()
           + "','RDF/XML', { keepLangTag: true, handleMultival: 'ARRAY' } )");
 
       assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
@@ -2894,37 +2896,37 @@ public class RDFImportTest {
           session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
 
-      Record singleRecord = session.run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
-          + " RETURN n.label as label, n.comment as comment, "
-          + " semantics.getLangValue('en',n.label) as label_en, "
-          + " semantics.getLangValue('es',n.label) as label_es, "
-          + " semantics.getLangValue('en',n.comment) as comment_en, "
-          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      Record singleRecord = session
+          .run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
+              + " RETURN n.label as label, n.comment as comment, "
+              + " semantics.getLangValue('en',n.label) as label_en, "
+              + " semantics.getLangValue('es',n.label) as label_es, "
+              + " semantics.getLangValue('en',n.comment) as comment_en, "
+              + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("Movie@en") &&
           singleRecord.get("label").asList().contains("Pelicula@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("A film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("A film@en") &&
           singleRecord.get("comment").asList().contains("Una pelicula@es"));
       assertEquals("Movie", singleRecord.get("label_en").asString());
       assertEquals("Pelicula", singleRecord.get("label_es").asString());
       assertEquals("A film", singleRecord.get("comment_en").asString());
       assertEquals("Una pelicula", singleRecord.get("comment_es").asString());
 
-
-      singleRecord = session.run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
-          + " RETURN n.label as label, n.comment as comment, "
-          + " semantics.getLangValue('en',n.label) as label_en, "
-          + " semantics.getLangValue('es',n.label) as label_es, "
-          + " semantics.getLangValue('en',n.comment) as comment_en, "
-          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      singleRecord = session
+          .run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
+              + " RETURN n.label as label, n.comment as comment, "
+              + " semantics.getLangValue('en',n.label) as label_en, "
+              + " semantics.getLangValue('es',n.label) as label_es, "
+              + " semantics.getLangValue('en',n.comment) as comment_en, "
+              + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("PRODUCED@en") &&
           singleRecord.get("label").asList().contains("PRODUCE@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("Producer produced film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("Producer produced film@en") &&
           singleRecord.get("comment").asList().contains("productor de una pelicula@es"));
       assertEquals("PRODUCED", singleRecord.get("label_en").asString());
       assertEquals("PRODUCE", singleRecord.get("label_es").asString());
       assertEquals("Producer produced film", singleRecord.get("comment_en").asString());
       assertEquals("productor de una pelicula", singleRecord.get("comment_es").asString());
-
 
       singleRecord = session.run("MATCH (n:Property { uri: 'http://neo4j.com/voc/movies#title'}) "
           + " RETURN n.label as label, n.comment as comment, "
@@ -2934,7 +2936,7 @@ public class RDFImportTest {
           + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("title@en") &&
           singleRecord.get("label").asList().contains("titulo@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("The title of a film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("The title of a film@en") &&
           singleRecord.get("comment").asList().contains("El titulo de una pelicula@es"));
       assertEquals("title", singleRecord.get("label_en").asString());
       assertEquals("titulo", singleRecord.get("label_es").asString());
@@ -2954,11 +2956,12 @@ public class RDFImportTest {
       createIndices(neo4j.getGraphDatabaseService());
       Session session = driver.session();
 
-      Map<String,Object> params = new HashMap<>();
-      params.put("rdf",this.turtleMultilangOntology);
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleMultilangOntology);
 
-      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,'Turtle',"
-          + " { keepLangTag: true, handleMultival: 'ARRAY' } )", params);
+      StatementResult importResults = session
+          .run("CALL semantics.importOntologySnippet($rdf,'Turtle',"
+              + " { keepLangTag: true, handleMultival: 'ARRAY' } )", params);
 
       assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
 
@@ -2973,37 +2976,37 @@ public class RDFImportTest {
           session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
 
-      Record singleRecord = session.run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
-          + " RETURN n.label as label, n.comment as comment, "
-          + " semantics.getLangValue('en',n.label) as label_en, "
-          + " semantics.getLangValue('es',n.label) as label_es, "
-          + " semantics.getLangValue('en',n.comment) as comment_en, "
-          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      Record singleRecord = session
+          .run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
+              + " RETURN n.label as label, n.comment as comment, "
+              + " semantics.getLangValue('en',n.label) as label_en, "
+              + " semantics.getLangValue('es',n.label) as label_es, "
+              + " semantics.getLangValue('en',n.comment) as comment_en, "
+              + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("Movie@en") &&
           singleRecord.get("label").asList().contains("Pelicula@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("A film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("A film@en") &&
           singleRecord.get("comment").asList().contains("Una pelicula@es"));
       assertEquals("Movie", singleRecord.get("label_en").asString());
       assertEquals("Pelicula", singleRecord.get("label_es").asString());
       assertEquals("A film", singleRecord.get("comment_en").asString());
       assertEquals("Una pelicula", singleRecord.get("comment_es").asString());
 
-
-      singleRecord = session.run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
-          + " RETURN n.label as label, n.comment as comment, "
-          + " semantics.getLangValue('en',n.label) as label_en, "
-          + " semantics.getLangValue('es',n.label) as label_es, "
-          + " semantics.getLangValue('en',n.comment) as comment_en, "
-          + " semantics.getLangValue('es',n.comment) as comment_es").next();
+      singleRecord = session
+          .run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
+              + " RETURN n.label as label, n.comment as comment, "
+              + " semantics.getLangValue('en',n.label) as label_en, "
+              + " semantics.getLangValue('es',n.label) as label_es, "
+              + " semantics.getLangValue('en',n.comment) as comment_en, "
+              + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("PRODUCED@en") &&
           singleRecord.get("label").asList().contains("PRODUCE@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("Producer produced film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("Producer produced film@en") &&
           singleRecord.get("comment").asList().contains("productor de una pelicula@es"));
       assertEquals("PRODUCED", singleRecord.get("label_en").asString());
       assertEquals("PRODUCE", singleRecord.get("label_es").asString());
       assertEquals("Producer produced film", singleRecord.get("comment_en").asString());
       assertEquals("productor de una pelicula", singleRecord.get("comment_es").asString());
-
 
       singleRecord = session.run("MATCH (n:Property { uri: 'http://neo4j.com/voc/movies#title'}) "
           + " RETURN n.label as label, n.comment as comment, "
@@ -3013,7 +3016,7 @@ public class RDFImportTest {
           + " semantics.getLangValue('es',n.comment) as comment_es").next();
       assertTrue(singleRecord.get("label").asList().contains("title@en") &&
           singleRecord.get("label").asList().contains("titulo@es"));
-      assertTrue( singleRecord.get("comment").asList().contains("The title of a film@en") &&
+      assertTrue(singleRecord.get("comment").asList().contains("The title of a film@en") &&
           singleRecord.get("comment").asList().contains("El titulo de una pelicula@es"));
       assertEquals("title", singleRecord.get("label_en").asString());
       assertEquals("titulo", singleRecord.get("label_es").asString());
@@ -3360,7 +3363,6 @@ public class RDFImportTest {
   }
 
 
-
   @Test
   public void testLoadJSONAsTreeEmptyJSON() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -3373,7 +3375,7 @@ public class RDFImportTest {
       StatementResult importResults
           = session
           .run("CREATE (n:Node)  WITH n "
-                  + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "')"
+              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "')"
               + " YIELD node RETURN node ");
       assertFalse(importResults.hasNext());
     }
@@ -3505,7 +3507,7 @@ public class RDFImportTest {
       List<Object> friends = queryresult.next().get("friends").asList();
       assertTrue(friends.contains("Dave Longley"));
       assertTrue(friends.contains("Manu Sporny"));
-      assertEquals(2,friends.size());
+      assertEquals(2, friends.size());
     }
   }
 

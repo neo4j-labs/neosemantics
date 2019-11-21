@@ -1,9 +1,9 @@
 package semantics;
 
 import static semantics.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.Params.PREFIX_SEPARATOR;
 import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
-import static semantics.Params.PREFIX_SEPARATOR;
 import static semantics.RDFImport.PROPERTY;
 import static semantics.RDFImport.RELATIONSHIP;
 import static semantics.RDFParserConfig.PROP_ARRAY;

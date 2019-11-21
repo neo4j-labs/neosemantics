@@ -20,7 +20,6 @@ public class RDFExportTest {
       .withProcedure(MappingUtils.class);
 
 
-
   @Test
   public void testStreamAsRDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -28,13 +27,14 @@ public class RDFExportTest {
             .toConfig()); Session session = driver.session()) {
 
       session
-          .run("CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+          .run(
+              "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
 
       StatementResult res
           = session
           .run(" CALL semantics.streamGraphAsRDF(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
       assertTrue(res.hasNext());
-      while (res.hasNext()){
+      while (res.hasNext()) {
         System.out.println(res.next());
       }
 
