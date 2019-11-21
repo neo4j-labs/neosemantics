@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.regex.Pattern;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -19,7 +18,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
@@ -43,8 +41,6 @@ public class RDFEndpoint {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
-  private final Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
-
 
   @Context
   public Log log;
@@ -72,7 +68,6 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       writer.handleNamespace("rdf", RDF.NAMESPACE);
       writer.handleNamespace("neovoc", BASE_VOCAB_NS);
       writer.handleNamespace("neoind", BASE_INDIV_NS);
@@ -82,7 +77,7 @@ public class RDFEndpoint {
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
 
-        proc.streamNodeById(idParam, excludeContextParam==null).forEach(st -> writer.handleStatement(st));
+        proc.streamNodeById(idParam, excludeContextParam==null).forEach(writer::handleStatement);
 
         writer.endRDF();
       } catch (Exception e) {
@@ -105,7 +100,6 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       writer.handleNamespace("rdf", RDF.NAMESPACE);
       writer.handleNamespace("neovoc", BASE_VOCAB_NS);
       writer.handleNamespace("neoind", BASE_INDIV_NS);
@@ -114,7 +108,8 @@ public class RDFEndpoint {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
-        proc.streamNodes(label, property, propVal, valType, excludeContextParam==null).forEach(st -> writer.handleStatement(st));
+        proc.streamNodes(label, property, propVal, valType, excludeContextParam==null).forEach(
+            writer::handleStatement);
         writer.endRDF();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
@@ -147,7 +142,8 @@ public class RDFEndpoint {
         proc
             .streamTriplesFromCypher((String) jsonMap.get("cypher"),
                 (Map<String, Object>) jsonMap
-                    .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(st -> writer.handleStatement(st));
+                    .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
+            writer::handleStatement);
 
         writer.endRDF();
       } catch (Exception e) {
@@ -166,7 +162,6 @@ public class RDFEndpoint {
 
     return Response.ok().entity((StreamingOutput) outputStream -> {
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       writer.handleNamespace("owl", OWL.NAMESPACE);
       writer.handleNamespace("rdfs", RDFS.NAMESPACE);
       writer.handleNamespace("rdf", RDF.NAMESPACE);
@@ -177,7 +172,7 @@ public class RDFEndpoint {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds);
         proc
-            .streamLocalImplicitOntology().forEach(st -> writer.handleStatement(st));
+            .streamLocalImplicitOntology().forEach(writer::handleStatement);
 
         writer.endRDF();
 
@@ -210,7 +205,7 @@ public class RDFEndpoint {
       try (Transaction tx = gds.beginTx()) {
 
         final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
-        proc.streamLocalImplicitOntology().forEach(st -> writer.handleStatement(st));
+        proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         writer.endRDF();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
@@ -232,7 +227,6 @@ public class RDFEndpoint {
       RDFWriter writer = Rio
           .createWriter(getFormat(acceptHeaderParam, (String) jsonMap.get("format")),
               outputStream);
-      SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       writer.handleNamespace("owl", OWL.NAMESPACE);
       writer.handleNamespace("rdfs", RDFS.NAMESPACE);
       writer.handleNamespace("rdf", RDF.NAMESPACE);
@@ -245,7 +239,8 @@ public class RDFEndpoint {
         final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
-                .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(st -> writer.handleStatement(st));
+                .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
+            writer::handleStatement);
         writer.endRDF();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam,
@@ -268,7 +263,6 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = Rio.createWriter(getFormat(acceptHeaderParam, format), outputStream);
-      SimpleValueFactory valueFactory = SimpleValueFactory.getInstance();
       writer.handleNamespace("rdf", RDF.NAMESPACE);
       writer.handleNamespace("neovoc", BASE_VOCAB_NS);
       writer.handleNamespace("neoind", BASE_INDIV_NS);
@@ -277,7 +271,8 @@ public class RDFEndpoint {
       try (Transaction tx = gds.beginTx()) {
 
         LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
-        proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam!= null).forEach(st -> writer.handleStatement(st));;
+        proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam!= null).forEach(
+            writer::handleStatement);
         writer.endRDF();
       } catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);

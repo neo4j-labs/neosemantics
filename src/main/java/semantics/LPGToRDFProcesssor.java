@@ -253,17 +253,19 @@ public class LPGToRDFProcesssor {
   }
 
   private IRI getUriforRelName(String name) {
-    if (name.equals("SCO")){
-      return RDFS.SUBCLASSOF;
-    } else if  (name.equals("SPO")){
-      return RDFS.SUBPROPERTYOF;
-    } else if  (name.equals("DOMAIN")){
-      return RDFS.DOMAIN;
-    } else if  (name.equals("RANGE")){
-      return RDFS.RANGE;
-    } else
-      //This should not happen :)
-      return RDFS.SUBCLASSOF;
+    switch (name) {
+      case "SCO":
+        return RDFS.SUBCLASSOF;
+      case "SPO":
+        return RDFS.SUBPROPERTYOF;
+      case "DOMAIN":
+        return RDFS.DOMAIN;
+      case "RANGE":
+        return RDFS.RANGE;
+      default:
+        //This should not happen :)
+        return RDFS.SUBCLASSOF;
+    }
   }
 
   private Set<Statement> processNodeInLPG(Node node, Map<Long, IRI>  ontologyEntitiesUris) {
