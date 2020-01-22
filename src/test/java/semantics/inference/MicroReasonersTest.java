@@ -144,6 +144,26 @@ public class MicroReasonersTest {
     }
   }
 
+
+  @Test
+  public void testGetNodesLinkedToOnModelWithUriNames() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+
+      Session session = driver.session();
+
+      session.run("create (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) ");
+      StatementResult results = session.run(
+          "match (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) "
+              + "call semantics.inference.nodesInCategory(c, "
+              + "{inCatRel:'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', "
+              + "subCatRel:'http://www.w3.org/2000/01/rdf-schema#subClassOf'}) yield node return node");
+      //just checking syntax is valid, no results expected.
+      assertEquals(false, results.hasNext());
+
+    }
+  }
+
   @Test
   public void testGetRelsNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),

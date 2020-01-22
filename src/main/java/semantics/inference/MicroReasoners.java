@@ -99,8 +99,8 @@ public class MicroReasoners {
     Map<String, Object> params = new HashMap<>();
     params.put("catId", catNode.getId());
 
-    String cypher = "MATCH (rootCategory)<-[:" + subCatRelName + "*0..]-()<-[:" +
-        inCatRelName + "]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
+    String cypher = "MATCH (rootCategory)<-[:`" + subCatRelName + "`*0..]-()<-[:`" +
+        inCatRelName + "`]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
 
     return db.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
         .map(NodeResult::new);
