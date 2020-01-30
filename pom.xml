@@ -8,7 +8,7 @@
   <version>3.5.0.4</version>
   <packaging>jar</packaging>
   <properties>
-    <neo4j.version>3.5.5</neo4j.version>
+    <neo4j.version>4.0.0</neo4j.version>
     <sesame.version>2.5.5</sesame.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
