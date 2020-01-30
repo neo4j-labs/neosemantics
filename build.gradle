@@ -1,0 +1,102 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+
+/**
+ * Get all the Neo4j releases
+ * The source of truth is https://api.github.com/repos/neo4j/neo4j/releases
+ * We don't consider all the tags with "prerelease" attribute to true
+ *
+ * @return
+ */
+def collectNeo4jReleases() {
+    def slurper = new JsonSlurper()
+
+    // get from tags or releases?
+    // https://api.github.com/repos/neo4j/neo4j/releases
+    def releases = slurper.parseText(new URL("http://search.maven.org/solrsearch/select?q=g:%22org.neo4j%22+AND+a:%22neo4j%22&core=gav&rows=500&wt=json").getText())
+    releases = releases.response.docs
+
+    def actualReleases = []
+    for (release in releases) {
+        actualReleases.add(release.v)
+    }
+
+    // We sort considering that X.Y.Z-SOMETHING should be considered lower than X.Y.Z --> it's not a lexicographical ordering
+    return actualReleases
+            .findAll { it >= "3.0" }
+            .sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
+            .reverse()
+}
+
+def orderVersion(str) {
+    return str.split("[.-]").collect{ it =~ "^\\d+\$" ? it.padLeft(4,"0") : it.replace("beta","mbeta").replace("BETA","MBETA") }.join(".") + "/"
+}
+/**
+ * Coupling Neo4j with APOC
+ *
+ * There are two heuristic in place:
+ *
+ * - latest version of Neo4j with latest version of APOC
+ * - if there is no available version of APOC for a given NEO4j release than take the prior available version of APOC
+ */
+task versions {
+    def neo4jReleases = collectNeo4jReleases()
+
+    def slurper = new JsonSlurper()
+
+    // get tags
+    def pattern = ~/<neo4j.version>(.*)<\/neo4j.version>/
+    def releases = slurper.parseText(new URL("https://api.github.com/repos/neo4j-labs/neosemantics/releases?page=1&per_page=500").getText())
+    def versions = []
+    def neo4jToApoc = [:]
+    def latestn10s, oldestn10ss
+    for (release in releases) {
+        if (release.prerelease || release.draft) continue;
+        def buildText = new URL("https://raw.githubusercontent.com/neo4j-labs/neosemantics/" + release.tag_name + "/pom.xml").getText()
+        def matcher = pattern.matcher(buildText)
+        for (def i = 0; i < matcher.getCount(); i++) {
+            def neo4jVersion = matcher[i][1]
+
+            println "neo " + neo4jVersion + ", n10s " + release.tag_name
+            if (!neo4jToApoc.containsKey(neo4jVersion)) {
+                neo4jToApoc[neo4jVersion] = release.tag_name
+            }
+
+            if (latestn10s == null) {
+                latestn10s = release.tag_name
+            }
+
+            oldestn10ss = release.tag_name
+        }
+    }
+
+    println "LATEST n10s IS " + latestn10s + " WHILE OLDEST IS " + oldestn10ss
+    println(neo4jToApoc)
+    println(neo4jReleases)
+    for (neo4jRelease in neo4jReleases) {
+        def prefix = neo4jRelease.substring(0,Math.min(4,neo4jRelease.length()))
+        if (prefix < "3.0") continue;
+
+        def n10sVersion = neo4jToApoc[neo4jRelease]
+
+        // If there is no n10s release for a Neo4j release we have to guess which one to associate
+        if (n10sVersion == null) {
+            def matchingNeo4jVersions = neo4jToApoc.keySet().findAll{ it.substring(0,4) == prefix }.sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
+            def matchingApocVersions = neo4jToApoc.subMap(matchingNeo4jVersions).values().sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
+            matchingNeo4jVersions = matchingNeo4jVersions.findAll{ orderVersion(it) < orderVersion(neo4jRelease) }
+            def matchingNeo4jVersion = matchingNeo4jVersions.isEmpty() ? null : matchingNeo4jVersions[-1]
+            def firstApocVersion = matchingApocVersions.isEmpty() ? null : matchingApocVersions[0]
+            n10sVersion = neo4jToApoc[matchingNeo4jVersion]==null ? firstApocVersion : neo4jToApoc[matchingNeo4jVersion]
+        }
+        if (n10sVersion != null) {
+            def version = [ neo4j : neo4jRelease, n10s : n10sVersion,
+                            url : "http://github.com/neo4j-labs/neosemantics/releases/" + n10sVersion,
+                            jar: "https://github.com/neo4j-labs/neosemantics/releases/download/${n10sVersion}/neosemantics-${n10sVersion}.jar" ]
+            versions.add(version)
+        }
+    }
+
+    def versionsFile = new File("build/versions.json")
+
+    versionsFile.write(JsonOutput.prettyPrint(JsonOutput.toJson(versions)))
+}
