@@ -1,4 +1,4 @@
-# NSMNTX
+# neosemantics (n10s)
 ![NSMNTX Logo](http://neo4j-labs.github.io/neosemantics/docs/img/nsmntx-logo.png)
 NSMNTX is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
 This effectively means that NSMNTX makes it possible to
