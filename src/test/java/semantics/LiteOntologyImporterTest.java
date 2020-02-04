@@ -4,12 +4,11 @@ import static org.junit.Assert.assertEquals;
 
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.*;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 
 
 /**
@@ -24,11 +23,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImport() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
@@ -55,11 +54,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImportWithCustomNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
@@ -92,11 +91,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImportWithCustomNamesAndResourceLabels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { addResourceLabels: true, classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
@@ -130,11 +129,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImportSchemaOrg() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("schema.rdf").toURI() +
           "','RDF/XML')");
 
@@ -163,11 +162,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImportClassHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
@@ -182,11 +181,11 @@ public class LiteOntologyImporterTest {
   @Test
   public void liteOntoImportPropHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.liteOntoImport('" +
+      Result importResults = session.run("CALL semantics.liteOntoImport('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
           "','RDF/XML')");
 

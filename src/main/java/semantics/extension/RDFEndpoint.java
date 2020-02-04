@@ -28,6 +28,7 @@ import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.helpers.JSONLDMode;
 import org.eclipse.rdf4j.rio.helpers.JSONLDSettings;
+import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -61,18 +62,19 @@ public class RDFEndpoint {
   @Path("/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodebyid(@Context GraphDatabaseService gds, @PathParam("nodeid") Long idParam,
-      @QueryParam("excludeContext") String excludeContextParam,
-      @QueryParam("mappedElemsOnly") String onlyMappedInfo,
-      @QueryParam("format") String format,
-      @HeaderParam("accept") String acceptHeaderParam) {
+  public Response nodebyid(@Context DatabaseManagementService gds, @PathParam("nodeid") Long idParam,
+                           @QueryParam("excludeContext") String excludeContextParam,
+                           @QueryParam("mappedElemsOnly") String onlyMappedInfo,
+                           @QueryParam("format") String format,
+                           @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
-      try (Transaction tx = gds.beginTx()) {
+      GraphDatabaseService neo4j = gds.database("neo4j");
+      try (Transaction tx = neo4j.beginTx()) {
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
-            getExportMappingsFromDB(gds), onlyMappedInfo != null);
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
+            getExportMappingsFromDB(neo4j), onlyMappedInfo != null);
 
         proc.streamNodeById(idParam, excludeContextParam == null).forEach(writer::handleStatement);
 
@@ -99,7 +101,7 @@ public class RDFEndpoint {
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
       try (Transaction tx = gds.beginTx()) {
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds, tx,
             getExportMappingsFromDB(gds), onlyMappedInfo != null);
         proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
             .forEach(
@@ -126,7 +128,7 @@ public class RDFEndpoint {
         RDFWriter writer = startRdfWriter(
             getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,  tx,
             getExportMappingsFromDB(gds), jsonMap.containsKey("mappedElemsOnly"));
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
@@ -151,7 +153,7 @@ public class RDFEndpoint {
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
       try (Transaction tx = gds.beginTx()) {
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds);
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds, tx);
         proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -175,7 +177,7 @@ public class RDFEndpoint {
 
       try (Transaction tx = gds.beginTx()) {
 
-        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
+        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
         proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -201,7 +203,7 @@ public class RDFEndpoint {
 
       try (Transaction tx = gds.beginTx()) {
 
-        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
+        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
                 .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
@@ -231,7 +233,7 @@ public class RDFEndpoint {
 
       try (Transaction tx = gds.beginTx()) {
 
-        LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds);
+        LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
         proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam != null).forEach(
             writer::handleStatement);
         endRDFWriter(writer);

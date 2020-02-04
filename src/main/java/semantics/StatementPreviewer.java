@@ -6,10 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import semantics.result.VirtualNode;
 import semantics.result.VirtualRelationship;
@@ -22,10 +19,10 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
   private Map<String, Node> vNodes;
   private List<Relationship> vRels;
 
-  StatementPreviewer(GraphDatabaseService db, RDFParserConfig conf,
-      Map<String, Node> virtualNodes,
-      List<Relationship> virtualRels, Log l) {
-    super(db, conf, l);
+  StatementPreviewer(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+                     Map<String, Node> virtualNodes,
+                     List<Relationship> virtualRels, Log l) {
+    super(db, tx, conf, l);
     vNodes = virtualNodes;
     vRels = virtualRels;
   }
@@ -33,7 +30,7 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
   public void endRDF() throws RDFHandlerException {
     for (String uri : resourceLabels.keySet()) {
       vNodes.put(uri, new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),
-          getPropsPlusUri(uri), graphdb));
+          getPropsPlusUri(uri)));
     }
 
     statements.forEach(st -> vRels.add(

@@ -7,13 +7,11 @@ import java.util.HashSet;
 import java.util.Set;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.*;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MicroReasonersTest {
 
@@ -24,12 +22,12 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "CALL semantics.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -44,13 +42,13 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesDefault() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
       session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "CALL semantics.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -66,13 +64,13 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesCustomHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
       session.run("CREATE (b:Class { cname: \"B\"}) CREATE (a:Class { cname: \"A\"})-[:SCO]->(b) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "CALL semantics.inference.nodesLabelled('B', { catLabel: 'Class', catNameProp: 'cname', subCatRel: 'SCO'}) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -88,7 +86,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesLinkedTo() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -99,7 +97,7 @@ public class MicroReasonersTest {
           "MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) "
               +
               "CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (bcat:Category { name: \"B\"}) CALL semantics.inference.nodesInCategory(bcat) YIELD node "
               +
               "RETURN count(node) as ct, collect(node.id) as nodes");
@@ -148,12 +146,12 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesLinkedToOnModelWithUriNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session.run("create (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "match (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) "
               + "call semantics.inference.nodesInCategory(c, "
               + "{inCatRel:'http://www.w3.org/1999/02/22-rdf-syntax-ns#type', "
@@ -167,13 +165,13 @@ public class MicroReasonersTest {
   @Test
   public void testGetRelsNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session.run(
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (b:B) CALL semantics.inference.getRels(b,'REL2') YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -191,7 +189,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetRels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -199,7 +197,7 @@ public class MicroReasonersTest {
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
       session.run(
           "CREATE (n:Relationship { name: 'REL1'})-[:SRO]->(:Relationship { name: 'GENERIC'})");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (b:B) CALL semantics.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -214,7 +212,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetRelsCustom() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -222,7 +220,7 @@ public class MicroReasonersTest {
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
       session.run(
           "CREATE (n:ObjectProperty { opName: 'REL1'})-[:SubPropertyOf]->(:ObjectProperty { opName: 'GENERIC'})");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (b:B) CALL semantics.inference.getRels(b,'GENERIC',{ relDir: '>',  relLabel: 'ObjectProperty', relNameProp: 'opName', subRelRel: 'SubPropertyOf'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -237,13 +235,13 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabelNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session
           .run("CREATE (:A {id:'iamA1'}) CREATE (:A {id: 'iamA2' }) CREATE (:B {id: 'iamB1' }) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (n) WHERE semantics.inference.hasLabel(n,'A') RETURN count(n) as ct, collect(n.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -261,14 +259,14 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabel() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
       session
           .run("CREATE (:A {id:'iamA1'}) CREATE (:A {id: 'iamA2' }) CREATE (:B {id: 'iamB1' }) ");
       session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (n) WHERE semantics.inference.hasLabel(n,'B') RETURN count(n) as ct, collect(n.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -284,7 +282,7 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabelCustom() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -292,7 +290,7 @@ public class MicroReasonersTest {
           .run("CREATE (:A {id:'iamA1'}) CREATE (:A {id: 'iamA2' }) CREATE (:B {id: 'iamB1' }) ");
       session.run(
           "CREATE (b:Class { cname: \"B\"}) CREATE (a:Class { cname: \"A\"})-[:SubClassOf]->(b) ");
-      StatementResult results = session.run(
+      Result results = session.run(
           "MATCH (n) WHERE semantics.inference.hasLabel(n,'B', { catLabel: 'Class', catNameProp: 'cname', subCatRel: 'SubClassOf'}) RETURN count(n) as ct, collect(n.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
@@ -308,7 +306,7 @@ public class MicroReasonersTest {
   @Test
   public void testInCategory() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -317,7 +315,7 @@ public class MicroReasonersTest {
           "CREATE (b:Category { name: \"B\"}) CREATE (a:Category { name: \"A\"})-[:SCO]->(b) ");
       session.run(
           "MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
-      StatementResult results = session
+      Result results = session
           .run("MATCH (bcat:Category)<-[:IN_CAT]-(b:Thing {id:'iamb'}) RETURN bcat.name as inCat");
       assertEquals(true, results.hasNext());
       assertEquals("B", results.next().get("inCat").asString());

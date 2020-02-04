@@ -28,11 +28,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.*;
 
 
 public class LPGRDFToRDFProcesssor {
@@ -42,19 +38,21 @@ public class LPGRDFToRDFProcesssor {
           .quote(PREFIX_SEPARATOR) + "(.+)$");
 
   private final Map<String, String> namespaces;
+  private Transaction tx;
   private GraphDatabaseService graphdb;
   private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
-  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb) {
+  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
     this.graphdb = graphdb;
     this.namespaces = getNamespacesFromDB(graphdb);
+    this.tx = tx;
   }
 
 
   public Stream<Statement> streamLocalImplicitOntology() {
     Set<Statement> statements = new HashSet<>();
-    Result res = graphdb.execute("CALL db.schema() ");
+    Result res = tx.execute("CALL db.schema() ");
 
     Map<String, Object> next = res.next();
     List<Node> nodeList = (List<Node>) next.get("nodes");
@@ -95,7 +93,7 @@ public class LPGRDFToRDFProcesssor {
 
   private Map<String, String> getNamespacesFromDB(GraphDatabaseService graphdb) {
 
-    Result nslist = graphdb.execute("MATCH (n:NamespacePrefixDefinition) \n" +
+    Result nslist = tx.execute("MATCH (n:NamespacePrefixDefinition) \n" +
         "UNWIND keys(n) AS namespace\n" +
         "RETURN namespace, n[namespace] AS prefix");
 
@@ -144,7 +142,7 @@ public class LPGRDFToRDFProcesssor {
 
   public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
     Set<Statement> statementResults = new HashSet<>();
-    final Result result = this.graphdb.execute(cypher, params);
+    final Result result = this.tx.execute(cypher, params);
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
 
     Set<ContextResource> serializedNodes = new HashSet<>();
@@ -220,7 +218,7 @@ public class LPGRDFToRDFProcesssor {
 
     Set<Statement> statementResults = new HashSet<>();
 
-    Result result = graphdb
+    Result result = tx
         .execute((excludeContext ? queryNoContext : queryWithContext), params);
 
     boolean doneOnce = false;

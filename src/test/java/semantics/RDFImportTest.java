@@ -5,8 +5,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.driver.v1.Values.NULL;
-import static org.neo4j.driver.v1.Values.ofNode;
+import static org.neo4j.driver.Values.NULL;
+import static org.neo4j.driver.Values.ofNode;
 import static semantics.Params.PREFIX_SEPARATOR;
 
 import java.net.URI;
@@ -24,16 +24,16 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Session;
+import org.neo4j.driver.Result;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import semantics.mapping.MappingUtils;
 
 /**
@@ -276,9 +276,9 @@ public class RDFImportTest {
   @Test
   public void testAbortIfNoIndices() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
           "','JSON-LD',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
@@ -297,12 +297,12 @@ public class RDFImportTest {
   @Test
   public void testFullTextIndexesPresent() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       session.run("CALL db.index.fulltext.createNodeIndex(\"multiLabelIndex\","
           + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('file:///fileDoesnotExist.txt','JSON-LD',{})");
 
       Map<String, Object> singleResult = importResults
@@ -319,11 +319,11 @@ public class RDFImportTest {
   @Test
   public void testCompositeIndexesPresent() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       session.run("CREATE INDEX ON :Person(age, country)");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('file:///fileDoesnotExist.txt','JSON-LD',{})");
 
       Map<String, Object> singleResult = importResults
@@ -340,11 +340,11 @@ public class RDFImportTest {
   @Test
   public void testAbortIfNoIndicesImportSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+      Result importResults1 = session.run("CALL semantics.importRDFSnippet('" +
           turtleFragment +
           "','Turtle')");
 
@@ -361,11 +361,11 @@ public class RDFImportTest {
   @Test
   public void testImportJSONLD() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session =  driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
@@ -387,13 +387,13 @@ public class RDFImportTest {
   @Test
   public void testImportJSONLDImportSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
+      Result importResults1 = session.run("CALL semantics.importRDFSnippet('" +
           jsonLdFragment + "','JSON-LD',"
           +
           "{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, " +
@@ -413,11 +413,11 @@ public class RDFImportTest {
   @Test
   public void testImportJSONLDShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
@@ -465,11 +465,11 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXML() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
@@ -495,11 +495,11 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShortening() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
@@ -531,9 +531,9 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinition() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://purl.org/dc/terms/`:'dc',\n" +
           "`http://www.w3.org/1999/02/22-rdf-syntax-ns#`:'rdf',\n" +
@@ -544,7 +544,7 @@ public class RDFImportTest {
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
@@ -575,16 +575,16 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinitionOneTriple() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
               .toURI()
           + "','RDF/XML',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
@@ -606,16 +606,16 @@ public class RDFImportTest {
   @Test
   public void testImportBadUrisTtl() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI()
@@ -632,16 +632,16 @@ public class RDFImportTest {
   @Test
   public void testImportTtlBadUrisException() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI()
@@ -657,16 +657,16 @@ public class RDFImportTest {
   @Test
   public void testImportRDFXMLBadUris() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUris.rdf")
               .toURI()
@@ -683,16 +683,16 @@ public class RDFImportTest {
   @Test
   public void testImportLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
@@ -758,13 +758,13 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalLangTag() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})";
-      StatementResult importResults
+      Result importResults
           = session.run(importCypher);
       Record next = importResults
           .next();
@@ -786,14 +786,14 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalWithMultivalList() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
           + "','Turtle',{ handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] })";
-      StatementResult importResults
+      Result importResults
           = session.run(importCypher);
       Record next = importResults
           .next();
@@ -823,14 +823,14 @@ public class RDFImportTest {
   @Test
   public void testImportMultivalWithExclusionList() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
           + "','Turtle',{ handleMultival: 'ARRAY', predicateExclusionList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] })";
-      StatementResult importResults
+      Result importResults
           = session.run(importCypher);
       Record next = importResults
           .next();
@@ -857,25 +857,25 @@ public class RDFImportTest {
   @Test
   public void testImportTurtle() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("opentox-example.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
       assertEquals(157L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult algoNames = session
+      Result algoNames = session
           .run("MATCH (n:`http://www.opentox.org/api/1.1#Algorithm`) " +
               "\nRETURN n.`http://purl.org/dc/elements/1.1/title` AS algos ORDER By algos");
 
       assertEquals("J48", algoNames.next().get("algos").asString());
       assertEquals("XLogP", algoNames.next().get("algos").asString());
 
-      StatementResult compounds = session.run(
+      Result compounds = session.run(
           "MATCH ()-[r:`http://www.opentox.org/api/1.1#compound`]->(c) RETURN DISTINCT c.uri AS compound order by compound");
       assertEquals("http://www.opentox.org/example/1.1#benzene",
           compounds.next().get("compound").asString());
@@ -891,18 +891,18 @@ public class RDFImportTest {
   @Test
   public void testImportTurtle02() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       session.run("CREATE (rdf:NamespacePrefixDefinition {" +
           "  `http://www.example.com/ontology/1.0.0#`: 'ex'," +
           "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})");
-      StatementResult importResults = session.run(String.format(
+      Result importResults = session.run(String.format(
           "CALL semantics.importRDF('%s','Turtle',{nodeCacheSize: 1})",
           file("myrdf/testImportTurtle02.ttl")));
       assertEquals(5, importResults.next().get("triplesLoaded").asInt());
 
-      StatementResult result = session.run(
+      Result result = session.run(
           "MATCH (:ex" + PREFIX_SEPARATOR + "DISTANCEVALUE)-[:ex" + PREFIX_SEPARATOR
               + "units]->(mu) " +
               "RETURN mu.uri AS unitsUri, mu.ex" + PREFIX_SEPARATOR + "name as unitsName");
@@ -916,11 +916,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetPassWrongUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
               + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, verifyUriSyntax: false})");
@@ -936,11 +936,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetFailWrongUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
               + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false})");
@@ -956,10 +956,10 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
-      StatementResult importResults
+      createIndices(neo4j.defaultDatabaseService());
+      Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
               + "','JSON-LD',{ handleVocabUris: 'KEEP', typesToLabels: false})");
@@ -975,9 +975,9 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromSnippetLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String turtleFragment = "@prefix show: <http://example.org/vocab/show/> .\n" +
           "\n" +
@@ -985,7 +985,7 @@ public class RDFImportTest {
           +
           "show:218 show:localName \"Cette Série des Années Soixante-dix\"@fr . \n" +
           "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
-      StatementResult importResults
+      Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + turtleFragment
               + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: false, languageFilter: 'fr'})");
@@ -1010,11 +1010,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.previewRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
@@ -1031,11 +1031,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromBadUriFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.previewRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("badUri.ttl")
@@ -1053,11 +1053,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromBadUriFileFail() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.previewRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("badUri.ttl")
@@ -1074,11 +1074,11 @@ public class RDFImportTest {
   @Test
   public void testPreviewFromFileLangFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.previewRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
@@ -1105,9 +1105,9 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileWithMapping() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String addMapping1 =
           " call semantics.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield namespace as sch\n"
@@ -1124,20 +1124,20 @@ public class RDFImportTest {
               "return *";
       session.run(addMapping2);
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML',{ handleVocabUris: 'MAP'})");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult mediaNames = session.run("MATCH (m:Media) " +
+      Result mediaNames = session.run("MATCH (m:Media) " +
           "\nRETURN m.uniqueName AS nm, m.uri AS uri");
 
       Record next = mediaNames.next();
       assertEquals("The Financial Times", next.get("nm").asString());
       assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
 
-      StatementResult personNames = session.run("MATCH (m { PersonName : 'JC'}) " +
+      Result personNames = session.run("MATCH (m { PersonName : 'JC'}) " +
           "\nRETURN m.LivesIn AS li, m.uri AS uri");
 
       next = personNames.next();
@@ -1149,24 +1149,24 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileIgnoreNs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML',{ handleVocabUris: 'IGNORE'})");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult mediaNames = session.run("MATCH (m:Publication) " +
+      Result mediaNames = session.run("MATCH (m:Publication) " +
           "\nRETURN m.name AS nm, m.uri AS uri");
 
       Record next = mediaNames.next();
       assertEquals("The Financial Times", next.get("nm").asString());
       assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
 
-      StatementResult rels = session.run(
+      Result rels = session.run(
           "MATCH ({ PersonName: 'JC'})-[r:reads]-(:Publication { name: 'The Financial Times'}) " +
               "\nRETURN count(r) as ct");
 
@@ -1179,24 +1179,24 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileIgnoreNsApplyNeoNaming() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML',{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true })");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult mediaNames = session.run("MATCH (m:Publication) " +
+      Result mediaNames = session.run("MATCH (m:Publication) " +
           "\nRETURN m.name AS nm, m.uri AS uri");
 
       Record next = mediaNames.next();
       assertEquals("The Financial Times", next.get("nm").asString());
       assertEquals("http://neo4j.com/invividual/FT", next.get("uri").asString());
 
-      StatementResult rels = session.run(
+      Result rels = session.run(
           "MATCH ({ personName: 'JC'})-[r:READS]-(:Publication { name: 'The Financial Times'}) " +
               "\nRETURN count(r) as ct");
 
@@ -1209,9 +1209,9 @@ public class RDFImportTest {
   @Test
   public void testImportFromFileWithPredFilter() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String addMapping1 =
           " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
@@ -1223,7 +1223,7 @@ public class RDFImportTest {
               "return *";
       session.run(addMapping1);
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("event.json")
               .toURI()
@@ -1231,13 +1231,13 @@ public class RDFImportTest {
       assertEquals(26L, importResults
           .next().get("triplesLoaded").asLong());
 
-      StatementResult postalAddresses = session.run("MATCH (m:PostalAddress) " +
+      Result postalAddresses = session.run("MATCH (m:PostalAddress) " +
           "\nRETURN m.postalCode as zip");
 
       Record next = postalAddresses.next();
       assertEquals("95051", next.get("zip").asString());
 
-      StatementResult whereRels = session.run("MATCH (e:Event)-[:WHERE]->(p:Place) " +
+      Result whereRels = session.run("MATCH (e:Event)-[:WHERE]->(p:Place) " +
           "\nRETURN p.name as placeName, e.desc as desc ");
 
       next = whereRels.next();
@@ -1253,11 +1253,11 @@ public class RDFImportTest {
   @Test
   public void testStreamFromFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.streamRDF('" +
           RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
               .toURI() + "','RDF/XML',{})");
@@ -1275,9 +1275,9 @@ public class RDFImportTest {
   @Test
   public void testStreamFromString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "<rdf:RDF xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n"
           + "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n"
@@ -1288,7 +1288,7 @@ public class RDFImportTest {
           + "         </rdf:Description>\n"
           + "</rdf:RDF>";
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.streamRDFSnippet('" + rdf + "','RDF/XML',{})");
       Map<String, Object> next = importResults
           .next().asMap();
@@ -1304,11 +1304,11 @@ public class RDFImportTest {
   @Test
   public void testStreamFromBadUriFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.streamRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI() + "','Turtle',{verifyUriSyntax: false})");
@@ -1326,15 +1326,15 @@ public class RDFImportTest {
   @Test
   public void testStreamFromBadUriString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix pr: <http://example.org/vocab/show/> .\n"
           + "pr:ent\n"
           + "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4> ;\n"
           + "      pr:name \"test name\" .";
-      StatementResult importResults
+      Result importResults
           = session
           .run("CALL semantics.streamRDFSnippet('" + rdf + "','Turtle',{verifyUriSyntax: false})");
       Map<String, Object> next = importResults
@@ -1351,11 +1351,11 @@ public class RDFImportTest {
   @Test
   public void testStreamFromBadUriFileFail() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.streamRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI() + "','Turtle',{})");
@@ -1372,11 +1372,11 @@ public class RDFImportTest {
   @Test
   public void testGetLangValUDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run(
           "return semantics.getLangValue('fr',[\"The Hague@en\", \"Den Haag@nl\", \"La Haye@fr\"]) as val");
       Map<String, Object> next = importResults
@@ -1436,11 +1436,11 @@ public class RDFImportTest {
   @Test
   public void testGetLangTagUDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("return semantics.getLangTag('The Hague@en') as val_en,"
           + "semantics.getLangTag('Den Haag@nl') as val_nl, "
           + "semantics.getLangTag('La Haye@fr') as val_fr,"
@@ -1474,11 +1474,11 @@ public class RDFImportTest {
   @Test
   public void testHasLangTagUDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("return semantics.hasLangTag('en','The Hague@en') as val_en,"
           + "semantics.hasLangTag('nl','Den Haag@nl') as val_nl, "
           + "semantics.hasLangTag('en','La Haye@fr') as val_fr_no,"
@@ -1514,11 +1514,11 @@ public class RDFImportTest {
   @Test
   public void testGetUriFromShortAndShortFromUri() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
@@ -1539,9 +1539,9 @@ public class RDFImportTest {
   @Test
   public void testAddNamespacePrefixInitial() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      StatementResult res = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
+      Result res = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
       assertTrue(res.hasNext());
       Record next = res.next();
       assertEquals("abc", next.get("prefix").asString());
@@ -1553,18 +1553,18 @@ public class RDFImportTest {
   @Test
   public void testAddNamespacePrefixExisting() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
-      StatementResult res1 = session.run("CALL semantics.importRDF('" +
+      createIndices(neo4j.defaultDatabaseService());
+      Result res1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD')");
       assertTrue(res1.hasNext());
       Map<String, Object> preAddition = res1.next().get("namespaces").asMap();
-      StatementResult res2 = session
+      Result res2 = session
           .run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
       assertTrue(res2.hasNext());
-      StatementResult res3 = session.run("MATCH (n:NamespacePrefixDefinition) RETURN n");
+      Result res3 = session.run("MATCH (n:NamespacePrefixDefinition) RETURN n");
       assertTrue(res3.hasNext());
       Map<String, Object> postAddition = res3.next().get("n").asNode().asMap();
       assertFalse(res3.hasNext());
@@ -1578,7 +1578,7 @@ public class RDFImportTest {
   @Test
   public void testAddNamespacePrefixFromText() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       String turtle = "@prefix tr-common: <http://permid.org/ontology/common/> . \n"
           + "@prefix fibo-be-le-cb: <http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/> . \n"
@@ -1642,7 +1642,7 @@ public class RDFImportTest {
 
   private void checkValidPrefixesCreated(Session session, Map<String, String> validPairs,
       String textFragment) {
-    StatementResult res;
+    Result res;
     int resultCount;
     res = session.run("CALL semantics.addNamespacePrefixesFromText('" + textFragment + "')");
     assertTrue(res.hasNext());
@@ -1663,11 +1663,11 @@ public class RDFImportTest {
   @Test
   public void testGetDataType() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session
+      Result importResults = session
           .run("return semantics.getDataType('2008-04-17^^ns1__date') AS val");
       Map<String, Object> next = importResults.next().asMap();
       assertEquals("ns1__date", next.get("val"));
@@ -1708,11 +1708,11 @@ public class RDFImportTest {
   @Test
   public void testGetValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session
+      Result importResults = session
           .run("return semantics.getValue('2008-04-17^^ns1__date') AS val");
       Map<String, Object> next = importResults.next().asMap();
       assertEquals("2008-04-17", next.get("val"));
@@ -1735,11 +1735,11 @@ public class RDFImportTest {
   @Test
   public void testCustomDataTypesKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI() + "','Turtle',{keepLangTag: true, handleMultival: 'ARRAY', " +
@@ -1750,7 +1750,7 @@ public class RDFImportTest {
           "handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
       assertEquals(10L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult cars = session.run("MATCH (n:`http://example.com/Car`) " +
+      Result cars = session.run("MATCH (n:`http://example.com/Car`) " +
           "\nRETURN n.`http://example.com/price` AS price," +
           "n.`http://example.com/power` AS power, " +
           "n.`http://example.com/color` AS color, " +
@@ -1775,11 +1775,11 @@ public class RDFImportTest {
   @Test
   public void testCustomDataTypesShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI() + "','Turtle',{keepLangTag: true, handleMultival: 'ARRAY', " +
@@ -1790,7 +1790,7 @@ public class RDFImportTest {
           "handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500})");
       assertEquals(10L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult cars = session.run("MATCH (n:ns0__Car) " +
+      Result cars = session.run("MATCH (n:ns0__Car) " +
           "\nRETURN n.ns0__price AS price," +
           "n.ns0__power AS power, " +
           "n.ns0__color AS color, " +
@@ -1815,17 +1815,17 @@ public class RDFImportTest {
   @Test
   public void testImportMultiValAfterImportSingelVal() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("testImportMultiValAfterImportSingelVal.ttl")
               .toURI() + "','Turtle',{handleMultival: 'OVERWRITE', handleVocabUris: 'KEEP'})";
-      StatementResult importResults = session.run(importCypher);
+      Result importResults = session.run(importCypher);
       Record next = importResults.next();
       assertEquals(3, next.get("triplesLoaded").asInt());
-      StatementResult queryResults = session
+      Result queryResults = session
           .run("MATCH (n:Resource) RETURN n.`http://example.com/price` AS price");
       Object imports = queryResults.next().get("price");
       assertEquals(IntegerValue.class, imports.getClass());
@@ -1849,25 +1849,25 @@ public class RDFImportTest {
   @Test
   public void testReificationImport() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("reification.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500})");
       assertEquals(25L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult dates = session
+      Result dates = session
           .run("MATCH (n:`http://www.w3.org/1999/02/22-rdf-syntax-ns#Statement`) " +
               "\nRETURN n.`http://example.com/from` AS fromDates ORDER BY fromDates DESC");
 
       assertEquals(LocalDate.parse("2019-09-01"), dates.next().get("fromDates").asLocalDate());
       assertEquals(LocalDate.parse("2016-09-01"), dates.next().get("fromDates").asLocalDate());
 
-      StatementResult statements = session.run("MATCH (statement)\n" +
+      Result statements = session.run("MATCH (statement)\n" +
           "WHERE (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#subject`]->()\n" +
           "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#predicate`]->()\n" +
           "AND (statement)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#object`]->()\n" +
@@ -1883,11 +1883,11 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadMultivaluesInArray() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle',{ handleMultival: 'ARRAY' })");
@@ -1900,7 +1900,7 @@ public class RDFImportTest {
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
 
-      StatementResult result = session.run("MATCH (n:ns0__Thing) " +
+      Result result = session.run("MATCH (n:ns0__Thing) " +
           "\nRETURN n.ns0__prop as multival ");
 
       List<String> vals = new ArrayList<>();
@@ -1915,17 +1915,17 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadNamespaces() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("event.json")
               .toURI() + "','JSON-LD')");
       assertEquals(28L, importResults
           .next().get("triplesLoaded").asLong());
-      StatementResult nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      Result nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
@@ -1961,19 +1961,19 @@ public class RDFImportTest {
   @Test
   public void testLoadNamespacesWithCustomPredefined() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("CREATE (:NamespacePrefixDefinition {\n"
           + "  `http://www.w3.org/2000/01/rdf-schema#`: 'myschema',\n"
           + "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'myrdf'})");
-      StatementResult nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      Result nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
       assertFalse(nsDefResult.hasNext());
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(171L, importResults.next().get("triplesLoaded").asLong());
@@ -1999,11 +1999,11 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadArrayOnPreviouslyAtomicValue() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle')");
@@ -2016,7 +2016,7 @@ public class RDFImportTest {
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
 
-      StatementResult result = session.run("MATCH (n:ns0__Thing) " +
+      Result result = session.run("MATCH (n:ns0__Thing) " +
           "\nRETURN n.ns0__prop as multival ");
 
       List<String> vals = new ArrayList<String>();
@@ -2031,11 +2031,11 @@ public class RDFImportTest {
   @Test
   public void testIncrementalLoadAtomicValueOnPreviouslyArray() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle',{ handleMultival: 'ARRAY' })");
@@ -2048,7 +2048,7 @@ public class RDFImportTest {
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
 
-      StatementResult result = session.run("MATCH (n:ns0__Thing) " +
+      Result result = session.run("MATCH (n:ns0__Thing) " +
           "\nRETURN n.ns0__prop as singleVal ");
 
       assertEquals(230L, result.next().get("singleVal").asLong());
@@ -2060,11 +2060,11 @@ public class RDFImportTest {
   @Test
   public void testLargerFileManyTransactions() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults
+      Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("100k.nt").toURI() + "','N-Triples',"
           + "{ commitSize: 5 , predicateExclusionList: ['http://www.w3.org/2004/02/skos/core#prefLabel']})");
@@ -2077,17 +2077,17 @@ public class RDFImportTest {
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
           + "(m {uri: 'http://example.org/Resource2'})"
           + "OPTIONAL MATCH (n)-[r]->(m) "
           + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
@@ -2096,7 +2096,7 @@ public class RDFImportTest {
       assertEquals("http://example.org/Resource1", record.get("nUri").asString());
       assertEquals("http://example.org/Resource2", record.get("mUri").asString());
 
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete1.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2117,17 +2117,17 @@ public class RDFImportTest {
   @Test
   public void testDeleteRelationshipShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
           + "(m {uri: 'http://example.org/Resource2'})"
           + "OPTIONAL MATCH (n)-[r]->(m) "
           + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
@@ -2136,7 +2136,7 @@ public class RDFImportTest {
       assertEquals("http://example.org/Resource1", record.get("nUri").asString());
       assertEquals("http://example.org/Resource2", record.get("mUri").asString());
 
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete1.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2158,9 +2158,9 @@ public class RDFImportTest {
   @Test
   public void testDeleteRelationshipShortenURIsFromString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix ex: <http://example.org/> .\n"
           + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
@@ -2185,12 +2185,12 @@ public class RDFImportTest {
           + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
           + "\n";
 
-      StatementResult importResults = session.run("CALL semantics.importRDFSnippet('" +
+      Result importResults = session.run("CALL semantics.importRDFSnippet('" +
           rdf
           + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}),"
           + "(m {uri: 'http://example.org/Resource2'})"
           + "OPTIONAL MATCH (n)-[r]->(m) "
           + "RETURN n.uri AS nUri, type(r) AS type, m.uri AS mUri");
@@ -2203,7 +2203,7 @@ public class RDFImportTest {
           + "\n"
           + "ex:Resource1\n"
           + "  ex:Predicate3 ex:Resource2 .\n";
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
           deleteRdf1
           + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2224,24 +2224,24 @@ public class RDFImportTest {
   @Test
   public void testDeleteLiteralKeepURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
           + "RETURN n.`http://example.org/Predicate2` AS nP2");
 
       Record record = result.next();
       assertEquals(1, record.get("nP2").asList().size());
       assertTrue(record.get("nP2").asList().contains("test"));
 
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete2.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2258,24 +2258,24 @@ public class RDFImportTest {
   @Test
   public void testDeleteLiteralShortenURIs() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
           + "RETURN n.ns0__Predicate2 AS nP2");
 
       Record record = result.next();
       assertEquals(1, record.get("nP2").asList().size());
       assertTrue(record.get("nP2").asList().contains("test"));
 
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete2.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2292,9 +2292,9 @@ public class RDFImportTest {
   @Test
   public void testDeleteLiteralShortenURIsFromString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix ex: <http://example.org/> .\n"
           + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
@@ -2319,12 +2319,12 @@ public class RDFImportTest {
           + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
           + "\n";
 
-      StatementResult importResults = session.run("CALL semantics.importRDFSnippet('" +
+      Result importResults = session.run("CALL semantics.importRDFSnippet('" +
           rdf
           + "','Turtle',{ handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'})"
           + "RETURN n.ns0__Predicate2 AS nP2");
 
       Record record = result.next();
@@ -2336,7 +2336,7 @@ public class RDFImportTest {
           + "ex:Resource1\n"
           + "  ex:Predicate2 \"test\" .\n";
 
-      StatementResult deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
+      Result deleteResults = session.run("CALL semantics.deleteRDFSnippet('" +
           deleteRdf
           + "', 'Turtle', {handleVocabUris: 'SHORTEN', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true})");
 
@@ -2353,17 +2353,17 @@ public class RDFImportTest {
   @Test
   public void testDeleteTypeFromResource() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(3, result.list().size());
       result = session.run("MATCH (n {uri: 'http://example.org/Resource2'})"
@@ -2371,7 +2371,7 @@ public class RDFImportTest {
       Record record = result.next();
       assertEquals(2, record.get("labels").asList().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete3.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2388,21 +2388,21 @@ public class RDFImportTest {
   @Test
   public void testDeleteAllTriplesRelatedToResource() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(3, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete4.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2418,17 +2418,17 @@ public class RDFImportTest {
   @Test
   public void testDeleteMultiLiteral() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}), "
+      Result result = session.run("MATCH (n {uri: 'http://example.org/Resource1'}), "
           + "(m {uri: 'http://example.org/Resource2'})"
           + "RETURN n.`http://example.org/Predicate4` AS nP4, "
           + "m.`http://example.org/Predicate3` AS mP3, "
@@ -2442,7 +2442,7 @@ public class RDFImportTest {
       assertTrue(record.get("mP4").asList().contains(300.0));
       assertTrue(record.get("mP4").asList().contains(400.0));
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete5.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2471,17 +2471,17 @@ public class RDFImportTest {
   @Test
   public void testDeleteSubjectNode() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(3, result.list().size());
       result = session.run("MATCH (n {uri: 'http://example.org/Resource3'})"
@@ -2489,7 +2489,7 @@ public class RDFImportTest {
       Record record = result.next();
       assertEquals("http://example.org/Resource3", record.get("n.uri").asString());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete7.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2505,17 +2505,17 @@ public class RDFImportTest {
   @Test
   public void testRepetitiveDeletion() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importRDF('" +
+      Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(15L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(3, result.list().size());
       result = session.run("MATCH (n {uri: 'http://example.org/Resource3'})"
@@ -2523,7 +2523,7 @@ public class RDFImportTest {
       Record record = result.next();
       assertEquals("http://example.org/Resource3", record.get("n.uri").asString());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1Delete4.ttl").toURI()
           + "', 'Turtle', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2541,12 +2541,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportTest() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
@@ -2569,15 +2569,15 @@ public class RDFImportTest {
   @Test
   public void ontoSnippetImportTest() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleOntology);
 
-      StatementResult importResults = session
+      Result importResults = session
           .run("CALL semantics.importOntologySnippet($rdf,'Turtle')",
               params);
 
@@ -2600,12 +2600,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportWithCustomNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})");
 
@@ -2646,15 +2646,15 @@ public class RDFImportTest {
   @Test
   public void ontoSnippetImportWithCustomNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleOntology);
 
-      StatementResult importResults = session.run("CALL semantics.importOntologySnippet("
+      Result importResults = session.run("CALL semantics.importOntologySnippet("
           + "$rdf, 'Turtle', { classLabel : 'Category', objectPropertyLabel: 'Rel', "
           + "dataTypePropertyLabel: 'Prop'})", params);
 
@@ -2695,12 +2695,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportWithCustomNamesFilterLabels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
@@ -2746,15 +2746,15 @@ public class RDFImportTest {
   @Test
   public void ontoSnippetImportWithCustomNamesFilterLabels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleOntology);
 
-      StatementResult importResults = session.run("CALL semantics.importOntologySnippet($rdf,"
+      Result importResults = session.run("CALL semantics.importOntologySnippet($rdf,"
           + "'Turtle', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
           + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})", params);
@@ -2799,9 +2799,9 @@ public class RDFImportTest {
   @Test
   public void ontoImportSchemaOrg() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       session.run("CALL semantics.importOntology('" +
@@ -2834,12 +2834,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportClassHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
@@ -2854,12 +2854,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportPropHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
           "','RDF/XML')");
 
@@ -2873,12 +2873,12 @@ public class RDFImportTest {
   @Test
   public void ontoImportMultilabel() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
-      StatementResult importResults = session.run("CALL semantics.importOntology('" +
+      Result importResults = session.run("CALL semantics.importOntology('" +
           LiteOntologyImporterTest.class.getClassLoader()
               .getResource("moviesontologyMultilabel.owl").toURI()
           + "','RDF/XML', { keepLangTag: true, handleMultival: 'ARRAY' } )");
@@ -2951,15 +2951,15 @@ public class RDFImportTest {
   @Test
   public void ontoSnippetImportMultilabel() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleMultilangOntology);
 
-      StatementResult importResults = session
+      Result importResults = session
           .run("CALL semantics.importOntologySnippet($rdf,'Turtle',"
               + " { keepLangTag: true, handleMultival: 'ARRAY' } )", params);
 
@@ -3030,13 +3030,13 @@ public class RDFImportTest {
   @Test
   public void testImportDatesAndTimes() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+      Result importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl").toURI()
           + "','Turtle')");
       assertEquals(2L, importResults1.single().get("triplesLoaded").asLong());
@@ -3053,13 +3053,13 @@ public class RDFImportTest {
   @Test
   public void testImportDatesAndTimes2() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+      Result importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl").toURI()
           + "','Turtle')");
       assertEquals(23L, importResults1.single().get("triplesLoaded").asLong());
@@ -3076,13 +3076,13 @@ public class RDFImportTest {
   @Test
   public void testImportDatesAndTimesMultivalued() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
+      Result importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("datetime/datetime-simple-multivalued.ttl").toURI()
           + "','Turtle', { handleMultival: 'ARRAY' })");
@@ -3119,17 +3119,17 @@ public class RDFImportTest {
   @Test
   public void testImportQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
+      Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session
+      Result result = session
           .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
               + "RETURN count(n) AS count");
       assertEquals(3, result.next().get("count").asInt());
@@ -3190,17 +3190,17 @@ public class RDFImportTest {
   @Test
   public void testImportQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
+      Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session
+      Result result = session
           .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
               + "RETURN count(n) AS count");
       assertEquals(3, result.next().get("count").asInt());
@@ -3261,21 +3261,21 @@ public class RDFImportTest {
   @Test
   public void testDeleteQuadRDFTriG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
+      Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -3292,21 +3292,21 @@ public class RDFImportTest {
   @Test
   public void testDeleteQuadRDFNQuads() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
+      Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.nq")
               .toURI()
           + "', 'N-Quads', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -3323,21 +3323,21 @@ public class RDFImportTest {
   @Test
   public void testRepetitiveDeletionQuadRDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
-      StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
+      Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
       assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
-      StatementResult result = session.run("MATCH (n:Resource)"
+      Result result = session.run("MATCH (n:Resource)"
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      StatementResult deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
+      Result deleteResult = session.run("CALL semantics.deleteQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', {handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -3359,20 +3359,20 @@ public class RDFImportTest {
   }
 
   private void createIndices(GraphDatabaseService db) {
-    db.execute("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
   }
 
 
   @Test
   public void testLoadJSONAsTreeEmptyJSON() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "";
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
               + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "')"
@@ -3384,9 +3384,9 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTreeListAtRoot() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       //String jsonFragment = "[]";
       String jsonFragment = "[{\"menu\": {\n"
@@ -3401,12 +3401,12 @@ public class RDFImportTest {
           + "  }\n"
           + "}}, { \"message\": \"hello!\"} ]";
 
-      StatementResult importResults
+      Result importResults
           = session.run("CREATE (n:Node)  WITH n "
           + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "','MY_JSON')"
           + " YIELD node RETURN node ");
       assertTrue(importResults.hasNext());
-      StatementResult queryresult = session
+      Result queryresult = session
           .run("match (n:Node)-[:MY_JSON]->(r) return count(r) as ct ");
       assertEquals(2, queryresult.next().get("ct").asInt());
       queryresult = session
@@ -3423,9 +3423,9 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"menu\": {\n"
           + "  \"id\": \"file\",\n"
@@ -3439,7 +3439,7 @@ public class RDFImportTest {
           + "  }\n"
           + "}}";
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CREATE (n:Node { id: 'record node'})  WITH n "
               + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
@@ -3447,7 +3447,7 @@ public class RDFImportTest {
       assertTrue(importResults.hasNext());
       assertEquals("record node", importResults.next().get("node").asNode()
           .get("id").asString());
-      StatementResult queryresult = session
+      Result queryresult = session
           .run("match (n:Node:Resource)-[:_jsonTree]->()-[:menu]->()-[:popup]->()"
               + "-[:menuitem]->(mi { value: 'Open', onclick: 'OpenDoc()'}) return mi ");
       assertEquals("Resource",
@@ -3459,9 +3459,9 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTreeWithUrisAndContext() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\n"
           + "  \"@context\": {\n"
@@ -3487,7 +3487,7 @@ public class RDFImportTest {
           + "  ]\n"
           + "}";
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CREATE (n:Node { id: 'I\\'m the hook node'})  WITH n "
               + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
@@ -3495,7 +3495,7 @@ public class RDFImportTest {
       assertTrue(importResults.hasNext());
       assertEquals("I'm the hook node",
           importResults.next().get("node").asNode().get("id").asString());
-      StatementResult queryresult = session
+      Result queryresult = session
           .run("match (n:Node:Resource)-[l:_jsonTree]->"
               + "(:Resource { uri: 'http://me.markus-lanthaler.com/'}) return l ");
       assertTrue(queryresult.hasNext());
@@ -3514,9 +3514,9 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree2() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"widget\": {\n"
           + "    \"debug\": \"on\",\n"
@@ -3545,13 +3545,13 @@ public class RDFImportTest {
           + "    }\n"
           + "}}    ";
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
               + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
-      StatementResult queryresult = session
+      Result queryresult = session
           .run("match (n:Node)-[:_jsonTree]->()-[:widget]->( { debug: 'on'})"
               + "-[:window]->(w) return w.title as title, w.width as width ");
       Record next = queryresult.next();
@@ -3569,9 +3569,9 @@ public class RDFImportTest {
   @Test
   public void testLoadJSONAsTree3() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().toConfig()); Session session = driver.session()) {
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"menu\": {\n"
           + "    \"header\": \"SVG Viewer\",\n"
@@ -3601,13 +3601,13 @@ public class RDFImportTest {
           + "    ]\n"
           + "}}";
 
-      StatementResult importResults
+      Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
               + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
-      StatementResult queryresult = session
+      Result queryresult = session
           .run("match (n:Node)-[:_jsonTree]->()-[:menu]->( { header: 'SVG Viewer'})"
               + "-[:items]->(item) return count(item) as itemcount, "
               + " count(distinct item.label) as labelcount ");

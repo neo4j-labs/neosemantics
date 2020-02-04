@@ -8,13 +8,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.Neo4jRule;
+
+import org.neo4j.driver.*;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import semantics.RDFImport;
 
 public class SHACLValidationTest {
@@ -37,7 +33,7 @@ public class SHACLValidationTest {
   //@Test
   public void testRegexValidationOnMovieDB() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -73,7 +69,7 @@ public class SHACLValidationTest {
 
       //StatementResult validationResults = session.run("CALL semantics.validation.shaclValidate() ");
 
-      StatementResult validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
+      Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
           + "CALL semantics.validation.shaclValidateTx(nodes) yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
           + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName ");
 
@@ -91,7 +87,7 @@ public class SHACLValidationTest {
   //@Test
   public void testTxTriggerValidation() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -127,7 +123,7 @@ public class SHACLValidationTest {
 
       //StatementResult validationResults = session.run("CALL semantics.validation.shaclValidate() ");
 
-      StatementResult validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
+      Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
           + "call semantics.validation.shaclValidateTxForTrigger(nodes,[], {}, {}, {}) "
           + "yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
           + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName");
@@ -163,7 +159,7 @@ public class SHACLValidationTest {
   public void testRunIndividualTestInTestSuite(String testGroupName, String testName,
       String cypherScript) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -187,7 +183,7 @@ public class SHACLValidationTest {
       }
 
       // run validation
-      StatementResult actualValidationResults = session
+      Result actualValidationResults = session
           .run("CALL semantics.validation.shaclValidate() ");
 
       // print out validation results
@@ -218,7 +214,7 @@ public class SHACLValidationTest {
           .toURI() + "','Turtle')");
 
       // query them in the graph and flatten the list
-      StatementResult expectedValidationResults = session.run(VAL_RESULTS_QUERY);
+      Result expectedValidationResults = session.run(VAL_RESULTS_QUERY);
 
       //print them out
       //System.out.println("expected: ");

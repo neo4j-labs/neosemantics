@@ -14,13 +14,7 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 /**
@@ -36,9 +30,9 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
   private static final String[] EMPTY_ARRAY = new String[0];
   private Cache<ContextResource, Node> nodeCache;
 
-  RDFQuadDirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFQuadDirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
 
-    super(db, conf, l);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
@@ -61,7 +55,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
   private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
+    tx.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
   @Override
@@ -78,7 +72,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
           String cypher = buildCypher(entry.getKey().getUri(),
               entry.getKey().getGraphUri(),
               params);
-          Result result = graphdb.execute(cypher, params);
+          Result result = tx.execute(cypher, params);
           if (result.hasNext()) {
             node = (Node) result.next().get("n");
             if (result.hasNext()) {
@@ -91,7 +85,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
             }
           }
           if (node == null) {
-            node = graphdb.createNode(RESOURCE);
+            node = tx.createNode(RESOURCE);
             node.setProperty("uri", entry.getKey().getUri());
             if (entry.getKey().getGraphUri() != null) {
               node.setProperty("graphUri", entry.getKey().getGraphUri());
@@ -137,7 +131,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
           String cypher = buildCypher(st.getSubject().stringValue(),
               st.getContext() != null ? st.getContext().stringValue() : null,
               params);
-          Result result = graphdb.execute(cypher, params);
+          Result result = tx.execute(cypher, params);
           if (result.hasNext()) {
             node = (Node) result.next().get("n");
             if (result.hasNext()) {
@@ -166,7 +160,7 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
           String cypher = buildCypher(st.getObject().stringValue(),
               st.getContext() != null ? st.getContext().stringValue() : null,
               params);
-          Result result = graphdb.execute(cypher, params);
+          Result result = tx.execute(cypher, params);
           if (result.hasNext()) {
             node = (Node) result.next().get("n");
             if (result.hasNext()) {
@@ -194,8 +188,8 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
           toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.OUTGOING)) {
+            .getRelationships(Direction.OUTGOING,
+                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -203,8 +197,8 @@ class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor implem
         }
       } else {
         for (Relationship rel : toNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.INCOMING)) {
+            .getRelationships(Direction.INCOMING,
+                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

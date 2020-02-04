@@ -10,13 +10,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
+
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -51,6 +46,10 @@ public class MicroReasoners {
 
   @Context
   public GraphDatabaseService db;
+
+  @Context
+  public Transaction tx;
+
   @Context
   public Log log;
 
@@ -64,7 +63,7 @@ public class MicroReasoners {
 
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("virtLabel", virtLabel);
-    Result results = db.execute(String.format(sloInferenceFormatReturnClassNames,
+    Result results = tx.execute(String.format(sloInferenceFormatReturnClassNames,
         (props.containsKey("catLabel") ? (String) props.get("catLabel") : DEFAULT_CAT_LABEL_NAME),
         (props.containsKey("catNameProp") ? (String) props.get("catNameProp")
             : DEFAULT_CAT_NAME_PROP_NAME),
@@ -79,7 +78,7 @@ public class MicroReasoners {
     labelList
         .forEach(x -> sb.append(" UNION MATCH (x:`").append(x).append("`) RETURN x as result "));
 
-    return db.execute(sb.toString()).stream().map(n -> (Node) n.get("result"))
+    return tx.execute(sb.toString()).stream().map(n -> (Node) n.get("result"))
         .map(NodeResult::new);
 
   }
@@ -102,21 +101,21 @@ public class MicroReasoners {
     String cypher = "MATCH (rootCategory)<-[:`" + subCatRelName + "`*0..]-()<-[:`" +
         inCatRelName + "`]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
 
-    return db.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
+    return tx.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
         .map(NodeResult::new);
   }
 
   private List<Long> getSubcatIds(Node catNode, String subCatRelName) {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("catId", catNode.getId());
-    return (List<Long>) db.execute((subCatRelName == null ? scoInferenceCypherTopDown
+    return (List<Long>) tx.execute((subCatRelName == null ? scoInferenceCypherTopDown
         : scoInferenceCypherTopDown.replace("SCO", subCatRelName)), params).next().get("catIds");
   }
 
   private List<Long> getSuperCatIds(long catNodeId, String subCatRelName) {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("catId", catNodeId);
-    return (List<Long>) db.execute((subCatRelName == null ? scoInferenceCypherBottomUp
+    return (List<Long>) tx.execute((subCatRelName == null ? scoInferenceCypherBottomUp
         : scoInferenceCypherBottomUp.replace("SCO", subCatRelName)), params).next().get("catIds");
   }
 
@@ -134,7 +133,7 @@ public class MicroReasoners {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("virtRel", virtRel);
 
-    Result results = db.execute(String.format(sroInferenceFormatReturnRelNames,
+    Result results = tx.execute(String.format(sroInferenceFormatReturnRelNames,
         (props.containsKey("relLabel") ? (String) props.get("relLabel") : DEFAULT_REL_LABEL_NAME),
         (props.containsKey("relNameProp") ? (String) props.get("relNameProp")
             : DEFAULT_REL_NAME_PROP_NAME),
@@ -175,7 +174,7 @@ public class MicroReasoners {
     for (Label l : labels) {
       params.put("oneOfCats", l.name());
       is |= (l.name().equals(label) ? true
-          : db.execute(queryString, params).next().get("isTrue").equals(true));
+          : tx.execute(queryString, params).next().get("isTrue").equals(true));
     }
 
     return is;
@@ -197,7 +196,7 @@ public class MicroReasoners {
         : DEFAULT_SEARCH_TOP_DOWN);
 
     Iterator<Relationship> relIterator = individual
-        .getRelationships(RelationshipType.withName(inCatRelName), Direction.OUTGOING).iterator();
+        .getRelationships(Direction.OUTGOING, RelationshipType.withName(inCatRelName)).iterator();
 
     if (searchTopDown) {
       List<Long> catIds = getSubcatIds(category, subCatRelName);

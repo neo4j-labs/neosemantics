@@ -18,12 +18,7 @@ import java.util.concurrent.Callable;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 /**
@@ -43,9 +38,9 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private long statementsWithBNodeCount;
   private String bNodeInfo;
 
-  DirectStatementDeleter(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  DirectStatementDeleter(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
 
-    super(db, conf, l);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
@@ -79,7 +74,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       final Node node;
       try {
         tempNode = nodeCache
-            .get(entry.getKey(), () -> graphdb.findNode(RESOURCE, "uri", entry.getKey()));
+            .get(entry.getKey(), () -> tx.findNode(RESOURCE, "uri", entry.getKey()));
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
       }
@@ -170,7 +165,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       Node fromNode = null;
       try {
         fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
@@ -178,7 +173,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
       Node toNode = null;
       try {
         toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
         });
       } catch (InvalidCacheLoadException icle) {
         icle.printStackTrace();
@@ -193,8 +188,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
           toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.OUTGOING)) {
+            .getRelationships(Direction.OUTGOING, RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
+                )) {
           if (rel.getEndNode().equals(toNode)) {
             rel.delete();
             break;
@@ -202,8 +197,8 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
         }
       } else {
         for (Relationship rel : toNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.INCOMING)) {
+            .getRelationships(Direction.INCOMING, RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
+                )) {
           if (rel.getStartNode().equals(fromNode)) {
             rel.delete();
             break;
@@ -261,7 +256,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
+    graphdb.executeTransactionally("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
 }

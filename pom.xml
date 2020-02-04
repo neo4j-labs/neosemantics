@@ -69,10 +69,11 @@
       <version>19.0</version>
     </dependency>
 
+
     <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-      <version>2.0</version>
+      <groupId>org.neo4j.3rdparty.javax.ws.rs</groupId>
+      <artifactId>jsr311-api</artifactId>
+      <version>1.1.2.r612</version>
       <scope>provided</scope>
     </dependency>
 
@@ -112,7 +113,7 @@
     <dependency>
       <groupId>org.neo4j.driver</groupId>
       <artifactId>neo4j-java-driver</artifactId>
-      <version>1.7.4</version>
+      <version>4.0.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

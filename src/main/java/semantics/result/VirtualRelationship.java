@@ -18,7 +18,6 @@ import org.neo4j.graphdb.RelationshipType;
  * @since 16.03.16
  */
 public class VirtualRelationship implements Relationship {
-
   private static AtomicLong MIN_ID = new AtomicLong(-1);
   private final Node startNode;
   private final Node endNode;
@@ -33,6 +32,14 @@ public class VirtualRelationship implements Relationship {
     this.type = type;
   }
 
+  public VirtualRelationship(long id, Node startNode, Node endNode, RelationshipType type, Map<String, Object> props) {
+    this.id = id;
+    this.startNode = startNode;
+    this.endNode = endNode;
+    this.type = type;
+    this.props.putAll(props);
+  }
+
   @Override
   public long getId() {
     return id;
@@ -40,12 +47,8 @@ public class VirtualRelationship implements Relationship {
 
   @Override
   public void delete() {
-    if (getStartNode() instanceof VirtualNode) {
-      ((VirtualNode) getStartNode()).delete(this);
-    }
-    if (getEndNode() instanceof VirtualNode) {
-      ((VirtualNode) getEndNode()).delete(this);
-    }
+    if (getStartNode() instanceof VirtualNode) ((VirtualNode) getStartNode()).delete(this);
+    if (getEndNode() instanceof VirtualNode) ((VirtualNode) getEndNode()).delete(this);
   }
 
   @Override
@@ -65,9 +68,9 @@ public class VirtualRelationship implements Relationship {
 
   @Override
   public Node[] getNodes() {
-    return new Node[]{
-        startNode, endNode
-    };
+    return new Node[] {
+            startNode, endNode
+    } ;
   }
 
   @Override
@@ -78,11 +81,6 @@ public class VirtualRelationship implements Relationship {
   @Override
   public boolean isType(RelationshipType relationshipType) {
     return relationshipType.name().equals(type.name());
-  }
-
-  @Override
-  public GraphDatabaseService getGraphDatabase() {
-    return getStartNode().getGraphDatabase();
   }
 
   @Override
@@ -119,7 +117,7 @@ public class VirtualRelationship implements Relationship {
   @Override
   public Map<String, Object> getProperties(String... strings) {
     Map<String, Object> res = new LinkedHashMap<>(props);
-    res.entrySet().retainAll(asList(strings));
+    res.keySet().retainAll(asList(strings));
     return res;
   }
 
@@ -145,9 +143,9 @@ public class VirtualRelationship implements Relationship {
   }
 
   @Override
-  public String toString() {
-    return "VirtualRelationship{" + "startNode=" + startNode.getLabels() + ", endNode=" + endNode
-        .getLabels() + ", " +
-        "type=" + type + '}';
+  public String toString()
+  {
+    return "VirtualRelationship{" + "startNode=" + startNode.getLabels() + ", endNode=" + endNode.getLabels() + ", " +
+            "type=" + type + '}';
   }
 }

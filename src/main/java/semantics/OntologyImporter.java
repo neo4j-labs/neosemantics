@@ -16,12 +16,7 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 public class OntologyImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
@@ -30,9 +25,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   public static final Label RESOURCE = Label.label("Resource");
   Cache<String, Node> nodeCache;
 
-  protected OntologyImporter(GraphDatabaseService db,
+  protected OntologyImporter(GraphDatabaseService db, Transaction tx,
       OntologyLoaderConfig conf, Log l) {
-    super(db, conf, l);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
@@ -149,9 +144,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
         final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
           @Override
           public Node call() {
-            Node node = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+            Node node = tx.findNode(RESOURCE, "uri", entry.getKey());
             if (node == null) {
-              node = graphdb.createNode(RESOURCE);
+              node = tx.createNode(RESOURCE);
               node.setProperty("uri", entry.getKey());
             }
             return node;
@@ -194,14 +189,14 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
       final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
         }
       });
 
       final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
         }
       });
 
@@ -213,8 +208,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
           toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
-            .getRelationships(RelationshipType.withName(translateRelName(st.getPredicate())),
-                Direction.OUTGOING)) {
+            .getRelationships(Direction.OUTGOING,
+                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -222,8 +217,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
         }
       } else {
         for (Relationship rel : toNode
-            .getRelationships(RelationshipType.withName(translateRelName(st.getPredicate())),
-                Direction.INCOMING)) {
+            .getRelationships(Direction.INCOMING,
+                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

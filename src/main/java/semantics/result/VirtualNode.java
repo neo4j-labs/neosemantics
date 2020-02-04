@@ -3,6 +3,7 @@ package semantics.result;
 import org.neo4j.graphdb.*;
 import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.internal.helpers.collection.Iterables;
+import semantics.Util;
 
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;

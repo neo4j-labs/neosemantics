@@ -4,11 +4,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+
+import org.apache.lucene.index.TwoPhaseCommitTool;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.impl.coreapi.TransactionImpl;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -131,6 +135,11 @@ public class SHACLValidation {
   @Context
   public Log log;
 
+  @Context
+  private Transaction tx;
+
+
+
   //@Procedure(mode = Mode.READ)
   @Description("semantics.validation.shaclValidateTx() - runs SHACL validation on selected nodes")
   public Stream<ValidationResult> shaclValidateTx(@Name("nodeList") List<Node> touchedNodes,
@@ -163,7 +172,7 @@ public class SHACLValidation {
     params.put("assignedLabels", assignedLabels);
     params.put("removedLabels", removedLabels);
     params.put("assignedNodeProperties", assignedNodeProperties);
-    Result validationResults = db.execute(
+    Result validationResults = tx.execute(
         "UNWIND reduce(nodes = [], x IN keys($removedLabels) | nodes + $removedLabels[x]) AS rln MATCH (rln)<--(x) WITH collect(DISTINCT x) AS sn UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + reduce( nodes = [] , x IN keys($assignedLabels) | nodes + $assignedLabels[x]) + reduce( nodes = [] , x IN keys($assignedNodeProperties) | nodes + [ item IN $assignedNodeProperties[x] | item.node] ) AS nd WITH collect( DISTINCT nd) AS touchedNodes\n"
             + "CALL semantics.validation.shaclValidateTx(touchedNodes) YIELD nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName\n"
             + "RETURN {nodeId: nodeId, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, propertyName:propertyName} AS validationResult ",
@@ -178,7 +187,7 @@ public class SHACLValidation {
 
   private Stream<ValidationResult> runValidations(List<Node> nodeList) {
 
-    Result propertyValidations = db.execute(CYPHER_PROP_VALIDATIONS);
+    Result propertyValidations = tx.execute(CYPHER_PROP_VALIDATIONS);
 
     Map<String, Object> allParams = new HashMap<>();
     allParams.put("touchedNodes", nodeList);
@@ -229,7 +238,7 @@ public class SHACLValidation {
 
     }
 
-    Result nodeValidations = db.execute(CYPHER_NODE_VALIDATIONS);
+    Result nodeValidations = tx.execute(CYPHER_NODE_VALIDATIONS);
 
     while (nodeValidations.hasNext()) {
       Map<String, Object> validation = nodeValidations.next();
@@ -240,7 +249,7 @@ public class SHACLValidation {
           "http://www.w3.org/ns/shacl#Violation", validation, nodeList != null);
     }
 
-    return db.execute(cypherUnion.toString(), allParams).stream().map(ValidationResult::new);
+    return tx.execute(cypherUnion.toString(), allParams).stream().map(ValidationResult::new);
   }
 
   private void addNodeStructureValidations(Map<String, Object> allParams, StringBuilder cypherUnion,

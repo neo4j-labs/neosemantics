@@ -8,13 +8,10 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.v1.Config;
-import org.neo4j.driver.v1.Driver;
-import org.neo4j.driver.v1.GraphDatabase;
-import org.neo4j.driver.v1.Record;
-import org.neo4j.driver.v1.Session;
-import org.neo4j.driver.v1.StatementResult;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.driver.*;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MappingUtilsTest {
 
@@ -26,7 +23,7 @@ public class MappingUtilsTest {
   @Test
   public void testaddSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -92,7 +89,7 @@ public class MappingUtilsTest {
   @Test
   public void testAddCommonSchemas() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -140,7 +137,7 @@ public class MappingUtilsTest {
   @Test
   public void testListSchemas() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -168,7 +165,7 @@ public class MappingUtilsTest {
   @Test
   public void testAddMappingToSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -215,7 +212,7 @@ public class MappingUtilsTest {
   @Test
   public void testListMappings() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -254,7 +251,7 @@ public class MappingUtilsTest {
   @Test
   public void testDropMappings() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -285,7 +282,7 @@ public class MappingUtilsTest {
   @Test
   public void testDropSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -326,7 +323,7 @@ public class MappingUtilsTest {
   @Test
   public void testBatchDropSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
+            Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -347,7 +344,7 @@ public class MappingUtilsTest {
           "CALL semantics.mapping.listSchemas('schema') YIELD namespace AS schName "
               +
               "    CALL semantics.mapping.dropSchema(schName) YIELD output RETURN schName , output ";
-      StatementResult batchResult = session.run(batchDropSchemasCypher);
+      Result batchResult = session.run(batchDropSchemasCypher);
       assertTrue(batchResult.hasNext());
       assertEquals(16,
           session.run(

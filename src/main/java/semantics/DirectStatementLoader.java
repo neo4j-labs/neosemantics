@@ -13,12 +13,7 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 /**
@@ -30,9 +25,9 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   private static final Label RESOURCE = Label.label("Resource");
   private Cache<String, Node> nodeCache;
 
-  DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
 
-    super(db, conf, l);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
@@ -55,7 +50,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
-    graphdb.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
+    tx.execute("MERGE (n:NamespacePrefixDefinition) SET n+=$props", params);
   }
 
   @Override
@@ -65,9 +60,9 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
       final Node node = nodeCache.get(entry.getKey(), () -> {
-        Node node1 = graphdb.findNode(RESOURCE, "uri", entry.getKey());
+        Node node1 = tx.findNode(RESOURCE, "uri", entry.getKey());
         if (node1 == null) {
-          node1 = graphdb.createNode(RESOURCE);
+          node1 = tx.createNode(RESOURCE);
           node1.setProperty("uri", entry.getKey());
         }
         return node1;
@@ -102,11 +97,11 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
       final Node fromNode = nodeCache
           .get(st.getSubject().stringValue(), () -> {  //throws AnyException
-            return graphdb.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+            return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
           });
 
       final Node toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
-        return graphdb.findNode(RESOURCE, "uri", st.getObject().stringValue());
+        return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
       });
 
       // check if the rel is already present. If so, don't recreate.
@@ -117,8 +112,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
           toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.OUTGOING)) {
+            .getRelationships(Direction.OUTGOING,
+                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -126,8 +121,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
         }
       } else {
         for (Relationship rel : toNode
-            .getRelationships(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-                Direction.INCOMING)) {
+            .getRelationships(Direction.INCOMING,
+                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

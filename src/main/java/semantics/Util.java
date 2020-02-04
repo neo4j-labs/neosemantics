@@ -14,11 +14,12 @@ import java.util.concurrent.RejectedExecutionHandler;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
+
+import org.neo4j.graphdb.*;
+
+import javax.lang.model.SourceVersion;
 
 /**
  * @author mh
@@ -44,7 +45,7 @@ public class Util {
       return pool.submit(() -> {
         try (Transaction tx = db.beginTx()) {
           T result = callable.call();
-          tx.success();
+          tx.commit();
           return result;
         }
       });
@@ -79,6 +80,24 @@ public class Util {
         }
       }
     }
+  }
+
+  public static String labelString(List<String> labelNames) {
+    return labelNames.stream().map(Util::quote).collect(Collectors.joining(":"));
+  }
+
+  public static String labelString(Node n) {
+    return joinLabels(n.getLabels(), ":");
+  }
+  public static String joinLabels(Iterable<Label> labels, String s) {
+    return StreamSupport.stream(labels.spliterator(), false).map(Label::name).collect(Collectors.joining(s));
+  }
+  public static List<String> labelStrings(Node n) {
+    return StreamSupport.stream(n.getLabels().spliterator(),false).map(Label::name).sorted().collect(Collectors.toList());
+  }
+
+  public static String quote(String var) {
+    return SourceVersion.isIdentifier(var) ? var : '`' + var + '`';
   }
 
   public static Label[] labels(Object labelNames) {
@@ -119,7 +138,12 @@ public class Util {
       String cypher = buildCypher(key.getUri(),
           key.getGraphUri(),
           params);
-      Result result = graphdb.execute(cypher, params);
+      Result result = graphdb.executeTransactionally(cypher, params, new ResultTransformer<Result>() {
+        @Override
+        public Result apply(Result result) {
+          return result;
+        }
+      });
 
       if (result.hasNext()) {
         node = (Node) result.next().get("n");

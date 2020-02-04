@@ -26,13 +26,7 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.*;
 
 
 public class LPGToRDFProcesssor {
@@ -40,26 +34,29 @@ public class LPGToRDFProcesssor {
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
   private GraphDatabaseService graphdb;
+  private Transaction tx;
   private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
-  public LPGToRDFProcesssor(GraphDatabaseService graphdb) {
+  public LPGToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
 
     this.graphdb = graphdb;
+    this.tx = tx;
     this.exportMappings = new HashMap<>();
     this.exportOnlyMappedElems = false;
   }
 
-  public LPGToRDFProcesssor(GraphDatabaseService gds, Map<String, String> exportMappings,
+  public LPGToRDFProcesssor(GraphDatabaseService gds, Transaction tx, Map<String, String> exportMappings,
       boolean mappedElemsOnly) {
     this.graphdb = gds;
+    this.tx = tx;
     this.exportMappings = exportMappings;
     this.exportOnlyMappedElems = mappedElemsOnly;
 
   }
 
   public Stream<Statement> streamLocalImplicitOntology() {
-    Result res = graphdb.execute("CALL db.schema() ");
+    Result res = tx.execute("CALL db.schema() ");
     Set<Statement> statements = new HashSet<>();
     Map<String, Object> next = res.next();
     List<Node> nodeList = (List<Node>) next.get("nodes");
@@ -100,7 +97,7 @@ public class LPGToRDFProcesssor {
 
   public Stream<Statement> streamLocalExplicitOntology(Map<String, Object> params) {
 
-    return this.graphdb.execute(buildOntoQuery(params)).stream().map(
+    return this.tx.execute(buildOntoQuery(params)).stream().map(
         triple ->
             vf.createStatement(vf.createIRI((String) triple.get("subject")),
                 vf.createIRI((String) triple.get("predicate")),
@@ -128,7 +125,7 @@ public class LPGToRDFProcesssor {
 
   public Stream<Statement> streamNodeById(Long nodeId, boolean streamContext) {
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
-    Node node = this.graphdb.getNodeById(nodeId);
+    Node node = this.tx.getNodeById(nodeId);
     Set<Statement> result = processNodeInLPG(node, ontologyEntitiesUris);
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
@@ -143,7 +140,7 @@ public class LPGToRDFProcesssor {
       String valType, boolean includeContext) {
     Set<Statement> result = new HashSet<>();
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
-    ResourceIterator<Node> nodes = graphdb.findNodes(Label.label(label), property,
+    ResourceIterator<Node> nodes = tx.findNodes(Label.label(label), property,
         (valType == null ? propVal : castValue(valType, propVal)));
     while (nodes.hasNext()) {
       Node node = nodes.next();
@@ -173,7 +170,7 @@ public class LPGToRDFProcesssor {
 
   public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
 
-    final Result result = this.graphdb.execute(cypher, params);
+    final Result result = this.tx.execute(cypher, params);
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
 
     Set<Long> serializedNodeIds = new HashSet<>();

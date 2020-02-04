@@ -33,6 +33,7 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.helpers.StatementCollector;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.QueryExecutionException;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
@@ -55,6 +56,10 @@ public class LiteOntologyImporter {
   private static final boolean DEFAULT_ADD_RESOURCE_LABELS = false;
   @Context
   public GraphDatabaseService db;
+
+  @Context
+  public Transaction tx;
+
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE,
       RDFFormat.NTRIPLES, RDFFormat.TRIG};
@@ -182,13 +187,13 @@ public class LiteOntologyImporter {
 
     Map<String, Object> paramsForPropQuery = new HashMap<>();
     paramsForPropQuery.put("paramList", allPropParams);
-    db.execute(String
+    tx.execute(String
         .format("UNWIND $paramList AS param MERGE (p:%s`%s` { uri: param.uri}) SET p+=param.props",
             (addResourceLabels ? "Resource:" : ""), propertyLabelName), paramsForPropQuery);
 
     Map<String, Object> paramsForDomainQuery = new HashMap<>();
     paramsForDomainQuery.put("paramList", allDomainParams);
-    db.execute(String.format(
+    tx.execute(String.format(
         "UNWIND $paramList AS param MATCH (p:%s`%s` { uri: param.propUri}), (c { uri: param.domainUri}) MERGE (p)-[:`%s`]->(c)",
         // c can be a class or an object property
         (addResourceLabels ? "Resource:" : ""), propertyLabelName, domainRelName),
@@ -196,7 +201,7 @@ public class LiteOntologyImporter {
 
     Map<String, Object> paramsForRangeQuery = new HashMap<>();
     paramsForRangeQuery.put("paramList", allRangeParams);
-    db.execute(String.format(
+    tx.execute(String.format(
         "UNWIND $paramList AS param MATCH (p:%s`%s` { uri: param.propUri}), (c { uri: param.rangeUri}) MERGE (p)-[:`%s`]->(c)",
         (addResourceLabels ? "Resource:" : ""), propertyLabelName, rangeRelName),
         paramsForRangeQuery);
@@ -257,7 +262,7 @@ public class LiteOntologyImporter {
         Map<String, Object> params = new HashMap<>();
         params.put("propUri", propResource.stringValue());
         params.put("parentPropUri", object.stringValue());
-        db.execute(String.format(
+        tx.execute(String.format(
             "MATCH (p:`%s` { uri:$propUri}), (c { uri:$parentPropUri}) MERGE (p)-[:`%s`]->(c)",
             propertyLabelName, subPropertyOfRelName), params);
       }
@@ -296,7 +301,7 @@ public class LiteOntologyImporter {
 
     Map<String, Object> classParams = new HashMap<>();
     classParams.put("paramList", paramList);
-    db.execute(String
+    tx.execute(String
         .format(
             "UNWIND $paramList AS params MERGE (p:%s`%s` { uri:params.uri}) SET p+=params.props",
             (addResourceLabels ? "Resource:" : ""), classLabelName), classParams);
@@ -315,7 +320,7 @@ public class LiteOntologyImporter {
 
     Map<String, Object> scoParams = new HashMap<>();
     scoParams.put("scoPairs", new ArrayList(scoPairs));
-    db.execute(String.format(
+    tx.execute(String.format(
         "UNWIND $scoPairs AS pair MATCH (p:`%s` { uri: pair.parent }), (c:`%s` { uri: pair.child }) "
             +
             "MERGE (p)<-[:`%s`]-(c)", classLabelName, classLabelName, scoRelName

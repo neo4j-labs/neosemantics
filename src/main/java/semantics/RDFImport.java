@@ -39,12 +39,7 @@ import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.jsonld.GenericJSONParser;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.QueryExecutionException;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -75,6 +70,10 @@ public class RDFImport {
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
   @Context
   public GraphDatabaseService db;
+
+  @Context
+  public Transaction tx;
+
   @Context
   public Log log;
 
@@ -107,7 +106,7 @@ public class RDFImport {
 
     ImportResults importResults = new ImportResults();
 
-    DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
+    DirectStatementLoader statementLoader = new DirectStatementLoader(db, tx, conf, log);
     try {
       checkIndexesExist();
       if (rdfFragment != null) {
@@ -163,7 +162,7 @@ public class RDFImport {
 
     ImportResults importResults = new ImportResults();
 
-    OntologyImporter ontoImporter = new OntologyImporter(db, conf, log);
+    OntologyImporter ontoImporter = new OntologyImporter(db, tx, conf, log);
     try {
       checkIndexesExist();
       if (rdfFragment != null) {
@@ -197,7 +196,7 @@ public class RDFImport {
 
     ImportResults importResults = new ImportResults();
 
-    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, conf,
+    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf,
         log);
     try {
       checkIndexesExist();
@@ -263,7 +262,7 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+    StatementPreviewer statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels,
         log);
     try {
       parseRDF(getInputStream(url, props), url, format, statementViewer);
@@ -343,7 +342,7 @@ public class RDFImport {
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, conf, virtualNodes, virtualRels,
+    StatementPreviewer statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels,
         log);
     try {
       parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
@@ -387,7 +386,7 @@ public class RDFImport {
 
     DeleteResults deleteResults = new DeleteResults();
 
-    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, conf, log);
+    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, tx, conf, log);
     try {
       checkIndexesExist();
       InputStream inputStream;
@@ -425,7 +424,7 @@ public class RDFImport {
 
     DeleteResults deleteResults = new DeleteResults();
 
-    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db,
+    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db, tx,
         conf, log);
     try {
       checkIndexesExist();
@@ -574,7 +573,7 @@ public class RDFImport {
 
     Matcher m = SHORTENED_URI_PATTERN.matcher(str);
     if (m.matches()) {
-      ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
+      ResourceIterator<Node> nspd = tx.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
         Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
@@ -595,7 +594,7 @@ public class RDFImport {
   public String shortFromUri(@Name("uri") String str) {
     try {
       IRI iri = SimpleValueFactory.getInstance().createIRI(str);
-      ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
+      ResourceIterator<Node> nspd = tx.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
         Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
@@ -620,7 +619,7 @@ public class RDFImport {
     Map<String, Object> params = new HashMap<>();
     params.put("prefix", prefix);
 
-    return db
+    return tx
         .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
             + "WITH n UNWIND keys(n) as ns\n"
             + "RETURN n[ns] as prefix, ns as namespace", ns), params).stream().map(
@@ -674,7 +673,7 @@ public class RDFImport {
   @Description("Lists all existing namespace prefix definitions")
   public Stream<NamespacePrefixesResult> listNamespacePrefixes() {
 
-    return db
+    return tx
         .execute("MATCH (n:NamespacePrefixDefinition) \n" +
             "UNWIND keys(n) AS namespace\n" +
             "RETURN namespace, n[namespace] AS prefix").stream().map(
@@ -692,7 +691,7 @@ public class RDFImport {
 
     //emptystring, no parsing and return null
     if (jsonPayload.isEmpty()) {
-      return null;
+      return Stream.empty();
     }
 
     HashMap<String, Object> params = new HashMap<>();
@@ -700,7 +699,7 @@ public class RDFImport {
     params.put("commitSize", Long.MAX_VALUE);
     RDFParserConfig conf = new RDFParserConfig(params);
 
-    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, conf, log);
+    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
     try {
       checkIndexesExist();
       String containerUri = (String) containerNode.getProperty("uri", null);
@@ -723,7 +722,7 @@ public class RDFImport {
   }
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
-    Iterable<IndexDefinition> indexes = db.schema().getIndexes();
+    Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
     if (missing(indexes.iterator(), "Resource")) {
       throw new RDFImportPreRequisitesNotMet(
           "The following index is required for importing RDF. Please run 'CREATE INDEX ON :Resource(uri)' and try again.");

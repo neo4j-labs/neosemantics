@@ -2,13 +2,14 @@ package semantics;
 
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
 public class PlainJsonStatementLoader extends DirectStatementLoader {
 
-  PlainJsonStatementLoader(GraphDatabaseService db, RDFParserConfig conf,
-      Log l) {
-    super(db, conf, l);
+  PlainJsonStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+                           Log l) {
+    super(db, tx, conf, l);
   }
 
   @Override
