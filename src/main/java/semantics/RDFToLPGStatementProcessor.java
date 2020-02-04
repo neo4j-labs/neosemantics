@@ -34,7 +34,8 @@ import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
-import org.neo4j.helpers.collection.Iterables;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
 
@@ -48,7 +49,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   private static final String[] EMPTY_ARRAY = new String[0];
   final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
-  protected GraphDatabaseService graphdb;
+  protected Transaction graphdb;
   protected Map<String, String> namespaces = new HashMap<>();
   protected Set<Statement> statements = new HashSet<>();
   Map<String, Map<String, Object>> resourceProps = new HashMap<>();
@@ -57,7 +58,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   long totalTriplesMapped = 0;
   long mappedTripleCounter = 0;
 
-  RDFToLPGStatementProcessor(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  RDFToLPGStatementProcessor(Transaction db, RDFParserConfig conf, Log l) {
     this.graphdb = db;
     this.parserConfig = conf;
     log = l;

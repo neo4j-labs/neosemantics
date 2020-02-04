@@ -10,6 +10,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
@@ -20,7 +21,7 @@ import semantics.result.NamespacePrefixesResult;
 public class MappingUtils {
 
   @Context
-  public GraphDatabaseService db;
+  public Transaction transaction;
   @Context
   public Log log;
 
@@ -33,13 +34,13 @@ public class MappingUtils {
     params.put("prefix", prefix);
     String checkIfSchemaOrPrefixExist = "MATCH (mns:_MapNs { _ns: $schema}) RETURN mns "
         + "UNION MATCH (mns:_MapNs { _prefix : $prefix }) RETURN mns ";
-    if (db.execute(checkIfSchemaOrPrefixExist, params).hasNext()) {
+    if (transaction.execute(checkIfSchemaOrPrefixExist, params).hasNext()) {
       throw new MappingDefinitionException("The schema URI or the prefix are already in use. "
           + "Drop existing ones before reusing.");
     } else {
       String createNewSchema = "CREATE (mns:_MapNs { _ns: $schema, _prefix : $prefix }) "
           + "RETURN  mns._ns AS namespace, mns._prefix AS prefix ";
-      return db.execute(createNewSchema, params).stream().map(
+      return transaction.execute(createNewSchema, params).stream().map(
           n -> new NamespacePrefixesResult((String) n.get("prefix"),
               (String) n.get("namespace")));
     }
@@ -85,7 +86,7 @@ public class MappingUtils {
         +
         " RETURN namespace, prefix";
 
-    return db.execute(cypher).stream().map(
+    return transaction.execute(cypher).stream().map(
         n -> new NamespacePrefixesResult((String) n.get("prefix"),
             (String) n.get("namespace")));
   }
@@ -102,7 +103,7 @@ public class MappingUtils {
         "MATCH (mns:_MapNs) WHERE mns._ns CONTAINS $searchString OR mns._prefix CONTAINS $searchString "
             + "RETURN mns._ns AS uri, mns._prefix AS prefix ");
 
-    return db.execute(cypher, params).stream().map(
+    return transaction.execute(cypher, params).stream().map(
         n -> new NamespacePrefixesResult((String) n.get("prefix"),
             (String) n.get("uri")));
   }
@@ -112,7 +113,7 @@ public class MappingUtils {
       @Name("graphElementName") String gElem,
       @Name("schemaElementName") String schElem) throws MappingDefinitionException {
 
-    Node schema = db.findNode(Label.label("_MapNs"), "_ns", schemaUri);
+    Node schema = transaction.findNode(Label.label("_MapNs"), "_ns", schemaUri);
     if (schema == null) {
       throw new MappingDefinitionException(
           "Schema URI not defined. Define it first with semantics.mapping.addSchema('" +
@@ -121,13 +122,13 @@ public class MappingUtils {
     Node mapDef;
     Map<String, Object> props = new HashMap<>();
     props.put("_key", gElem);
-    ResourceIterator<Node> matchingNodes = db.findNodes(Label.label("_MapDef"), props);
+    ResourceIterator<Node> matchingNodes = transaction.findNodes(Label.label("_MapDef"), props);
     // we need to find the schema it links to
     if (matchingNodes.hasNext()) {
       mapDef = matchingNodes.next();
       //if there is a mapping defined already for this element...
       Relationship rel = mapDef
-          .getRelationships(RelationshipType.withName("_IN"), Direction.OUTGOING).iterator().next();
+          .getRelationships(Direction.OUTGOING,RelationshipType.withName("_IN")).iterator().next();
       if (rel.getEndNode().equals(schema)) {
         //and it links to the right schema, then just replace the local
         mapDef.setProperty("_local", schElem);
@@ -137,7 +138,7 @@ public class MappingUtils {
       }
 
     } else {
-      mapDef = db.createNode(Label.label("_MapDef"));
+      mapDef = transaction.createNode(Label.label("_MapDef"));
       mapDef.setProperty("_key", gElem);
       mapDef.setProperty("_local", schElem);
       mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
@@ -151,13 +152,13 @@ public class MappingUtils {
   public Stream<StringOutput> dropSchema(@Name("schemaUri") String schemaUri) {
     Map<String, Object> props = new HashMap<>();
     props.put("_ns", schemaUri);
-    ResourceIterator<Node> schemas = db.findNodes(Label.label("_MapNs"), props);
+    ResourceIterator<Node> schemas = transaction.findNodes(Label.label("_MapNs"), props);
     if (!schemas.hasNext()) {
       return Stream.of(new StringOutput("schema not found"));
     } else {
       Node schemaToDelete = schemas.next();
       Iterable<Relationship> inRels = schemaToDelete
-          .getRelationships(RelationshipType.withName("_IN"), Direction.INCOMING);
+          .getRelationships(Direction.INCOMING,RelationshipType.withName("_IN"));
       inRels.forEach(x -> {
         x.getOtherNode(schemaToDelete).delete();
         x.delete();
@@ -174,7 +175,7 @@ public class MappingUtils {
     Map<String, Object> params = new HashMap<>();
     params.put("local", gElem);
     return Stream.of(new StringOutput(
-        ((Long) db.execute(cypher, params).next().get("ct")).equals(new Long(1))
+        ((Long) transaction.execute(cypher, params).next().get("ct")).equals(new Long(1))
             ? "successfully deleted mapping" : "mapping not found"));
   }
 
@@ -190,10 +191,10 @@ public class MappingUtils {
         +
         " RETURN elem._key AS elemName, elem._local AS schemaElement, mns._prefix AS schemaPrefix, mns._ns AS schemaNs  ");
 
-    return db.execute(cypher, params).stream().map(MappingDesc::new);
+    return transaction.execute(cypher, params).stream().map(MappingDesc::new);
   }
 
-  public static Map<String, String> getExportMappingsFromDB(GraphDatabaseService gds) {
+  public static Map<String, String> getExportMappingsFromDB(Transaction gds) {
     Map<String, String> mappings = new HashMap<>();
     gds.execute(
         "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ")
@@ -203,7 +204,7 @@ public class MappingUtils {
     return mappings;
   }
 
-  public static Map<String, String> getImportMappingsFromDB(GraphDatabaseService gds) {
+  public static Map<String, String> getImportMappingsFromDB(Transaction gds) {
     Map<String, String> mappings = new HashMap<>();
     gds.execute(
         "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ")

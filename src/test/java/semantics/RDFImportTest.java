@@ -33,7 +33,7 @@ import org.neo4j.driver.v1.StatementResult;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
-import org.neo4j.harness.junit.Neo4jRule;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 import semantics.mapping.MappingUtils;
 
 /**
@@ -363,7 +363,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -391,7 +391,7 @@ public class RDFImportTest {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDFSnippet('" +
           jsonLdFragment + "','JSON-LD',"
@@ -415,7 +415,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -467,7 +467,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -497,7 +497,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -533,7 +533,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://purl.org/dc/terms/`:'dc',\n" +
           "`http://www.w3.org/1999/02/22-rdf-syntax-ns#`:'rdf',\n" +
@@ -577,7 +577,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
@@ -608,7 +608,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
@@ -634,7 +634,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
@@ -659,7 +659,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
@@ -685,7 +685,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("WITH {`http://example.org/vocab/show/`:'voc' } as nslist\n" +
           "MERGE (n:NamespacePrefixDefinition)\n" +
@@ -760,7 +760,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})";
@@ -788,7 +788,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
@@ -825,7 +825,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
@@ -859,7 +859,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -893,7 +893,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       session.run("CREATE (rdf:NamespacePrefixDefinition {" +
           "  `http://www.example.com/ontology/1.0.0#`: 'ex'," +
           "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})");
@@ -918,7 +918,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session
@@ -938,7 +938,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session
@@ -958,7 +958,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       StatementResult importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
@@ -977,7 +977,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String turtleFragment = "@prefix show: <http://example.org/vocab/show/> .\n" +
           "\n" +
@@ -1012,7 +1012,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.previewRDF('" +
@@ -1033,7 +1033,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.previewRDF('" +
@@ -1055,7 +1055,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.previewRDF('" +
@@ -1076,7 +1076,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.previewRDF('" +
@@ -1107,7 +1107,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String addMapping1 =
           " call semantics.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield namespace as sch\n"
@@ -1151,7 +1151,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1181,7 +1181,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1211,7 +1211,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String addMapping1 =
           " call semantics.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
@@ -1255,7 +1255,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.streamRDF('" +
@@ -1277,7 +1277,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "<rdf:RDF xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n"
           + "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n"
@@ -1306,7 +1306,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.streamRDF('" +
@@ -1328,7 +1328,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix pr: <http://example.org/vocab/show/> .\n"
           + "pr:ent\n"
@@ -1353,7 +1353,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.streamRDF('" +
@@ -1374,7 +1374,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run(
@@ -1438,7 +1438,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("return semantics.getLangTag('The Hague@en') as val_en,"
@@ -1476,7 +1476,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("return semantics.hasLangTag('en','The Hague@en') as val_en,"
@@ -1516,7 +1516,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1555,7 +1555,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       StatementResult res1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD')");
@@ -1665,7 +1665,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session
           .run("return semantics.getDataType('2008-04-17^^ns1__date') AS val");
@@ -1710,7 +1710,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session
           .run("return semantics.getValue('2008-04-17^^ns1__date') AS val");
@@ -1737,7 +1737,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1777,7 +1777,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1817,7 +1817,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       String importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
               .getResource("testImportMultiValAfterImportSingelVal.ttl")
@@ -1851,7 +1851,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1885,7 +1885,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1917,7 +1917,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -1963,7 +1963,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       session.run("CREATE (:NamespacePrefixDefinition {\n"
           + "  `http://www.w3.org/2000/01/rdf-schema#`: 'myschema',\n"
@@ -2001,7 +2001,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -2033,7 +2033,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -2062,7 +2062,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults
           = session.run("CALL semantics.importRDF('" +
@@ -2079,7 +2079,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2119,7 +2119,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2160,7 +2160,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix ex: <http://example.org/> .\n"
           + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
@@ -2226,7 +2226,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2260,7 +2260,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2294,7 +2294,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String rdf = "@prefix ex: <http://example.org/> .\n"
           + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
@@ -2355,7 +2355,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2390,7 +2390,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2420,7 +2420,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2473,7 +2473,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2507,7 +2507,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
@@ -2543,7 +2543,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2571,7 +2571,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -2602,7 +2602,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2648,7 +2648,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -2697,7 +2697,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2748,7 +2748,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -2801,7 +2801,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       session.run("CALL semantics.importOntology('" +
@@ -2836,7 +2836,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2856,7 +2856,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2875,7 +2875,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       StatementResult importResults = session.run("CALL semantics.importOntology('" +
@@ -2953,7 +2953,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().withEncryptionLevel(Config.EncryptionLevel.NONE).toConfig())) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -3034,7 +3034,7 @@ public class RDFImportTest {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl").toURI()
@@ -3057,7 +3057,7 @@ public class RDFImportTest {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl").toURI()
@@ -3080,7 +3080,7 @@ public class RDFImportTest {
 
       Session session = driver.session();
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults1 = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
@@ -3121,7 +3121,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
@@ -3192,7 +3192,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
@@ -3263,7 +3263,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
@@ -3294,7 +3294,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
@@ -3325,7 +3325,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       StatementResult importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
@@ -3359,7 +3359,7 @@ public class RDFImportTest {
   }
 
   private void createIndices(GraphDatabaseService db) {
-    db.execute("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
   }
 
 
@@ -3368,7 +3368,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "";
 
@@ -3386,7 +3386,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       //String jsonFragment = "[]";
       String jsonFragment = "[{\"menu\": {\n"
@@ -3425,7 +3425,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"menu\": {\n"
           + "  \"id\": \"file\",\n"
@@ -3461,7 +3461,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\n"
           + "  \"@context\": {\n"
@@ -3516,7 +3516,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"widget\": {\n"
           + "    \"debug\": \"on\",\n"
@@ -3571,7 +3571,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.build().toConfig()); Session session = driver.session()) {
 
-      createIndices(neo4j.getGraphDatabaseService());
+      createIndices(neo4j.defaultDatabaseService());
 
       String jsonFragment = "{\"menu\": {\n"
           + "    \"header\": \"SVG Viewer\",\n"

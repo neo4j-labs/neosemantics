@@ -19,6 +19,7 @@ import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
 /**
@@ -30,9 +31,9 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   private static final Label RESOURCE = Label.label("Resource");
   private Cache<String, Node> nodeCache;
 
-  DirectStatementLoader(GraphDatabaseService db, RDFParserConfig conf, Log l) {
+  DirectStatementLoader(Transaction tx, RDFParserConfig conf, Log l) {
 
-    super(db, conf, l);
+    super(tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();

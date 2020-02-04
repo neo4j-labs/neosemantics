@@ -100,7 +100,7 @@ public class RDFEndpoint {
       try (Transaction tx = gds.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
-            getExportMappingsFromDB(gds), onlyMappedInfo != null);
+            getExportMappingsFromDB(tx), onlyMappedInfo != null);
         proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
             .forEach(
                 writer::handleStatement);
@@ -127,7 +127,7 @@ public class RDFEndpoint {
             getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,
-            getExportMappingsFromDB(gds), jsonMap.containsKey("mappedElemsOnly"));
+            getExportMappingsFromDB(tx), jsonMap.containsKey("mappedElemsOnly"));
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
                 .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
