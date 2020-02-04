@@ -45,7 +45,6 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Transaction;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -74,10 +73,8 @@ public class RDFImport {
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
-  //@Context
-  //public GraphDatabaseService db;
   @Context
-  public Transaction transaction;
+  public GraphDatabaseService db;
   @Context
   public Log log;
 
@@ -110,7 +107,7 @@ public class RDFImport {
 
     ImportResults importResults = new ImportResults();
 
-    DirectStatementLoader statementLoader = new DirectStatementLoader(transaction, conf, log);
+    DirectStatementLoader statementLoader = new DirectStatementLoader(db, conf, log);
     try {
       checkIndexesExist();
       if (rdfFragment != null) {
@@ -577,7 +574,7 @@ public class RDFImport {
 
     Matcher m = SHORTENED_URI_PATTERN.matcher(str);
     if (m.matches()) {
-      ResourceIterator<Node> nspd = transaction.findNodes(Label.label("NamespacePrefixDefinition"));
+      ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
         Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
@@ -598,7 +595,7 @@ public class RDFImport {
   public String shortFromUri(@Name("uri") String str) {
     try {
       IRI iri = SimpleValueFactory.getInstance().createIRI(str);
-      ResourceIterator<Node> nspd = transaction.findNodes(Label.label("NamespacePrefixDefinition"));
+      ResourceIterator<Node> nspd = db.findNodes(Label.label("NamespacePrefixDefinition"));
       if (nspd.hasNext()) {
         Map<String, Object> namespaces = nspd.next().getAllProperties();
         Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
@@ -623,7 +620,7 @@ public class RDFImport {
     Map<String, Object> params = new HashMap<>();
     params.put("prefix", prefix);
 
-    return transaction
+    return db
         .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
             + "WITH n UNWIND keys(n) as ns\n"
             + "RETURN n[ns] as prefix, ns as namespace", ns), params).stream().map(
@@ -677,7 +674,7 @@ public class RDFImport {
   @Description("Lists all existing namespace prefix definitions")
   public Stream<NamespacePrefixesResult> listNamespacePrefixes() {
 
-    return transaction
+    return db
         .execute("MATCH (n:NamespacePrefixDefinition) \n" +
             "UNWIND keys(n) AS namespace\n" +
             "RETURN namespace, n[namespace] AS prefix").stream().map(
@@ -726,7 +723,7 @@ public class RDFImport {
   }
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
-    Iterable<IndexDefinition> indexes = transaction.schema().getIndexes();
+    Iterable<IndexDefinition> indexes = db.schema().getIndexes();
     if (missing(indexes.iterator(), "Resource")) {
       throw new RDFImportPreRequisitesNotMet(
           "The following index is required for importing RDF. Please run 'CREATE INDEX ON :Resource(uri)' and try again.");

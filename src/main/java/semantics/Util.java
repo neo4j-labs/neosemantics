@@ -18,7 +18,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.ResultTransformer;
 import org.neo4j.graphdb.Transaction;
 
 /**
@@ -45,7 +44,7 @@ public class Util {
       return pool.submit(() -> {
         try (Transaction tx = db.beginTx()) {
           T result = callable.call();
-          tx.commit();
+          tx.success();
           return result;
         }
       });
@@ -120,13 +119,7 @@ public class Util {
       String cypher = buildCypher(key.getUri(),
           key.getGraphUri(),
           params);
-      Result result = graphdb.executeTransactionally(cypher, params,
-          new ResultTransformer<Result>() {
-            @Override
-            public Result apply(Result result) {
-              return result;
-            }
-          });
+      Result result = graphdb.execute(cypher, params);
 
       if (result.hasNext()) {
         node = (Node) result.next().get("n");
