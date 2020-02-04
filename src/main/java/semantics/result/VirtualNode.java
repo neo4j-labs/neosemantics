@@ -1,22 +1,14 @@
 package semantics.result;
 
-import static java.util.Arrays.asList;
+import org.neo4j.graphdb.*;
+import org.neo4j.internal.helpers.collection.FilteringIterable;
+import org.neo4j.internal.helpers.collection.Iterables;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.helpers.collection.FilteringIterable;
-import org.neo4j.helpers.collection.Iterables;
+import java.util.stream.Collectors;
 
+import static java.util.Arrays.asList;
 /**
  * (taken from APOC)
  *
@@ -24,24 +16,33 @@ import org.neo4j.helpers.collection.Iterables;
  * @since 16.03.16
  */
 public class VirtualNode implements Node {
-
   private static AtomicLong MIN_ID = new AtomicLong(-1);
-  private final List<Label> labels = new ArrayList<Label>();
+  private final Set<String> labels = new LinkedHashSet<>();
   private final Map<String, Object> props = new HashMap<>();
   private final List<Relationship> rels = new ArrayList<>();
-  private final GraphDatabaseService db;
   private final long id;
 
-  public VirtualNode(Label[] labels, Map<String, Object> props, GraphDatabaseService db) {
+  public VirtualNode(Label[] labels, Map<String, Object> props) {
     this.id = MIN_ID.getAndDecrement();
-    this.db = db;
-    this.labels.addAll(asList(labels));
+    addLabels(asList(labels));
     this.props.putAll(props);
   }
 
-  public VirtualNode(long nodeId, GraphDatabaseService db) {
+  public VirtualNode(long nodeId, Label[] labels, Map<String, Object> props) {
     this.id = nodeId;
-    this.db = db;
+    addLabels(asList(labels));
+    this.props.putAll(props);
+  }
+
+  public VirtualNode(long nodeId) {
+    this.id = nodeId;
+  }
+
+  public VirtualNode(Node node, List<String> propertyNames) {
+    this.id = node.getId();
+    this.labels.addAll(Util.labelStrings(node));
+    String[] keys = propertyNames.toArray(new String[propertyNames.size()]);
+    this.props.putAll(node.getProperties(keys));
   }
 
   @Override
@@ -73,23 +74,18 @@ public class VirtualNode implements Node {
 
   private boolean isType(Relationship r, RelationshipType... relationshipTypes) {
     for (RelationshipType type : relationshipTypes) {
-      if (r.isType(type)) {
-        return true;
-      }
+      if (r.isType(type)) return true;
     }
     return false;
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(Direction direction,
-      RelationshipType... relationshipTypes) {
-    return new FilteringIterable<>(rels,
-        (r) -> isType(r, relationshipTypes) && isDirection(r, direction));
+  public Iterable<Relationship> getRelationships(Direction direction, RelationshipType... relationshipTypes) {
+    return new FilteringIterable<>(rels, (r) -> isType(r, relationshipTypes) && isDirection(r, direction));
   }
 
   private boolean isDirection(Relationship r, Direction direction) {
-    return direction == Direction.BOTH || direction == Direction.OUTGOING && r.getStartNode()
-        .equals(this) || direction == Direction.INCOMING && r.getEndNode().equals(this);
+    return direction == Direction.BOTH || direction == Direction.OUTGOING && r.getStartNode().equals(this) || direction == Direction.INCOMING && r.getEndNode().equals(this);
   }
 
   @Override
@@ -113,38 +109,43 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(RelationshipType relationshipType,
-      Direction direction) {
-    return new FilteringIterable<>(rels,
-        (r) -> isType(r, relationshipType) && isDirection(r, direction));
+  public Relationship getSingleRelationship(RelationshipType relationshipType, Direction direction) {
+    return Iterables.single(getRelationships(direction, relationshipType));
   }
 
   @Override
-  public boolean hasRelationship(RelationshipType relationshipType, Direction direction) {
-    return false;
+  public VirtualRelationship createRelationshipTo(Node node, RelationshipType relationshipType) {
+    VirtualRelationship rel = new VirtualRelationship(this, node, relationshipType);
+    rels.add(rel);
+    if (node instanceof VirtualNode) { // register the inverse relationship into the target virtual node only if it is not a self relationship
+      VirtualNode target = (VirtualNode) node;
+      if (!target.rels.contains(rel)) {
+        target.rels.add(rel);
+      }
+    }
+    return rel;
   }
 
-  @Override
-  public Relationship getSingleRelationship(RelationshipType relationshipType,
-      Direction direction) {
-    return null;
-  }
-
-  @Override
-  public Relationship createRelationshipTo(Node node, RelationshipType relationshipType) {
-    Relationship rel = new VirtualRelationship(this, node, relationshipType);
-
-    return null;
+  public VirtualRelationship createRelationshipFrom(Node start, RelationshipType relationshipType) {
+    VirtualRelationship rel = new VirtualRelationship(start, this, relationshipType);
+    rels.add(rel);
+    if (start instanceof VirtualNode) { // register the inverse relationship into the start virtual node only if it is not a self relationship
+      VirtualNode startVirtual = (VirtualNode) start;
+      if (!startVirtual.rels.contains(rel)) {
+        startVirtual.rels.add(rel);
+      }
+    }
+    return rel;
   }
 
   @Override
   public Iterable<RelationshipType> getRelationshipTypes() {
-    return null;
+    return rels.stream().map(Relationship::getType).collect(Collectors.toList());
   }
 
   @Override
   public int getDegree() {
-    return (int) rels.size();
+    return rels.size();
   }
 
   @Override
@@ -159,42 +160,33 @@ public class VirtualNode implements Node {
 
   @Override
   public int getDegree(RelationshipType relationshipType, Direction direction) {
-    return (int) Iterables.count(getRelationships(relationshipType, direction));
+    return (int) Iterables.count(getRelationships(direction, relationshipType));
   }
 
   @Override
   public void addLabel(Label label) {
-    labels.add(label);
+    labels.add(label.name());
+  }
+
+  public void addLabels(Iterable<Label> labels) {
+    for (Label label : labels) {
+      addLabel(label);
+    }
   }
 
   @Override
   public void removeLabel(Label label) {
-    for (Iterator<Label> iterator = labels.iterator(); iterator.hasNext(); ) {
-      Label next = iterator.next();
-      if (next.name().equals(label.name())) {
-        iterator.remove();
-      }
-    }
+    labels.remove(label.name());
   }
 
   @Override
   public boolean hasLabel(Label label) {
-    for (Label l : labels) {
-      if (l.name().equals(label.name())) {
-        return true;
-      }
-    }
-    return false;
+    return labels.contains(label.name());
   }
 
   @Override
   public Iterable<Label> getLabels() {
-    return labels;
-  }
-
-  @Override
-  public GraphDatabaseService getGraphDatabase() {
-    return db;
+    return labels.stream().map(Label::label).collect(Collectors.toList());
   }
 
   @Override
@@ -231,7 +223,7 @@ public class VirtualNode implements Node {
   @Override
   public Map<String, Object> getProperties(String... strings) {
     HashMap<String, Object> res = new HashMap<>(props);
-    res.entrySet().retainAll(asList(strings));
+    res.keySet().retainAll(asList(strings));
     return res;
   }
 
