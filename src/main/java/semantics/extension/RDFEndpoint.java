@@ -38,10 +38,11 @@ import semantics.LPGToRDFProcesssor;
 /**
  * Created by jbarrasa on 08/09/2016.
  */
-@Path("/")
+@Path("/n10s")
 public class RDFEndpoint {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static final String DEFAULT_DB_NAME = "neo4j";
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
 
@@ -59,10 +60,12 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/id/{nodeid}")
+  @Path("{dbname}/describe/id/{nodeid}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodebyid(@Context DatabaseManagementService gds, @PathParam("nodeid") Long idParam,
+  public Response nodebyid(@Context DatabaseManagementService gds,
+                           @PathParam("dbname") String dbNameParam,
+                           @PathParam("nodeid") Long idParam,
                            @QueryParam("excludeContext") String excludeContextParam,
                            @QueryParam("mappedElemsOnly") String onlyMappedInfo,
                            @QueryParam("format") String format,
@@ -70,7 +73,7 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
-      GraphDatabaseService neo4j = gds.database("neo4j");
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
       try (Transaction tx = neo4j.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
@@ -86,10 +89,12 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/find/{label}/{property}/{propertyValue}")
+  @Path("{dbname}/describe/find/{label}/{property}/{propertyValue}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodefind(@Context GraphDatabaseService gds, @PathParam("label") String label,
+  public Response nodefind(@Context DatabaseManagementService gds,
+                           @PathParam("dbname") String dbNameParam,
+                           @PathParam("label") String label,
       @PathParam("property") String property, @PathParam("propertyValue") String propVal,
       @QueryParam("valType") String valType,
       @QueryParam("excludeContext") String excludeContextParam,
@@ -98,11 +103,12 @@ public class RDFEndpoint {
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
-      try (Transaction tx = gds.beginTx()) {
+      try (Transaction tx = neo4j.beginTx()) {
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds, tx,
-            getExportMappingsFromDB(gds), onlyMappedInfo != null);
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
+            getExportMappingsFromDB(neo4j), onlyMappedInfo != null);
         proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
             .forEach(
                 writer::handleStatement);
@@ -114,22 +120,24 @@ public class RDFEndpoint {
   }
 
   @POST
-  @Path("/cypher")
+  @Path("{dbname}/cypher")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response cypherOnPlainLPG(@Context GraphDatabaseService gds,
+  public Response cypherOnPlainLPG(@Context DatabaseManagementService gds,
+                                   @PathParam("dbname") String dbNameParam,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
       Map<String, Object> jsonMap = objectMapper
           .readValue(body,
               new TypeReference<Map<String, Object>>() {
               });
-      try (Transaction tx = gds.beginTx()) {
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
+      try (Transaction tx = neo4j.beginTx()) {
         RDFWriter writer = startRdfWriter(
             getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds,  tx,
-            getExportMappingsFromDB(gds), jsonMap.containsKey("mappedElemsOnly"));
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j,  tx,
+            getExportMappingsFromDB(neo4j), jsonMap.containsKey("mappedElemsOnly"));
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
                 .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
@@ -143,17 +151,20 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/onto")
+  @Path("{dbname}/onto")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response exportOnto(@Context GraphDatabaseService gds, @QueryParam("format") String format,
+  public Response exportOnto(@Context DatabaseManagementService gds,
+                             @PathParam("dbname") String dbNameParam,
+                             @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
 
     return Response.ok().entity((StreamingOutput) outputStream -> {
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
-      try (Transaction tx = gds.beginTx()) {
+      try (Transaction tx = neo4j.beginTx()) {
 
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(gds, tx);
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx);
         proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -165,19 +176,20 @@ public class RDFEndpoint {
   /////////  RDF graph on LPG /////
 
   @GET
-  @Path("/ontonrdf")
+  @Path("{dbname}/ontonrdf")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response exportRdfOnto(@Context GraphDatabaseService gds,
+  public Response exportRdfOnto(@Context DatabaseManagementService gds,
+                                @PathParam("dbname") String dbNameParam,
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
-
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
 
-      try (Transaction tx = gds.beginTx()) {
+      try (Transaction tx = neo4j.beginTx()) {
 
-        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
+        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
         proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         endRDFWriter(writer);
       } catch (Exception e) {
@@ -187,13 +199,14 @@ public class RDFEndpoint {
   }
 
   @POST
-  @Path("/cypheronrdf")
+  @Path("{dbname}/cypheronrdf")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response cypherOnImportedRDF(@Context GraphDatabaseService gds,
+  public Response cypherOnImportedRDF(@Context DatabaseManagementService gds,
+                                      @PathParam("dbname") String dbNameParam,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
-
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
       Map<String, Object> jsonMap = objectMapper
           .readValue(body, new TypeReference<Map<String, Object>>() {
           });
@@ -201,9 +214,9 @@ public class RDFEndpoint {
       RDFWriter writer = startRdfWriter(
           getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, true);
 
-      try (Transaction tx = gds.beginTx()) {
+      try (Transaction tx = neo4j.beginTx()) {
 
-        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
+        final LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
         proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
             (Map<String, Object>) jsonMap
                 .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
@@ -218,10 +231,11 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("/describe/uri/{nodeuri}")
+  @Path("{dbname}/describe/uri/{nodeuri}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
-  public Response nodebyuri(@Context GraphDatabaseService gds,
+  public Response nodebyuri(@Context DatabaseManagementService gds,
+                            @PathParam("dbname") String dbNameParam,
       @PathParam("nodeuri") String uriParam,
       @QueryParam("graphuri") String graphUriParam,
       @QueryParam("excludeContext") String excludeContextParam,
@@ -230,10 +244,10 @@ public class RDFEndpoint {
     return Response.ok().entity((StreamingOutput) outputStream -> {
 
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
+      GraphDatabaseService neo4j = gds.database(dbNameParam);
+      try (Transaction tx = neo4j.beginTx()) {
 
-      try (Transaction tx = gds.beginTx()) {
-
-        LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(gds, tx);
+        LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
         proc.streamNodeByUri(uriParam, graphUriParam, excludeContextParam != null).forEach(
             writer::handleStatement);
         endRDFWriter(writer);

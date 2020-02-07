@@ -8,7 +8,7 @@ RDF is a W3C standard model for data interchange on the Web that represents data
 There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the graph by its unique identifier (id or uri), selecting a group of nodes by Label + property value and via Cypher. Let's analyse each of them in detail.
 
 [WARNING]
-The paths used in the following sections assume that NSMNTX is mounted at `/rdf`. If you've mounted the extension under a different name (instructions on how to do this can be found in the <<install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used. 
+The paths used in the following sections assume that NSMNTX is mounted at `/rdf`. If you've mounted the extension under a different name (instructions on how to do this can be found in the <<Install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used.
 
 === By node ID
 

@@ -56,7 +56,7 @@ public class LPGToRDFProcesssor {
   }
 
   public Stream<Statement> streamLocalImplicitOntology() {
-    Result res = tx.execute("CALL db.schema() ");
+    Result res = tx.execute("CALL db.schema.visualization() ");
     Set<Statement> statements = new HashSet<>();
     Map<String, Object> next = res.next();
     List<Node> nodeList = (List<Node>) next.get("nodes");

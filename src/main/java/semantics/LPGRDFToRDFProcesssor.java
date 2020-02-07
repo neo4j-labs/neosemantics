@@ -45,14 +45,15 @@ public class LPGRDFToRDFProcesssor {
 
   public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
     this.graphdb = graphdb;
-    this.namespaces = getNamespacesFromDB(graphdb);
     this.tx = tx;
+    this.namespaces = getNamespacesFromDB(graphdb);
+
   }
 
 
   public Stream<Statement> streamLocalImplicitOntology() {
     Set<Statement> statements = new HashSet<>();
-    Result res = tx.execute("CALL db.schema() ");
+    Result res = tx.execute("CALL db.schema.visualization() ");
 
     Map<String, Object> next = res.next();
     List<Node> nodeList = (List<Node>) next.get("nodes");
@@ -195,23 +196,23 @@ public class LPGRDFToRDFProcesssor {
     Map<String, Object> params = new HashMap<>();
     params.put("uri", uri);
     if (graphId == null || graphId.equals("")) {
-      queryWithContext = "MATCH (x:Resource {uri:{uri}}) " +
+      queryWithContext = "MATCH (x:Resource {uri:$uri}) " +
           "WHERE NOT EXISTS(x.graphUri)\n" +
           "OPTIONAL MATCH (x)-[r]-(val:Resource) " +
           "WHERE exists(val.uri)\n" +
           "AND NOT EXISTS(val.graphUri)\n" +
           "RETURN x, r, val.uri AS value";
 
-      queryNoContext = "MATCH (x:Resource {uri:{uri}}) " +
+      queryNoContext = "MATCH (x:Resource {uri:$uri}) " +
           "WHERE NOT EXISTS(x.graphUri)\n" +
           "RETURN x, null AS r, null AS value";
     } else {
-      queryWithContext = "MATCH (x:Resource {uri:{uri}, graphUri:{graphUri}}) " +
-          "OPTIONAL MATCH (x)-[r]-(val:Resource {graphUri:{graphUri}}) " +
+      queryWithContext = "MATCH (x:Resource {uri:$uri, graphUri:$graphUri}) " +
+          "OPTIONAL MATCH (x)-[r]-(val:Resource {graphUri:$graphUri}) " +
           "WHERE exists(val.uri)\n" +
           "RETURN x, r, val.uri AS value";
 
-      queryNoContext = "MATCH (x:Resource {uri:{uri}, graphUri:{graphUri}}) " +
+      queryNoContext = "MATCH (x:Resource {uri:$uri, graphUri:$graphUri}) " +
           "RETURN x, null AS r, null AS value";
       params.put("graphUri", graphId);
     }
