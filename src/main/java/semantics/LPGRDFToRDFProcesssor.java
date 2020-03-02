@@ -1,8 +1,8 @@
 package semantics;
 
-import static semantics.Params.BASE_VOCAB_NS;
-import static semantics.Params.CUSTOM_DATA_TYPE_SEPERATOR;
-import static semantics.Params.PREFIX_SEPARATOR;
+import static semantics.config.Params.BASE_VOCAB_NS;
+import static semantics.config.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.config.Params.PREFIX_SEPARATOR;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +29,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
+import semantics.config.Params;
 
 
 public class LPGRDFToRDFProcesssor {

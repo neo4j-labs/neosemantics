@@ -1,10 +1,10 @@
 package semantics;
 
-import static semantics.Params.DATATYPE_REGULAR_PATTERN;
-import static semantics.Params.DATATYPE_SHORTENED_PATTERN;
-import static semantics.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
-import static semantics.Params.PREFIX_SEPARATOR;
-import static semantics.Params.SHORTENED_URI_PATTERN;
+import static semantics.config.Params.DATATYPE_REGULAR_PATTERN;
+import static semantics.config.Params.DATATYPE_SHORTENED_PATTERN;
+import static semantics.config.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
+import static semantics.config.Params.PREFIX_SEPARATOR;
+import static semantics.config.Params.SHORTENED_URI_PATTERN;
 
 import com.google.common.base.Preconditions;
 import java.io.BufferedWriter;
@@ -48,6 +48,9 @@ import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
+import semantics.config.GraphConfig;
+import semantics.config.OntologyLoaderConfig;
+import semantics.config.RDFParserConfig;
 import semantics.result.GraphResult;
 import semantics.result.NamespacePrefixesResult;
 import semantics.result.NodeResult;
@@ -99,37 +102,52 @@ public class RDFImport {
   private ImportResults doImport(@Name("format") String format, @Name("url") String url,
       @Name("rdf") String rdfFragment,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
 
+    DirectStatementLoader statementLoader = null;
+    RDFParserConfig conf = null;
+    RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
-
-    DirectStatementLoader statementLoader = new DirectStatementLoader(db, tx, conf, log);
     try {
       checkIndexesExist();
-      if (rdfFragment != null) {
-        parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
-            "http://neo4j.com/base/", format, statementLoader);
-      } else {
-        parseRDF(getInputStream(url, props), url, format, statementLoader);
-      }
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      statementLoader = new DirectStatementLoader(db, tx, conf, log);
+    } catch (RDFImportPreRequisitesNotMet e){
       importResults.setTerminationKO(e.getMessage());
-      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
-      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-      importResults.setConfigSummary(conf.getConfigSummary());
-      e.printStackTrace();
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+    } catch (RDFImportBadParams e) {
+      importResults.setTerminationKO(e.getMessage());
+    }
 
-    } finally {
-      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
-      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-      importResults.setNamespaces(statementLoader.getNamespaces());
-      importResults.setConfigSummary(conf.getConfigSummary());
+    if (statementLoader != null) {
+      try {
+        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementLoader);
+        importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+        importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+        importResults.setNamespaces(statementLoader.getNamespaces());
+        //TODO get db conf? not any more because the config is explicit and persisted
+        importResults.setConfigSummary(conf.getConfigSummary());
 
+      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+        importResults.setTerminationKO(e.getMessage());
+        importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+        importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+        //TODO get db conf? not any more because the config is explicit and persisted
+        //importResults.setConfigSummary(conf.getConfigSummary());
+      }
     }
     return importResults;
+  }
+
+  private void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url, @Name("rdf") String rdfFragment,
+        @Name(value = "params", defaultValue = "{}") Map<String, Object> props, ConfiguredStatementHandler statementLoader) throws IOException {
+    if (rdfFragment != null) {
+      instantiateAndKickOffParser(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+              "http://neo4j.com/base/", format, statementLoader);
+    } else {
+      instantiateAndKickOffParser(getInputStream(url, props), url, format, statementLoader);
+    }
   }
 
   @Procedure(mode = Mode.WRITE)
@@ -155,70 +173,54 @@ public class RDFImport {
   private ImportResults doOntoImport(String format, String url,
       String rdfFragment, Map<String, Object> props) {
 
-    //url handling settings will be ignored
+    //url handling settings will be ignored  because that is what
+    // ontoimport does ( -> specific graph setting for ontos)
+    // TODO: Instead this should bbe a check on the config and a warning / error message?
+    // not good to just override the graph settings
     props.put("handleVocabUris", "IGNORE");
 
-    OntologyLoaderConfig conf = new OntologyLoaderConfig(props);
 
+    OntologyImporter ontoImporter = null;
+    OntologyLoaderConfig conf = null;
+    RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
-
-    OntologyImporter ontoImporter = new OntologyImporter(db, tx, conf, log);
     try {
       checkIndexesExist();
-      if (rdfFragment != null) {
-        parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
-            "http://neo4j.com/base/", format, ontoImporter);
-      } else {
-        parseRDF(getInputStream(url, props), url, format, ontoImporter);
-      }
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      conf = new OntologyLoaderConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      ontoImporter = new OntologyImporter(db, tx, conf, log);
+    } catch (RDFImportPreRequisitesNotMet e){
       importResults.setTerminationKO(e.getMessage());
-      importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
-      importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
-      importResults.setConfigSummary(conf.getConfigSummary());
-      e.printStackTrace();
-    } finally {
-      importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
-      importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
-      importResults.setConfigSummary(conf.getConfigSummary());
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+    } catch (RDFImportBadParams e) {
+      importResults.setTerminationKO(e.getMessage());
+    }
+
+
+    if (ontoImporter!=null) {
+      try {
+        parseRDFPayloadOrFromUrl(rdfFormat,url, rdfFragment, props,  ontoImporter);
+      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+        importResults.setTerminationKO(e.getMessage());
+        importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
+        importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+        importResults.setConfigSummary(conf.getConfigSummary());
+        e.printStackTrace();
+      } finally {
+        importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
+        importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+        importResults.setConfigSummary(conf.getConfigSummary());
+      }
     }
     return importResults;
   }
 
-  @Procedure(mode = Mode.WRITE)
-  public Stream<ImportResults> importQuadRDF(@Name("url") String url,
-      @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        format.equals(RDFFormat.TRIG.getName()) || format.equals(RDFFormat.NQUADS.getName()),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
-
-    ImportResults importResults = new ImportResults();
-
-    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf,
-        log);
-    try {
-      checkIndexesExist();
-      parseRDF(getInputStream(url, props), url, format, statementLoader);
-
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      importResults.setTerminationKO(e.getMessage());
-      e.printStackTrace();
-    } finally {
-      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
-      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-      importResults.setNamespaces(statementLoader.getNamespaces());
-      importResults.setConfigSummary(conf.getConfigSummary());
-    }
-    return Stream.of(importResults);
-  }
-
-  private void parseRDF(InputStream inputStream, @Name("url") String url,
-      @Name("format") String format,
+  private void instantiateAndKickOffParser(InputStream inputStream, @Name("url") String url,
+      @Name("format") RDFFormat format,
       ConfiguredStatementHandler handler)
-      throws IOException, RDFImportPreRequisitesNotMet {
-    RDFParser rdfParser = Rio.createParser(getFormat(format));
+      throws IOException {
+    RDFParser rdfParser = Rio.createParser(format);
     rdfParser
         .set(BasicParserSettings.VERIFY_URI_SYNTAX, handler.getParserConfig().isVerifyUriSyntax());
     rdfParser.setRDFHandler(handler);
@@ -252,110 +254,105 @@ public class RDFImport {
   @Description("Parses RDF and produces virtual Nodes and relationships for preview in the Neo4j "
       + "browser. No writing to the DB.")
   public Stream<GraphResult> previewRDF(@Name("url") String url, @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
-    conf.setCommitSize(Long.MAX_VALUE);
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
 
+
+    //TODO: add this to props (is it needed? is the commit size not ignored bby the StatementPreviewer???
+    //conf.setCommitSize(Long.MAX_VALUE);
+
+    GraphResult graphResult = doPreview(url, null, format, props);
+    return Stream.of(graphResult);
+  }
+
+  @Procedure(mode = Mode.READ)
+  @Description("Parses an RDF fragment passed as parameter (no retrieval from url) and produces "
+          + "virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB.")
+  public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment,
+                                               @Name("format") String format,
+                                               @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+          throws RDFImportException {
+    GraphResult graphResult = doPreview(null, rdfFragment, format, props);
+    return Stream.of(graphResult);
+  }
+
+  private GraphResult doPreview(@Name("url") String url, @Name("rdf") String rdfFragment, @Name("format") String format,
+                                @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+    RDFParserConfig conf = null;
+    RDFFormat rdfFormat = null;
+    StatementPreviewer statementViewer = null;
     Map<String, Node> virtualNodes = new HashMap<>();
     List<Relationship> virtualRels = new ArrayList<>();
 
-    StatementPreviewer statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels,
-        log);
     try {
-      parseRDF(getInputStream(url, props), url, format, statementViewer);
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      e.printStackTrace();
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      statementViewer =  new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
+    }
+    catch (RDFImportBadParams e){
+      throw new RDFImportException(e);
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
     }
 
-    GraphResult graphResult = new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
-    return Stream.of(graphResult);
-
-
+    if(statementViewer != null ) {
+      try {
+        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
+      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+        e.printStackTrace();
+      }
+    }
+    return new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
   }
+
 
   @Procedure(mode = Mode.READ)
   @Description(
       "Parses RDF and streams each triple as a record with <S,P,O> along with datatype and "
           + "language tag for Literal values. No writing to the DB.")
   public Stream<StreamedStatement> streamRDF(@Name("url") String url, @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-        .get("verifyUriSyntax") : true);
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
 
     return doStream(url, null, format, props);
+  }
+
+  @Procedure(mode = Mode.READ)
+  @Description(
+          "Parses RDF passed as a string and streams each triple as a record with <S,P,O> along "
+                  + "with datatype and language tag for Literal values. No writing to the DB.")
+  public Stream<StreamedStatement> streamRDFSnippet(@Name("rdf") String rdf,
+                                                    @Name("format") String format,
+                                                    @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+          throws RDFImportException {
+
+    return doStream(null, rdf, format, props);
   }
 
   private Stream<StreamedStatement> doStream(@Name("url") String url,
       @Name("rdfFragment") String rdfFragment,
       @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    StatementStreamer statementStreamer = new StatementStreamer(new RDFParserConfig(props));
-    try {
-      if (rdfFragment != null) {
-        parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
-            "http://neo4j.com/base/", format, statementStreamer);
-      } else {
-        parseRDF(getInputStream(url, props), url, format, statementStreamer);
-      }
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+    StatementStreamer statementStreamer = null;
+    RDFFormat rdfFormat = null;
+    RDFParserConfig conf = null;
+    try{
+      rdfFormat = getFormat(format);
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      statementStreamer = new StatementStreamer(conf);
+    }catch (RDFImportBadParams e) {
+      throw new RDFImportException(e);
+    }catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+    }
 
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      e.printStackTrace();
-      statementStreamer.setErrorMsg(e.getMessage());
+    try {
+      parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementStreamer);
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+      throw new RDFImportException(e);
     }
     return statementStreamer.getStatements().stream();
   }
 
-  @Procedure(mode = Mode.READ)
-  @Description(
-      "Parses RDF passed as a string and streams each triple as a record with <S,P,O> along "
-          + "with datatype and language tag for Literal values. No writing to the DB.")
-  public Stream<StreamedStatement> streamRDFSnippet(@Name("rdf") String rdf,
-      @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    final boolean verifyUriSyntax = (props.containsKey("verifyUriSyntax") ? (Boolean) props
-        .get("verifyUriSyntax") : true);
-
-    return doStream(null, rdf, format, props);
-  }
-
-  @Procedure(mode = Mode.READ)
-  @Description("Parses an RDF fragment passed as parameter (no retrieval from url) and produces "
-      + "virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB.")
-  public Stream<GraphResult> previewRDFSnippet(@Name("rdf") String rdfFragment,
-      @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
-    conf.setCommitSize(Long.MAX_VALUE);
-
-    Map<String, Node> virtualNodes = new HashMap<>();
-    List<Relationship> virtualRels = new ArrayList<>();
-
-    StatementPreviewer statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels,
-        log);
-    try {
-      parseRDF(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
-          "http://neo4j.com/base/", format, statementViewer);
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      e.printStackTrace();
-    }
-
-    GraphResult graphResult = new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
-    return Stream.of(graphResult);
-
-
-  }
 
   @Procedure(mode = Mode.WRITE)
   @Description(
@@ -378,72 +375,106 @@ public class RDFImport {
 
   private DeleteResults doDelete(String format, String url, String rdfFragment,
       Map<String, Object> props) {
-    Preconditions.checkArgument(
-        Arrays.stream(availableParsers).anyMatch(x -> x.getName().equals(format)),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
-    conf.setCommitSize(Long.MAX_VALUE);
 
+    DirectStatementDeleter statementDeleter = null;
+    RDFParserConfig conf = null;
+    RDFFormat rdfFormat = null;
     DeleteResults deleteResults = new DeleteResults();
 
-    DirectStatementDeleter statementDeleter = new DirectStatementDeleter(db, tx, conf, log);
     try {
       checkIndexesExist();
-      InputStream inputStream;
-
-      if (rdfFragment != null) {
-        inputStream = new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset()));
-        url = "http://neo4j.com/base/";
-      } else {
-        inputStream = getInputStream(url, props);
-      }
-
-      RDFParser rdfParser = Rio.createParser(getFormat(format));
-      rdfParser.setRDFHandler(statementDeleter);
-      rdfParser.parse(inputStream, url);
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      statementDeleter = new DirectStatementDeleter(db, tx, conf, log);
+    }catch (RDFImportPreRequisitesNotMet e){
       deleteResults.setTerminationKO(e.getMessage());
-      e.printStackTrace();
-    } finally {
-      deleteResults.setTriplesDeleted(
-          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
-      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
-      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      deleteResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+    } catch (RDFImportBadParams e) {
+      deleteResults.setTerminationKO(e.getMessage());
+    }
+
+    if (statementDeleter != null) {
+      try {
+        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementDeleter);
+      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+        deleteResults.setTerminationKO(e.getMessage());
+        e.printStackTrace();
+      } finally {
+        deleteResults.setTriplesDeleted(
+                statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+        deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+        deleteResults.setNamespaces(statementDeleter.getNamespaces());
+      }
     }
     return deleteResults;
   }
 
-  @Procedure(mode = Mode.WRITE)
-  public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
-      @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"),
-        "Input format not supported");
-    RDFParserConfig conf = new RDFParserConfig(props);
-    conf.setCommitSize(Long.MAX_VALUE);
 
-    DeleteResults deleteResults = new DeleteResults();
+//  TODO: Named Graphs management temporarily on hold
+//  @Procedure(mode = Mode.WRITE)
+//  public Stream<ImportResults> importQuadRDF(@Name("url") String url,
+//      @Name("format") String format,
+//      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+//    Preconditions.checkArgument(
+//        format.equals(RDFFormat.TRIG.getName()) || format.equals(RDFFormat.NQUADS.getName()),
+//        "Input format not supported");
+//
+//
+//    RDFParserConfig conf = new RDFParserConfig(props);
+//
+//    ImportResults importResults = new ImportResults();
+//
+//    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf,
+//        log);
+//    try {
+//      checkIndexesExist();
+//      parseRDF(getInputStream(url, props), url, format, statementLoader);
+//
+//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+//      importResults.setTerminationKO(e.getMessage());
+//      e.printStackTrace();
+//    } finally {
+//      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+//      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+//      importResults.setNamespaces(statementLoader.getNamespaces());
+//      importResults.setConfigSummary(conf.getConfigSummary());
+//    }
+//    return Stream.of(importResults);
+//  }
 
-    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db, tx,
-        conf, log);
-    try {
-      checkIndexesExist();
 
-      InputStream inputStream = getInputStream(url, props);
-      RDFParser rdfParser = Rio.createParser(getFormat(format));
-      rdfParser.setRDFHandler(statementDeleter);
-      rdfParser.parse(inputStream, url);
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      deleteResults.setTerminationKO(e.getMessage());
-      e.printStackTrace();
-    } finally {
-      deleteResults.setTriplesDeleted(
-          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
-      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
-      deleteResults.setNamespaces(statementDeleter.getNamespaces());
-    }
-    return Stream.of(deleteResults);
-  }
+//  @Procedure(mode = Mode.WRITE)
+//  public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
+//      @Name("format") String format,
+//      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+//    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"),
+//        "Input format not supported");
+//    RDFParserConfig conf = new RDFParserConfig(props);
+//    conf.setCommitSize(Long.MAX_VALUE);
+//
+//    DeleteResults deleteResults = new DeleteResults();
+//
+//    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db, tx,
+//        conf, log);
+//    try {
+//      checkIndexesExist();
+//
+//      InputStream inputStream = getInputStream(url, props);
+//      RDFParser rdfParser = Rio.createParser(getFormat(format));
+//      rdfParser.setRDFHandler(statementDeleter);
+//      rdfParser.parse(inputStream, url);
+//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+//      deleteResults.setTerminationKO(e.getMessage());
+//      e.printStackTrace();
+//    } finally {
+//      deleteResults.setTriplesDeleted(
+//          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+//      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+//      deleteResults.setNamespaces(statementDeleter.getNamespaces());
+//    }
+//    return Stream.of(deleteResults);
+//  }
 
   @UserFunction
   @Description("Returns the XMLSchema or custom datatype of a property when present")
@@ -682,44 +713,45 @@ public class RDFImport {
 
   }
 
-  @Procedure(mode = Mode.WRITE)
-  @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
-      + "Requires a uniqueness constraint on :Resource(uri)")
-  public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
-      @Name("jsonpayload") String jsonPayload,
-      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) {
-
-    //emptystring, no parsing and return null
-    if (jsonPayload.isEmpty()) {
-      return Stream.empty();
-    }
-
-    HashMap<String, Object> params = new HashMap<>();
-    params.put("handleVocabUris", "IGNORE");
-    params.put("commitSize", Long.MAX_VALUE);
-    RDFParserConfig conf = new RDFParserConfig(params);
-
-    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
-    try {
-      checkIndexesExist();
-      String containerUri = (String) containerNode.getProperty("uri", null);
-      if (containerUri == null) {
-        containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
-        containerNode.setProperty("uri", containerUri);
-        containerNode.addLabel(Label.label("Resource"));
-      }
-      GenericJSONParser rdfParser = new GenericJSONParser();
-      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
-      rdfParser.setRDFHandler(plainJSONStatementLoader);
-      rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
-          "neo4j://voc#", containerUri, relName);
-
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      e.printStackTrace();
-
-    }
-    return Stream.of(new NodeResult(containerNode));
-  }
+  // TODO: EXperimental generic JSON to neo4j mapper on hold
+//  @Procedure(mode = Mode.WRITE)
+//  @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
+//      + "Requires a uniqueness constraint on :Resource(uri)")
+//  public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
+//      @Name("jsonpayload") String jsonPayload,
+//      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) {
+//
+//    //emptystring, no parsing and return null
+//    if (jsonPayload.isEmpty()) {
+//      return Stream.empty();
+//    }
+//
+//    HashMap<String, Object> params = new HashMap<>();
+//    params.put("handleVocabUris", "IGNORE");
+//    params.put("commitSize", Long.MAX_VALUE);
+//    RDFParserConfig conf = new RDFParserConfig(params);
+//
+//    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
+//    try {
+//      checkIndexesExist();
+//      String containerUri = (String) containerNode.getProperty("uri", null);
+//      if (containerUri == null) {
+//        containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
+//        containerNode.setProperty("uri", containerUri);
+//        containerNode.addLabel(Label.label("Resource"));
+//      }
+//      GenericJSONParser rdfParser = new GenericJSONParser();
+//      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
+//      rdfParser.setRDFHandler(plainJSONStatementLoader);
+//      rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
+//          "neo4j://voc#", containerUri, relName);
+//
+//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+//      e.printStackTrace();
+//
+//    }
+//    return Stream.of(new NodeResult(containerNode));
+//  }
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
     Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
@@ -741,7 +773,7 @@ public class RDFImport {
     return true;
   }
 
-  private RDFFormat getFormat(String format) throws RDFImportPreRequisitesNotMet {
+  private RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().equals(format)) {
@@ -749,7 +781,7 @@ public class RDFImport {
         }
       }
     }
-    throw new RDFImportPreRequisitesNotMet("Unrecognized serialization format: " + format);
+    throw new RDFImportBadParams("Unrecognized serialization format: " + format);
   }
 
 
@@ -811,17 +843,15 @@ public class RDFImport {
 
   }
 
-  private class RDFImportPreRequisitesNotMet extends Exception {
-
-    String message;
-
-    public RDFImportPreRequisitesNotMet(String s) {
-      message = s;
+  private class RDFImportPreRequisitesNotMet extends Throwable {
+    public RDFImportPreRequisitesNotMet(String message){
+      super(message);
     }
+  }
 
-    @Override
-    public String getMessage() {
-      return message;
+  private class RDFImportBadParams extends Exception {
+    public  RDFImportBadParams(String message){
+      super(message);
     }
   }
 }

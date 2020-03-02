@@ -1,7 +1,7 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFParserConfig.URL_SHORTEN;
+import static semantics.config.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -15,6 +15,8 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
+import semantics.config.GraphConfig;
+import semantics.config.RDFParserConfig;
 
 /**
  * Created by jbarrasa on 09/11/2016.
@@ -37,7 +39,7 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) { //URL_SHORTEN
       // Namespaces are only persisted at the end of each periodic commit.
       // This makes importRDF not thread safe when using url shortening. TODO: fix this.
       persistNamespaceNode();

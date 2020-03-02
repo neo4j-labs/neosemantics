@@ -18,6 +18,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
+import semantics.config.OntologyLoaderConfig;
 
 public class OntologyImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
@@ -26,7 +27,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   Cache<String, Node> nodeCache;
 
   protected OntologyImporter(GraphDatabaseService db, Transaction tx,
-      OntologyLoaderConfig conf, Log l) {
+                             OntologyLoaderConfig conf, Log l) {
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())

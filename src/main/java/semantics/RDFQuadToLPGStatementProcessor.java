@@ -2,8 +2,6 @@ package semantics;
 
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
-import static semantics.RDFParserConfig.PROP_ARRAY;
-import static semantics.RDFParserConfig.PROP_OVERWRITE;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -23,6 +21,8 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
+import semantics.config.GraphConfig;
+import semantics.config.RDFParserConfig;
 
 
 /**
@@ -114,11 +114,11 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
       } else {
         props = resourceProps.get(contextResource);
       }
-      if (parserConfig.getHandleMultival() == PROP_OVERWRITE) {
+      if (parserConfig.getGraphConf().getHandleMultival() == GraphConfig.GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
-      } else if (parserConfig.getHandleMultival() == PROP_ARRAY) {
+      } else if (parserConfig.getGraphConf().getHandleMultival() == GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY) {
         if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {

@@ -26,7 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.Assert.*;
-import static semantics.Params.PREFIX_SEPARATOR;
+import static semantics.config.Params.PREFIX_SEPARATOR;
 
 /**
  * Created by jbarrasa on 14/09/2016.
@@ -177,6 +177,58 @@ public class RDFEndpointTest {
         }
       }
   }
+
+
+    @Test
+    public void ImportGetNodeByIdOnImportedOnto() throws Exception {
+        // Given
+        final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+        //first import onto
+        try (Transaction tx = graphDatabaseService.beginTx()) {
+            tx.execute("CREATE INDEX ON :Resource(uri)");
+            tx.commit();
+        }
+        try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = tx.execute("CALL semantics.importOntology('" +
+                    RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
+                            .toURI() + "','RDF/XML',{})");
+
+            tx.commit();
+        }
+        //  check data is  correctly loaded
+        Long  id;
+        try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result result = tx.execute("match (n:Class " +
+                    "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})" +
+                    "-[r]-(o) " +
+                    "return n.name as name, id(n) as id, type(r) as reltype, o.uri as otheruri");
+            Map<String, Object> next = result.next();
+            assertEquals("RF_signal_strength", next.get("name"));
+            assertEquals("SCO", next.get("reltype"));
+            assertEquals("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key", next.get("otheruri"));
+
+            id = (Long)next.get("id");
+        }
+        // then export elements and check the output is right
+        HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
+                HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                        + "n10s/neo4j/describe/id/" + id);
+
+        String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+                "@prefix neovoc: <neo4j://vocabulary#> .\n" +
+                "@prefix neoind: <neo4j://individuals#> .\n" +
+                "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n" +
+                "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
+                "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
+                "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
+
+        assertEquals(200, response.status());
+        assertTrue(ModelTestUtils
+                .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+
+    }
 
 
   @Test

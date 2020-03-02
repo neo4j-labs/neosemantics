@@ -1,7 +1,7 @@
 package semantics;
 
-import static semantics.Params.BASE_INDIV_NS;
-import static semantics.Params.BASE_VOCAB_NS;
+import static semantics.config.Params.BASE_INDIV_NS;
+import static semantics.config.Params.BASE_VOCAB_NS;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,6 +27,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.*;
+import semantics.config.Params;
 
 
 public class LPGToRDFProcesssor {
@@ -233,6 +234,14 @@ public class LPGToRDFProcesssor {
     if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
         rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
       //if it's  an ontlogy rel, it must apply to an ontology entity
+      if(!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())){
+        ontologyEntitiesUris.put(rel.getStartNode().getId(),
+                vf.createIRI(BASE_VOCAB_NS, (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
+      }
+      if(!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())){
+        ontologyEntitiesUris.put(rel.getEndNode().getId(),
+                vf.createIRI(BASE_VOCAB_NS, (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
+      }
       //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
       statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),
           getUriforRelName(rel.getType().name()), ontologyEntitiesUris.get(rel.getEndNodeId()));

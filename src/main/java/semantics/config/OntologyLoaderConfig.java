@@ -1,4 +1,4 @@
-package semantics;
+package semantics.config;
 
 import java.util.Map;
 
@@ -19,8 +19,8 @@ public class OntologyLoaderConfig extends RDFParserConfig {
   private final String domainRelName;
   private final String rangeRelName;
 
-  public OntologyLoaderConfig(Map<String, Object> props) {
-    super(props);
+  public OntologyLoaderConfig(Map<String, Object> props, GraphConfig gc) {
+    super(props, gc);
 
     classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel")
         : DEFAULT_CLASS_LABEL_NAME;

@@ -1,4 +1,4 @@
-package semantics;
+package semantics.config;
 
 import java.util.regex.Pattern;
 

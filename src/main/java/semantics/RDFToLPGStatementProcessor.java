@@ -1,16 +1,12 @@
 package semantics;
 
-import static semantics.Params.CUSTOM_DATA_TYPE_SEPERATOR;
-import static semantics.Params.PREFIX_SEPARATOR;
+import static semantics.config.GraphConfig.*;
+import static semantics.config.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.config.Params.PREFIX_SEPARATOR;
 import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFParserConfig.PROP_ARRAY;
-import static semantics.RDFParserConfig.PROP_OVERWRITE;
-import static semantics.RDFParserConfig.URL_IGNORE;
-import static semantics.RDFParserConfig.URL_MAP;
-import static semantics.RDFParserConfig.URL_SHORTEN;
 import static semantics.mapping.MappingUtils.getImportMappingsFromDB;
 
 import java.time.LocalDate;
@@ -37,6 +33,8 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
+import semantics.config.GraphConfig;
+import semantics.config.RDFParserConfig;
 
 
 /**
@@ -64,7 +62,8 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     this.tx = tx;
     this.parserConfig = conf;
     log = l;
-    if (this.parserConfig.getHandleVocabUris() == URL_MAP) {
+    //initialise vocMappings  if needed
+    if (this.parserConfig.getGraphConf().getHandleVocabUris() == GraphConfig.GRAPHCONF_VOC_URI_MAP) {
       Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {
         //a mapping on RDF.TYPE is illegal
@@ -142,7 +141,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
       final Optional<String> language = object.getLanguage();
       if (parserConfig.getLanguageFilter() == null || !language.isPresent() || parserConfig
           .getLanguageFilter().equals(language.get())) {
-        return object.stringValue() + (parserConfig.isKeepLangTag() && language.isPresent() ? "@"
+        return object.stringValue() + (parserConfig.getGraphConf().isKeepLangTag() && language.isPresent() ? "@"
             + language.get()
             : "");
       } else {
@@ -171,15 +170,15 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
       }
     } else {
       //it's a custom data type
-      if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getHandleVocabUris() == URL_IGNORE
-          || parserConfig.getHandleVocabUris() == URL_MAP)) {
+      if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+          || parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP)) {
         //keep custom type
         String value = object.stringValue();
         if (parserConfig.getCustomDataTypedPropList() == null || parserConfig
             .getCustomDataTypedPropList()
             .contains(propertyIRI.stringValue())) {
           String datatypeString;
-          if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+          if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
             datatypeString = handleIRI(datatype, DATATYPE);
           } else {
             datatypeString = datatype.stringValue();
@@ -218,13 +217,13 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   String handleIRI(IRI iri, int elementType) {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
       String localName = iri.getLocalName();
       String prefix = getPrefix(iri.getNamespace());
       return prefix + PREFIX_SEPARATOR + localName;
-    } else if (parserConfig.getHandleVocabUris() == URL_IGNORE) {
+    } else if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
-    } else if (parserConfig.getHandleVocabUris() == URL_MAP) {
+    } else if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
       return mapElement(iri, elementType, null);
     } else { //if (handleUris  ==  URL_KEEP){
       return iri.stringValue();
@@ -265,7 +264,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   @Override
   public void startRDF() throws RDFHandlerException {
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
       //differentiate between map/shorten and keep_long urls?
       loadNamespaces();
       log.debug("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
@@ -318,11 +317,11 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
       } else {
         props = resourceProps.get(subjectUri);
       }
-      if (parserConfig.getHandleMultival() == PROP_OVERWRITE) {
+      if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
-      } else if (parserConfig.getHandleMultival() == PROP_ARRAY) {
+      } else if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY) {
         if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {

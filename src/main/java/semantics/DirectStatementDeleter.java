@@ -1,7 +1,6 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.RDFParserConfig.URL_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -20,6 +19,8 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
+import semantics.config.GraphConfig;
+import semantics.config.RDFParserConfig;
 
 /**
  * This class implements an RDF handler to statement-wise delete imported RDF data
@@ -53,7 +54,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   public void endRDF() throws RDFHandlerException {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getHandleVocabUris() == URL_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GraphConfig.GRAPHCONF_VOC_URI_SHORTEN) {
       persistNamespaceNode();
     }
 
@@ -256,7 +257,7 @@ class DirectStatementDeleter extends RDFToLPGStatementProcessor implements Calla
   private void persistNamespaceNode() {
     Map<String, Object> params = new HashMap<>();
     params.put("props", namespaces);
-    graphdb.executeTransactionally("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
+    graphdb.executeTransactionally("MERGE (n:NamespacePrefixDefinition) SET n+=$props", params);
   }
 
 }

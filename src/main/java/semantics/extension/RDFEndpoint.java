@@ -1,7 +1,7 @@
 package semantics.extension;
 
-import static semantics.Params.BASE_INDIV_NS;
-import static semantics.Params.BASE_VOCAB_NS;
+import static semantics.config.Params.BASE_INDIV_NS;
+import static semantics.config.Params.BASE_VOCAB_NS;
 import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
