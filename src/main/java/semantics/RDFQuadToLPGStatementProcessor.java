@@ -2,6 +2,7 @@ package semantics;
 
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
+import static semantics.config.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -62,7 +63,7 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (parserConfig.isTypesToLabels() && predicate.equals(RDF.TYPE)
+      } else if (parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)
           && !(object instanceof BNode)) {
         setLabel(sub, handleIRI((IRI) object, LABEL));
         mappedTripleCounter++;
@@ -119,7 +120,7 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
         // only the last value read is kept.
         props.put(propName, propValue);
       } else if (parserConfig.getGraphConf().getHandleMultival() == GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY) {
-        if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList()
+        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf().getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);

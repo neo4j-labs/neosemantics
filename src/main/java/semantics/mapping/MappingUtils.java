@@ -174,7 +174,7 @@ public class MappingUtils {
     Map<String, Object> params = new HashMap<>();
     params.put("local", gElem);
     return Stream.of(new StringOutput(
-        ((Long) tx.execute(cypher, params).next().get("ct")).equals(new Long(1))
+        ((Long) tx.execute(cypher, params).next().get("ct")).equals(1L)
             ? "successfully deleted mapping" : "mapping not found"));
   }
 

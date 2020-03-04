@@ -84,6 +84,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
                 //here an exception can be raised if types are conflicting
               }
             } else {
+              //TODO: this logic goes because it should not be possible to change
+              // from atomic to multival without emptying the DB
               ((List) v).add(node.getProperty(k));
             }
             //we make it a set to remove duplicates. Semantics of multivalued props in RDF.

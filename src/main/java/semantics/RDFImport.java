@@ -109,7 +109,7 @@ public class RDFImport {
     ImportResults importResults = new ImportResults();
     try {
       checkIndexesExist();
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+        conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       statementLoader = new DirectStatementLoader(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e){
@@ -298,7 +298,7 @@ public class RDFImport {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
-        e.printStackTrace();
+        throw new RDFImportException(e.getMessage());
       }
     }
     return new GraphResult(new ArrayList<>(virtualNodes.values()), virtualRels);
@@ -348,7 +348,7 @@ public class RDFImport {
       parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementStreamer);
 
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
-      throw new RDFImportException(e);
+      throw new RDFImportException(e.getMessage());
     }
     return statementStreamer.getStatements().stream();
   }
@@ -713,45 +713,42 @@ public class RDFImport {
 
   }
 
-  // TODO: EXperimental generic JSON to neo4j mapper on hold
-//  @Procedure(mode = Mode.WRITE)
-//  @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
-//      + "Requires a uniqueness constraint on :Resource(uri)")
-//  public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
-//      @Name("jsonpayload") String jsonPayload,
-//      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) {
-//
-//    //emptystring, no parsing and return null
-//    if (jsonPayload.isEmpty()) {
-//      return Stream.empty();
-//    }
-//
-//    HashMap<String, Object> params = new HashMap<>();
-//    params.put("handleVocabUris", "IGNORE");
-//    params.put("commitSize", Long.MAX_VALUE);
-//    RDFParserConfig conf = new RDFParserConfig(params);
-//
-//    PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
-//    try {
-//      checkIndexesExist();
-//      String containerUri = (String) containerNode.getProperty("uri", null);
-//      if (containerUri == null) {
-//        containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
-//        containerNode.setProperty("uri", containerUri);
-//        containerNode.addLabel(Label.label("Resource"));
-//      }
-//      GenericJSONParser rdfParser = new GenericJSONParser();
-//      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
-//      rdfParser.setRDFHandler(plainJSONStatementLoader);
-//      rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
-//          "neo4j://voc#", containerUri, relName);
-//
-//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-//      e.printStackTrace();
-//
-//    }
-//    return Stream.of(new NodeResult(containerNode));
-//  }
+  @Procedure(mode = Mode.WRITE)
+  @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
+      + "Requires a uniqueness constraint on :Resource(uri)")
+  public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
+      @Name("jsonpayload") String jsonPayload,
+      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) throws RDFImportException {
+
+    //emptystring, no parsing and return null
+    if (jsonPayload.isEmpty()) {
+      return Stream.empty();
+    }
+
+    try {
+      checkIndexesExist();
+      RDFParserConfig conf = new RDFParserConfig(new HashMap<>(), new GraphConfig(tx));
+      String containerUri = (String) containerNode.getProperty("uri", null);
+      PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
+      if (containerUri == null) {
+        containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
+        containerNode.setProperty("uri", containerUri);
+        containerNode.addLabel(Label.label("Resource"));
+      }
+      GenericJSONParser rdfParser = new GenericJSONParser();
+      rdfParser.set(BasicParserSettings.VERIFY_URI_SYNTAX, false);
+      rdfParser.setRDFHandler(plainJSONStatementLoader);
+      rdfParser.parse(new ByteArrayInputStream(jsonPayload.getBytes(Charset.defaultCharset())),
+          "neo4j://voc#", containerUri, relName);
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
+      throw new RDFImportException(e);
+    }catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+    }
+
+    return Stream.of(new NodeResult(containerNode));
+  }
 
   private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
     Iterable<IndexDefinition> indexes = tx.schema().getIndexes();

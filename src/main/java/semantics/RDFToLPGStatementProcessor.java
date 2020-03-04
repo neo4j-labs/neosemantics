@@ -170,12 +170,11 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
       }
     } else {
       //it's a custom data type
-      if (parserConfig.isKeepCustomDataTypes() && !(parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+      if (parserConfig.getGraphConf().isKeepCustomDataTypes() && !(parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
           || parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP)) {
         //keep custom type
         String value = object.stringValue();
-        if (parserConfig.getCustomDataTypedPropList() == null || parserConfig
-            .getCustomDataTypedPropList()
+        if (parserConfig.getGraphConf().getCustomDataTypePropList() == null || parserConfig.getGraphConf().getCustomDataTypePropList()
             .contains(propertyIRI.stringValue())) {
           String datatypeString;
           if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
@@ -231,7 +230,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
   private String applyCapitalisation(String name, int element) {
-    if (parserConfig.isApplyNeo4jNaming()) {
+    if (parserConfig.getGraphConf().isApplyNeo4jNaming()) {
       //apply Neo4j naming recommendations
       if (element == RELATIONSHIP) {
         return name.toUpperCase();
@@ -322,7 +321,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
         // only the last value read is kept.
         props.put(propName, propValue);
       } else if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY) {
-        if (parserConfig.getMultivalPropList() == null || parserConfig.getMultivalPropList()
+        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf().getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);
@@ -385,8 +384,9 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (parserConfig.isTypesToLabels() && predicate.equals(RDF.TYPE)
+      } else if (parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)
           && !(object instanceof BNode)) {
+        //TODO:Deal with other values of config param handleRDFTypes
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
         mappedTripleCounter++;
       } else {
