@@ -13,6 +13,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.test.server.HTTP;
+import semantics.GraphConfigProcedures;
 import semantics.ModelTestUtils;
 import semantics.RDFImport;
 import semantics.mapping.MappingUtils;
@@ -36,7 +37,7 @@ public class RDFEndpointTest {
   @Rule
   public Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
-      .withProcedure(MappingUtils.class);
+      .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class);
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -152,11 +153,12 @@ public class RDFEndpointTest {
       try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
               Config.builder().withoutEncryption().build()); Session session = driver.session()) {
         session.run("CREATE INDEX ON :Resource(uri)");
+        session.run("CALL semantics.setGraphConfig( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
         org.neo4j.driver.Result importResults
             = session.run("CALL semantics.importRDF('" +
             HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/describe/id/"
             + id +
-            "','Turtle',{ handleVocabUris: 'IGNORE', typesToLabels: true, commitSize: 500})");
+            "','Turtle')");
 
         Map<String, Object> singleResult = importResults
             .single().asMap();
@@ -190,7 +192,8 @@ public class RDFEndpointTest {
             tx.commit();
         }
         try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importOntology('" +
+            tx.execute("CALL semantics.setGraphConfig({})");
+            tx.execute("CALL semantics.importOntology('" +
                     RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
                             .toURI() + "','RDF/XML',{})");
 
@@ -271,11 +274,11 @@ public class RDFEndpointTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
               Config.builder().withoutEncryption().build()); Session session = driver.session()) {
         session.run("CREATE INDEX ON :Resource(uri)");
-
+        session.run("CALL semantics.setGraphConfig( { handleVocabUris: 'IGNORE' })");
         org.neo4j.driver.Result importResults
             = session.run("CALL semantics.importRDF('" +
             HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/cypher" +
-            "','Turtle',{ handleVocabUris: 'IGNORE', headerParams: { Accept: \"text/turtle\"},"
+            "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
             + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
         Map<String, Object> singleResult = importResults
@@ -783,11 +786,12 @@ public class RDFEndpointTest {
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
             tx.commit();
-          }
-          try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig({})");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-                    .toURI() + "','RDF/XML',{})");
+                    .toURI() + "','RDF/XML')");
 
             tx.commit();
           }
@@ -832,11 +836,13 @@ public class RDFEndpointTest {
   public void testNodeByUriMissingNamespaceDefinition() throws Exception {
 
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-    try (Transaction tx = graphDatabaseService.beginTx()) {
+      try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
             tx.commit();
           }
+
           try (Transaction tx = graphDatabaseService.beginTx()) {
+            tx.execute("CALL semantics.setGraphConfig({})");
             //set a prefix that we can remove afterwards
             tx.execute("CREATE (n:NamespacePrefixDefinition) "
                 + "SET n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/` = 'fiboanno'");
@@ -874,13 +880,13 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-          try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( { keepLangTag : true, handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
-                    .toURI() + "','Turtle',{ keepLangTag : true, handleMultival: 'ARRAY'})");
+                    .toURI() + "','Turtle')");
 
             tx.commit();
           }
@@ -1073,19 +1079,17 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
+      }
 
-          try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+          tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true, typesToLabels: true} )");
+          tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
-                +
-                "keepCustomDataTypes: true, typesToLabels: true})");
+                + "','Turtle')");
 
-            tx.commit();
+          tx.commit();
           }
 
       HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
@@ -1116,16 +1120,15 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
+    }
     try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, "
+          + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE',"
+          + " keepCustomDataTypes: true, typesToLabels: true} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                    .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
-                +
-                "keepCustomDataTypes: true, typesToLabels: true})");
+                    .toURI() + "','Turtle')");
 
             tx.commit();
           }
@@ -1162,18 +1165,17 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( "
+          + "{ keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+          + "  multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
+          + "  keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-                +
-                "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
-                +
-                "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1207,18 +1209,18 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, "
+          + " handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+          + " multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
+          + " keepCustomDataTypes: true, "
+          + " customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpoint.class.getClassLoader().getResource("customDataTypes.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-                +
-                "multivalPropList: ['http://example.com/price', 'http://example.com/power'], keepCustomDataTypes: true, "
-                +
-                "customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1253,16 +1255,14 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', "
-                +
-                "keepCustomDataTypes: true})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1302,15 +1302,15 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader()
                     .getResource("datetime/datetime-simple-multivalued.ttl")
                     .toURI()
-                + "','Turtle',{handleMultival: 'ARRAY'})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1367,14 +1367,14 @@ public class RDFEndpointTest {
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, "
+          + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+          + " keepCustomDataTypes: true } )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-                    .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
-                +
-                "keepCustomDataTypes: true})");
+                    .toURI() + "','Turtle')");
 
             tx.commit();
           }
@@ -1415,18 +1415,17 @@ public class RDFEndpointTest {
 
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( "
+          + "{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+          + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+          + "keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-                +
-                "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-                +
-                "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1464,18 +1463,16 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute("CALL semantics.importRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+          + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+          + " keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-                +
-                "multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-                +
-                "keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/price', 'http://example.com/color']})");
+                + "','Turtle')");
 
             tx.commit();
           }
@@ -1513,17 +1510,19 @@ public class RDFEndpointTest {
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
 
-            tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importRDF('" +
+        tx.commit();
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( "
+          + " { keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true} )");
+      tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+                + "','Turtle')");
             Result res = tx.execute("CALL semantics.deleteRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
                     .toURI()
-                + "','Turtle',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+                + "','Turtle')");
             Map map = res.next();
             assertEquals(1L, map.get("triplesDeleted"));
             assertEquals(
@@ -1556,14 +1555,15 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
-            tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-          tx.execute("CALL semantics.importQuadRDF('" +
+        tx.commit();
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( { handleVocabUris: 'KEEP', "
+          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importQuadRDF('" +
                   RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                           .toURI()
-                  + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+                  + "','TriG')");
           tx.commit();
       }
 
@@ -1592,14 +1592,16 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importQuadRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( { handleVocabUris: 'KEEP', "
+          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, "
+          + " handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
-                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+                + "','N-Quads')");
             tx.commit();
           }
       Map<String, String> params = new HashMap<>();
@@ -1627,14 +1629,14 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importQuadRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
-                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+                + "','TriG')");
 
             tx.commit();
           }
@@ -1660,14 +1662,14 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importQuadRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+      tx.execute("CALL semantics.importQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
                     .toURI()
-                + "','TriG',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+                + "','TriG')");
 
             tx.commit();
           }
@@ -1700,14 +1702,15 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importQuadRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig({ handleVocabUris: 'KEEP', "
+          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+      tx.execute("CALL semantics.importQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
                     .toURI()
-                + "','N-Quads',{ handleVocabUris: 'KEEP', typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+                + "','N-Quads')");
 
             tx.commit();
           }
@@ -1738,20 +1741,21 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
       try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CREATE INDEX ON :Resource(uri)");
-
             tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.importQuadRDF('" +
+      }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL semantics.setGraphConfig( {keepLangTag: true, handleVocabUris: 'KEEP', "
+          + " handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+      tx.execute("CALL semantics.importQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource(
                     "RDFDatasets/RDFDatasetBNodes.trig")
                     .toURI()
-                + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+                + "','TriG')");
             Result res = tx.execute("CALL semantics.deleteQuadRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource(
                     "RDFDatasets/RDFDatasetBNodesDelete.trig")
                     .toURI()
-                + "','TriG',{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+                + "','TriG')");
             Map map = res.next();
             assertEquals(3L, map.get("triplesDeleted"));
             assertEquals(
@@ -1759,6 +1763,7 @@ public class RDFEndpointTest {
                 map.get("extraInfo"));
             tx.commit();
           }
+
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (a:Resource) "
           + "OPTIONAL MATCH (a)-[r]->()"

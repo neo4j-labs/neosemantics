@@ -47,7 +47,6 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.config.GraphConfig;
-import semantics.config.OntologyLoaderConfig;
 import semantics.config.RDFParserConfig;
 import semantics.result.GraphResult;
 import semantics.result.NamespacePrefixesResult;
@@ -179,12 +178,12 @@ public class RDFImport {
 
 
     OntologyImporter ontoImporter = null;
-    OntologyLoaderConfig conf = null;
+    RDFParserConfig conf = null;
     RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
     try {
       checkIndexesExist();
-      conf = new OntologyLoaderConfig(props, new GraphConfig(tx));
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e){

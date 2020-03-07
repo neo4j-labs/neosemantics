@@ -36,7 +36,7 @@ public class GraphConfig {
 
     public static final String GRAPHCONF_RDFTYPES_AS_LABELS_STR = "LABELS";
     public static final String GRAPHCONF_RDFTYPES_AS_NODES_STR = "NODES";
-    public static final String GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES_STR = "LABELS AND NODES";
+    public static final String GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES_STR = "LABELS_AND_NODES";
 
     private static final String DEFAULT_CLASS_LABEL_NAME = "Class";
     private static final String DEFAULT_SCO_REL_NAME = "SCO";
