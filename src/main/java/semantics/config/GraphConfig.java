@@ -38,6 +38,14 @@ public class GraphConfig {
     public static final String GRAPHCONF_RDFTYPES_AS_NODES_STR = "NODES";
     public static final String GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES_STR = "LABELS AND NODES";
 
+    private static final String DEFAULT_CLASS_LABEL_NAME = "Class";
+    private static final String DEFAULT_SCO_REL_NAME = "SCO";
+    private static final String DEFAULT_DATATYPEPROP_LABEL_NAME = "Property";
+    private static final String DEFAULT_OBJECTPROP_LABEL_NAME = "Relationship";
+    private static final String DEFAULT_SPO_REL_NAME = "SPO";
+    private static final String DEFAULT_DOMAIN_REL_NAME = "DOMAIN";
+    private static final String DEFAULT_RANGE_REL_NAME = "RANGE";
+
     private final int handleVocabUris;
     private final int handleMultival;
     private final int handleRDFTypes;
@@ -46,6 +54,14 @@ public class GraphConfig {
     private final boolean keepCustomDataTypes;
     private final Set<String> multivalPropList;
     private final Set<String> customDataTypePropList;
+    private final String classLabelName;
+    private final String subClassOfRelName;
+    private final String dataTypePropertyLabelName;
+    private final String objectPropertyLabelName;
+    private final String subPropertyOfRelName;
+    private final String domainRelName;
+    private final String rangeRelName;
+
 
     public GraphConfig(Map<String, Object> props) throws InvalidParamException {
         this.handleVocabUris = (props.containsKey("handleVocabUris") ? parseHandleVocabUrisValue(
@@ -67,6 +83,27 @@ public class GraphConfig {
         this.customDataTypePropList = (props.containsKey("customDataTypePropList")
                 ? ((List<String>) props.get("customDataTypePropList")).stream().collect(Collectors.toSet())
                 : null);
+
+        // Ontology config
+
+        this.classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel")
+                : DEFAULT_CLASS_LABEL_NAME;
+        this.subClassOfRelName =
+                props.containsKey("subClassOfRel") ? (String) props.get("subClassOfRel")
+                        : DEFAULT_SCO_REL_NAME;
+        this.dataTypePropertyLabelName =
+                props.containsKey("dataTypePropertyLabel") ? (String) props.get("dataTypePropertyLabel")
+                        : DEFAULT_DATATYPEPROP_LABEL_NAME;
+        this.objectPropertyLabelName =
+                props.containsKey("objectPropertyLabel") ? (String) props.get("objectPropertyLabel")
+                        : DEFAULT_OBJECTPROP_LABEL_NAME;
+        this.subPropertyOfRelName =
+                props.containsKey("subPropertyOfRel") ? (String) props.get("subPropertyOfRel")
+                        : DEFAULT_SPO_REL_NAME;
+        this.domainRelName =
+                props.containsKey("domainRel") ? (String) props.get("domainRel") : DEFAULT_DOMAIN_REL_NAME;
+        this.rangeRelName =
+                props.containsKey("rangeRel") ? (String) props.get("rangeRel") : DEFAULT_RANGE_REL_NAME;
     }
 
     public GraphConfig(Transaction tx) throws GraphConfigNotFound {
@@ -82,6 +119,26 @@ public class GraphConfig {
             this.applyNeo4jNaming = (boolean)graphConfigProperties.get("_applyNeo4jNaming");
             this.multivalPropList = getListOfStringsOrNull(graphConfigProperties, "_multivalPropList");
             this.customDataTypePropList = getListOfStringsOrNull(graphConfigProperties,"_customDataTypePropList");
+
+
+            this.classLabelName = graphConfigProperties.containsKey("_classLabel") ? (String) graphConfigProperties.get("_classLabel")
+                    : DEFAULT_CLASS_LABEL_NAME;
+            this.subClassOfRelName =
+                    graphConfigProperties.containsKey("_subClassOfRel") ? (String) graphConfigProperties.get("_subClassOfRel")
+                            : DEFAULT_SCO_REL_NAME;
+            this.dataTypePropertyLabelName =
+                    graphConfigProperties.containsKey("_dataTypePropertyLabel") ? (String) graphConfigProperties.get("_dataTypePropertyLabel")
+                            : DEFAULT_DATATYPEPROP_LABEL_NAME;
+            this.objectPropertyLabelName =
+                    graphConfigProperties.containsKey("_objectPropertyLabel") ? (String) graphConfigProperties.get("_objectPropertyLabel")
+                            : DEFAULT_OBJECTPROP_LABEL_NAME;
+            this.subPropertyOfRelName =
+                    graphConfigProperties.containsKey("_subPropertyOfRel") ? (String) graphConfigProperties.get("_subPropertyOfRel")
+                            : DEFAULT_SPO_REL_NAME;
+            this.domainRelName =
+                    graphConfigProperties.containsKey("_domainRel") ? (String) graphConfigProperties.get("_domainRel") : DEFAULT_DOMAIN_REL_NAME;
+            this.rangeRelName =
+                    graphConfigProperties.containsKey("_rangeRel") ? (String) graphConfigProperties.get("_rangeRel") : DEFAULT_RANGE_REL_NAME;
         } else {
             throw new GraphConfigNotFound();
         }
@@ -183,6 +240,28 @@ public class GraphConfig {
             configAsMap.put("_customDataTypePropList", this.customDataTypePropList);
         }
 
+        if (this.classLabelName != DEFAULT_CLASS_LABEL_NAME) {
+            configAsMap.put("_classLabel", this.classLabelName);
+        };
+        if (this.subClassOfRelName != DEFAULT_SCO_REL_NAME) {
+            configAsMap.put("_subClassOfRel", this.subClassOfRelName);
+        };
+        if (this.dataTypePropertyLabelName != DEFAULT_DATATYPEPROP_LABEL_NAME) {
+            configAsMap.put("_dataTypePropertyLabel", this.dataTypePropertyLabelName);
+        };
+        if (this.objectPropertyLabelName != DEFAULT_OBJECTPROP_LABEL_NAME) {
+            configAsMap.put("_objectPropertyLabel", this.objectPropertyLabelName);
+        };
+        if (this.subPropertyOfRelName != DEFAULT_SPO_REL_NAME) {
+            configAsMap.put("_subPropertyOfRell", this.subPropertyOfRelName);
+        };
+        if (this.domainRelName != DEFAULT_DOMAIN_REL_NAME) {
+            configAsMap.put("_domainRel", this.domainRelName);
+        };
+        if (this.rangeRelName != DEFAULT_RANGE_REL_NAME) {
+            configAsMap.put("_rangeRel", this.objectPropertyLabelName);
+        };
+
         return  configAsMap;
     }
 
@@ -210,9 +289,41 @@ public class GraphConfig {
         return keepCustomDataTypes;
     }
 
-    public Set<String> getMultivalPropList() { return multivalPropList; }
+    public Set<String> getMultivalPropList() {
+        return multivalPropList;
+    }
 
-    public Set<String> getCustomDataTypePropList() { return customDataTypePropList; }
+    public Set<String> getCustomDataTypePropList() {
+        return customDataTypePropList;
+    }
+
+    public String getClassLabelName() {
+        return classLabelName;
+    }
+
+    public String getObjectPropertyLabelName() {
+        return objectPropertyLabelName;
+    }
+
+    public String getDataTypePropertyLabelName() {
+        return  dataTypePropertyLabelName;
+    }
+
+    public String getSubClassOfRelName() {
+        return subClassOfRelName;
+    }
+
+    public String getSubPropertyOfRelName() {
+        return subPropertyOfRelName;
+    }
+
+    public String getDomainRelName() {
+        return domainRelName;
+    }
+
+    public String getRangeRelName() {
+        return rangeRelName;
+    }
 
     public class InvalidParamException extends Throwable {
         public InvalidParamException(String msg) {

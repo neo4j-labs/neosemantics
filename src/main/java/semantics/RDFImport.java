@@ -6,7 +6,6 @@ import static semantics.config.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
 import static semantics.config.Params.PREFIX_SEPARATOR;
 import static semantics.config.Params.SHORTENED_URI_PATTERN;
 
-import com.google.common.base.Preconditions;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -19,7 +18,6 @@ import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -177,7 +175,7 @@ public class RDFImport {
     // ontoimport does ( -> specific graph setting for ontos)
     // TODO: Instead this should bbe a check on the config and a warning / error message?
     // not good to just override the graph settings
-    props.put("handleVocabUris", "IGNORE");
+    //props.put("handleVocabUris", "IGNORE");
 
 
     OntologyImporter ontoImporter = null;
@@ -410,71 +408,100 @@ public class RDFImport {
     return deleteResults;
   }
 
+  @Procedure(mode = Mode.WRITE)
+  public Stream<ImportResults> importQuadRDF(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-//  TODO: Named Graphs management temporarily on hold
-//  @Procedure(mode = Mode.WRITE)
-//  public Stream<ImportResults> importQuadRDF(@Name("url") String url,
-//      @Name("format") String format,
-//      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-//    Preconditions.checkArgument(
-//        format.equals(RDFFormat.TRIG.getName()) || format.equals(RDFFormat.NQUADS.getName()),
-//        "Input format not supported");
-//
-//
-//    RDFParserConfig conf = new RDFParserConfig(props);
-//
-//    ImportResults importResults = new ImportResults();
-//
-//    RDFQuadDirectStatementLoader statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf,
-//        log);
-//    try {
-//      checkIndexesExist();
-//      parseRDF(getInputStream(url, props), url, format, statementLoader);
-//
-//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-//      importResults.setTerminationKO(e.getMessage());
-//      e.printStackTrace();
-//    } finally {
-//      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
-//      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-//      importResults.setNamespaces(statementLoader.getNamespaces());
-//      importResults.setConfigSummary(conf.getConfigSummary());
-//    }
-//    return Stream.of(importResults);
-//  }
+    RDFQuadDirectStatementLoader statementLoader = null;
+    RDFParserConfig conf = null;
+    RDFFormat rdfFormat = null;
+    ImportResults importResults = new ImportResults();
+      try {
+      checkIndexesExist();
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
+        throw new RDFImportBadParams (rdfFormat.getName() + " is not a Quad serialisation format");
+      }
+      statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf, log);
+    } catch (RDFImportPreRequisitesNotMet e){
+      importResults.setTerminationKO(e.getMessage());
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+    } catch (RDFImportBadParams e) {
+      importResults.setTerminationKO(e.getMessage());
+    }
+
+    if (statementLoader != null) {
+    try {
+      instantiateAndKickOffParser(getInputStream(url, props), url, rdfFormat, statementLoader);
+      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+      importResults.setNamespaces(statementLoader.getNamespaces());
+      //TODO get db conf? not any more because the config is explicit and persisted
+      importResults.setConfigSummary(conf.getConfigSummary());
+
+    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+      importResults.setTerminationKO(e.getMessage());
+      importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
+      importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
+      //TODO get db conf? not any more because the config is explicit and persisted
+      //importResults.setConfigSummary(conf.getConfigSummary());
+    }
+  }
 
 
-//  @Procedure(mode = Mode.WRITE)
-//  public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
-//      @Name("format") String format,
-//      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-//    Preconditions.checkArgument(format.equals("TriG") || format.equals("N-Quads"),
-//        "Input format not supported");
-//    RDFParserConfig conf = new RDFParserConfig(props);
-//    conf.setCommitSize(Long.MAX_VALUE);
-//
-//    DeleteResults deleteResults = new DeleteResults();
-//
-//    RDFQuadDirectStatementDeleter statementDeleter = new RDFQuadDirectStatementDeleter(db, tx,
-//        conf, log);
-//    try {
-//      checkIndexesExist();
-//
-//      InputStream inputStream = getInputStream(url, props);
-//      RDFParser rdfParser = Rio.createParser(getFormat(format));
-//      rdfParser.setRDFHandler(statementDeleter);
-//      rdfParser.parse(inputStream, url);
-//    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-//      deleteResults.setTerminationKO(e.getMessage());
-//      e.printStackTrace();
-//    } finally {
-//      deleteResults.setTriplesDeleted(
-//          statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
-//      deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
-//      deleteResults.setNamespaces(statementDeleter.getNamespaces());
-//    }
-//    return Stream.of(deleteResults);
-//  }
+    return Stream.of(importResults);
+  }
+
+
+  @Procedure(mode = Mode.WRITE)
+  public Stream<DeleteResults> deleteQuadRDF(@Name("url") String url,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+
+    RDFQuadDirectStatementDeleter statementDeleter = null;
+    RDFParserConfig conf = null;
+    RDFFormat rdfFormat = null;
+    DeleteResults deleteResults = new DeleteResults();
+    try {
+      checkIndexesExist();
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      rdfFormat = getFormat(format);
+      if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
+        throw new RDFImportBadParams (rdfFormat.getName() + " is not a Quad serialisation format");
+      }
+      statementDeleter = new RDFQuadDirectStatementDeleter(db, tx, conf, log);
+    } catch (RDFImportPreRequisitesNotMet e){
+      deleteResults.setTerminationKO(e.getMessage());
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      deleteResults.setTerminationKO("A Graph Config is required for RDF deleting procedures to run");
+    } catch (RDFImportBadParams e) {
+      deleteResults.setTerminationKO(e.getMessage());
+    }
+
+
+    if (statementDeleter != null) {
+
+      try {
+        RDFParser rdfParser = Rio.createParser(rdfFormat);
+        rdfParser.setRDFHandler(statementDeleter);
+        rdfParser.parse(getInputStream(url, props), url);
+        deleteResults.setTriplesDeleted(statementDeleter.totalTriplesMapped -
+                statementDeleter.getNotDeletedStatementCount());
+        deleteResults.setNamespaces(statementDeleter.getNamespaces());
+        deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException  e) {
+        deleteResults.setTerminationKO(e.getMessage());
+        deleteResults.setTriplesDeleted(statementDeleter.totalTriplesMapped -
+                statementDeleter.getNotDeletedStatementCount());
+        deleteResults.setNamespaces(statementDeleter.getNamespaces());
+        deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
+      }
+    }
+    return Stream.of(deleteResults);
+  }
 
   @UserFunction
   @Description("Returns the XMLSchema or custom datatype of a property when present")

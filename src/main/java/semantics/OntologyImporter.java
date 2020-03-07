@@ -77,15 +77,15 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
         .contains(st.getPredicate().stringValue())) {
       if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDFS.CLASS) || st.getObject()
           .equals(OWL.CLASS)) && st.getSubject() instanceof IRI) {
-        instantiate(((OntologyLoaderConfig) parserConfig).getClassLabelName(),
+        instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDF.PROPERTY) || st
           .getObject().equals(OWL.OBJECTPROPERTY)) && st.getSubject() instanceof IRI) {
-        instantiate(((OntologyLoaderConfig) parserConfig).getObjectPropertyLabelName(),
+        instantiate(parserConfig.getGraphConf().getObjectPropertyLabelName(),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDF.TYPE) && st.getObject().equals(OWL.DATATYPEPROPERTY)
           && st.getSubject() instanceof IRI) {
-        instantiate(((OntologyLoaderConfig) parserConfig).getDataTypePropertyLabelName(),
+        instantiate(parserConfig.getGraphConf().getDataTypePropertyLabelName(),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDFS.SUBCLASSOF) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
@@ -242,13 +242,13 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
 
   private String translateRelName(IRI iri) {
     if (iri.equals(RDFS.SUBCLASSOF)) {
-      return ((OntologyLoaderConfig) parserConfig).getSubClassOfRelName();
+      return parserConfig.getGraphConf().getSubClassOfRelName();
     } else if (iri.equals(RDFS.SUBPROPERTYOF)) {
-      return ((OntologyLoaderConfig) parserConfig).getSubPropertyOfRelName();
+      return parserConfig.getGraphConf().getSubPropertyOfRelName();
     } else if (iri.equals(RDFS.DOMAIN)) {
-      return ((OntologyLoaderConfig) parserConfig).getDomainRelName();
+      return parserConfig.getGraphConf().getDomainRelName();
     } else if (iri.equals(RDFS.RANGE)) {
-      return ((OntologyLoaderConfig) parserConfig).getRangeRelName();
+      return parserConfig.getGraphConf().getRangeRelName();
     } else {
       //Not valid
       return "REL";

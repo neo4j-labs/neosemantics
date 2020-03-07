@@ -8,9 +8,7 @@ import java.util.stream.Collectors;
 
 public class RDFParserConfig {
 
-  private static final boolean DEFAULT_TYPES_TO_LABELS = true;
-  private static final boolean DEFAULT_KEEP_CUSTOM_DATA_TYPES = false;
-  //numbre of statements parsed between partial commits
+  //number of statements parsed between partial commits
   private static final long DEFAULT_COMMIT_SIZE = 25000;
   //nodes kept in the cache when writing to disk
   private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
@@ -68,38 +66,9 @@ public class RDFParserConfig {
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
 
-    //GET the DB config from the DB config node
-//    if (handleVocabUris != 0) {
-//      summary.put("handleVocabUris", getHandleVocabUrisAsString());
-//    }
-
-//    if (applyNeo4jNaming) {
-//      summary.put("applyNeo4jNaming", applyNeo4jNaming);
-//    }
-
-//    if (handleMultival != 0) {
-//      summary.put("handleMultival", getHandleMultivalAsString());
-//    }
-
-//    if (multivalPropList != null) {
-//      summary.put("multivalPropList", multivalPropList);
-//    }
-
     if (predicateExclusionList != null) {
       summary.put("predicateExclusionList", predicateExclusionList);
     }
-
-//    if (customDataTypedPropList != null) {
-//      summary.put("customDataTypedPropList", customDataTypedPropList);
-//    }
-//
-//    if (typesToLabels != DEFAULT_TYPES_TO_LABELS) {
-//      summary.put("typesToLabels", typesToLabels);
-//    }
-
-//    if (keepCustomDataTypes != DEFAULT_KEEP_CUSTOM_DATA_TYPES) {
-//      summary.put("keepCustomDataTypes", keepCustomDataTypes);
-//    }
 
     if (commitSize != DEFAULT_COMMIT_SIZE) {
       summary.put("commitSize", commitSize);
