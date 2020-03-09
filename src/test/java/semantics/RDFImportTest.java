@@ -2784,7 +2784,8 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build())) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),"{ classLabel : 'Category', "
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' }");
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -2792,8 +2793,7 @@ public class RDFImportTest {
 
       Result importResults = session.run("CALL semantics.importOntologySnippet($rdf,"
           + "'Turtle', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
-          + "'http://www.w3.org/2000/01/rdf-schema#comment'], classLabel : 'Category', "
-          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})", params);
+          + "'http://www.w3.org/2000/01/rdf-schema#comment'] })", params);
 
       assertEquals(30L, importResults.next().get("triplesLoaded").asLong());
 
