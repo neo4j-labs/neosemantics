@@ -39,6 +39,9 @@ public class RDFEndpointTest {
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
       .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class);
 
+  @Rule
+  public Neo4jRule temp = new Neo4jRule().withProcedure(RDFImport.class).withProcedure(GraphConfigProcedures.class);
+
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   private static final CollectionType collectionType = TypeFactory
@@ -150,7 +153,7 @@ public class RDFEndpointTest {
       assertEquals(7, id);
     }
 
-      try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+      try (Driver driver = GraphDatabase.driver(temp.boltURI(),
               Config.builder().withoutEncryption().build()); Session session = driver.session()) {
         session.run("CREATE INDEX ON :Resource(uri)");
         session.run("CALL semantics.setGraphConfig( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
@@ -242,8 +245,8 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetCypher() throws Exception {
 
-    neo4j.databaseManagementService().createDatabase("test");
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    final GraphDatabaseService tempGDBs = temp.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
             String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -277,13 +280,13 @@ public class RDFEndpointTest {
       assertNull(preImport.get("uri"));
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+    try (Driver driver = GraphDatabase.driver(temp.boltURI(),
               Config.builder().withoutEncryption().build()); Session session = driver.session()) {
         session.run("CREATE INDEX ON :Resource(uri)");
         session.run("CALL semantics.setGraphConfig( { handleVocabUris: 'IGNORE' })");
         org.neo4j.driver.Result importResults
             = session.run("CALL semantics.importRDF('" +
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/system/cypher" +
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/cypher" +
             "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
             + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
@@ -671,6 +674,7 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
+            tx.execute("CALL semantics.setGraphConfig()");
             String nsDefCreation =
                 "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
                     +
@@ -699,7 +703,7 @@ public class RDFEndpointTest {
           }
 
       HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/ontonrdf");
+          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/onto");
 
       String expected =
           "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
@@ -1353,24 +1357,50 @@ public class RDFEndpointTest {
   @Test
   public void testcypherErrorWhereModelIsNotRDF() throws Exception {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CREATE INDEX ON :Resource(uri)");
 
-            tx.commit();
-          }
-      try (Transaction tx = graphDatabaseService.beginTx()) {
-            Result res = tx.execute(""
-                + "CREATE (:Node { uri: 'neo4j://ind#123' })-[:LINKED_TO]->(:Node { id: 124 })");
+    String cypherCreate = " CREATE (:Resource { uri: 'neo4j://ind#123' , name: 'the name' }) ";
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+            Result res = tx.execute(cypherCreate);
             tx.commit();
           }
       Map<String, String> params = new HashMap<>();
-      params.put("cypher", "MATCH (n)-[r]-(m) RETURN *");
+      params.put("cypher", "MATCH (n) RETURN *");
 
       HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
           HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/cypher", params);
 
       assertEquals(200, response.status());
-      assertEquals("# No such property, 'uri'.\n", response.rawContent());
+
+      String exportedAsLPG = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+          + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+          + "@prefix neoind: <neo4j://individuals#> .\n"
+          + "\n"
+          + "\n"
+          + "neoind:0 a neovoc:Resource;\n"
+          + "  neovoc:name \"the name\";\n"
+          + "  neovoc:uri \"neo4j://ind#123\" .";
+
+      assertTrue(ModelTestUtils.compareModels(exportedAsLPG, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+      try (Transaction tx = graphDatabaseService.beginTx()) {
+        tx.execute(" MATCH (n) DETACH DELETE n ");
+        tx.execute(" CALL semantics.setGraphConfig({handleVocabUris: 'IGNORE'}) ");
+        tx.execute(cypherCreate );
+        tx.commit();
+      }
+
+      response = HTTP.withHeaders("Accept", "text/turtle").POST(
+          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/cypher", params);
+
+    String exportedAsRDF = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+        + "@prefix neoind: <neo4j://individuals#> .\n"
+        + "\n"
+        + "\n"
+        + "<neo4j://ind#123> neovoc:name \"the name\" .";
+
+    assertTrue(ModelTestUtils.compareModels(exportedAsRDF, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
   }
 
 

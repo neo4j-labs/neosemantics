@@ -60,7 +60,8 @@ public class LPGRDFToRDFProcesssor {
     List<Node> nodeList = (List<Node>) next.get("nodes");
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
-      if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+      if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")
+          && !catName.equals("_GraphConfig")) {
         IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
