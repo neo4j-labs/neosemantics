@@ -1,0 +1,603 @@
+<?xml version="1.0"?>
+<rdf:RDF xmlns="http://n4j.com/tst1/ontologies/2020/0/untitled-ontology-400#"
+     xml:base="http://n4j.com/tst1/ontologies/2020/0/untitled-ontology-400"
+     xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+     xmlns:owl="http://www.w3.org/2002/07/owl#"
+     xmlns:xml="http://www.w3.org/XML/1998/namespace"
+     xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
+     xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#">
+    <owl:Ontology rdf:about="http://n4j.com/tst1/ontologies/2020/0/untitled-ontology-400"/>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Object Properties
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_State -->
+
+    <owl:ObjectProperty rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_State"/>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_Timestamp -->
+
+    <owl:ObjectProperty rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_Timestamp">
+        <rdfs:domain rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_Pedal_Pressed"/>
+        <rdfs:range rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_timestamp"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Vehicle_Speed -->
+
+    <owl:ObjectProperty rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Vehicle_Speed">
+        <rdfs:domain rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Ground_Speed"/>
+        <rdfs:range rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Velocity"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Safetybelt_worn -->
+
+    <owl:ObjectProperty rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Safetybelt_worn">
+        <rdfs:subPropertyOf rdf:resource="http://www.w3.org/2002/07/owl#topObjectProperty"/>
+    </owl:ObjectProperty>
+    
+
+
+    <!-- 
+    ///////////////////////////////////////////////////////////////////////////////////////
+    //
+    // Classes
+    //
+    ///////////////////////////////////////////////////////////////////////////////////////
+     -->
+
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#A2_Vehicle_Cyber_Metamodel -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#A2_Vehicle_Cyber_Metamodel"/>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Acceleration_Pedal_Position -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Acceleration_Pedal_Position">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Acceleration_pedal_position_timestamp -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Acceleration_pedal_position_timestamp">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#AdBlue_Consumption -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#AdBlue_Consumption">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#AdBlue_Level -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#AdBlue_Level">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Blinker_state -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Blinker_state">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Blinker_state_timestamp -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Blinker_state_timestamp">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_Pedal_Pressed -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_Pedal_Pressed">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_Torque -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_Torque">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_applied -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_applied">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_timestamp -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_timestamp">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Dashboard_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Dashboard_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Indicator -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Indicator">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Main_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Main_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Side_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Front_Side_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Rear_Break_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Rear_Break_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Rear_Indicator -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_Rear_Indicator">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_safetybelt_state -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_safetybelt_state">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_safetybelt_state_timestamp -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_safetybelt_state_timestamp">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Electric_Parking_Brake_Pedal_Pressed -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Electric_Parking_Brake_Pedal_Pressed">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Level -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Level">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Quantity -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Quantity">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Rail_Pressure -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Rail_Pressure">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Range -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Fuel_Range">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Interior_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Interior_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Active_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Active_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Fob_Exist_Indication -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Fob_Exist_Indication">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Switch_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Key_Switch_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#License_Plate_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#License_Plate_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Authentication -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Authentication">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Checksum -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Checksum">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Details -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Details">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Error_Code -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Error_Code">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Header -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Header">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_ID -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_ID">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Numerator -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Numerator">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Payload -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Payload">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Raw_Data -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Raw_Data">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Response_Code -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Response_Code">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Status -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Status">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Version -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Message_Version">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Parking_Brake_Pedal_Pressed -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Parking_Brake_Pedal_Pressed">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Indicator -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Indicator">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Main_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Main_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Side_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Front_Side_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Rear_Break_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Rear_Break_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Rear_Indicator -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Passenger_Rear_Indicator">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Rear_Fog_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Rear_Fog_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Reversing_Light_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Reversing_Light_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Side_Indicator_State -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Side_Indicator_State">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Total_Consumption -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Total_Consumption">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#A2_Vehicle_Cyber_Metamodel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Event -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Event">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#A2_Vehicle_Cyber_Metamodel"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Fuel">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Ground_Speed -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Ground_Speed"/>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Lamps">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Message">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Pedals">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Model"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Velocity -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Velocity"/>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_event_velocity -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_event_velocity">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_max_velocity -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_max_velocity">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Data_Properties"/>
+    </owl:Class>
+    
+
+
+    <!-- http://n4j.com/tst1/ontologies/2020/0/untitled-ontology-400#Vehicle_Crash -->
+
+    <owl:Class rdf:about="http://n4j.com/tst1/ontologies/2020/0/untitled-ontology-400#Vehicle_Crash">
+        <rdfs:subClassOf rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Event"/>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_State"/>
+                <owl:someValuesFrom rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_applied"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Brake_Timestamp"/>
+                <owl:someValuesFrom rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Brake_pedal_timestamp"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Has_Vehicle_Speed"/>
+                <owl:someValuesFrom rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_event_velocity"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+        <rdfs:subClassOf>
+            <owl:Restriction>
+                <owl:onProperty rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Safetybelt_worn"/>
+                <owl:someValuesFrom rdf:resource="http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Driver_safetybelt_state"/>
+            </owl:Restriction>
+        </rdfs:subClassOf>
+    </owl:Class>
+
+</rdf:RDF>
+
+
