@@ -1,7 +1,7 @@
 # neosemantics (n10s)
-![NSMNTX Logo](http://neo4j-labs.github.io/neosemantics/docs/img/nsmntx-logo.png)
-NSMNTX is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
-This effectively means that NSMNTX makes it possible to
+![neosemantics Logo](https://s3.amazonaws.com/dev.assets.neo4j.com/wp-content/uploads/nsmntx-logo.png)
+neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
+This effectively means that neosemantics makes it possible to
 
 * **Store RDF data in Neo4j** in a
 lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
@@ -13,7 +13,7 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 
 ⇨ Check out the complete **[user manual](https://neo4j.com/docs/labs/nsmntx/current/)** with examples of use. ⇦
 
-⇨ [Blog on NSMNTX](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
+⇨ [Blog on neosemantics](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
 ## Installation
  
