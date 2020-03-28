@@ -38,6 +38,8 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.jsonld.GenericJSONParser;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.schema.ConstraintDefinition;
+import org.neo4j.graphdb.schema.ConstraintType;
 import org.neo4j.graphdb.schema.IndexDefinition;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -65,6 +67,7 @@ public class RDFImport {
   static final int LABEL = 1;
   static final int PROPERTY = 2;
   static final int DATATYPE = 3;
+  private static final String UNIQUENESS_CONSTRAINT_ON_URI = "n10s_unique_uri";
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
@@ -79,7 +82,7 @@ public class RDFImport {
 
   @Procedure(mode = Mode.WRITE)
   @Description("Imports RDF from an url (file or http) and stores it in Neo4j as a property graph. "
-      + "Requires and index on :Resource(uri)")
+      + "Requires a unique constraint on :Resource(uri)")
   public Stream<ImportResults> importRDF(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
@@ -88,7 +91,7 @@ public class RDFImport {
 
   @Procedure(mode = Mode.WRITE)
   @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
-      + "graph. Requires and index on :Resource(uri)")
+      + "graph. Requires a unique constraint on :Resource(uri)")
   public Stream<ImportResults> importRDFSnippet(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -105,7 +108,7 @@ public class RDFImport {
     RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
     try {
-      checkIndexesExist();
+      checkConstraintExist();
         conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       statementLoader = new DirectStatementLoader(db, tx, conf, log);
@@ -182,7 +185,7 @@ public class RDFImport {
     RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
     try {
-      checkIndexesExist();
+      checkConstraintExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
@@ -379,7 +382,7 @@ public class RDFImport {
     DeleteResults deleteResults = new DeleteResults();
 
     try {
-      checkIndexesExist();
+      checkConstraintExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       statementDeleter = new DirectStatementDeleter(db, tx, conf, log);
@@ -417,7 +420,7 @@ public class RDFImport {
     RDFFormat rdfFormat = null;
     ImportResults importResults = new ImportResults();
       try {
-      checkIndexesExist();
+        checkIndexExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
@@ -465,7 +468,7 @@ public class RDFImport {
     RDFFormat rdfFormat = null;
     DeleteResults deleteResults = new DeleteResults();
     try {
-      checkIndexesExist();
+      checkIndexExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
@@ -671,24 +674,42 @@ public class RDFImport {
   @Procedure(mode = Mode.WRITE)
   @Description("Adds namespace - prefix pair definition")
   public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix,
-      @Name("ns") String ns) {
+      @Name("ns") String ns) throws OperationNotAllowed {
 
-    Map<String, Object> params = new HashMap<>();
-    params.put("prefix", prefix);
+    ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
+        .findNodes(Label.label("NamespacePrefixDefinition"));
+    if(namespacePrefixDefinitionNodes.hasNext()){
+      Node nsPrefDefNode = namespacePrefixDefinitionNodes.next();
+      if (nsPrefDefNode.getProperties().keySet().contains(prefix) && !graphIsEmpty()){
+        throw new OperationNotAllowed("A namespace prefix definition cannot be changed "
+            + "when the graph is non-empty.");
+      } else {
+        nsPrefDefNode.setProperty(ns, prefix);
+      }
+    } else {
+      Map<String, Object> params = new HashMap<>();
+      params.put("prefix", prefix);
+      Result execute = tx
+          .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix ", ns), params);
+    }
 
-    return tx
-        .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix "
-            + "WITH n UNWIND keys(n) as ns\n"
-            + "RETURN n[ns] as prefix, ns as namespace", ns), params).stream().map(
-            n -> new NamespacePrefixesResult((String) n.get("prefix"),
-                (String) n.get("namespace")));
 
+    return tx.execute("MATCH (n:NamespacePrefixDefinition) "
+        + "WITH n UNWIND keys(n) as ns\n"
+        + "RETURN n[ns] as prefix, ns as namespace").stream()
+            .map(n -> new NamespacePrefixesResult((String) n.get("prefix"),
+        (String) n.get("namespace")));
+
+  }
+
+  private boolean graphIsEmpty() {
+    return !tx.execute("match (r:Resource) return id(r) limit 1").hasNext();
   }
 
   @Procedure(mode = Mode.WRITE)
   @Description("Adds namespaces from a prefix declaration header fragment")
   public Stream<NamespacePrefixesResult> addNamespacePrefixesFromText(
-      @Name("prefix") String textFragment) {
+      @Name("prefix") String textFragment) throws OperationNotAllowed {
 
     //Try Turtle fragment
     Pattern turtleNamespaceDefinitionRegex =
@@ -717,7 +738,7 @@ public class RDFImport {
   }
 
   private boolean tryExtractNsDefinitions(@Name("prefix") String textFragment,
-      Pattern pattern) {
+      Pattern pattern) throws OperationNotAllowed {
     Matcher m;
     m = pattern.matcher(textFragment);
     while (m.find()) {
@@ -752,7 +773,7 @@ public class RDFImport {
     }
 
     try {
-      checkIndexesExist();
+      checkConstraintExist();
       RDFParserConfig conf = new RDFParserConfig(new HashMap<>(), new GraphConfig(tx));
       String containerUri = (String) containerNode.getProperty("uri", null);
       PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
@@ -776,11 +797,44 @@ public class RDFImport {
     return Stream.of(new NodeResult(containerNode));
   }
 
-  private void checkIndexesExist() throws RDFImportPreRequisitesNotMet {
-    Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
-    if (missing(indexes.iterator(), "Resource")) {
+  private void checkConstraintExist() throws RDFImportPreRequisitesNotMet {
+
+    boolean constraintExists = isConstraintOnResourceUriPresent();
+
+    if (!constraintExists) {
       throw new RDFImportPreRequisitesNotMet(
-          "The following index is required for importing RDF. Please run 'CREATE INDEX ON :Resource(uri)' and try again.");
+          "The following constraint is required for importing RDF. Please run 'CREATE CONSTRAINT n10s_unique_uri "
+              + "ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.");
+    }
+
+  }
+
+  private boolean isConstraintOnResourceUriPresent() {
+    Iterator<ConstraintDefinition> constraintIterator = tx.schema().getConstraints().iterator();
+
+    while (constraintIterator.hasNext()) {
+      ConstraintDefinition constraintDef = constraintIterator.next();
+      if (constraintDef.isConstraintType(ConstraintType.UNIQUENESS) &&
+          constraintDef.getLabel().equals(Label.label("Resource")) &&
+          sizeOneAndNameUri(constraintDef.getPropertyKeys().iterator())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean sizeOneAndNameUri(Iterator<String> iterator) {
+    // size one and single value (property key) is uri
+    return iterator.hasNext() && iterator.next().equals("uri") && !iterator.hasNext();
+  }
+
+  private void checkIndexExist() throws RDFImportPreRequisitesNotMet {
+    Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
+    if (isConstraintOnResourceUriPresent() || missing(indexes.iterator(), "Resource")) {
+      throw new RDFImportPreRequisitesNotMet(
+          "An index on :Resource(uri) is required for importing RDF Quads. "
+              + "Please run 'CREATE INDEX ON :Resource(uri)' and try again. "
+              + "Note that uniqueness constraint needs to be dropped if existing");
     }
   }
 
@@ -874,6 +928,12 @@ public class RDFImport {
 
   private class RDFImportBadParams extends Exception {
     public  RDFImportBadParams(String message){
+      super(message);
+    }
+  }
+
+  private class OperationNotAllowed extends Exception {
+    public  OperationNotAllowed(String message){
       super(message);
     }
   }

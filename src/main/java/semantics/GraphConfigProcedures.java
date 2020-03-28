@@ -32,7 +32,7 @@ public class GraphConfigProcedures {
       try {
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("props", new GraphConfig(props).serialiseConfig());
-        return tx.execute("MERGE (gc:_GraphConfig {_id: 1 }) " +
+        return tx.execute("MERGE (gc:_GraphConfig { _id: 1 }) " +
                 " SET gc+= $props RETURN gc ", queryParams).stream().map(n -> (Node) n.get("gc")).map(NodeResult::new);
       } catch (GraphConfig.InvalidParamException e) {
         throw new GraphConfigException("Invalid Config: " + e.getMessage());

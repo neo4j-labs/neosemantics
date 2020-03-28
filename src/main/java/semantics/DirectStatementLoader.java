@@ -59,6 +59,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   public Integer call() throws Exception {
     int count = 0;
 
+   //get the ns from the db
+
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
       final Node node = nodeCache.get(entry.getKey(), () -> {
@@ -145,6 +147,9 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     resourceLabels.clear();
     resourceProps.clear();
 
+    //TODO: get namespaces from db
+    //if conflict, rollback use 0/1 to return ok or ko
+    //throw namespaceprefixconflict
     //TODO what to return here? number of nodes and rels?
     return 0;
   }

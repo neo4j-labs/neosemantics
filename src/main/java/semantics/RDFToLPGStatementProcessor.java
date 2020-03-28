@@ -78,7 +78,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  private void loadNamespaces() {
+  private void loadNamespaceos() {
     Result nslist = tx.execute("MATCH (n:NamespacePrefixDefinition) \n" +
         "UNWIND keys(n) AS namespace\n" +
         "RETURN namespace, n[namespace] AS prefix");

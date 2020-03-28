@@ -288,8 +288,8 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The following index is required for importing RDF. Please run "
-              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+      assertEquals("The following constraint is required for importing RDF. Please "
+              + "run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -310,8 +310,8 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The following index is required for importing RDF. Please run "
-              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+      assertEquals("The following constraint is required for importing RDF. "
+              + "Please run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -331,8 +331,9 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The following index is required for importing RDF. Please run "
-              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+      assertEquals("The following constraint is required for importing RDF. Please "
+              + "run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' "
+              + "and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -352,8 +353,8 @@ public class RDFImportTest {
 
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
-      assertEquals("The following index is required for importing RDF. Please run "
-              + "'CREATE INDEX ON :Resource(uri)' and try again.",
+      assertEquals("The following constraint is required for importing RDF. Please run "
+              + "'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -3156,7 +3157,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
       Result importResults = session.run("CALL semantics.importQuadRDF('" +
@@ -3228,7 +3229,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),"{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),"{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
       Result importResults = session.run("CALL semantics.importQuadRDF('" +
           RDFImportTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
@@ -3299,7 +3300,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
       Result importResults = session.run("CALL semantics.importQuadRDF('" +
@@ -3331,7 +3332,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' } ");
 
       Result importResults = session.run("CALL semantics.importQuadRDF('" +
@@ -3363,7 +3364,7 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
       Result importResults = session.run("CALL semantics.importQuadRDF('" +
@@ -3398,9 +3399,16 @@ public class RDFImportTest {
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
+         + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
     db.executeTransactionally("CALL semantics.setGraphConfig(" +
             (graphConfigParams!=null?graphConfigParams:"{}") + ")");
+  }
+
+  private void initialiseGraphDBForQuads(GraphDatabaseService db, String graphConfigParams) {
+    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally("CALL semantics.setGraphConfig(" +
+        (graphConfigParams!=null?graphConfigParams:"{}") + ")");
   }
 
 
