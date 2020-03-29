@@ -11,6 +11,7 @@ import org.neo4j.logging.Log;
 import semantics.config.RDFParserConfig;
 import semantics.result.VirtualNode;
 import semantics.result.VirtualRelationship;
+import semantics.utils.NamespacePrefixConflictException;
 
 /**
  * Created by jbarrasa on 09/11/2016.
@@ -34,10 +35,16 @@ class StatementPreviewer extends RDFToLPGStatementProcessor {
           getPropsPlusUri(uri)));
     }
 
-    statements.forEach(st -> vRels.add(
-        new VirtualRelationship(vNodes.get(st.getSubject().stringValue().replace("'", "\'")),
-            vNodes.get(st.getObject().stringValue().replace("'", "\'")),
-            RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))));
+    statements.forEach(st -> {
+      try {
+        vRels.add(
+            new VirtualRelationship(vNodes.get(st.getSubject().stringValue().replace("'", "\'")),
+                vNodes.get(st.getObject().stringValue().replace("'", "\'")),
+                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))));
+      } catch (NamespacePrefixConflictException e) {
+        e.printStackTrace();
+      }
+    });
   }
 
   private Map<String, Object> getPropsPlusUri(String uri) {

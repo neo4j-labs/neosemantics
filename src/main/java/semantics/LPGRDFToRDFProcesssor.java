@@ -30,6 +30,8 @@ import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import semantics.config.Params;
+import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
+import semantics.utils.NsPrefixMap;
 
 
 public class LPGRDFToRDFProcesssor {
@@ -38,16 +40,17 @@ public class LPGRDFToRDFProcesssor {
       "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(\\w+)" + Pattern
           .quote(PREFIX_SEPARATOR) + "(.+)$");
 
-  private final Map<String, String> namespaces;
+  private final NsPrefixMap namespaces;
   private Transaction tx;
   private GraphDatabaseService graphdb;
   private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
-  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
+  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx)
+      throws InvalidNamespacePrefixDefinitionInDB {
     this.graphdb = graphdb;
     this.tx = tx;
-    this.namespaces = getNamespacesFromDB(graphdb);
+    this.namespaces = new NsPrefixMap(tx);
 
   }
 
@@ -62,7 +65,7 @@ public class LPGRDFToRDFProcesssor {
       String catName = node.getAllProperties().get("name").toString();
       if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")
           && !catName.equals("_GraphConfig")) {
-        IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName, namespaces));
+        IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
             vf.createLiteral(subject.getLocalName())));
@@ -72,20 +75,20 @@ public class LPGRDFToRDFProcesssor {
     List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
     for (Relationship r : relationshipList) {
       IRI relUri = vf
-          .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name(), namespaces));
+          .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name()));
       statements.add(vf.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
       statements.add(vf.createStatement(relUri, RDFS.LABEL,
           vf.createLiteral(relUri.getLocalName())));
       String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
       if (!domainClassStr.equals("Resource")) {
         IRI domainUri = vf
-            .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr, namespaces));
+            .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr));
         statements.add(vf.createStatement(relUri, RDFS.DOMAIN, domainUri));
       }
       String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
       if (!rangeClassStr.equals("Resource")) {
         IRI rangeUri = vf
-            .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr, namespaces));
+            .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr));
         statements.add(vf.createStatement(relUri, RDFS.RANGE, rangeUri));
       }
     }
@@ -93,29 +96,19 @@ public class LPGRDFToRDFProcesssor {
     return statements.stream();
   }
 
-
-  private Map<String, String> getNamespacesFromDB(GraphDatabaseService graphdb) {
-
-    Result nslist = tx.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-        "UNWIND keys(n) AS namespace\n" +
-        "RETURN namespace, n[namespace] AS prefix");
-
-    Map<String, String> result = new HashMap<>();
-    while (nslist.hasNext()) {
-      Map<String, Object> ns = nslist.next();
-      result.put((String) ns.get("namespace"), (String) ns.get("prefix"));
-    }
-    return result;
-  }
-
-  private String buildURI(String baseVocabNS, String name, Map<String, String> namespaces) {
+  private String buildURI(String baseVocabNS, String name) {
+    //TODO: Why is namespaces passed as param?
     Pattern regex = Pattern.compile("^(\\w+)" + PREFIX_SEPARATOR + "(.*)$");
     Matcher matcher = regex.matcher(name);
     if (matcher.matches()) {
       String prefix = matcher.group(1);
-      String uriPrefix = getKeyFromValue(prefix);
+      String uriNsPart = namespaces.getNsForPrefix(prefix);
+      if(uriNsPart == null){
+        throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
+            .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+      }
       String localName = matcher.group(2);
-      return uriPrefix + localName;
+      return uriNsPart + localName;
     } else if (name.startsWith("http")) {
       //TODO make this test better?
       return name;
@@ -123,16 +116,6 @@ public class LPGRDFToRDFProcesssor {
       return baseVocabNS + name;
     }
 
-  }
-
-  private String getKeyFromValue(String prefix) {
-    for (String key : namespaces.keySet()) {
-      if (namespaces.get(key).equals(prefix)) {
-        return key;
-      }
-    }
-    throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
-        .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
   }
 
   private class MissingNamespacePrefixDefinition extends RDFHandlerException {
@@ -244,7 +227,7 @@ public class LPGRDFToRDFProcesssor {
   private Set<Statement> processRelationship(Relationship rel) {
     Set<Statement> result = new HashSet<>();
     Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString());
-    IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, rel.getType().name(), namespaces));
+    IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, rel.getType().name()));
     Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString());
     Resource context = null;
     if (rel.getStartNode().hasProperty("graphUri") && rel.getEndNode().hasProperty("graphUri")) {
@@ -275,7 +258,7 @@ public class LPGRDFToRDFProcesssor {
         result.add(vf.createStatement(
             buildSubjectOrContext(node.getProperty("uri").toString()),
             RDF.TYPE,
-            vf.createIRI(buildURI(BASE_VOCAB_NS, label.name(), namespaces)),
+            vf.createIRI(buildURI(BASE_VOCAB_NS, label.name())),
             node.hasProperty("graphUri") ? vf
                 .createIRI(node.getProperty("graphUri").toString()) : null));
 
@@ -286,7 +269,7 @@ public class LPGRDFToRDFProcesssor {
     for (String key : allProperties.keySet()) {
       if (!key.equals("uri") && !key.equals("graphUri")) {
         Resource subject = buildSubjectOrContext(node.getProperty("uri").toString());
-        IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key, namespaces));
+        IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key));
         Object propertyValueObject = allProperties.get(key);
         Resource context = null;
         if (node.hasProperty("graphUri")) {
@@ -351,9 +334,13 @@ public class LPGRDFToRDFProcesssor {
     if (matcher.matches()) {
       String value = matcher.group(1);
       String prefix = matcher.group(2);
-      String uriPrefix = getKeyFromValue(prefix);
+      String uriNsPart = namespaces.getNsForPrefix(prefix);
+      if(uriNsPart == null ){
+        throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
+            .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+      }
       String localName = matcher.group(3);
-      return value + CUSTOM_DATA_TYPE_SEPERATOR + uriPrefix + localName;
+      return value + CUSTOM_DATA_TYPE_SEPERATOR + uriNsPart + localName;
     } else {
       return literal;
     }

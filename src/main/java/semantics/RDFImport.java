@@ -3,8 +3,6 @@ package semantics;
 import static semantics.config.Params.DATATYPE_REGULAR_PATTERN;
 import static semantics.config.Params.DATATYPE_SHORTENED_PATTERN;
 import static semantics.config.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
-import static semantics.config.Params.PREFIX_SEPARATOR;
-import static semantics.config.Params.SHORTENED_URI_PATTERN;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -24,10 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -54,6 +49,8 @@ import semantics.result.GraphResult;
 import semantics.result.NamespacePrefixesResult;
 import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
+import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
+import semantics.utils.NamespacePrefixConflictException;
 
 /**
  * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instancdes of DatatypeProperties
@@ -71,6 +68,7 @@ public class RDFImport {
 
   public static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
+
   @Context
   public GraphDatabaseService db;
 
@@ -626,140 +624,6 @@ public class RDFImport {
     return false;
   }
 
-  @UserFunction
-  @Description("Returns the expanded (full) IRI given a shortened one created in the load process "
-      + "with semantics.importRDF")
-  public String uriFromShort(@Name("short") String str) {
-
-    Matcher m = SHORTENED_URI_PATTERN.matcher(str);
-    if (m.matches()) {
-      ResourceIterator<Node> nspd = tx.findNodes(Label.label("NamespacePrefixDefinition"));
-      if (nspd.hasNext()) {
-        Map<String, Object> namespaces = nspd.next().getAllProperties();
-        Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-        while (nsIterator.hasNext()) {
-          Map.Entry<String, Object> kv = nsIterator.next();
-          if (m.group(1).equals(kv.getValue())) {
-            return kv.getKey() + m.group(2);
-          }
-        }
-      }
-    }
-    //default return original value
-    return str;
-  }
-
-  @UserFunction
-  @Description("Returns the shortened version of an IRI using the existing namespace definitions")
-  public String shortFromUri(@Name("uri") String str) {
-    try {
-      IRI iri = SimpleValueFactory.getInstance().createIRI(str);
-      ResourceIterator<Node> nspd = tx.findNodes(Label.label("NamespacePrefixDefinition"));
-      if (nspd.hasNext()) {
-        Map<String, Object> namespaces = nspd.next().getAllProperties();
-        Iterator<Map.Entry<String, Object>> nsIterator = namespaces.entrySet().iterator();
-        while (nsIterator.hasNext()) {
-          Map.Entry<String, Object> kv = nsIterator.next();
-          if (kv.getKey().equals(iri.getNamespace())) {
-            return kv.getValue() + PREFIX_SEPARATOR + iri.getLocalName();
-          }
-        }
-      }
-      return str;
-    } catch (Exception e) {
-      return str;
-    }
-  }
-
-  @Procedure(mode = Mode.WRITE)
-  @Description("Adds namespace - prefix pair definition")
-  public Stream<NamespacePrefixesResult> addNamespacePrefix(@Name("prefix") String prefix,
-      @Name("ns") String ns) throws OperationNotAllowed {
-
-    ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
-        .findNodes(Label.label("NamespacePrefixDefinition"));
-    if(namespacePrefixDefinitionNodes.hasNext()){
-      Node nsPrefDefNode = namespacePrefixDefinitionNodes.next();
-      if (nsPrefDefNode.getProperties().keySet().contains(prefix) && !graphIsEmpty()){
-        throw new OperationNotAllowed("A namespace prefix definition cannot be changed "
-            + "when the graph is non-empty.");
-      } else {
-        nsPrefDefNode.setProperty(ns, prefix);
-      }
-    } else {
-      Map<String, Object> params = new HashMap<>();
-      params.put("prefix", prefix);
-      Result execute = tx
-          .execute(String.format("MERGE (n:NamespacePrefixDefinition) SET n.`%s` = $prefix ", ns), params);
-    }
-
-
-    return tx.execute("MATCH (n:NamespacePrefixDefinition) "
-        + "WITH n UNWIND keys(n) as ns\n"
-        + "RETURN n[ns] as prefix, ns as namespace").stream()
-            .map(n -> new NamespacePrefixesResult((String) n.get("prefix"),
-        (String) n.get("namespace")));
-
-  }
-
-  private boolean graphIsEmpty() {
-    return !tx.execute("match (r:Resource) return id(r) limit 1").hasNext();
-  }
-
-  @Procedure(mode = Mode.WRITE)
-  @Description("Adds namespaces from a prefix declaration header fragment")
-  public Stream<NamespacePrefixesResult> addNamespacePrefixesFromText(
-      @Name("prefix") String textFragment) throws OperationNotAllowed {
-
-    //Try Turtle fragment
-    Pattern turtleNamespaceDefinitionRegex =
-        Pattern.compile("(?i)@prefix (\\S+)\\:\\s+<(\\S*)>", Pattern.MULTILINE);
-    if (tryExtractNsDefinitions(textFragment, turtleNamespaceDefinitionRegex)) {
-      return listNamespacePrefixes();
-    }
-
-    //Try RDF/XML fragment
-    Pattern rdfxmlNamespaceDefinitionRegex =
-        Pattern.compile("xmlns:(\\S+)\\s*=\\s*\\\"(\\S*)\\\"", Pattern.MULTILINE);
-    if (tryExtractNsDefinitions(textFragment, rdfxmlNamespaceDefinitionRegex)) {
-      return listNamespacePrefixes();
-    }
-    //try sparql
-    Pattern sparqlNamespaceDefinitionRegex =
-        Pattern.compile("(?i)prefix\\s+(\\S+)\\:\\s+<(\\S*)>", Pattern.MULTILINE);
-    if (tryExtractNsDefinitions(textFragment, sparqlNamespaceDefinitionRegex)) {
-      return listNamespacePrefixes();
-    }
-
-    // unclear how to make it safe with jsonld while keeping it simple
-
-    return listNamespacePrefixes();
-
-  }
-
-  private boolean tryExtractNsDefinitions(@Name("prefix") String textFragment,
-      Pattern pattern) throws OperationNotAllowed {
-    Matcher m;
-    m = pattern.matcher(textFragment);
-    while (m.find()) {
-      addNamespacePrefix(m.group(1).replace("-", "_"), m.group(2));
-    }
-    return m.matches();
-  }
-
-  @Procedure(mode = Mode.READ)
-  @Description("Lists all existing namespace prefix definitions")
-  public Stream<NamespacePrefixesResult> listNamespacePrefixes() {
-
-    return tx
-        .execute("MATCH (n:NamespacePrefixDefinition) \n" +
-            "UNWIND keys(n) AS namespace\n" +
-            "RETURN namespace, n[namespace] AS prefix").stream().map(
-            n -> new NamespacePrefixesResult((String) n.get("prefix"),
-                (String) n.get("namespace")));
-
-  }
-
   @Procedure(mode = Mode.WRITE)
   @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
       + "Requires a uniqueness constraint on :Resource(uri)")
@@ -803,8 +667,9 @@ public class RDFImport {
 
     if (!constraintExists) {
       throw new RDFImportPreRequisitesNotMet(
-          "The following constraint is required for importing RDF. Please run 'CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.");
+          "The following constraint is required for importing RDF. Please run 'CREATE CONSTRAINT "
+              +  UNIQUENESS_CONSTRAINT_ON_URI
+              + " ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.");
     }
 
   }
@@ -932,9 +797,4 @@ public class RDFImport {
     }
   }
 
-  private class OperationNotAllowed extends Exception {
-    public  OperationNotAllowed(String message){
-      super(message);
-    }
-  }
 }

@@ -35,6 +35,9 @@ import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 import semantics.config.GraphConfig;
 import semantics.config.RDFParserConfig;
+import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
+import semantics.utils.NamespacePrefixConflictException;
+import semantics.utils.NsPrefixMap;
 
 
 /**
@@ -49,7 +52,8 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
   protected GraphDatabaseService graphdb;
-  protected Map<String, String> namespaces = new HashMap<>();
+  //protected Map<String, String> namespaces = new HashMap<>();
+  protected NsPrefixMap namespaces;
   protected Set<Statement> statements = new HashSet<>();
   Map<String, Map<String, Object>> resourceProps = new HashMap<>();
   Map<String, Set<String>> resourceLabels = new HashMap<>();
@@ -78,53 +82,11 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  private void loadNamespaceos() {
-    Result nslist = tx.execute("MATCH (n:NamespacePrefixDefinition) \n" +
-        "UNWIND keys(n) AS namespace\n" +
-        "RETURN namespace, n[namespace] AS prefix");
-    if (!nslist.hasNext()) {
-      //no namespace definition, initialise with popular ones
-      namespaces.putAll(popularNamespaceList());
-    } else {
-      while (nslist.hasNext()) {
-        Map<String, Object> ns = nslist.next();
-        namespaces.put((String) ns.get("namespace"), (String) ns.get("prefix"));
-      }
-      popularNamespaceList().forEach((k, v) -> {
-        if (!namespaces.containsKey(k)) {
-          namespaces.put(k, v);
-        }
-      });
-    }
+  private void loadNamespaces() throws InvalidNamespacePrefixDefinitionInDB {
+    NsPrefixMap prefixesFromDB = new NsPrefixMap(tx);
+    //TODO: if confict... throw exception
+    namespaces = prefixesFromDB;
 
-  }
-
-  private Map<String, String> popularNamespaceList() {
-    Map<String, String> ns = new HashMap<>();
-    ns.put("http://schema.org/", "sch");
-    ns.put("http://purl.org/dc/elements/1.1/", "dc");
-    ns.put("http://purl.org/dc/terms/", "dct");
-    ns.put("http://www.w3.org/2004/02/skos/core#", "skos");
-    ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
-    ns.put("http://www.w3.org/2002/07/owl#", "owl");
-    ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
-    ns.put("http://www.w3.org/ns/shacl#", "sh");
-    return ns;
-  }
-
-
-  private String getPrefix(String namespace) {
-    if (namespaces.containsKey(namespace)) {
-      return namespaces.get(namespace);
-    } else {
-      namespaces.put(namespace, nextPrefix());
-      return namespaces.get(namespace);
-    }
-  }
-
-  private String nextPrefix() {
-
-    return "ns" + namespaces.values().stream().filter(x -> x.startsWith("ns")).count();
   }
 
   /**
@@ -135,7 +97,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
    *
    * @return processed literal
    */
-  Object getObjectValue(IRI propertyIRI, Literal object) {
+  Object getObjectValue(IRI propertyIRI, Literal object) throws NamespacePrefixConflictException {
     IRI datatype = object.getDatatype();
     if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
       final Optional<String> language = object.getLanguage();
@@ -214,11 +176,11 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  String handleIRI(IRI iri, int elementType) {
+  String handleIRI(IRI iri, int elementType) throws NamespacePrefixConflictException {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
       String localName = iri.getLocalName();
-      String prefix = getPrefix(iri.getNamespace());
+      String prefix = namespaces.getPrefixOrAdd(iri.getNamespace());
       return prefix + PREFIX_SEPARATOR + localName;
     } else if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
@@ -265,8 +227,12 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   public void startRDF() throws RDFHandlerException {
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
       //differentiate between map/shorten and keep_long urls?
-      loadNamespaces();
-      log.debug("Found " + namespaces.size() + " namespaces in the DB: " + namespaces);
+      try {
+        loadNamespaces();
+      } catch (InvalidNamespacePrefixDefinitionInDB e) {
+        throw new RDFHandlerException(e.getMessage());
+      }
+      log.debug("Found " + namespaces.getPrefixes().size() + " namespaces in the DB: " + namespaces);
     } else {
       log.debug("URIs will be ignored. Only local names will be kept.");
     }
@@ -302,7 +268,8 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return props;
   }
 
-  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
+  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw)
+      throws NamespacePrefixConflictException {
     Map<String, Object> props;
 
     String propName = handleIRI(propertyIRI, PROPERTY);
@@ -389,6 +356,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
         //TODO:Deal with other values of config param handleRDFTypes
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
         mappedTripleCounter++;
+
       } else {
         addResource(subject.stringValue());
         addResource(object.stringValue());
@@ -410,7 +378,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
   Map<String, String> getNamespaces() {
-    return namespaces;
+    return namespaces.getNsToPrefix();
   }
 
   // Stolen from APOC :)

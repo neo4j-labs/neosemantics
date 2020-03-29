@@ -50,9 +50,8 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
   }
 
   private void persistNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    tx.execute("MERGE (n:NamespacePrefixDefinition) SET n+=$props", params);
+    //TODO: Logic here to dectect conflicts
+    namespaces.flushToDB(tx);
   }
 
   @Override

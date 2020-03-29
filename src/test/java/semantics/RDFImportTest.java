@@ -1557,6 +1557,8 @@ public class RDFImportTest {
       assertEquals("abc", next.get("prefix").asString());
       assertEquals("http://myvoc#", next.get("namespace").asString());
       assertFalse(res.hasNext());
+      session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc2#')");
+      System.out.println("");
     }
   }
 

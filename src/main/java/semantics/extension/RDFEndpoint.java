@@ -36,6 +36,7 @@ import semantics.LPGRDFToRDFProcesssor;
 import semantics.LPGToRDFProcesssor;
 import semantics.config.GraphConfig;
 import semantics.config.GraphConfig.GraphConfigNotFound;
+import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
 
 /**
  * Created by jbarrasa on 08/09/2016.
