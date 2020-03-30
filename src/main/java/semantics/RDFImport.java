@@ -3,6 +3,8 @@ package semantics;
 import static semantics.config.Params.DATATYPE_REGULAR_PATTERN;
 import static semantics.config.Params.DATATYPE_SHORTENED_PATTERN;
 import static semantics.config.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
+import static semantics.config.Params.PREFIX_SEPARATOR;
+import static semantics.config.Params.SHORTENED_URI_PATTERN;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -23,6 +25,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -44,13 +48,13 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.config.GraphConfig;
+import semantics.config.GraphConfig.InvalidParamException;
 import semantics.config.RDFParserConfig;
 import semantics.result.GraphResult;
-import semantics.result.NamespacePrefixesResult;
 import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
 import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
-import semantics.utils.NamespacePrefixConflictException;
+import semantics.utils.NsPrefixMap;
 
 /**
  * Created by jbarrasa on 21/03/2016. <p> RDF importer based on: 1. Instancdes of DatatypeProperties
@@ -174,8 +178,7 @@ public class RDFImport {
     //url handling settings will be ignored  because that is what
     // ontoimport does ( -> specific graph setting for ontos)
     // TODO: Instead this should bbe a check on the config and a warning / error message?
-    // not good to just override the graph settings
-    //props.put("handleVocabUris", "IGNORE");
+    props.put("handleVocabUris", "IGNORE");
 
 
     OntologyImporter ontoImporter = null;
@@ -184,17 +187,16 @@ public class RDFImport {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      conf = new RDFParserConfig(props, new GraphConfig(props));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e){
       importResults.setTerminationKO(e.getMessage());
-    } catch (GraphConfig.GraphConfigNotFound e) {
-      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
+    } catch (InvalidParamException e) {
+      importResults.setTerminationKO("Invalid config param(?)");
     }
-
 
     if (ontoImporter!=null) {
       try {
@@ -624,6 +626,38 @@ public class RDFImport {
     return false;
   }
 
+  @UserFunction
+  @Description("Returns the expanded (full) IRI given a shortened one created in the load process "
+      + "with semantics.importRDF")
+  public String fullUriFromShortForm(@Name("short") String str)
+      throws InvalidNamespacePrefixDefinitionInDB, InvalidShortenedName {
+
+    Matcher m = SHORTENED_URI_PATTERN.matcher(str);
+    if (!m.matches()) {
+      throw new InvalidShortenedName( "Wrong Syntax: " + str + " is not a valid n10s shortened schema name.");
+    }
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx);
+    if (!prefixDefs.hasPrefix(m.group(1))) {
+      throw new InvalidShortenedName( "Prefix Undefined: " + str + " is using an undefined prefix.");
+    }
+
+    return prefixDefs.getNsForPrefix(m.group(1)) + m.group(2);
+  }
+
+  @UserFunction
+  @Description("Returns the shortened version of an IRI using the existing namespace definitions")
+  public String shortFormFromFullUri(@Name("uri") String str)
+      throws InvalidNamespacePrefixDefinitionInDB, InvalidShortenedName {
+
+    IRI iri = SimpleValueFactory.getInstance().createIRI(str);
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx);
+    if (!prefixDefs.hasNs(iri.getNamespace())) {
+      throw new InvalidShortenedName( "Prefix Undefined: No prefix defined for this namespace <"  + str + "> .");
+    }
+    return prefixDefs.getPrefixForNs(iri.getNamespace()) + PREFIX_SEPARATOR + iri.getLocalName();
+
+  }
+
   @Procedure(mode = Mode.WRITE)
   @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "
       + "Requires a uniqueness constraint on :Resource(uri)")
@@ -796,5 +830,10 @@ public class RDFImport {
       super(message);
     }
   }
+
+  private class InvalidShortenedName extends Exception {
+    public InvalidShortenedName(String s) {  super(s); }
+  }
+
 
 }

@@ -12,9 +12,9 @@ import org.neo4j.graphdb.Transaction;
 
 public class NsPrefixMap {
 
-  private static Map<String, String> standardPrefixes = createStandardPrefixesMap();
+  private static Map<String,String> standardNamespaces = createStandardNamespacesMap();
 
-  private static Map<String, String> createStandardPrefixesMap() {
+  private static Map<String,String> createStandardNamespacesMap() {
     Map<String,String> ns = new HashMap<>();
     ns.put("http://schema.org/", "sch");
     ns.put("http://purl.org/dc/elements/1.1/", "dc");
@@ -24,6 +24,21 @@ public class NsPrefixMap {
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
     ns.put("http://www.w3.org/ns/shacl#", "sh");
+    return ns;
+  };
+
+  private static Map<String,String> standardPrefixes = createStandardPrefixesMap();
+
+  private static Map<String,String> createStandardPrefixesMap() {
+    Map<String,String> ns = new HashMap<>();
+    ns.put("sch","http://schema.org/");
+    ns.put("dc","http://purl.org/dc/elements/1.1/");
+    ns.put("dct","http://purl.org/dc/terms/");
+    ns.put("skos","http://www.w3.org/2004/02/skos/core#");
+    ns.put("rdfs","http://www.w3.org/2000/01/rdf-schema#");
+    ns.put("owl","http://www.w3.org/2002/07/owl#");
+    ns.put("rdf","http://www.w3.org/1999/02/22-rdf-syntax-ns#");
+    ns.put("sh","http://www.w3.org/ns/shacl#");
     return ns;
   };
 
@@ -39,19 +54,29 @@ public class NsPrefixMap {
 
       if(namespacePrefixDefinitionNodes.hasNext()) {
         nsPrefDefNode = namespacePrefixDefinitionNodes.next();
-        tx.acquireWriteLock(nsPrefDefNode);
-      } else {
-        nsPrefDefNode = (Node) tx.execute("MERGE (n:NamespacePrefixDefinition) RETURN n ")
-            .next().get("n");
-      }
 
-      for (Entry<String, Object> entry: nsPrefDefNode.getAllProperties().entrySet()) {
-        add(entry.getKey(), (String) entry.getValue());
+        for (Entry<String, Object> entry: nsPrefDefNode.getAllProperties().entrySet()) {
+          add(entry.getKey(), (String) entry.getValue());
+        }
+
+        tx.acquireWriteLock(nsPrefDefNode);
+
       }
+// TODO:  Remove this
+//      else {
+//          nsPrefDefNode = (Node) tx.execute("MERGE (n:NamespacePrefixDefinition) RETURN n ")
+//              .next().get("n");
+//      }
 
     } catch(NamespacePrefixConflictException e){
       throw new InvalidNamespacePrefixDefinitionInDB("The namespace prefix definition in the DB "
           + "is invalid. Check the 'NamespacePrefixDefinition' node. Detail: " + e.getMessage());
+    }
+  }
+
+  public NsPrefixMap(Map<String,String> staticMap) {
+    for (Entry<String,String> entry:staticMap.entrySet()) {
+      add(entry.getKey(),entry.getValue());
     }
   }
 
@@ -76,9 +101,9 @@ public class NsPrefixMap {
       return nsToPrefix.get(ns);
     } else {
       //is it a standard? use std  prefix
-      if(standardPrefixes.containsKey(ns)) {
-        add(standardPrefixes.get(ns), ns);
-        return standardPrefixes.get(ns);
+      if(standardNamespaces.containsKey(ns)) {
+        add(standardNamespaces.get(ns), ns);
+        return standardNamespaces.get(ns);
       } else {
         //it's not a standard, we need to generate next in sequence
         String nextNsPrefix = "ns" + prefixToNs.keySet().stream().filter(x -> x.startsWith("ns")).count();
@@ -89,7 +114,13 @@ public class NsPrefixMap {
   }
 
   public void add(String prefix, String ns) throws NamespacePrefixConflictException {
-    if (!prefixToNs.containsKey(prefix) && !nsToPrefix.containsKey(ns)){
+    if (standardPrefixes.containsKey(prefix) && !standardPrefixes.get(prefix).equals(ns)){
+      throw new NamespacePrefixConflictException( "Invalid prefix + namespace combination: "
+          + prefix + " is a reserved namespace prefix for <" + standardPrefixes.get(prefix) + ">");
+    } else if (standardNamespaces.containsKey(ns) && !standardNamespaces.get(ns).equals(prefix)){
+      throw new NamespacePrefixConflictException( "Invalid prefix + namespace combination: "
+          + ns + " is a standard namespace that has the associated standard prefix " + standardNamespaces.get(ns));
+    } else if (!prefixToNs.containsKey(prefix) && !nsToPrefix.containsKey(ns)){
       prefixToNs.put(prefix,ns);
       nsToPrefix.put(ns,prefix);
     } else if (prefixToNs.containsKey(prefix) && !prefixToNs.get(prefix).equals(ns)){

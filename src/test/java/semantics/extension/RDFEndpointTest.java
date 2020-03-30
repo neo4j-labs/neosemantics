@@ -25,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import semantics.nsprefixes.NsPrefixDefProcedures;
 
 import static org.junit.Assert.*;
 import static semantics.config.Params.PREFIX_SEPARATOR;
@@ -37,7 +38,8 @@ public class RDFEndpointTest {
   @Rule
   public Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
-      .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class);
+      .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class)
+      .withProcedure(NsPrefixDefProcedures.class);
 
   @Rule
   public Neo4jRule temp = new Neo4jRule().withProcedure(RDFImport.class).withProcedure(GraphConfigProcedures.class);
@@ -678,11 +680,9 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CALL semantics.setGraphConfig()");
-            String nsDefCreation =
-                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                    +
-                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-            tx.execute(nsDefCreation);
+            tx.execute("call semantics.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
+            tx.execute("call semantics.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
+
             String dataInsertion =
                 "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
                     + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
@@ -748,11 +748,8 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CALL semantics.setGraphConfig()");
-            String nsDefCreation =
-                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                    +
-                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-            tx.execute(nsDefCreation);
+            tx.execute("call semantics.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
+            tx.execute("call semantics.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
             String dataInsertion =
                 "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
                     + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
@@ -864,23 +861,38 @@ public class RDFEndpointTest {
           try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CALL semantics.setGraphConfig({})");
             //set a prefix that we can remove afterwards
-            tx.execute("CREATE (n:NamespacePrefixDefinition) "
-                + "SET n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/` = 'fiboanno'");
+            tx.execute(
+                "call semantics.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
 
             tx.execute("CALL semantics.importRDF('" +
                 RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
                     .toURI() + "','RDF/XML',{})");
-
-            //we remove the namespace now
-            tx.execute("MATCH (n:NamespacePrefixDefinition) "
-                + "REMOVE n.`https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/`");
             tx.commit();
           }
+
+          try (Transaction tx = graphDatabaseService.beginTx()){
+            //we try (and fail) to remove the namespace
+            tx.execute("call semantics.nsprefixes.remove('fiboanno')");
+            tx.execute("call semantics.nsprefixes.list()").next();
+            assertTrue(false);
+            tx.commit();
+          } catch (Exception e) {
+            //expected
+            assertTrue(true);
+          }
+
+          try (Transaction tx = graphDatabaseService.beginTx()) {
+            //now we force delete it from the node
+            tx.execute("match (n:NamespacePrefixDefinition) remove n.fiboanno ");
+            tx.commit();
+          }
+
       HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
           HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
               + "n10s/neo4j/describe/" + URLEncoder
               .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
                   StandardCharsets.UTF_8.toString()));
+
       assertEquals(200, response.status());
       String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
           + "<rdf:RDF\n"
@@ -890,6 +902,7 @@ public class RDFEndpointTest {
           + "</rdf:RDF>";
       assertTrue(ModelTestUtils
           .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+
       assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno in use "
           + "but not defined in the 'NamespacePrefixDefinition' node"));
 
@@ -936,11 +949,10 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CALL semantics.setGraphConfig()");
-            String nsDefCreation =
-                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                    +
-                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-            tx.execute(nsDefCreation);
+            tx.execute("call semantics.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
+            tx.execute("call semantics.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
+
+
             String dataInsertion =
                 "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
                     + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
@@ -991,19 +1003,16 @@ public class RDFEndpointTest {
       final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
-            tx.execute("CALL semantics.setGraphConfig()");
-            String nsDefCreation =
-                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                    +
-                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-            tx.execute(nsDefCreation);
-            String dataInsertion =
-                "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-                    + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-                    + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
-            tx.execute(dataInsertion);
-            tx.commit();
-          }
+      tx.execute("CALL semantics.setGraphConfig()");
+      tx.execute("CALL semantics.nsprefixes.add('ns1', 'http://ont.thomsonreuters.com/mdaas/')");
+      tx.execute("CALL semantics.nsprefixes.add('ns0', 'http://permid.org/ontology/organization/')");
+      String dataInsertion =
+          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+              + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
+      tx.execute(dataInsertion);
+      tx.commit();
+    }
 
       Map<String, String> params = new HashMap<>();
       params.put("cypher", "MATCH (n) RETURN n ");
@@ -1034,11 +1043,8 @@ public class RDFEndpointTest {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
             tx.execute("CALL semantics.setGraphConfig()");
-            String nsDefCreation =
-                "CREATE (n:NamespacePrefixDefinition { `http://ont.thomsonreuters.com/mdaas/` : 'ns1' ,\n"
-                    +
-                    "`http://permid.org/ontology/organization/` : 'ns0' } ) ";
-            tx.execute(nsDefCreation);
+            tx.execute("call semantics.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
+            tx.execute("call semantics.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
             String dataInsertion =
                 "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
                     + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR

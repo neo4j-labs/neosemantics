@@ -35,6 +35,7 @@ import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import semantics.mapping.MappingUtils;
+import semantics.nsprefixes.NsPrefixDefProcedures;
 
 /**
  * Created by jbarrasa on 21/03/2016.
@@ -44,7 +45,8 @@ public class RDFImportTest {
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
-      .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class);
+      .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class).withProcedure(
+          NsPrefixDefProcedures.class);
   private String jsonLdFragment = "{\n" +
       "  \"@context\": {\n" +
       "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
@@ -371,6 +373,8 @@ public class RDFImportTest {
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
           "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+
       assertEquals(6L, importResults
           .single().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
@@ -432,9 +436,9 @@ public class RDFImportTest {
               .next().get("count").asLong());
 
       assertEquals("ns0",
-          session.run(
-              "MATCH (n:NamespacePrefixDefinition) RETURN n.`http://xmlns.com/foaf/0.1/` AS prefix")
-              .next().get("prefix").asString());
+          session.run("call semantics.nsprefixes.list() yield prefix, namespace "
+                  + "with prefix, namespace where namespace = 'http://xmlns.com/foaf/0.1/' "
+                  + "return prefix, namespace").next().get("prefix").asString());
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //set graph config
@@ -454,7 +458,9 @@ public class RDFImportTest {
 
       assertEquals("ns0",
           session.run(
-              "MATCH (n:NamespacePrefixDefinition) RETURN n.`http://xmlns.com/foaf/0.1/` AS prefix")
+              "call semantics.nsprefixes.list() yield prefix, namespace "
+                  + " with prefix, namespace where namespace = 'http://xmlns.com/foaf/0.1/' "
+                  + " return prefix ")
               .next().get("prefix").asString());
     }
 
@@ -502,7 +508,7 @@ public class RDFImportTest {
           RDFImportTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
               .toURI()
-          + "','RDF/XML',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
+          + "','RDF/XML',{ commitSize: 500})");
       assertEquals(38L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals(7L,
@@ -519,9 +525,9 @@ public class RDFImportTest {
               .get("datasetUrl").asString());
 
       assertEquals("ns0",
-          session.run("MATCH (n:NamespacePrefixDefinition) \n" +
-              "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
-              .next().get("prefix").asString());
+          session.run("call semantics.nsprefixes.list() yield prefix, namespace\n"
+              + "with prefix, namespace where namespace = 'http://www.w3.org/ns/dcat#'\n"
+              + "return prefix, namespace").next().get("prefix").asString());
 
     }
   }
@@ -532,15 +538,12 @@ public class RDFImportTest {
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),null);
-
-      session.run("WITH {`http://purl.org/dc/terms/`:'dc',\n" +
-          "`http://www.w3.org/1999/02/22-rdf-syntax-ns#`:'rdf',\n" +
-          "`http://www.w3.org/2002/07/owl#`:'owl',\n" +
-          "`http://www.w3.org/ns/dcat#`:'dcat',\n" +
-          "`http://www.w3.org/2000/01/rdf-schema#`:'rdfs',\n" +
-          "`http://xmlns.com/foaf/0.1/`:'foaf'} as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
-          "SET n+=nslist");
+      session.run("call semantics.nsprefixes.add('dct','http://purl.org/dc/terms/')");
+      session.run("call semantics.nsprefixes.add('rdf','http://www.w3.org/1999/02/22-rdf-syntax-ns#')");
+      session.run("call semantics.nsprefixes.add('owl','http://www.w3.org/2002/07/owl#')");
+      session.run("call semantics.nsprefixes.add('dcat','http://www.w3.org/ns/dcat#')");
+      session.run("call semantics.nsprefixes.add('rdfs','http://www.w3.org/2000/01/rdf-schema#')");
+      session.run("call semantics.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
 
       Result importResults
           = session.run("CALL semantics.importRDF('" +
@@ -552,7 +555,7 @@ public class RDFImportTest {
           .next().get("triplesLoaded").asLong());
       assertEquals(7L,
           session
-              .run("MATCH ()-[r:dc" + PREFIX_SEPARATOR + "relation]->(b) RETURN count(b) as count")
+              .run("MATCH ()-[r:dct" + PREFIX_SEPARATOR + "relation]->(b) RETURN count(b) as count")
               .next().get("count").asLong());
 
       assertEquals(
@@ -563,8 +566,9 @@ public class RDFImportTest {
               .get("datasetUrl").asString());
 
       assertEquals("dcat",
-          session.run("MATCH (n:NamespacePrefixDefinition) \n" +
-              "RETURN n.`http://www.w3.org/ns/dcat#` as prefix")
+          session.run("call semantics.nsprefixes.list() yield prefix, namespace\n"
+          + " with prefix, namespace where namespace = 'http://www.w3.org/ns/dcat#' \n"
+          + " return prefix, namespace")
               .next().get("prefix").asString());
 
     }
@@ -576,11 +580,7 @@ public class RDFImportTest {
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),null);
-
-      session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
-          "SET n+=nslist " +
-          "RETURN n ");
+      session.run("call semantics.nsprefixes.add('voc','http://neo4j.com/voc/')");
 
       Result importResults = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("oneTriple.rdf")
@@ -594,10 +594,10 @@ public class RDFImportTest {
               .next().get("name").asString());
 
       assertEquals("voc",
-          session.run("MATCH (n:NamespacePrefixDefinition) \n" +
-              "RETURN n.`http://neo4j.com/voc/` as prefix")
+          session.run("call semantics.nsprefixes.list() yield prefix, namespace "
+              + " with prefix where namespace = 'http://neo4j.com/voc/' "
+              + " return  prefix ")
               .next().get("prefix").asString());
-
     }
   }
 
@@ -606,18 +606,16 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
 
-      session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
-          "SET n+=nslist " +
-          "RETURN n ");
+      session.run("call semantics.nsprefixes.add('pr','http://example.org/vocab/show/')");
 
       Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI()
-          + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500, verifyUriSyntax: false})");
+          + "','Turtle',{ commitSize: 500, verifyUriSyntax: false})");
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("test name",
@@ -658,11 +656,7 @@ public class RDFImportTest {
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),null);
-
-      session.run("WITH {`http://neo4j.com/voc/`:'voc' } as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
-          "SET n+=nslist " +
-          "RETURN n ");
+      session.run("call semantics.nsprefixes.add('voc','http://neo4j.com/voc/')");
 
       Result importResults
           = session.run("CALL semantics.importRDF('" +
@@ -685,16 +679,13 @@ public class RDFImportTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),null);
 
-      session.run("WITH {`http://example.org/vocab/show/`:'voc' } as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
-          "SET n+=nslist " +
-          "RETURN n ");
+      session.run("call semantics.nsprefixes.add('voc','http://example.org/vocab/show/')");
 
       Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
-          + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', languageFilter: 'en', commitSize: 500})");
+          + "','Turtle',{ languageFilter: 'en', commitSize: 500})");
       assertEquals(1L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("That Seventies Show",
@@ -709,7 +700,7 @@ public class RDFImportTest {
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
-          + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', languageFilter: 'fr', commitSize: 500})");
+          + "','Turtle',{ languageFilter: 'fr', commitSize: 500})");
       assertEquals(1L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("Cette Série des Années Soixante-dix",
@@ -895,9 +886,9 @@ public class RDFImportTest {
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),null);
-      session.run("CREATE (rdf:NamespacePrefixDefinition {" +
-          "  `http://www.example.com/ontology/1.0.0#`: 'ex'," +
-          "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'rdfs'})");
+      session.run("call semantics.nsprefixes.add('ex','http://www.example.com/ontology/1.0.0#')");
+      session.run("call semantics.nsprefixes.add('rdf','http://www.w3.org/1999/02/22-rdf-syntax-ns#')");
+
       Result importResults = session.run(String.format(
           "CALL semantics.importRDF('%s','Turtle',{nodeCacheSize: 1})",
           file("myrdf/testImportTurtle02.ttl")));
@@ -919,12 +910,13 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{handleVocabUris: 'KEEP', handleRDFTypes: 'NODES' }");
 
       Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
-              + "','Turtle',{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES', verifyUriSyntax: false})");
+              + "','Turtle',{ verifyUriSyntax: false})");
       Map<String, Object> next = importResults
           .next().asMap();
       final List<Node> nodes = (List<Node>) next.get("nodes");
@@ -939,13 +931,14 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
 
       try {
         Result importResults
                 = session
                 .run("CALL semantics.previewRDFSnippet('" + wrongUriTtl
-                        + "','Turtle',{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'})");
+                        + "','Turtle')");
 
         importResults.next();
         //we should not get here
@@ -1526,22 +1519,23 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
 
       Result importResults
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
-          "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
+          "{ commitSize: 500 })");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("http://xmlns.com/foaf/0.1/knows",
           session.run("MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'})-[r]-() " +
-              " RETURN semantics.uriFromShort(type(r)) AS uri")
+              " RETURN semantics.fullUriFromShortForm(type(r)) AS uri")
               .next().get("uri").asString());
 
       assertEquals("ns0" + PREFIX_SEPARATOR + "knows",
-          session.run("RETURN semantics.shortFromUri('http://xmlns.com/foaf/0.1/knows') AS uri")
+          session.run("RETURN semantics.shortFormFromFullUri('http://xmlns.com/foaf/0.1/knows') AS uri")
               .next().get("uri").asString());
     }
   }
@@ -1551,14 +1545,17 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      Result res = session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
+      Result res = session.run("CALL semantics.nsprefixes.add('abc','http://myvoc#')");
       assertTrue(res.hasNext());
       Record next = res.next();
       assertEquals("abc", next.get("prefix").asString());
       assertEquals("http://myvoc#", next.get("namespace").asString());
       assertFalse(res.hasNext());
-      session.run("CALL semantics.addNamespacePrefix('abc','http://myvoc2#')");
-      System.out.println("");
+      session.run("CALL semantics.nsprefixes.remove('abc')");
+      res = session.run("CALL semantics.nsprefixes.add('abc','http://myvoc2#')");
+      next = res.next();
+      assertEquals("abc", next.get("prefix").asString());
+      assertEquals("http://myvoc2#", next.get("namespace").asString());
     }
   }
 
@@ -1573,8 +1570,9 @@ public class RDFImportTest {
           + "','JSON-LD')");
       assertTrue(res1.hasNext());
       Map<String, Object> preAddition = res1.next().get("namespaces").asMap();
+      String ns_prefix = "abc";
       Result res2 = session
-          .run("CALL semantics.addNamespacePrefix('abc','http://myvoc#')");
+          .run("CALL semantics.nsprefixes.add('" + ns_prefix + "','http://myvoc#')");
       assertTrue(res2.hasNext());
       Result res3 = session.run("MATCH (n:NamespacePrefixDefinition) RETURN n");
       assertTrue(res3.hasNext());
@@ -1583,7 +1581,7 @@ public class RDFImportTest {
       Set<String> keys = new HashSet<>(postAddition.keySet());
       keys.removeAll(preAddition.keySet());
       assertEquals(1, keys.size());
-      assertEquals("http://myvoc#", keys.iterator().next());
+      assertEquals(ns_prefix, keys.iterator().next());
     }
   }
 
@@ -1656,7 +1654,7 @@ public class RDFImportTest {
       String textFragment) {
     Result res;
     int resultCount;
-    res = session.run("CALL semantics.addNamespacePrefixesFromText('" + textFragment + "')");
+    res = session.run("CALL semantics.nsprefixes.addFromText('" + textFragment + "')");
     assertTrue(res.hasNext());
     resultCount = 0;
     while (res.hasNext()) {

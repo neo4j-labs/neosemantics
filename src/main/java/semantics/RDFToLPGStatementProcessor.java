@@ -378,7 +378,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
   Map<String, String> getNamespaces() {
-    return namespaces.getNsToPrefix();
+    return (namespaces==null?null:namespaces.getPrefixToNs());
   }
 
   // Stolen from APOC :)
