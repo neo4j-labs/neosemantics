@@ -48,6 +48,7 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
 import semantics.config.GraphConfig;
+import semantics.config.GraphConfig.GraphConfigNotFound;
 import semantics.config.GraphConfig.InvalidParamException;
 import semantics.config.RDFParserConfig;
 import semantics.result.GraphResult;
@@ -156,7 +157,8 @@ public class RDFImport {
   @Description("Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.")
   public Stream<ImportResults> importOntology(@Name("url") String url,
       @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws GraphConfigNotFound {
 
     return Stream.of(doOntoImport(format, url, null, props));
 
@@ -166,14 +168,15 @@ public class RDFImport {
   @Description("Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.")
   public Stream<ImportResults> importOntologySnippet(@Name("rdf") String rdf,
       @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws GraphConfigNotFound {
 
     return Stream.of(doOntoImport(format, null, rdf, props));
 
   }
 
   private ImportResults doOntoImport(String format, String url,
-      String rdfFragment, Map<String, Object> props) {
+      String rdfFragment, Map<String, Object> props) throws GraphConfigNotFound {
 
     //url handling settings will be ignored  because that is what
     // ontoimport does ( -> specific graph setting for ontos)
@@ -187,15 +190,13 @@ public class RDFImport {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      conf = new RDFParserConfig(props, new GraphConfig(props));
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e){
       importResults.setTerminationKO(e.getMessage());
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
-    } catch (InvalidParamException e) {
-      importResults.setTerminationKO("Invalid config param(?)");
     }
 
     if (ontoImporter!=null) {
