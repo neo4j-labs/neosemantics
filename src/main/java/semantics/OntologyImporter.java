@@ -35,11 +35,6 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   }
 
   @Override
-  public void startRDF() throws RDFHandlerException {
-    //do nothing
-  }
-
-  @Override
   protected void periodicOperation() {
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
@@ -48,6 +43,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
 
   @Override
   public void endRDF() throws RDFHandlerException {
+
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     // take away the unused extra triples (maybe too much for just returning a counter?)
@@ -112,6 +108,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
     totalTriplesParsed++;
 
     if (parserConfig.getCommitSize() != Long.MAX_VALUE
+        && mappedTripleCounter != 0
         && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }
@@ -135,6 +132,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
 
   @Override
   public Integer call() throws Exception {
+
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
       if (!entry.getValue().isEmpty()) {

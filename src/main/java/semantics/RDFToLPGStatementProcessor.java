@@ -52,7 +52,6 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
   protected GraphDatabaseService graphdb;
-  //protected Map<String, String> namespaces = new HashMap<>();
   protected NsPrefixMap namespaces;
   protected Set<Statement> statements = new HashSet<>();
   Map<String, Map<String, Object>> resourceProps = new HashMap<>();
@@ -83,10 +82,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
 
   private void loadNamespaces() throws InvalidNamespacePrefixDefinitionInDB {
-    NsPrefixMap prefixesFromDB = new NsPrefixMap(tx);
-    //TODO: if confict... throw exception
-    namespaces = prefixesFromDB;
-
+    namespaces = new NsPrefixMap(tx, false);
   }
 
   /**
@@ -366,7 +362,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     }
     totalTriplesParsed++;
 
-    if (parserConfig.getCommitSize() != Long.MAX_VALUE
+    if (parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter != 0
         && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }

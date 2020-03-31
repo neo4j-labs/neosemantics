@@ -423,7 +423,7 @@ public class RDFImportTest {
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
-          "{ commitSize: 500 })");
+          "{ commitSize: 1 })");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
@@ -445,7 +445,7 @@ public class RDFImportTest {
       session.run("CALL semantics.setGraphConfig({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
 
       importResults = session.run("CALL semantics.importRDFSnippet('" +
-          jsonLdFragment + "','JSON-LD', { commitSize: 500})");
+          jsonLdFragment + "','JSON-LD', { commitSize: 4})");
       assertEquals(6L, importResults.next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
           session.run(
@@ -2880,6 +2880,8 @@ public class RDFImportTest {
           LiteOntologyImporterTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
+      Record importSummary = importResults.next();
+      assertEquals(5L,importSummary.get("triplesLoaded").asLong());
 
       assertEquals(1L,
           session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +

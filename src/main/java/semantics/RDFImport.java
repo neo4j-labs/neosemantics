@@ -129,15 +129,13 @@ public class RDFImport {
         importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
         importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
         importResults.setNamespaces(statementLoader.getNamespaces());
-        //TODO get db conf? not any more because the config is explicit and persisted
-        importResults.setConfigSummary(conf.getConfigSummary());
+        importResults.setConfigSummary(props);
 
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         importResults.setTerminationKO(e.getMessage());
         importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
         importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-        //TODO get db conf? not any more because the config is explicit and persisted
-        //importResults.setConfigSummary(conf.getConfigSummary());
+        importResults.setConfigSummary(props);
       }
     }
     return importResults;
@@ -178,9 +176,7 @@ public class RDFImport {
   private ImportResults doOntoImport(String format, String url,
       String rdfFragment, Map<String, Object> props) throws GraphConfigNotFound {
 
-    //url handling settings will be ignored  because that is what
-    // ontoimport does ( -> specific graph setting for ontos)
-    // TODO: Instead this should bbe a check on the config and a warning / error message?
+    // TODO: This effectively overrides the graphconfig (and can cause conflict?)
     props.put("handleVocabUris", "IGNORE");
 
 
@@ -202,16 +198,15 @@ public class RDFImport {
     if (ontoImporter!=null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat,url, rdfFragment, props,  ontoImporter);
+        importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
+        importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
+        importResults.setConfigSummary(props);
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         importResults.setTerminationKO(e.getMessage());
         importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
         importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
-        importResults.setConfigSummary(conf.getConfigSummary());
+        importResults.setConfigSummary(props);
         e.printStackTrace();
-      } finally {
-        importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
-        importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
-        importResults.setConfigSummary(conf.getConfigSummary());
       }
     }
     return importResults;
@@ -442,15 +437,13 @@ public class RDFImport {
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
       importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
       importResults.setNamespaces(statementLoader.getNamespaces());
-      //TODO get db conf? not any more because the config is explicit and persisted
-      importResults.setConfigSummary(conf.getConfigSummary());
+      importResults.setConfigSummary(props);
 
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
       importResults.setTerminationKO(e.getMessage());
       importResults.setTriplesLoaded(statementLoader.totalTriplesMapped);
       importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
-      //TODO get db conf? not any more because the config is explicit and persisted
-      //importResults.setConfigSummary(conf.getConfigSummary());
+      importResults.setConfigSummary(props);
     }
   }
 
@@ -637,7 +630,7 @@ public class RDFImport {
     if (!m.matches()) {
       throw new InvalidShortenedName( "Wrong Syntax: " + str + " is not a valid n10s shortened schema name.");
     }
-    NsPrefixMap prefixDefs = new NsPrefixMap(tx);
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
     if (!prefixDefs.hasPrefix(m.group(1))) {
       throw new InvalidShortenedName( "Prefix Undefined: " + str + " is using an undefined prefix.");
     }
@@ -651,7 +644,7 @@ public class RDFImport {
       throws InvalidNamespacePrefixDefinitionInDB, InvalidShortenedName {
 
     IRI iri = SimpleValueFactory.getInstance().createIRI(str);
-    NsPrefixMap prefixDefs = new NsPrefixMap(tx);
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
     if (!prefixDefs.hasNs(iri.getNamespace())) {
       throw new InvalidShortenedName( "Prefix Undefined: No prefix defined for this namespace <"  + str + "> .");
     }
@@ -769,7 +762,7 @@ public class RDFImport {
     public long triplesParsed = 0;
     public Map<String, String> namespaces;
     public String extraInfo = "";
-    public Map<String, Object> configSummary;
+    public Map<String, Object> callParams;
 
     public void setTriplesLoaded(long count) {
       this.triplesLoaded = count;
@@ -780,7 +773,7 @@ public class RDFImport {
     }
 
     public void setConfigSummary(Map<String, Object> summary) {
-      this.configSummary = summary;
+      this.callParams = summary;
     }
 
     public void setNamespaces(Map<String, String> namespaces) {

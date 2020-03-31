@@ -32,9 +32,9 @@ public class NsPrefixDefProcedures {
   public Stream<NamespacePrefixesResult> add(@Name("prefix") String prefix,
       @Name("ns") String ns)
       throws InvalidNamespacePrefixDefinitionInDB, NamespacePrefixConflictException {
-    NsPrefixMap map = new NsPrefixMap(tx);
+    NsPrefixMap map = new NsPrefixMap(tx, true);
     map.add(prefix, ns);
-    map.flushToDB(tx);
+    map.flushToDB();
 
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));
@@ -49,9 +49,9 @@ public class NsPrefixDefProcedures {
       throw new NsPrefixOperationNotAllowed("A namespace prefix definition cannot be removed "
           + "when the graph is non-empty.");
     }
-    NsPrefixMap map = new NsPrefixMap(tx);
+    NsPrefixMap map = new NsPrefixMap(tx, true);
     map.removePrefix(prefix);
-    map.flushToDB(tx);
+    map.flushToDB();
 
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));

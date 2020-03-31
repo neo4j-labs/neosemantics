@@ -5,12 +5,15 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.lang.String;
+import java.util.concurrent.Callable;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 
-public class NsPrefixMap {
+public class NsPrefixMap implements Callable<Integer> {
 
   private static Map<String,String> standardNamespaces = createStandardNamespacesMap();
 
@@ -42,41 +45,33 @@ public class NsPrefixMap {
     return ns;
   };
 
+  private Transaction tx;
   Map<String,String> prefixToNs = new HashMap<>();
   Map<String,String> nsToPrefix = new HashMap<>();
+  Lock lock;
 
-  public NsPrefixMap(Transaction tx) throws InvalidNamespacePrefixDefinitionInDB {
+  public NsPrefixMap(Transaction tx, boolean acquireLock) throws InvalidNamespacePrefixDefinitionInDB {
     try {
-      Node nsPrefDefNode;
 
+      this.tx = tx;
       ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
           .findNodes(Label.label("NamespacePrefixDefinition"));
 
       if(namespacePrefixDefinitionNodes.hasNext()) {
-        nsPrefDefNode = namespacePrefixDefinitionNodes.next();
+        Node nspd = namespacePrefixDefinitionNodes.next();
+        if(acquireLock) {
+          lock = tx.acquireWriteLock(nspd);
+        }
 
-        for (Entry<String, Object> entry: nsPrefDefNode.getAllProperties().entrySet()) {
+        for (Entry<String, Object> entry: nspd.getAllProperties().entrySet()) {
           add(entry.getKey(), (String) entry.getValue());
         }
 
-        tx.acquireWriteLock(nsPrefDefNode);
-
       }
-// TODO:  Remove this
-//      else {
-//          nsPrefDefNode = (Node) tx.execute("MERGE (n:NamespacePrefixDefinition) RETURN n ")
-//              .next().get("n");
-//      }
 
     } catch(NamespacePrefixConflictException e){
       throw new InvalidNamespacePrefixDefinitionInDB("The namespace prefix definition in the DB "
           + "is invalid. Check the 'NamespacePrefixDefinition' node. Detail: " + e.getMessage());
-    }
-  }
-
-  public NsPrefixMap(Map<String,String> staticMap) {
-    for (Entry<String,String> entry:staticMap.entrySet()) {
-      add(entry.getKey(),entry.getValue());
     }
   }
 
@@ -160,7 +155,7 @@ public class NsPrefixMap {
     return nsToPrefix;
   }
 
-  public void flushToDB(Transaction tx){
+  public void flushToDB(){
     Node nsPrefDefNode;
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
@@ -168,17 +163,38 @@ public class NsPrefixMap {
 
     if(namespacePrefixDefinitionNodes.hasNext()) {
       nsPrefDefNode = namespacePrefixDefinitionNodes.next();
-    } else {
+      tx.acquireWriteLock(nsPrefDefNode);
+      // get the latest from the DB and update it.
+      Map<String, String> nsPrefDefInDB = new HashMap<>();
+
+      for (Entry<String, Object> entry : nsPrefDefNode.getAllProperties().entrySet()) {
+        if (!prefixToNs.containsKey(entry.getKey()) || !prefixToNs.get(entry.getKey())
+            .equals(entry.getValue())) {
+          //it's been removed or replaced, we remove it from the DB
+          nsPrefDefNode.removeProperty(entry.getKey());
+        } else{
+          nsPrefDefInDB.put(entry.getKey(), (String) entry.getValue());
+        }
+      }
+
+      //and add the new values
+      for (Entry<String,String> entry : prefixToNs.entrySet()) {
+        //if  it's not in the latest from the DB then we add it.
+        if(!nsPrefDefInDB.containsKey(entry.getKey())) {
+          nsPrefDefNode.setProperty(entry.getKey(), entry.getValue());
+        }
+      }
+
+    } else if (!prefixToNs.isEmpty()){
       nsPrefDefNode = (Node) tx.execute("MERGE (n:NamespacePrefixDefinition) RETURN n ")
           .next().get("n");
+      for (Entry<String,String> entry : prefixToNs.entrySet()) {
+          nsPrefDefNode.setProperty(entry.getKey(), entry.getValue());
+      }
+
     }
-    //remove all properties
-    //TODO: should  we delta them? We probably should. Remember it's a bijection
-    nsPrefDefNode.getAllProperties().forEach((k,v) -> nsPrefDefNode.removeProperty(k));
-    //and reset them
-    for (Entry<String,String> entry : prefixToNs.entrySet()) {
-      nsPrefDefNode.setProperty(entry.getKey(),entry.getValue());
-    }
+
+
 
   }
 
@@ -189,5 +205,45 @@ public class NsPrefixMap {
     }
     return sb.toString();
   }
+
+  private boolean reloadFromDB() throws DynamicNamespacePrefixConflict {
+    Node nsPrefDefNode;
+
+    ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
+        .findNodes(Label.label("NamespacePrefixDefinition"));
+
+    if(namespacePrefixDefinitionNodes.hasNext()) {
+      nsPrefDefNode = namespacePrefixDefinitionNodes.next();
+
+      // get the latest from the DB and update it.
+      for (Entry<String,Object> entry :nsPrefDefNode.getAllProperties().entrySet()) {
+        if (!prefixToNs.containsKey(entry.getKey()) &&  !nsToPrefix.containsKey(entry.getValue())){
+          //it's a new entry. We get it.
+          add(entry.getKey(), (String) entry.getValue());
+        } else if (prefixToNs.containsKey(entry.getKey()) &&  !nsToPrefix.containsKey(entry.getValue())) {
+          throw new DynamicNamespacePrefixConflict(
+              "Prefix " + entry.getKey() + " is already in use for namespace <" +
+                  entry.getValue() + ">");
+        } else if (!prefixToNs.containsKey(entry.getKey()) &&  nsToPrefix.containsKey(entry.getValue())){
+          throw new DynamicNamespacePrefixConflict("An alternative prefix (" + entry.getKey() + ") is already in use for namespace <" +
+              entry.getValue() + ">");
+        }
+      }
+    }
+
+    return true;
+  }
+
+
+  @Override
+  public Integer call() throws Exception {
+
+    if(reloadFromDB()) {
+      flushToDB();
+      return 0;
+    }
+    return 1;
+  }
+
 
 }

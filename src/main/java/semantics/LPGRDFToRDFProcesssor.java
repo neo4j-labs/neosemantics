@@ -50,7 +50,7 @@ public class LPGRDFToRDFProcesssor {
       throws InvalidNamespacePrefixDefinitionInDB {
     this.graphdb = graphdb;
     this.tx = tx;
-    this.namespaces = new NsPrefixMap(tx);
+    this.namespaces = new NsPrefixMap(tx,false);
 
   }
 
@@ -97,7 +97,7 @@ public class LPGRDFToRDFProcesssor {
   }
 
   private String buildURI(String baseVocabNS, String name) {
-    //TODO: Why is namespaces passed as param?
+    //TODO: we know what kind of graph we have from the config (fix this)
     Pattern regex = Pattern.compile("^(\\w+)" + PREFIX_SEPARATOR + "(.*)$");
     Matcher matcher = regex.matcher(name);
     if (matcher.matches()) {

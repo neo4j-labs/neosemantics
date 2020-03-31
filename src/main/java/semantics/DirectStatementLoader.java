@@ -2,6 +2,7 @@ package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
 import static semantics.config.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
+import static semantics.config.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -37,28 +38,18 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
 
   @Override
   public void endRDF() throws RDFHandlerException {
+    //TODO: Can this be just a call to `periodicOperation`?
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      Util.inTx(graphdb, namespaces);
+    }
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) { //URL_SHORTEN
-      // Namespaces are only persisted at the end of each periodic commit.
-      // This makes importRDF not thread safe when using url shortening. TODO: fix this.
-      persistNamespaceNode();
-    }
-
     log.debug("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }
 
-  private void persistNamespaceNode() {
-    //TODO: Logic here to dectect conflicts
-    namespaces.flushToDB(tx);
-  }
-
   @Override
   public Integer call() throws Exception {
-    int count = 0;
-
-   //get the ns from the db
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
@@ -146,20 +137,26 @@ class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callab
     resourceLabels.clear();
     resourceProps.clear();
 
-    //TODO: get namespaces from db
-    //if conflict, rollback use 0/1 to return ok or ko
-    //throw namespaceprefixconflict
-    //TODO what to return here? number of nodes and rels?
-    return 0;
+    Integer result = 0;
+    //TODO I don't like this.
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      result = namespaces.call();
+    }
+
+    return result;
   }
 
 
   @Override
   protected void periodicOperation() {
+
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      Util.inTx(graphdb, namespaces);
+    }
+
     Util.inTx(graphdb, this);
     totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
-    persistNamespaceNode();
   }
 
 }
