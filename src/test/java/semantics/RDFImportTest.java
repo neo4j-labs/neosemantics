@@ -423,7 +423,7 @@ public class RDFImportTest {
           = session.run("CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
           +
-          "{ commitSize: 1 })");
+          "{ commitSize: 10 })");
       assertEquals(6L, importResults
           .next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
@@ -441,11 +441,11 @@ public class RDFImportTest {
                   + "return prefix, namespace").next().get("prefix").asString());
 
       session.run("MATCH (n) DETACH DELETE n ;");
-      //set graph config
+      //reset graph config
       session.run("CALL semantics.setGraphConfig({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
 
       importResults = session.run("CALL semantics.importRDFSnippet('" +
-          jsonLdFragment + "','JSON-LD', { commitSize: 4})");
+          jsonLdFragment + "','JSON-LD', { commitSize: 10 })");
       assertEquals(6L, importResults.next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
           session.run(
@@ -462,6 +462,55 @@ public class RDFImportTest {
                   + " with prefix, namespace where namespace = 'http://xmlns.com/foaf/0.1/' "
                   + " return prefix ")
               .next().get("prefix").asString());
+    }
+
+  }
+
+  @Test
+  public void testImportJSONLDShorteningStrict() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'SHORTEN_STRICT', handleRDFTypes: 'LABELS' }");
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      Result importResults
+          = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
+          +
+          "{ commitSize: 10 })");
+      Record next = importResults.next();
+
+      assertTrue(false);
+
+    } catch(Exception e) {
+      assertEquals("Failed to invoke procedure `semantics.importRDF`: Caused by: "
+          + "semantics.utils.NamespaceWithUndefinedPrefix: No prefix has been defined for "
+          + "namespace <http://xmlns.com/foaf/0.1/> and 'handleVocabUris' is set "
+          + "to 'SHORTEN_STRICT'", e.getMessage());
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertEquals("one",
+          session.run("call semantics.nsprefixes.add('one','http://xmlns.com/foaf/0.1/')").next().get("prefix").asString());
+
+      Result importResults
+          = session.run("CALL semantics.importRDF('" +
+          RDFImportTest.class.getClassLoader().getResource("mini-ld.json").toURI() + "','JSON-LD',"
+          +
+          "{ commitSize: 10 })");
+      assertEquals(6L,importResults.next().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{ one" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+
+      assertEquals(1L,
+          session.run("MATCH (n) WHERE exists(n.one" + PREFIX_SEPARATOR
+              + "modified) RETURN count(n) AS count")
+              .next().get("count").asLong());
     }
 
   }

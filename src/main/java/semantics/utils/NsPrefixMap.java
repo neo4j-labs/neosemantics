@@ -91,10 +91,10 @@ public class NsPrefixMap implements Callable<Integer> {
     return nsToPrefix.containsKey(ns);
   }
 
-  public String getPrefixOrAdd(String ns) throws NamespacePrefixConflictException {
+  public String getPrefixOrAdd(String ns, boolean strict)  {
     if (nsToPrefix.containsKey(ns)) {
       return nsToPrefix.get(ns);
-    } else {
+    } else if (!strict){
       //is it a standard? use std  prefix
       if(standardNamespaces.containsKey(ns)) {
         add(standardNamespaces.get(ns), ns);
@@ -105,6 +105,9 @@ public class NsPrefixMap implements Callable<Integer> {
         add(nextNsPrefix, ns);
         return nextNsPrefix;
       }
+    } else {
+      throw new NamespaceWithUndefinedPrefix("No prefix has been defined for namespace <" +
+          ns + "> and 'handleVocabUris' is set to 'SHORTEN_STRICT'");
     }
   }
 

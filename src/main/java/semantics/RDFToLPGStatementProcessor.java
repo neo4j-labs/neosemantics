@@ -36,7 +36,6 @@ import org.neo4j.logging.Log;
 import semantics.config.GraphConfig;
 import semantics.config.RDFParserConfig;
 import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
-import semantics.utils.NamespacePrefixConflictException;
 import semantics.utils.NsPrefixMap;
 
 
@@ -59,6 +58,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   long totalTriplesParsed = 0;
   long totalTriplesMapped = 0;
   long mappedTripleCounter = 0;
+
 
   RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
     this.graphdb = db;
@@ -93,7 +93,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
    *
    * @return processed literal
    */
-  Object getObjectValue(IRI propertyIRI, Literal object) throws NamespacePrefixConflictException {
+  Object getObjectValue(IRI propertyIRI, Literal object) {
     IRI datatype = object.getDatatype();
     if (datatype.equals(XMLSchema.STRING) || datatype.equals(RDF.LANGSTRING)) {
       final Optional<String> language = object.getLanguage();
@@ -172,11 +172,12 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
   }
 
 
-  String handleIRI(IRI iri, int elementType) throws NamespacePrefixConflictException {
+  String handleIRI(IRI iri, int elementType)  {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
-    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
+        parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT) {
       String localName = iri.getLocalName();
-      String prefix = namespaces.getPrefixOrAdd(iri.getNamespace());
+      String prefix = namespaces.getPrefixOrAdd(iri.getNamespace(), parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT);
       return prefix + PREFIX_SEPARATOR + localName;
     } else if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
@@ -221,7 +222,8 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   @Override
   public void startRDF() throws RDFHandlerException {
-    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
+        parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ) {
       //differentiate between map/shorten and keep_long urls?
       try {
         loadNamespaces();
@@ -264,8 +266,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return props;
   }
 
-  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw)
-      throws NamespacePrefixConflictException {
+  protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
     Map<String, Object> props;
 
     String propName = handleIRI(propertyIRI, PROPERTY);
