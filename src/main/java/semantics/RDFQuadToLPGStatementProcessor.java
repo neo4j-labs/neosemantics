@@ -3,6 +3,7 @@ package semantics;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
 import static semantics.config.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
+import static semantics.config.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -63,9 +64,18 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)
+      } else if ((parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)||
+          parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES)
           && !(object instanceof BNode)) {
+
         setLabel(sub, handleIRI((IRI) object, LABEL));
+
+        if(parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES){
+          addResource(sub);
+          addResource(obj);
+          addStatement(st);
+        }
+
         mappedTripleCounter++;
       } else {
         addResource(sub);

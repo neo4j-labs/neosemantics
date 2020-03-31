@@ -78,6 +78,10 @@ public class RDFImportTest {
       "show:218 show:localName \"Cette Série des Années Soixante-dix\"@fr . \n" +
       "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
 
+  private String turtleFragmentTypes = "@prefix show: <http://example.org/vocab/show/> .\n" +
+      " show:218 show:localName \"That Seventies Show\"@en . " +
+      " show:218 rdf:type show:Show . ";
+
   private String wrongUriTtl = "@prefix pr: <http://example.org/vocab/show/> .\n" +
       "pr:ent" +
       "      pr:P854 <https://suasprod.noc-science.at/XLCubedWeb/WebForm/ShowReport.aspx?rep=004+studierende%2f001+universit%u00e4ten%2f003+studierende+nach+universit%u00e4ten.xml&toolbar=true> ;\n"
@@ -1004,17 +1008,64 @@ public class RDFImportTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
       Result importResults
           = session
           .run("CALL semantics.previewRDFSnippet('" + jsonLdFragment
-              + "','JSON-LD',{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'})");
+              + "','JSON-LD')");
       Map<String, Object> next = importResults
           .next().asMap();
       final List<Node> nodes = (List<Node>) next.get("nodes");
       assertEquals(3, nodes.size());
       final List<Relationship> rels = (List<Relationship>) next.get("relationships");
       assertEquals(2, rels.size());
+    }
+  }
+
+  @Test
+  public void testLoadFromSnippetCreateNodes() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
+      Result importResults
+          = session
+          .run("CALL semantics.importRDFSnippet('" + turtleFragmentTypes
+              + "','Turtle')");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals(2L, next.get("triplesLoaded"));
+      Record results = session
+          .run("MATCH (x:Resource)-[:`http://www.w3.org/1999/02/22-rdf-syntax-ns#type`]->(t:Resource) RETURN x, t, "
+              + "[x in labels(x) where x<>'Resource' | x ][0] as xlabel").next();
+      assertEquals("http://example.org/vocab/show/218", results.get("x").asNode().get("uri").asString());
+      assertEquals("http://example.org/vocab/show/Show", results.get("t").asNode().get("uri").asString());
+      assertTrue(results.get("xlabel").isNull());
+    }
+  }
+
+  @Test
+  public void testLoadFromSnippetCreateNodesAndLabels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS_AND_NODES'}");
+      Result importResults
+          = session
+          .run("CALL semantics.importRDFSnippet('" + turtleFragmentTypes
+              + "','Turtle')");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      assertEquals(2L, next.get("triplesLoaded"));
+      Record results = session
+          .run("MATCH (x:Resource)-[:rdf__type]->(t:Resource) RETURN x, t, "
+              + "semantics.fullUriFromShortForm([x in labels(x) where x<>'Resource' | x ][0]) as xlabelAsUri").next();
+      assertEquals("http://example.org/vocab/show/218", results.get("x").asNode().get("uri").asString());
+      assertEquals("http://example.org/vocab/show/Show", results.get("t").asNode().get("uri").asString());
+      assertEquals("http://example.org/vocab/show/Show", results.get("xlabelAsUri").asString());
     }
   }
 

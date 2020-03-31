@@ -348,10 +348,19 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if (parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)
+      } else if ((parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS ||
+          parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES)
+          && predicate.equals(RDF.TYPE)
           && !(object instanceof BNode)) {
-        //TODO:Deal with other values of config param handleRDFTypes
+
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
+
+        if(parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES){
+          addResource(subject.stringValue());
+          addResource(object.stringValue());
+          addStatement(st);
+        }
+
         mappedTripleCounter++;
 
       } else {
