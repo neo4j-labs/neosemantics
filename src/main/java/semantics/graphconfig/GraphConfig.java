@@ -47,21 +47,21 @@ public class GraphConfig {
     private static final String DEFAULT_DOMAIN_REL_NAME = "DOMAIN";
     private static final String DEFAULT_RANGE_REL_NAME = "RANGE";
 
-    private final int handleVocabUris;
-    private final int handleMultival;
-    private final int handleRDFTypes;
-    private final boolean keepLangTag;
-    private final boolean applyNeo4jNaming;
-    private final boolean keepCustomDataTypes;
-    private final Set<String> multivalPropList;
-    private final Set<String> customDataTypePropList;
-    private final String classLabelName;
-    private final String subClassOfRelName;
-    private final String dataTypePropertyLabelName;
-    private final String objectPropertyLabelName;
-    private final String subPropertyOfRelName;
-    private final String domainRelName;
-    private final String rangeRelName;
+    private int handleVocabUris;
+    private int handleMultival;
+    private int handleRDFTypes;
+    private boolean keepLangTag;
+    private boolean applyNeo4jNaming;
+    private boolean keepCustomDataTypes;
+    private Set<String> multivalPropList;
+    private Set<String> customDataTypePropList;
+    private String classLabelName;
+    private String subClassOfRelName;
+    private String dataTypePropertyLabelName;
+    private String objectPropertyLabelName;
+    private String subPropertyOfRelName;
+    private String domainRelName;
+    private String rangeRelName;
 
 
     public GraphConfig(Map<String, Object> props) throws InvalidParamException {
@@ -79,10 +79,12 @@ public class GraphConfig {
         this.keepCustomDataTypes = (props.containsKey("keepCustomDataTypes") && (boolean) props
                 .get("keepCustomDataTypes"));
         this.multivalPropList = (props.containsKey("multivalPropList")
-                ? ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet())
+                ? (props.get("multivalPropList")!=null?((List<String>) props.get("multivalPropList"))
+            .stream().collect(Collectors.toSet()):null)
                 : null);
         this.customDataTypePropList = (props.containsKey("customDataTypePropList")
-                ? ((List<String>) props.get("customDataTypePropList")).stream().collect(Collectors.toSet())
+                ? (props.get("customDataTypePropList")!=null?((List<String>) props.get("customDataTypePropList"))
+                    .stream().collect(Collectors.toSet()):null)
                 : null);
 
         // Ontology config
@@ -247,30 +249,16 @@ public class GraphConfig {
         result.add(new GraphConfigItemResult("keepCustomDataTypes", isKeepCustomDataTypes()));
         result.add(new GraphConfigItemResult("customDataTypePropList", getCustomDataTypePropList()));
         result.add(new GraphConfigItemResult("applyNeo4jNaming", isApplyNeo4jNaming()));
+        //onto  import config
+        result.add(new GraphConfigItemResult("classLabel", getClassLabelName()));
+        result.add(new GraphConfigItemResult("subClassOfRel", getSubClassOfRelName()));
+        result.add(new GraphConfigItemResult("dataTypePropertyLabel", getDataTypePropertyLabelName()));
+        result.add(new GraphConfigItemResult("objectPropertyLabel", getObjectPropertyLabelName()));
+        result.add(new GraphConfigItemResult("subPropertyOfRel", getSubPropertyOfRelName()));
+        result.add(new GraphConfigItemResult("domainRel", getDomainRelName()));
+        result.add(new GraphConfigItemResult("rangeRel", getRangeRelName()));
 
         return result;
-
-        // Ontology config
-//
-//        this.classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel")
-//            : DEFAULT_CLASS_LABEL_NAME;
-//        this.subClassOfRelName =
-//            props.containsKey("subClassOfRel") ? (String) props.get("subClassOfRel")
-//                : DEFAULT_SCO_REL_NAME;
-//        this.dataTypePropertyLabelName =
-//            props.containsKey("dataTypePropertyLabel") ? (String) props.get("dataTypePropertyLabel")
-//                : DEFAULT_DATATYPEPROP_LABEL_NAME;
-//        this.objectPropertyLabelName =
-//            props.containsKey("objectPropertyLabel") ? (String) props.get("objectPropertyLabel")
-//                : DEFAULT_OBJECTPROP_LABEL_NAME;
-//        this.subPropertyOfRelName =
-//            props.containsKey("subPropertyOfRel") ? (String) props.get("subPropertyOfRel")
-//                : DEFAULT_SPO_REL_NAME;
-//        this.domainRelName =
-//            props.containsKey("domainRel") ? (String) props.get("domainRel") : DEFAULT_DOMAIN_REL_NAME;
-//        this.rangeRelName =
-//            props.containsKey("rangeRel") ? (String) props.get("rangeRel") : DEFAULT_RANGE_REL_NAME;
-
     }
 
     public Map<String, Object> serialiseConfig() {
@@ -379,6 +367,56 @@ public class GraphConfig {
     public String getRelatedConceptRelName() {
         return "RELATED";
         //TODO: create a config param for skosRelatedConceptRelName
+    }
+
+    public void add(Map<String, Object> props) throws InvalidParamException {
+        if (props.containsKey("handleVocabUris")) {
+            this.handleVocabUris = parseHandleVocabUrisValue((String) props.get("handleVocabUris"));
+        }
+        if (props.containsKey("handleMultival")){
+            this.handleMultival = parseHandleMultivalValue((String) props.get("handleMultival"));
+        }
+        if(props.containsKey("handleRDFTypes")){
+            this.handleRDFTypes = parseHandleRDFTypesValue( (String)props.get("handleRDFTypes"));
+        }
+        if((props.containsKey("keepLangTag") && (boolean) props.get("keepLangTag"))){
+            this.keepLangTag = (boolean)props.get("keepLangTag");
+        }
+        if (props.containsKey("applyNeo4jNaming") && (boolean) props.get("applyNeo4jNaming")){
+            this.applyNeo4jNaming =(boolean) props.get("applyNeo4jNaming");
+        }
+        if ((props.containsKey("keepCustomDataTypes") && (boolean) props.get("keepCustomDataTypes"))){
+            this.keepCustomDataTypes =  (boolean) props.get("keepCustomDataTypes");
+        }
+        if (props.containsKey("multivalPropList")){
+            this.multivalPropList = (props.get("multivalPropList")!=null?
+                ((List<String>) props.get("multivalPropList")).stream().collect(Collectors.toSet()): null);
+        }
+        if (props.containsKey("customDataTypePropList")){
+            this.customDataTypePropList = (props.get("customDataTypePropList")!=null?
+                ((List<String>) props.get("customDataTypePropList")).stream().collect(Collectors.toSet()):null);
+        }
+        if (props.containsKey("classLabel")){
+            this.classLabelName = (String) props.get("classLabel");
+        }
+        if(props.containsKey("subClassOfRel")){
+            this.subClassOfRelName = (String) props.get("subClassOfRel");
+        }
+        if(props.containsKey("dataTypePropertyLabel")){
+            this.dataTypePropertyLabelName = (String) props.get("dataTypePropertyLabel");
+        }
+        if(props.containsKey("objectPropertyLabel")) {
+            this.objectPropertyLabelName = (String) props.get("objectPropertyLabel");
+        }
+        if(props.containsKey("subPropertyOfRel")){
+            this.subPropertyOfRelName = (String) props.get("subPropertyOfRel");
+        }
+        if(props.containsKey("domainRel")) {
+            this.domainRelName = (String) props.get("domainRel");
+        }
+        if(props.containsKey("rangeRel")) {
+            this.rangeRelName =  (String) props.get("rangeRel");
+        }
     }
 
     public class InvalidParamException extends Throwable {

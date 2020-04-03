@@ -447,7 +447,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //reset graph config
-      session.run("CALL semantics.graphconfig.set({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
+      session.run("CALL semantics.graphconfig.init({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
 
       importResults = session.run("CALL semantics.importRDFSnippet('" +
           jsonLdFragment + "','JSON-LD', { commitSize: 10 })");
@@ -1943,7 +1943,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //set graph config
-      session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY', handleVocabUris: 'KEEP' });");
+      session.run("CALL semantics.graphconfig.init({ handleMultival: 'ARRAY', handleVocabUris: 'KEEP' });");
 
       importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
@@ -2126,7 +2126,7 @@ public class RDFImportTest {
           .next().get("triplesLoaded").asLong());
 
       try {
-        Result modifyGraphConfigResult = session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY' });");
+        Result modifyGraphConfigResult = session.run("CALL semantics.graphconfig.init({ handleMultival: 'ARRAY' });");
         modifyGraphConfigResult.hasNext();
         assertFalse(true);
       } catch (Exception e) {
@@ -2136,7 +2136,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //set graph config
-      session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY' });");
+      session.run("CALL semantics.graphconfig.init({ handleMultival: 'ARRAY' });");
 
       //{ handleMultival: 'ARRAY' }
       importResults
@@ -3504,13 +3504,13 @@ public class RDFImportTest {
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
-    db.executeTransactionally("CALL semantics.graphconfig.set(" +
+    db.executeTransactionally("CALL semantics.graphconfig.init(" +
             (graphConfigParams!=null?graphConfigParams:"{}") + ")");
   }
 
   private void initialiseGraphDBForQuads(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
-    db.executeTransactionally("CALL semantics.graphconfig.set(" +
+    db.executeTransactionally("CALL semantics.graphconfig.init(" +
         (graphConfigParams!=null?graphConfigParams:"{}") + ")");
   }
 
@@ -3525,7 +3525,7 @@ public class RDFImportTest {
       Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
-              + " CALL semantics.importJSONAsTree(n, '')"
+              + " CALL semantics.experimental.importJSONAsTree(n, '')"
               + " YIELD node RETURN node ");
       assertFalse(importResults.hasNext());
     }
@@ -3553,7 +3553,7 @@ public class RDFImportTest {
 
       Result importResults
           = session.run("CREATE (n:Node)  WITH n "
-          + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "','MY_JSON')"
+          + " CALL semantics.experimental.importJSONAsTree(n, '" + jsonFragment + "','MY_JSON')"
           + " YIELD node RETURN node ");
       assertTrue(importResults.hasNext());
       Result queryresult = session
@@ -3592,7 +3592,7 @@ public class RDFImportTest {
       Result importResults
           = session
           .run("CREATE (n:Node { id: 'record node'})  WITH n "
-              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " CALL semantics.experimental.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
       assertEquals("record node", importResults.next().get("node").asNode()
@@ -3640,7 +3640,7 @@ public class RDFImportTest {
       Result importResults
           = session
           .run("CREATE (n:Node { id: 'I\\'m the hook node'})  WITH n "
-              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " CALL semantics.experimental.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
       assertEquals("I'm the hook node",
@@ -3698,7 +3698,7 @@ public class RDFImportTest {
       Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
-              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " CALL semantics.experimental.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
       Result queryresult = session
@@ -3754,7 +3754,7 @@ public class RDFImportTest {
       Result importResults
           = session
           .run("CREATE (n:Node)  WITH n "
-              + " CALL semantics.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
+              + " CALL semantics.experimental.importJSONAsTree(n, '" + jsonFragment + "') YIELD node "
               + " RETURN node ");
       assertTrue(importResults.hasNext());
       Result queryresult = session

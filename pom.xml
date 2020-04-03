@@ -5,11 +5,11 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>neosemantics</artifactId>
-  <version>4.0.0.0</version>
+  <version>4.0.0.0-beta</version>
   <packaging>jar</packaging>
   <properties>
     <neo4j.version>4.0.0</neo4j.version>
-    <sesame.version>2.5.5</sesame.version>
+    <sesame.version>3.1.2</sesame.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 

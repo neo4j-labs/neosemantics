@@ -20,12 +20,12 @@ import semantics.graphconfig.RDFParserConfig;
  * Created by jbarrasa on 09/11/2016.
  */
 
-class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
+public class DirectStatementLoader extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
   private static final Label RESOURCE = Label.label("Resource");
   private Cache<String, Node> nodeCache;
 
-  DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
 
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
