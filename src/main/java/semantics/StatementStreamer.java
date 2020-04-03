@@ -6,7 +6,7 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.RDFParserConfig;
 import semantics.result.StreamedStatement;
 
 public class StatementStreamer extends ConfiguredStatementHandler {

@@ -1,7 +1,7 @@
 package semantics;
 
-import static semantics.config.Params.BASE_INDIV_NS;
-import static semantics.config.Params.BASE_VOCAB_NS;
+import static semantics.graphconfig.Params.BASE_INDIV_NS;
+import static semantics.graphconfig.Params.BASE_VOCAB_NS;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -27,7 +27,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.*;
-import semantics.config.Params;
+import semantics.graphconfig.Params;
 
 
 public class LPGToRDFProcesssor {

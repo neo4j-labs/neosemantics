@@ -1,12 +1,11 @@
-package semantics;
+package semantics.graphconfig;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.*;
-import semantics.config.GraphConfig;
-import semantics.result.NodeResult;
+import semantics.graphconfig.GraphConfig.GraphConfigNotFound;
+import semantics.result.GraphConfigItemResult;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -24,21 +23,32 @@ public class GraphConfigProcedures {
   public Log log;
 
   @Procedure(mode = Mode.WRITE)
-  @Description("Defines the config that drives the behavior of the graph")
-  public Stream<NodeResult> setGraphConfig(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws GraphConfigException{
+  @Description("Sets the config that drives the behavior of the graph")
+  public Stream<GraphConfigItemResult> set(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws GraphConfigException{
 
-    //identify config changes that are acceptable (additive)
+    //TODO: identify config changes that are acceptable (additive)?
     if(graphIsEmpty()) {
       try {
         Map<String, Object> queryParams = new HashMap<>();
-        queryParams.put("props", new GraphConfig(props).serialiseConfig());
-        return tx.execute("MERGE (gc:_GraphConfig { _id: 1 }) " +
-                " SET gc+= $props RETURN gc ", queryParams).stream().map(n -> (Node) n.get("gc")).map(NodeResult::new);
+        GraphConfig newGraphConfig = new GraphConfig(props);
+        queryParams.put("props", newGraphConfig.serialiseConfig());
+        tx.execute("MERGE (gc:_GraphConfig) SET gc+= $props", queryParams);
+        return  newGraphConfig.getAsGraphConfigResults().stream();
       } catch (GraphConfig.InvalidParamException e) {
         throw new GraphConfigException("Invalid Config: " + e.getMessage());
       }
     } else{
       throw new GraphConfigException("The graph is non-empty. Config cannot be changed.");
+    }
+  }
+
+  @Procedure(mode = Mode.READ)
+  @Description("Shows the current graph config")
+  public Stream<GraphConfigItemResult> show() throws GraphConfigException{
+    try {
+      return new GraphConfig(tx).getAsGraphConfigResults().stream();
+    } catch (GraphConfigNotFound e) {
+      return Stream.empty();
     }
   }
 

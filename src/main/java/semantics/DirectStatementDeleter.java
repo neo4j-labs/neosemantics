@@ -19,8 +19,8 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import semantics.config.GraphConfig;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.GraphConfig;
+import semantics.graphconfig.RDFParserConfig;
 
 /**
  * This class implements an RDF handler to statement-wise delete imported RDF data

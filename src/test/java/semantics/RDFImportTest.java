@@ -7,7 +7,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 import static org.neo4j.driver.Values.NULL;
 import static org.neo4j.driver.Values.ofNode;
-import static semantics.config.Params.PREFIX_SEPARATOR;
+import static semantics.graphconfig.Params.PREFIX_SEPARATOR;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,6 +34,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.harness.junit.rule.Neo4jRule;
+import semantics.graphconfig.GraphConfigProcedures;
 import semantics.mapping.MappingUtils;
 import semantics.nsprefixes.NsPrefixDefProcedures;
 
@@ -446,7 +447,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //reset graph config
-      session.run("CALL semantics.setGraphConfig({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
+      session.run("CALL semantics.graphconfig.set({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
 
       importResults = session.run("CALL semantics.importRDFSnippet('" +
           jsonLdFragment + "','JSON-LD', { commitSize: 10 })");
@@ -1942,7 +1943,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //set graph config
-      session.run("CALL semantics.setGraphConfig({ handleMultival: 'ARRAY', handleVocabUris: 'KEEP' });");
+      session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY', handleVocabUris: 'KEEP' });");
 
       importCypher = "CALL semantics.importRDF('" +
           RDFImportTest.class.getClassLoader()
@@ -2125,7 +2126,7 @@ public class RDFImportTest {
           .next().get("triplesLoaded").asLong());
 
       try {
-        Result modifyGraphConfigResult = session.run("CALL semantics.setGraphConfig({ handleMultival: 'ARRAY' });");
+        Result modifyGraphConfigResult = session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY' });");
         modifyGraphConfigResult.hasNext();
         assertFalse(true);
       } catch (Exception e) {
@@ -2135,7 +2136,7 @@ public class RDFImportTest {
 
       session.run("MATCH (n) DETACH DELETE n ;");
       //set graph config
-      session.run("CALL semantics.setGraphConfig({ handleMultival: 'ARRAY' });");
+      session.run("CALL semantics.graphconfig.set({ handleMultival: 'ARRAY' });");
 
       //{ handleMultival: 'ARRAY' }
       importResults
@@ -3503,13 +3504,13 @@ public class RDFImportTest {
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
-    db.executeTransactionally("CALL semantics.setGraphConfig(" +
+    db.executeTransactionally("CALL semantics.graphconfig.set(" +
             (graphConfigParams!=null?graphConfigParams:"{}") + ")");
   }
 
   private void initialiseGraphDBForQuads(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
-    db.executeTransactionally("CALL semantics.setGraphConfig(" +
+    db.executeTransactionally("CALL semantics.graphconfig.set(" +
         (graphConfigParams!=null?graphConfigParams:"{}") + ")");
   }
 

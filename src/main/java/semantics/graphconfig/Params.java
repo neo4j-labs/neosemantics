@@ -1,4 +1,4 @@
-package semantics.config;
+package semantics.graphconfig;
 
 import java.util.regex.Pattern;
 

@@ -4,7 +4,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.RDFParserConfig;
 
 public class PlainJsonStatementLoader extends DirectStatementLoader {
 

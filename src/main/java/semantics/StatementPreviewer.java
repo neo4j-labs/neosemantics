@@ -8,7 +8,7 @@ import java.util.Map;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.RDFParserConfig;
 import semantics.result.VirtualNode;
 import semantics.result.VirtualRelationship;
 import semantics.utils.NamespacePrefixConflictException;

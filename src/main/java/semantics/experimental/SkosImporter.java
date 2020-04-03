@@ -1,7 +1,8 @@
-package semantics;
+package semantics.experimental;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -11,22 +12,35 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.vocabulary.OWL;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.SKOS;
+import org.eclipse.rdf4j.model.vocabulary.SKOSXL;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
+import semantics.RDFToLPGStatementProcessor;
+import semantics.Util;
 import semantics.graphconfig.RDFParserConfig;
 
-public class OntologyImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
+public class SkosImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
-  protected Set<Statement> extraStatements = new HashSet<>();
+  protected Map<String, String> resourceIndirectAltProps = new HashMap<>();
+  protected Map<String, String> resourceIndirectPrefProps = new HashMap<>();
+  protected Map<String, String> resourceIndirectHiddenProps = new HashMap<>();
+  protected Map<String, Literal> pendingLabels = new HashMap<>();
   public static final Label RESOURCE = Label.label("Resource");
   Cache<String, Node> nodeCache;
 
-  protected OntologyImporter(GraphDatabaseService db, Transaction tx,
+  protected SkosImporter(GraphDatabaseService db, Transaction tx,
                              RDFParserConfig conf, Log l) {
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
@@ -71,37 +85,41 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
     if (parserConfig.getPredicateExclusionList() == null || !parserConfig
         .getPredicateExclusionList()
         .contains(st.getPredicate().stringValue())) {
-      if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDFS.CLASS) || st.getObject()
-          .equals(OWL.CLASS)) && st.getSubject() instanceof IRI) {
+      if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(SKOS.CONCEPT)) && st.getSubject() instanceof IRI) {
         instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
-      } else if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDF.PROPERTY) || st
-          .getObject().equals(OWL.OBJECTPROPERTY)) && st.getSubject() instanceof IRI) {
-        instantiate(parserConfig.getGraphConf().getObjectPropertyLabelName(),
+      }
+      else if ((st.getPredicate().equals(SKOS.BROADER) || st.getPredicate().equals(SKOS.RELATED))&& st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        addStatement(st);
+      }
+      else if (st.getPredicate().equals(SKOS.NARROWER) && st.getObject() instanceof IRI && st
+          .getSubject() instanceof IRI) {
+        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
+        //we invert the order to make it a 'broader'
+        addStatement(SimpleValueFactory.getInstance().createStatement((IRI)st.getObject(),SKOS.BROADER,st.getSubject()));
+      }
+      else if ((st.getPredicate().equals(SKOS.PREF_LABEL) || st.getPredicate().equals(SKOS.ALT_LABEL)||
+          st.getPredicate().equals(SKOS.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
+        //we also instantiate when we get a label property
+        instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
-      } else if (st.getPredicate().equals(RDF.TYPE) && st.getObject().equals(OWL.DATATYPEPROPERTY)
-          && st.getSubject() instanceof IRI) {
-        instantiate(parserConfig.getGraphConf().getDataTypePropertyLabelName(),
-            (IRI) st.getSubject());
-      } else if (st.getPredicate().equals(RDFS.SUBCLASSOF) && st.getObject() instanceof IRI && st
-          .getSubject() instanceof IRI) {
-        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-        addStatement(st);
-      } else if (st.getPredicate().equals(RDFS.SUBPROPERTYOF) && st.getObject() instanceof IRI && st
-          .getSubject() instanceof IRI) {
-        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-        addStatement(st);
-      } else if (st.getPredicate().equals(RDFS.DOMAIN) && st.getObject() instanceof IRI && st
-          .getSubject() instanceof IRI) {
-        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-        addStatement(st);
-      } else if (st.getPredicate().equals(RDFS.RANGE) && st.getObject() instanceof IRI && st
-          .getSubject() instanceof IRI) {
-        instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
-        addStatement(st);
-      } else if ((st.getPredicate().equals(RDFS.LABEL) || st.getPredicate().equals(RDFS.COMMENT))
-          && st.getSubject() instanceof IRI) {
         setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
+        mappedTripleCounter++;
+      }
+      else if ((st.getPredicate().equals(SKOSXL.PREF_LABEL) || st.getPredicate().equals(SKOSXL.ALT_LABEL)||
+          st.getPredicate().equals(SKOSXL.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
+        //instantiate when we get a label property
+        instantiate(parserConfig.getGraphConf().getClassLabelName(),
+            (IRI) st.getSubject());
+        //set the indirect reference
+        setIndirectPropFirstLeg(st.getSubject().stringValue(), st.getPredicate(), st.getObject().stringValue());
+        mappedTripleCounter++;
+      }
+      else if (st.getPredicate().equals(SKOSXL.LITERAL_FORM) && st.getObject() instanceof Literal) {
+        // complete the indirect reference
+        setIndirectPropSecondLeg(st.getSubject().stringValue(), (Literal) st.getObject());
         mappedTripleCounter++;
       }
     }
@@ -129,11 +147,39 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
     mappedTripleCounter++;
   }
 
+  private void setIndirectPropSecondLeg(String subject, Literal object) {
+     if(resourceIndirectPrefProps.containsKey(subject)) {
+       setProp(resourceIndirectPrefProps.get(subject), SKOS.PREF_LABEL, object);
+     } else if(resourceIndirectAltProps.containsKey(subject)) {
+       setProp(resourceIndirectAltProps.get(subject), SKOS.ALT_LABEL, object);
+     } else if(resourceIndirectHiddenProps.containsKey(subject)) {
+       setProp(resourceIndirectHiddenProps.get(subject), SKOS.HIDDEN_LABEL, object);
+     } else {
+       //first leg not parsed yet
+       pendingLabels.put(subject,object);
+     }
+
+  }
+
+  private void setIndirectPropFirstLeg(String subject, IRI predicate, String object) {
+    if (pendingLabels.containsKey(object)){
+      setProp(subject,predicate, pendingLabels.get(object));
+    } else {
+      if (predicate.equals(SKOSXL.PREF_LABEL)) {
+        resourceIndirectPrefProps.put(object, subject);
+      } else if (predicate.equals(SKOSXL.ALT_LABEL)) {
+        resourceIndirectAltProps.put(object, subject);
+      } else if (predicate.equals(SKOSXL.HIDDEN_LABEL)) {
+        resourceIndirectHiddenProps.put(object, subject);
+      }
+    }
+  }
+
 
   @Override
   public Integer call() throws Exception {
 
-    for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
+    for (Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
 
       if (!entry.getValue().isEmpty()) {
         // if the uri is for an element for which we have not parsed the
@@ -239,16 +285,12 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   }
 
   private String translateRelName(IRI iri) {
-    if (iri.equals(RDFS.SUBCLASSOF)) {
+    if (iri.equals(SKOS.BROADER)) {
       return parserConfig.getGraphConf().getSubClassOfRelName();
-    } else if (iri.equals(RDFS.SUBPROPERTYOF)) {
-      return parserConfig.getGraphConf().getSubPropertyOfRelName();
-    } else if (iri.equals(RDFS.DOMAIN)) {
-      return parserConfig.getGraphConf().getDomainRelName();
-    } else if (iri.equals(RDFS.RANGE)) {
-      return parserConfig.getGraphConf().getRangeRelName();
+    } else if (iri.equals(SKOS.RELATED)) {
+      return parserConfig.getGraphConf().getRelatedConceptRelName();
     } else {
-      //Not valid
+      //Not valid. Should not happen.
       return "REL";
     }
   }

@@ -2,8 +2,8 @@ package semantics;
 
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
-import static semantics.config.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
-import static semantics.config.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES;
+import static semantics.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
+import static semantics.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES;
 
 import com.google.common.base.Preconditions;
 import java.util.ArrayList;
@@ -23,8 +23,8 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import semantics.config.GraphConfig;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.GraphConfig;
+import semantics.graphconfig.RDFParserConfig;
 
 
 /**

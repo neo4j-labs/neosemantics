@@ -1,7 +1,7 @@
 package semantics.extension;
 
-import static semantics.config.Params.BASE_INDIV_NS;
-import static semantics.config.Params.BASE_VOCAB_NS;
+import static semantics.graphconfig.Params.BASE_INDIV_NS;
+import static semantics.graphconfig.Params.BASE_VOCAB_NS;
 import static semantics.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.io.IOException;
@@ -34,9 +34,8 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import semantics.LPGRDFToRDFProcesssor;
 import semantics.LPGToRDFProcesssor;
-import semantics.config.GraphConfig;
-import semantics.config.GraphConfig.GraphConfigNotFound;
-import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
+import semantics.graphconfig.GraphConfig;
+import semantics.graphconfig.GraphConfig.GraphConfigNotFound;
 
 /**
  * Created by jbarrasa on 08/09/2016.

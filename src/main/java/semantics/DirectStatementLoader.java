@@ -1,12 +1,10 @@
 package semantics;
 
 import static semantics.RDFImport.RELATIONSHIP;
-import static semantics.config.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
-import static semantics.config.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
+import static semantics.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -16,8 +14,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
-import semantics.config.GraphConfig;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.RDFParserConfig;
 
 /**
  * Created by jbarrasa on 09/11/2016.

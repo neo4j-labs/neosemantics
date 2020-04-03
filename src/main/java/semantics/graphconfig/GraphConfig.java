@@ -1,4 +1,4 @@
-package semantics.config;
+package semantics.graphconfig;
 
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
@@ -6,6 +6,7 @@ import org.neo4j.graphdb.Transaction;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import semantics.result.GraphConfigItemResult;
 
 public class GraphConfig {
 
@@ -107,7 +108,7 @@ public class GraphConfig {
     }
 
     public GraphConfig(Transaction tx) throws GraphConfigNotFound {
-        Result gcResult = tx.execute("MATCH (gc:_GraphConfig {_id: 1 }) RETURN gc ");
+        Result gcResult = tx.execute("MATCH (gc:_GraphConfig) RETURN gc ");
         if(gcResult.hasNext()){
             Map<String, Object> singleRecord = gcResult.next();
             Map<String, Object> graphConfigProperties = ((Node) singleRecord.get("gc")).getAllProperties();
@@ -222,6 +223,56 @@ public class GraphConfig {
         }
     }
 
+    public String getHandleRDFTypesAsString() {
+        switch (this.handleRDFTypes){
+            case GRAPHCONF_RDFTYPES_AS_LABELS:
+                return GRAPHCONF_RDFTYPES_AS_LABELS_STR;
+            case GRAPHCONF_RDFTYPES_AS_NODES:
+                return GRAPHCONF_RDFTYPES_AS_NODES_STR;
+            case  GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES:
+                return  GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES_STR;
+            default:
+                return GRAPHCONF_RDFTYPES_AS_LABELS_STR;
+        }
+    }
+
+    public List<GraphConfigItemResult> getAsGraphConfigResults(){
+
+        List<GraphConfigItemResult> result = new ArrayList<>();
+        result.add(new GraphConfigItemResult("handleVocabUris", getHandleVocabUrisAsString()));
+        result.add(new GraphConfigItemResult("handleMultival", getHandleMultivalAsString()));
+        result.add(new GraphConfigItemResult("handleRDFTypes", getHandleRDFTypesAsString()));
+        result.add(new GraphConfigItemResult("keepLangTag", isKeepLangTag()));
+        result.add(new GraphConfigItemResult("multivalPropList", getMultivalPropList()));
+        result.add(new GraphConfigItemResult("keepCustomDataTypes", isKeepCustomDataTypes()));
+        result.add(new GraphConfigItemResult("customDataTypePropList", getCustomDataTypePropList()));
+        result.add(new GraphConfigItemResult("applyNeo4jNaming", isApplyNeo4jNaming()));
+
+        return result;
+
+        // Ontology config
+//
+//        this.classLabelName = props.containsKey("classLabel") ? (String) props.get("classLabel")
+//            : DEFAULT_CLASS_LABEL_NAME;
+//        this.subClassOfRelName =
+//            props.containsKey("subClassOfRel") ? (String) props.get("subClassOfRel")
+//                : DEFAULT_SCO_REL_NAME;
+//        this.dataTypePropertyLabelName =
+//            props.containsKey("dataTypePropertyLabel") ? (String) props.get("dataTypePropertyLabel")
+//                : DEFAULT_DATATYPEPROP_LABEL_NAME;
+//        this.objectPropertyLabelName =
+//            props.containsKey("objectPropertyLabel") ? (String) props.get("objectPropertyLabel")
+//                : DEFAULT_OBJECTPROP_LABEL_NAME;
+//        this.subPropertyOfRelName =
+//            props.containsKey("subPropertyOfRel") ? (String) props.get("subPropertyOfRel")
+//                : DEFAULT_SPO_REL_NAME;
+//        this.domainRelName =
+//            props.containsKey("domainRel") ? (String) props.get("domainRel") : DEFAULT_DOMAIN_REL_NAME;
+//        this.rangeRelName =
+//            props.containsKey("rangeRel") ? (String) props.get("rangeRel") : DEFAULT_RANGE_REL_NAME;
+
+    }
+
     public Map<String, Object> serialiseConfig() {
         Map<String, Object> configAsMap = new HashMap<>();
 
@@ -323,6 +374,11 @@ public class GraphConfig {
 
     public String getRangeRelName() {
         return rangeRelName;
+    }
+
+    public String getRelatedConceptRelName() {
+        return "RELATED";
+        //TODO: create a config param for skosRelatedConceptRelName
     }
 
     public class InvalidParamException extends Throwable {

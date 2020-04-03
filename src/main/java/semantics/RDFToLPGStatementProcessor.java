@@ -1,8 +1,8 @@
 package semantics;
 
-import static semantics.config.GraphConfig.*;
-import static semantics.config.Params.CUSTOM_DATA_TYPE_SEPERATOR;
-import static semantics.config.Params.PREFIX_SEPARATOR;
+import static semantics.graphconfig.GraphConfig.*;
+import static semantics.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static semantics.graphconfig.Params.PREFIX_SEPARATOR;
 import static semantics.RDFImport.DATATYPE;
 import static semantics.RDFImport.LABEL;
 import static semantics.RDFImport.PROPERTY;
@@ -29,12 +29,11 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
-import semantics.config.GraphConfig;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.GraphConfig;
+import semantics.graphconfig.RDFParserConfig;
 import semantics.utils.InvalidNamespacePrefixDefinitionInDB;
 import semantics.utils.NsPrefixMap;
 
@@ -43,24 +42,24 @@ import semantics.utils.NsPrefixMap;
  * Created by jbarrasa on 15/04/2019.
  */
 
-abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
+public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   protected final Log log;
   private static final String[] EMPTY_ARRAY = new String[0];
   protected Transaction tx;
-  final RDFParserConfig parserConfig;
+  protected  final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
   protected GraphDatabaseService graphdb;
   protected NsPrefixMap namespaces;
   protected Set<Statement> statements = new HashSet<>();
-  Map<String, Map<String, Object>> resourceProps = new HashMap<>();
-  Map<String, Set<String>> resourceLabels = new HashMap<>();
-  long totalTriplesParsed = 0;
-  long totalTriplesMapped = 0;
-  long mappedTripleCounter = 0;
+  protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
+  protected Map<String, Set<String>> resourceLabels = new HashMap<>();
+  public long totalTriplesParsed = 0;
+  public long totalTriplesMapped = 0;
+  public long mappedTripleCounter = 0;
 
 
-  RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
     this.graphdb = db;
     this.tx = tx;
     this.parserConfig = conf;
@@ -231,10 +230,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
         throw new RDFHandlerException(e.getMessage());
       }
       log.debug("Found " + namespaces.getPrefixes().size() + " namespaces in the DB: " + namespaces);
-    } else {
-      log.debug("URIs will be ignored. Only local names will be kept.");
     }
-
   }
 
   @Override
@@ -242,7 +238,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
 
   }
 
-  void addStatement(Statement st) {
+  protected void addStatement(Statement st) {
     statements.add(st);
   }
 
@@ -311,7 +307,7 @@ abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHandler {
     return propValue != null;
   }
 
-  void setLabel(String subjectUri, String label) {
+  protected void setLabel(String subjectUri, String label) {
     Set<String> labels;
 
     if (!resourceLabels.containsKey(subjectUri)) {

@@ -1,10 +1,10 @@
 package semantics;
 
-import static semantics.config.Params.DATATYPE_REGULAR_PATTERN;
-import static semantics.config.Params.DATATYPE_SHORTENED_PATTERN;
-import static semantics.config.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
-import static semantics.config.Params.PREFIX_SEPARATOR;
-import static semantics.config.Params.SHORTENED_URI_PATTERN;
+import static semantics.graphconfig.Params.DATATYPE_REGULAR_PATTERN;
+import static semantics.graphconfig.Params.DATATYPE_SHORTENED_PATTERN;
+import static semantics.graphconfig.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
+import static semantics.graphconfig.Params.PREFIX_SEPARATOR;
+import static semantics.graphconfig.Params.SHORTENED_URI_PATTERN;
 
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
@@ -47,10 +47,9 @@ import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
-import semantics.config.GraphConfig;
-import semantics.config.GraphConfig.GraphConfigNotFound;
-import semantics.config.GraphConfig.InvalidParamException;
-import semantics.config.RDFParserConfig;
+import semantics.graphconfig.GraphConfig;
+import semantics.graphconfig.GraphConfig.GraphConfigNotFound;
+import semantics.graphconfig.RDFParserConfig;
 import semantics.result.GraphResult;
 import semantics.result.NodeResult;
 import semantics.result.StreamedStatement;
@@ -141,7 +140,7 @@ public class RDFImport {
     return importResults;
   }
 
-  private void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url, @Name("rdf") String rdfFragment,
+  protected void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url, @Name("rdf") String rdfFragment,
         @Name(value = "params", defaultValue = "{}") Map<String, Object> props, ConfiguredStatementHandler statementLoader) throws IOException {
     if (rdfFragment != null) {
       instantiateAndKickOffParser(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
@@ -689,7 +688,7 @@ public class RDFImport {
     return Stream.of(new NodeResult(containerNode));
   }
 
-  private void checkConstraintExist() throws RDFImportPreRequisitesNotMet {
+  protected void checkConstraintExist() throws RDFImportPreRequisitesNotMet {
 
     boolean constraintExists = isConstraintOnResourceUriPresent();
 
@@ -743,7 +742,7 @@ public class RDFImport {
     return true;
   }
 
-  private RDFFormat getFormat(String format) throws RDFImportBadParams {
+  protected RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().equals(format)) {
@@ -813,19 +812,19 @@ public class RDFImport {
 
   }
 
-  private class RDFImportPreRequisitesNotMet extends Throwable {
+  protected class RDFImportPreRequisitesNotMet extends Throwable {
     public RDFImportPreRequisitesNotMet(String message){
       super(message);
     }
   }
 
-  private class RDFImportBadParams extends Exception {
+  protected class RDFImportBadParams extends Exception {
     public  RDFImportBadParams(String message){
       super(message);
     }
   }
 
-  private class InvalidShortenedName extends Exception {
+  protected class InvalidShortenedName extends Exception {
     public InvalidShortenedName(String s) {  super(s); }
   }
 

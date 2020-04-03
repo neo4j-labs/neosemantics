@@ -13,7 +13,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.test.server.HTTP;
-import semantics.GraphConfigProcedures;
+import semantics.graphconfig.GraphConfigProcedures;
 import semantics.ModelTestUtils;
 import semantics.RDFImport;
 import semantics.mapping.MappingUtils;
@@ -28,7 +28,7 @@ import java.util.Set;
 import semantics.nsprefixes.NsPrefixDefProcedures;
 
 import static org.junit.Assert.*;
-import static semantics.config.Params.PREFIX_SEPARATOR;
+import static semantics.graphconfig.Params.PREFIX_SEPARATOR;
 
 /**
  * Created by jbarrasa on 14/09/2016.
