@@ -1,7 +1,9 @@
 [[Import]]
 == Importing RDF data 
 
-The main method for importing RDF is `semantics.importRDF`. It imports and persists into Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically. More on how to parameterise the access to web services in section x[link]. 
+The main method for importing RDF is `semantics.importRDF`. It imports and persists into Neo4j
+the triples returned by an url. This url can point to an RDF file (local or remote) or a service
+producing RDF dynamically. More on how to parameterise the access to web services in section <<#advancedfetching>>.
 
 All import procedures take the following three parameters:
 [#common_params]
@@ -14,14 +16,36 @@ All import procedures take the following three parameters:
 | params | Map  | Optional set of parameters (see description in table below)
 |===
 
-
-
-**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importRDF` procedure will remind you with an error messsage.
+**Note** that for this method to run, a uniqueness constraint needs to exist on property `uri` of
+nodes labeled as `Resource` so if not done it yet, just run the following command on your
+DB or the RDF import procedures will remind you with an error messsage.
 
 [source,cypher]
 ----
-CREATE INDEX ON :Resource(uri)
+CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE
 ---- 
+
+=== Before Importing RDF: Setting the configuration of the graph
+There is another pre-requisite before carrying out any data import into Neo4j with neosemantics: we need to
+define the type and characteristics of the graph we will be creating. These are kept in the `GrapConfig`.
+
+[WARNING]
+If we try to run any RDF import procedure without having defined the uniqueness constraint or the GraphConfig first,
+the import will fail showing an error message indicating what's missing.
+
+The method `semantics.setGraphConfig` can help us with this setup. Calling the procedure
+without parameters sets all the default values:
+
+[source,cypher]
+----
+call semantics.graphconfig.set()
+----
+
+Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll
+see that in detail later in section <<graphconfig>>.
+
+
+
 
 In its most basic form the `semantics.importRDF` method just takes the url string to access the RDF data and the serialisation format. Let's say you're trying to load the following set of triples into Neo4j. 
 
@@ -146,6 +170,8 @@ image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces,s
 The imported graph in this case has the same structure, of course, but uses full uris as labels, relationships an property names.
 
 
+== More on GraphConfig
+[#graphconfig]
 
 === Filtering triples by predicate
 
