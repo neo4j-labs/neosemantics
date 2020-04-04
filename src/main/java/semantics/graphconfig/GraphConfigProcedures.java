@@ -24,7 +24,7 @@ public class GraphConfigProcedures {
   public Log log;
 
   @Procedure(mode = Mode.WRITE)
-  @Description("Sets the config that drives the behavior of the graph")
+  @Description("Initialises the config that drives the behavior of the graph")
   public Stream<GraphConfigItemResult> init(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws GraphConfigException{
     //create or overwite
     if(graphIsEmpty()) {
@@ -43,7 +43,7 @@ public class GraphConfigProcedures {
   }
 
   @Procedure(mode = Mode.WRITE)
-  @Description("Sets the config that drives the behavior of the graph")
+  @Description("sets specific params to the config that drives the behavior of the graph")
   public Stream<GraphConfigItemResult> set(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws GraphConfigException{
     //update
     //TODO: identify config changes that are acceptable (additive) when graph is not empty?
@@ -54,7 +54,7 @@ public class GraphConfigProcedures {
           currentGraphConfig = new GraphConfig(tx);
           currentGraphConfig.add(props);
         } catch (GraphConfigNotFound e) {
-          currentGraphConfig = new GraphConfig(props);
+          throw new GraphConfigException("Graph config not found. Call 'init' method first.");
         }
       } catch (InvalidParamException ipe){
         throw new GraphConfigException(ipe.getMessage());

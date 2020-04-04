@@ -34,6 +34,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.harness.junit.rule.Neo4jRule;
+import semantics.experimental.ExperimentalImports;
 import semantics.graphconfig.GraphConfigProcedures;
 import semantics.mapping.MappingUtils;
 import semantics.nsprefixes.NsPrefixDefProcedures;
@@ -47,7 +48,7 @@ public class RDFImportTest {
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(RDFImport.class).withFunction(RDFImport.class)
       .withProcedure(MappingUtils.class).withProcedure(GraphConfigProcedures.class).withProcedure(
-          NsPrefixDefProcedures.class);
+          NsPrefixDefProcedures.class).withProcedure(ExperimentalImports.class);
   private String jsonLdFragment = "{\n" +
       "  \"@context\": {\n" +
       "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
