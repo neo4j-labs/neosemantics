@@ -11,6 +11,7 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
+import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
@@ -18,9 +19,14 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.graphconfig.RDFParserConfig;
 
 public class OntologyImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
@@ -29,7 +35,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   Cache<String, Node> nodeCache;
 
   public OntologyImporter(GraphDatabaseService db, Transaction tx,
-                             RDFParserConfig conf, Log l) {
+      RDFParserConfig conf, Log l) {
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
@@ -210,7 +216,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
             .getRelationships(Direction.OUTGOING,
-                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -219,7 +225,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
       } else {
         for (Relationship rel : toNode
             .getRelationships(Direction.INCOMING,
-                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

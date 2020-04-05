@@ -15,17 +15,24 @@ import java.util.concurrent.Callable;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
+import n10s.graphconfig.GraphConfig;
+import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.RDFParserConfig;
 
 /**
  * This class implements an RDF handler to statement-wise delete imported RDF data sets
- *
+ * <p>
  * Created on 18/06/2019.
  *
  * @author Emre Arkan
@@ -41,7 +48,8 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
   private long statementsWithbNodeCount;
   private String bNodeInfo;
 
-  public RDFQuadDirectStatementDeleter(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public RDFQuadDirectStatementDeleter(GraphDatabaseService db, Transaction tx,
+      RDFParserConfig conf, Log l) {
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
@@ -252,13 +260,16 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
       }
 
       // find relationship if it exists
-      if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+      if (fromNode.getDegree(RelationshipType
+              .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
           Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+          toNode.getDegree(RelationshipType
+                  .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
             .getRelationships(Direction.OUTGOING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+                RelationshipType.withName(
+                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
           if (rel.getEndNode().equals(toNode)) {
             rel.delete();
             break;
@@ -267,7 +278,8 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
       } else {
         for (Relationship rel : toNode
             .getRelationships(Direction.INCOMING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+                RelationshipType.withName(
+                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
           if (rel.getStartNode().equals(fromNode)) {
             rel.delete();
             break;

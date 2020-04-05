@@ -1049,7 +1049,7 @@ exDoc:G3 {
 [[OntoImport]]
 == Importing Ontologies
 
-Ontologies are serialised as RDF, so they can be imported using plain `importRDF` but the `liteOntoImport` method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j. It's important to note that this procedure exclusively import the following:
+Ontologies are serialised as RDF, so they can be imported using plain `importRDF` but the `importOntology` method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j. It's important to note that this procedure exclusively import the following:
 
 1. Named class (category) declarations with both `rdfs:Class` and `owl:Class`.
 2. Explicit class hierarchies defined with `rdf:subClassOf` statements.
@@ -1059,7 +1059,7 @@ Ontologies are serialised as RDF, so they can be imported using plain `importRDF
 
 All other elments will be ignored by this loader.
 
-The `liteOntoImport` procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
+The `importOntology` procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
 
 [source,cypher]
 ----

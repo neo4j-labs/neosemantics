@@ -10,7 +10,9 @@ import org.junit.Test;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MicroReasonersTest {
@@ -22,7 +24,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -42,7 +44,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesDefault() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -64,7 +66,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesCustomHierarchy() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -86,7 +88,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesLinkedTo() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -146,11 +148,12 @@ public class MicroReasonersTest {
   @Test
   public void testGetNodesLinkedToOnModelWithUriNames() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
-      session.run("create (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) ");
+      session
+          .run("create (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) ");
       Result results = session.run(
           "match (c:Resource {`http://www.w3.org/2000/01/rdf-schema#label`: \"MyClass\"}) "
               + "call n10s.inference.nodesInCategory(c, "
@@ -165,7 +168,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetRelsNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -189,7 +192,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetRels() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -212,7 +215,7 @@ public class MicroReasonersTest {
   @Test
   public void testGetRelsCustom() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -235,7 +238,7 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabelNoOnto() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -259,7 +262,7 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabel() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -282,7 +285,7 @@ public class MicroReasonersTest {
   @Test
   public void testHasLabelCustom() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -306,7 +309,7 @@ public class MicroReasonersTest {
   @Test
   public void testInCategory() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 

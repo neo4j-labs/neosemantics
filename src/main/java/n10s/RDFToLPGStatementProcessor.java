@@ -1,6 +1,13 @@
 package n10s;
 
-import static n10s.graphconfig.GraphConfig.*;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_OVERWRITE;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static n10s.mapping.MappingUtils.getImportMappingsFromDB;
@@ -15,6 +22,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import n10s.graphconfig.GraphConfig;
+import n10s.graphconfig.RDFParserConfig;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.NsPrefixMap;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -28,10 +39,6 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
-import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.RDFParserConfig;
-import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import n10s.utils.NsPrefixMap;
 
 
 /**
@@ -47,7 +54,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   protected final Log log;
   private static final String[] EMPTY_ARRAY = new String[0];
   protected Transaction tx;
-  protected  final RDFParserConfig parserConfig;
+  protected final RDFParserConfig parserConfig;
   private final Map<String, String> vocMappings;
   protected GraphDatabaseService graphdb;
   protected NsPrefixMap namespaces;
@@ -59,13 +66,15 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   public long mappedTripleCounter = 0;
 
 
-  public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+      Log l) {
     this.graphdb = db;
     this.tx = tx;
     this.parserConfig = conf;
     log = l;
     //initialise vocMappings  if needed
-    if (this.parserConfig.getGraphConf().getHandleVocabUris() == GraphConfig.GRAPHCONF_VOC_URI_MAP) {
+    if (this.parserConfig.getGraphConf().getHandleVocabUris()
+        == GraphConfig.GRAPHCONF_VOC_URI_MAP) {
       Map<String, String> mappingsTemp = getImportMappingsFromDB(this.graphdb);
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {
         //a mapping on RDF.TYPE is illegal
@@ -98,9 +107,10 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       final Optional<String> language = object.getLanguage();
       if (parserConfig.getLanguageFilter() == null || !language.isPresent() || parserConfig
           .getLanguageFilter().equals(language.get())) {
-        return object.stringValue() + (parserConfig.getGraphConf().isKeepLangTag() && language.isPresent() ? "@"
-            + language.get()
-            : "");
+        return object.stringValue() + (
+            parserConfig.getGraphConf().isKeepLangTag() && language.isPresent() ? "@"
+                + language.get()
+                : "");
       } else {
         //filtered by lang
         return null;
@@ -127,11 +137,13 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       }
     } else {
       //it's a custom data type
-      if (parserConfig.getGraphConf().isKeepCustomDataTypes() && !(parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-          || parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP)) {
+      if (parserConfig.getGraphConf().isKeepCustomDataTypes() && !(
+          parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+              || parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP)) {
         //keep custom type
         String value = object.stringValue();
-        if (parserConfig.getGraphConf().getCustomDataTypePropList() == null || parserConfig.getGraphConf().getCustomDataTypePropList()
+        if (parserConfig.getGraphConf().getCustomDataTypePropList() == null || parserConfig
+            .getGraphConf().getCustomDataTypePropList()
             .contains(propertyIRI.stringValue())) {
           String datatypeString;
           if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
@@ -171,12 +183,13 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   }
 
 
-  protected String handleIRI(IRI iri, int elementType)  {
+  protected String handleIRI(IRI iri, int elementType) {
     //TODO: would caching this improve perf? It's kind of cached in getPrefix()
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
         parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT) {
       String localName = iri.getLocalName();
-      String prefix = namespaces.getPrefixOrAdd(iri.getNamespace(), parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT);
+      String prefix = namespaces.getPrefixOrAdd(iri.getNamespace(),
+          parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT);
       return prefix + PREFIX_SEPARATOR + localName;
     } else if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE) {
       return applyCapitalisation(iri.getLocalName(), elementType);
@@ -222,14 +235,15 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   @Override
   public void startRDF() throws RDFHandlerException {
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
-        parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ) {
+        parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT) {
       //differentiate between map/shorten and keep_long urls?
       try {
         loadNamespaces();
       } catch (InvalidNamespacePrefixDefinitionInDB e) {
         throw new RDFHandlerException(e.getMessage());
       }
-      log.debug("Found " + namespaces.getPrefixes().size() + " namespaces in the DB: " + namespaces);
+      log.debug(
+          "Found " + namespaces.getPrefixes().size() + " namespaces in the DB: " + namespaces);
     }
   }
 
@@ -281,7 +295,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
         // only the last value read is kept.
         props.put(propName, propValue);
       } else if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY) {
-        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf().getMultivalPropList()
+        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf()
+            .getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);
@@ -351,7 +366,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
         setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
 
-        if(parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES){
+        if (parserConfig.getGraphConf().getHandleRDFTypes()
+            == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES) {
           addResource(subject.stringValue());
           addResource(object.stringValue());
           addStatement(st);
@@ -380,7 +396,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   }
 
   public Map<String, String> getNamespaces() {
-    return (namespaces==null?null:namespaces.getPrefixToNs());
+    return (namespaces == null ? null : namespaces.getPrefixToNs());
   }
 
   // Stolen from APOC :)

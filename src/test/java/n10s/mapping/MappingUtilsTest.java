@@ -8,9 +8,12 @@ import java.util.HashMap;
 import java.util.Map;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MappingUtilsTest {
@@ -89,7 +92,7 @@ public class MappingUtilsTest {
   @Test
   public void testAddCommonSchemas() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -137,7 +140,7 @@ public class MappingUtilsTest {
   @Test
   public void testListSchemas() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -165,7 +168,7 @@ public class MappingUtilsTest {
   @Test
   public void testAddMappingToSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -212,7 +215,7 @@ public class MappingUtilsTest {
   @Test
   public void testListMappings() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -251,7 +254,7 @@ public class MappingUtilsTest {
   @Test
   public void testDropMappings() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -282,7 +285,7 @@ public class MappingUtilsTest {
   @Test
   public void testDropSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -323,7 +326,7 @@ public class MappingUtilsTest {
   @Test
   public void testBatchDropSchema() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 

@@ -18,6 +18,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import n10s.ContextResource;
+import n10s.graphconfig.Params;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.NsPrefixMap;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
@@ -29,10 +32,12 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
-import n10s.graphconfig.Params;
-import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import n10s.utils.NsPrefixMap;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 
 public class LPGRDFToRDFProcesssor {
@@ -51,7 +56,7 @@ public class LPGRDFToRDFProcesssor {
       throws InvalidNamespacePrefixDefinitionInDB {
     this.graphdb = graphdb;
     this.tx = tx;
-    this.namespaces = new NsPrefixMap(tx,false);
+    this.namespaces = new NsPrefixMap(tx, false);
 
   }
 
@@ -104,7 +109,7 @@ public class LPGRDFToRDFProcesssor {
     if (matcher.matches()) {
       String prefix = matcher.group(1);
       String uriNsPart = namespaces.getNsForPrefix(prefix);
-      if(uriNsPart == null){
+      if (uriNsPart == null) {
         throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
             .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
       }
@@ -336,7 +341,7 @@ public class LPGRDFToRDFProcesssor {
       String value = matcher.group(1);
       String prefix = matcher.group(2);
       String uriNsPart = namespaces.getNsForPrefix(prefix);
-      if(uriNsPart == null ){
+      if (uriNsPart == null) {
         throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
             .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
       }

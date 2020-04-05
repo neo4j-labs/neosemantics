@@ -57,13 +57,14 @@ public class RDFProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-        conf = new RDFParserConfig(props, new GraphConfig(tx));
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       statementLoader = new DirectStatementLoader(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
     } catch (GraphConfig.GraphConfigNotFound e) {
-      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+      importResults
+          .setTerminationKO("A Graph Config is required for RDF importing procedures to run");
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
     }
@@ -86,8 +87,10 @@ public class RDFProcedures extends CommonProcedures {
     return importResults;
   }
 
-  protected GraphResult doPreview(@Name("url") String url, @Name("rdf") String rdfFragment, @Name("format") String format,
-                                @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+  protected GraphResult doPreview(@Name("url") String url, @Name("rdf") String rdfFragment,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws RDFImportException {
     RDFParserConfig conf = null;
     RDFFormat rdfFormat = null;
     StatementPreviewer statementViewer = null;
@@ -97,15 +100,15 @@ public class RDFProcedures extends CommonProcedures {
     try {
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
-      statementViewer =  new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
-    }
-    catch (RDFImportBadParams e){
+      statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
+    } catch (RDFImportBadParams e) {
       throw new RDFImportException(e);
     } catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+      throw new RDFImportException(
+          "A Graph Config is required for RDF importing procedures to run");
     }
 
-    if(statementViewer != null ) {
+    if (statementViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
@@ -118,18 +121,20 @@ public class RDFProcedures extends CommonProcedures {
   protected Stream<StreamedStatement> doStream(@Name("url") String url,
       @Name("rdfFragment") String rdfFragment,
       @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws RDFImportException {
     StatementStreamer statementStreamer = null;
     RDFFormat rdfFormat = null;
     RDFParserConfig conf = null;
-    try{
+    try {
       rdfFormat = getFormat(format);
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       statementStreamer = new StatementStreamer(conf);
-    }catch (RDFImportBadParams e) {
+    } catch (RDFImportBadParams e) {
       throw new RDFImportException(e);
-    }catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException(
+          "A Graph Config is required for RDF importing procedures to run");
     }
 
     try {
@@ -154,10 +159,11 @@ public class RDFProcedures extends CommonProcedures {
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       statementDeleter = new DirectStatementDeleter(db, tx, conf, log);
-    }catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       deleteResults.setTerminationKO(e.getMessage());
     } catch (GraphConfig.GraphConfigNotFound e) {
-      deleteResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+      deleteResults
+          .setTerminationKO("A Graph Config is required for RDF importing procedures to run");
     } catch (RDFImportBadParams e) {
       deleteResults.setTerminationKO(e.getMessage());
     }
@@ -170,7 +176,7 @@ public class RDFProcedures extends CommonProcedures {
         e.printStackTrace();
       } finally {
         deleteResults.setTriplesDeleted(
-                statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
+            statementDeleter.totalTriplesMapped - statementDeleter.getNotDeletedStatementCount());
         deleteResults.setExtraInfo(statementDeleter.getbNodeInfo());
         deleteResults.setNamespaces(statementDeleter.getNamespaces());
       }
@@ -307,11 +313,12 @@ public class RDFProcedures extends CommonProcedures {
 
     Matcher m = SHORTENED_URI_PATTERN.matcher(str);
     if (!m.matches()) {
-      throw new InvalidShortenedName( "Wrong Syntax: " + str + " is not a valid n10s shortened schema name.");
+      throw new InvalidShortenedName(
+          "Wrong Syntax: " + str + " is not a valid n10s shortened schema name.");
     }
     NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
     if (!prefixDefs.hasPrefix(m.group(1))) {
-      throw new InvalidShortenedName( "Prefix Undefined: " + str + " is using an undefined prefix.");
+      throw new InvalidShortenedName("Prefix Undefined: " + str + " is using an undefined prefix.");
     }
 
     return prefixDefs.getNsForPrefix(m.group(1)) + m.group(2);
@@ -325,7 +332,8 @@ public class RDFProcedures extends CommonProcedures {
     IRI iri = SimpleValueFactory.getInstance().createIRI(str);
     NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
     if (!prefixDefs.hasNs(iri.getNamespace())) {
-      throw new InvalidShortenedName( "Prefix Undefined: No prefix defined for this namespace <"  + str + "> .");
+      throw new InvalidShortenedName(
+          "Prefix Undefined: No prefix defined for this namespace <" + str + "> .");
     }
     return prefixDefs.getPrefixForNs(iri.getNamespace()) + PREFIX_SEPARATOR + iri.getLocalName();
 

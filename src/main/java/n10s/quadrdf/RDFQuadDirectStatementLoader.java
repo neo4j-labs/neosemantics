@@ -12,12 +12,19 @@ import java.util.stream.Collectors;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
-import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
-import org.neo4j.logging.Log;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.logging.Log;
 
 /**
  * Created on 06/06/2019.
@@ -31,7 +38,8 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
   private static final Label RESOURCE = Label.label("Resource");
   private Cache<ContextResource, Node> nodeCache;
 
-  public RDFQuadDirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public RDFQuadDirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+      Log l) {
 
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
@@ -184,13 +192,16 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
       // check if the rel is already present. If so, don't recreate.
       // explore the node with the lowest degree
       boolean found = false;
-      if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+      if (fromNode.getDegree(RelationshipType
+              .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
           Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+          toNode.getDegree(RelationshipType
+                  .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
             .getRelationships(Direction.OUTGOING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+                RelationshipType.withName(
+                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -199,7 +210,8 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
       } else {
         for (Relationship rel : toNode
             .getRelationships(Direction.INCOMING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+                RelationshipType.withName(
+                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;
@@ -210,7 +222,8 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
       if (!found) {
         fromNode.createRelationshipTo(
             toNode,
-            RelationshipType.withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)));
+            RelationshipType
+                .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)));
       }
     }
 

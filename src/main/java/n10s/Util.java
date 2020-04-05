@@ -16,12 +16,15 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.LockSupport;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
-
+import javax.lang.model.SourceVersion;
 import n10s.quadrdf.RDFQuadDirectStatementDeleter;
 import n10s.quadrdf.RDFQuadDirectStatementLoader;
-import org.neo4j.graphdb.*;
-
-import javax.lang.model.SourceVersion;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.ResultTransformer;
+import org.neo4j.graphdb.Transaction;
 
 /**
  * @author mh
@@ -91,11 +94,15 @@ public class Util {
   public static String labelString(Node n) {
     return joinLabels(n.getLabels(), ":");
   }
+
   public static String joinLabels(Iterable<Label> labels, String s) {
-    return StreamSupport.stream(labels.spliterator(), false).map(Label::name).collect(Collectors.joining(s));
+    return StreamSupport.stream(labels.spliterator(), false).map(Label::name)
+        .collect(Collectors.joining(s));
   }
+
   public static List<String> labelStrings(Node n) {
-    return StreamSupport.stream(n.getLabels().spliterator(),false).map(Label::name).sorted().collect(Collectors.toList());
+    return StreamSupport.stream(n.getLabels().spliterator(), false).map(Label::name).sorted()
+        .collect(Collectors.toList());
   }
 
   public static String quote(String var) {
@@ -128,7 +135,7 @@ public class Util {
    * @param key the resource to load
    * @return a {@link Callable} to retrieve a {@link Node}, which can be {@code null}
    * @author Emre Arkan
-   *
+   * <p>
    * Created on 02.07.2019
    * @see RDFQuadDirectStatementLoader
    * @see RDFQuadDirectStatementDeleter
@@ -140,12 +147,13 @@ public class Util {
       String cypher = buildCypher(key.getUri(),
           key.getGraphUri(),
           params);
-      Result result = graphdb.executeTransactionally(cypher, params, new ResultTransformer<Result>() {
-        @Override
-        public Result apply(Result result) {
-          return result;
-        }
-      });
+      Result result = graphdb
+          .executeTransactionally(cypher, params, new ResultTransformer<Result>() {
+            @Override
+            public Result apply(Result result) {
+              return result;
+            }
+          });
 
       if (result.hasNext()) {
         node = (Node) result.next().get("n");
@@ -163,12 +171,12 @@ public class Util {
   }
 
   /**
-   * @param uri the uri of the searched node
+   * @param uri      the uri of the searched node
    * @param graphUri the graph uri of the searched node
-   * @param params parameters of the query
+   * @param params   parameters of the query
    * @return a {@link String} of the Cypher query to be executed
    * @author Emre Arkan
-   *
+   * <p>
    * Created on 02.07.2019
    */
   private static String buildCypher(String uri, String graphUri, Map<String, Object> params) {

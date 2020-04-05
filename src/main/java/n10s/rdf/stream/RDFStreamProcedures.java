@@ -17,7 +17,8 @@ public class RDFStreamProcedures extends RDFProcedures {
       "Parses RDF and streams each triple as a record with <S,P,O> along with datatype and "
           + "language tag for Literal values. No writing to the DB.")
   public Stream<StreamedStatement> fetch(@Name("url") String url, @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws RDFImportException {
 
     return doStream(url, null, format, props);
   }

@@ -27,14 +27,15 @@ public class QuadRDFProcedures extends CommonProcedures {
       checkIndexExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
-      if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
+      if (rdfFormat != RDFFormat.TRIG && rdfFormat != RDFFormat.NQUADS) {
         throw new RDFImportBadParams(rdfFormat.getName() + " is not a Quad serialisation format");
       }
       statementLoader = new RDFQuadDirectStatementLoader(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
     } catch (GraphConfig.GraphConfigNotFound e) {
-      importResults.setTerminationKO("A Graph Config is required for RDF importing procedures to run");
+      importResults
+          .setTerminationKO("A Graph Config is required for RDF importing procedures to run");
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
     }
@@ -71,18 +72,18 @@ public class QuadRDFProcedures extends CommonProcedures {
       checkIndexExist();
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
-      if(rdfFormat!=RDFFormat.TRIG && rdfFormat!=RDFFormat.NQUADS){
+      if (rdfFormat != RDFFormat.TRIG && rdfFormat != RDFFormat.NQUADS) {
         throw new RDFImportBadParams(rdfFormat.getName() + " is not a Quad serialisation format");
       }
       statementDeleter = new RDFQuadDirectStatementDeleter(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       deleteResults.setTerminationKO(e.getMessage());
     } catch (GraphConfig.GraphConfigNotFound e) {
-      deleteResults.setTerminationKO("A Graph Config is required for RDF deleting procedures to run");
+      deleteResults
+          .setTerminationKO("A Graph Config is required for RDF deleting procedures to run");
     } catch (RDFImportBadParams e) {
       deleteResults.setTerminationKO(e.getMessage());
     }
-
 
     if (statementDeleter != null) {
 

@@ -42,7 +42,6 @@ public class OntoProcedures extends CommonProcedures {
     // TODO: This effectively overrides the graphconfig (and can cause conflict?)
     props.put("handleVocabUris", "IGNORE");
 
-
     OntologyImporter ontoImporter = null;
     RDFParserConfig conf;
     RDFFormat rdfFormat = null;
@@ -52,15 +51,15 @@ public class OntoProcedures extends CommonProcedures {
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
     }
 
-    if (ontoImporter!=null) {
+    if (ontoImporter != null) {
       try {
-        parseRDFPayloadOrFromUrl(rdfFormat,url, rdfFragment, props,  ontoImporter);
+        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, ontoImporter);
         importResults.setTriplesLoaded(ontoImporter.totalTriplesMapped);
         importResults.setTriplesParsed(ontoImporter.totalTriplesParsed);
         importResults.setConfigSummary(props);
@@ -75,8 +74,10 @@ public class OntoProcedures extends CommonProcedures {
     return importResults;
   }
 
-  protected GraphResult doPreviewOnto(@Name("url") String url, @Name("rdf") String rdfFragment, @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
+  protected GraphResult doPreviewOnto(@Name("url") String url, @Name("rdf") String rdfFragment,
+      @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws RDFImportException {
     RDFParserConfig conf = null;
     RDFFormat rdfFormat = null;
     OntologyPreviewer ontoViewer = null;
@@ -86,15 +87,15 @@ public class OntoProcedures extends CommonProcedures {
     try {
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
-      ontoViewer =  new OntologyPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
-    }
-    catch (RDFImportBadParams e){
+      ontoViewer = new OntologyPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
+    } catch (RDFImportBadParams e) {
       throw new RDFImportException(e);
     } catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+      throw new RDFImportException(
+          "A Graph Config is required for RDF importing procedures to run");
     }
 
-    if(ontoViewer != null ) {
+    if (ontoViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, ontoViewer);
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {

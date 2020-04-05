@@ -11,11 +11,17 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
+import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.graphconfig.RDFParserConfig;
 
 /**
  * Created by jbarrasa on 09/11/2016.
@@ -26,7 +32,8 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor implements
   private static final Label RESOURCE = Label.label("Resource");
   private Cache<String, Node> nodeCache;
 
-  public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+      Log l) {
 
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
@@ -107,7 +114,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor implements
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
             .getRelationships(Direction.OUTGOING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
+                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -116,7 +123,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor implements
       } else {
         for (Relationship rel : toNode
             .getRelationships(Direction.INCOMING,
-                    RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
+                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

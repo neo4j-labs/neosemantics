@@ -1,15 +1,24 @@
 package n10s.result;
 
-import org.neo4j.graphdb.*;
-import org.neo4j.internal.helpers.collection.FilteringIterable;
-import org.neo4j.internal.helpers.collection.Iterables;
-import n10s.Util;
+import static java.util.Arrays.asList;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
+import n10s.Util;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.internal.helpers.collection.FilteringIterable;
+import org.neo4j.internal.helpers.collection.Iterables;
 
-import static java.util.Arrays.asList;
 /**
  * (taken from APOC)
  *
@@ -17,6 +26,7 @@ import static java.util.Arrays.asList;
  * @since 16.03.16
  */
 public class VirtualNode implements Node {
+
   private static AtomicLong MIN_ID = new AtomicLong(-1);
   private final Set<String> labels = new LinkedHashSet<>();
   private final Map<String, Object> props = new HashMap<>();
@@ -75,18 +85,23 @@ public class VirtualNode implements Node {
 
   private boolean isType(Relationship r, RelationshipType... relationshipTypes) {
     for (RelationshipType type : relationshipTypes) {
-      if (r.isType(type)) return true;
+      if (r.isType(type)) {
+        return true;
+      }
     }
     return false;
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(Direction direction, RelationshipType... relationshipTypes) {
-    return new FilteringIterable<>(rels, (r) -> isType(r, relationshipTypes) && isDirection(r, direction));
+  public Iterable<Relationship> getRelationships(Direction direction,
+      RelationshipType... relationshipTypes) {
+    return new FilteringIterable<>(rels,
+        (r) -> isType(r, relationshipTypes) && isDirection(r, direction));
   }
 
   private boolean isDirection(Relationship r, Direction direction) {
-    return direction == Direction.BOTH || direction == Direction.OUTGOING && r.getStartNode().equals(this) || direction == Direction.INCOMING && r.getEndNode().equals(this);
+    return direction == Direction.BOTH || direction == Direction.OUTGOING && r.getStartNode()
+        .equals(this) || direction == Direction.INCOMING && r.getEndNode().equals(this);
   }
 
   @Override
@@ -110,7 +125,8 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Relationship getSingleRelationship(RelationshipType relationshipType, Direction direction) {
+  public Relationship getSingleRelationship(RelationshipType relationshipType,
+      Direction direction) {
     return Iterables.single(getRelationships(direction, relationshipType));
   }
 

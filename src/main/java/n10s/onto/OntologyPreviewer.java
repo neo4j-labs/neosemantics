@@ -22,8 +22,9 @@ public class OntologyPreviewer extends OntologyImporter {
   private Map<String, Node> vNodes;
   private List<Relationship> vRels;
 
-  public OntologyPreviewer(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Map<String, Node> virtualNodes, List<Relationship> virtualRels, Log log) {
-    super(db,tx,conf,log);
+  public OntologyPreviewer(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+      Map<String, Node> virtualNodes, List<Relationship> virtualRels, Log log) {
+    super(db, tx, conf, log);
     vNodes = virtualNodes;
     vRels = virtualRels;
   }

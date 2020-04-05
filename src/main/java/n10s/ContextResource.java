@@ -7,7 +7,7 @@ import n10s.quadrdf.RDFQuadDirectStatementLoader;
 /**
  * ContextResource represents a Resource with an optional graph (context) uri. <p> It is used as Key
  * for the Maps containing labels and properties.
- *
+ * <p>
  * Created on 06.06.2019
  *
  * @author Emre Arkan

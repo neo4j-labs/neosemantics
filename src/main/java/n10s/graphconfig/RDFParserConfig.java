@@ -61,7 +61,9 @@ public class RDFParserConfig {
     return languageFilter;
   }
 
-  public GraphConfig  getGraphConf() { return  graphConf; }
+  public GraphConfig getGraphConf() {
+    return graphConf;
+  }
 
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();

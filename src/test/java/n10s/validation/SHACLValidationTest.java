@@ -8,10 +8,14 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-
-import org.neo4j.driver.*;
-import org.neo4j.harness.junit.rule.Neo4jRule;
 import n10s.rdf.RDFProcedures;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Record;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
+import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class SHACLValidationTest {
 
@@ -33,7 +37,7 @@ public class SHACLValidationTest {
   //@Test
   public void testRegexValidationOnMovieDB() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -87,7 +91,7 @@ public class SHACLValidationTest {
   //@Test
   public void testTxTriggerValidation() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -159,7 +163,7 @@ public class SHACLValidationTest {
   public void testRunIndividualTestInTestSuite(String testGroupName, String testName,
       String cypherScript) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
+        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 

@@ -14,8 +14,9 @@ import org.neo4j.procedure.Procedure;
 public class RDFExportProcedures extends RDFProcedures {
 
   @Procedure(mode = Mode.READ)
-  @Description("[Experimental] Executes a cypher query returning graph elements (nodes,rels) and serialises "
-      + "the output as triples.")
+  @Description(
+      "[Experimental] Executes a cypher query returning graph elements (nodes,rels) and serialises "
+          + "the output as triples.")
   public Stream<StreamedStatement> cypher(@Name("cypher") String cypher,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 

@@ -10,8 +10,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
-
-import org.neo4j.graphdb.*;
+import n10s.result.NodeResult;
+import n10s.result.RelAndNodeResult;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
@@ -19,8 +27,6 @@ import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 import org.neo4j.procedure.UserFunction;
-import n10s.result.NodeResult;
-import n10s.result.RelAndNodeResult;
 
 public class MicroReasoners {
 
@@ -53,8 +59,8 @@ public class MicroReasoners {
   @Context
   public Log log;
 
-    /* get nodes with a given label explicit or inferred.
-    * semantics (cat:Cat { name: 'xyz'})-[:SCO]->(parent:Cat { name: ''}) */
+  /* get nodes with a given label explicit or inferred.
+   * semantics (cat:Cat { name: 'xyz'})-[:SCO]->(parent:Cat { name: ''}) */
 
   @Procedure(mode = Mode.READ)
   @Description("semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.")

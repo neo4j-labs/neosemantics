@@ -3,6 +3,10 @@ package n10s.nsprefixes;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import n10s.result.NamespacePrefixesResult;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.NamespacePrefixConflictException;
+import n10s.utils.NsPrefixMap;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -11,10 +15,6 @@ import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import n10s.result.NamespacePrefixesResult;
-import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import n10s.utils.NamespacePrefixConflictException;
-import n10s.utils.NsPrefixMap;
 
 public class NsPrefixDefProcedures {
 
@@ -119,7 +119,8 @@ public class NsPrefixDefProcedures {
   }
 
   private class NsPrefixOperationNotAllowed extends Exception {
-    public  NsPrefixOperationNotAllowed(String message){
+
+    public NsPrefixOperationNotAllowed(String message) {
       super(message);
     }
   }

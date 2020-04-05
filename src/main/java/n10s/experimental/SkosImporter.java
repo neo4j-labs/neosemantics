@@ -9,6 +9,9 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
+import n10s.RDFToLPGStatementProcessor;
+import n10s.Util;
+import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
@@ -25,9 +28,6 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
-import n10s.graphconfig.RDFParserConfig;
 
 public class SkosImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
 
@@ -39,7 +39,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
   Cache<String, Node> nodeCache;
 
   protected SkosImporter(GraphDatabaseService db, Transaction tx,
-                             RDFParserConfig conf, Log l) {
+      RDFParserConfig conf, Log l) {
     super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
@@ -83,39 +83,42 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
     if (parserConfig.getPredicateExclusionList() == null || !parserConfig
         .getPredicateExclusionList()
         .contains(st.getPredicate().stringValue())) {
-      if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(SKOS.CONCEPT)) && st.getSubject() instanceof IRI) {
+      if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(SKOS.CONCEPT)) && st
+          .getSubject() instanceof IRI) {
         instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
-      }
-      else if ((st.getPredicate().equals(SKOS.BROADER) || st.getPredicate().equals(SKOS.RELATED))&& st.getObject() instanceof IRI && st
+      } else if ((st.getPredicate().equals(SKOS.BROADER) || st.getPredicate().equals(SKOS.RELATED))
+          && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         addStatement(st);
-      }
-      else if (st.getPredicate().equals(SKOS.NARROWER) && st.getObject() instanceof IRI && st
+      } else if (st.getPredicate().equals(SKOS.NARROWER) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         //we invert the order to make it a 'broader'
-        addStatement(SimpleValueFactory.getInstance().createStatement((IRI)st.getObject(),SKOS.BROADER,st.getSubject()));
-      }
-      else if ((st.getPredicate().equals(SKOS.PREF_LABEL) || st.getPredicate().equals(SKOS.ALT_LABEL)||
-          st.getPredicate().equals(SKOS.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
+        addStatement(SimpleValueFactory.getInstance()
+            .createStatement((IRI) st.getObject(), SKOS.BROADER, st.getSubject()));
+      } else if (
+          (st.getPredicate().equals(SKOS.PREF_LABEL) || st.getPredicate().equals(SKOS.ALT_LABEL) ||
+              st.getPredicate().equals(SKOS.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //we also instantiate when we get a label property
         instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
         setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
         mappedTripleCounter++;
-      }
-      else if ((st.getPredicate().equals(SKOSXL.PREF_LABEL) || st.getPredicate().equals(SKOSXL.ALT_LABEL)||
-          st.getPredicate().equals(SKOSXL.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
+      } else if (
+          (st.getPredicate().equals(SKOSXL.PREF_LABEL) || st.getPredicate().equals(SKOSXL.ALT_LABEL)
+              ||
+              st.getPredicate().equals(SKOSXL.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //instantiate when we get a label property
         instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
         //set the indirect reference
-        setIndirectPropFirstLeg(st.getSubject().stringValue(), st.getPredicate(), st.getObject().stringValue());
+        setIndirectPropFirstLeg(st.getSubject().stringValue(), st.getPredicate(),
+            st.getObject().stringValue());
         mappedTripleCounter++;
-      }
-      else if (st.getPredicate().equals(SKOSXL.LITERAL_FORM) && st.getObject() instanceof Literal) {
+      } else if (st.getPredicate().equals(SKOSXL.LITERAL_FORM) && st
+          .getObject() instanceof Literal) {
         // complete the indirect reference
         setIndirectPropSecondLeg(st.getSubject().stringValue(), (Literal) st.getObject());
         mappedTripleCounter++;
@@ -146,22 +149,22 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
   }
 
   private void setIndirectPropSecondLeg(String subject, Literal object) {
-     if(resourceIndirectPrefProps.containsKey(subject)) {
-       setProp(resourceIndirectPrefProps.get(subject), SKOS.PREF_LABEL, object);
-     } else if(resourceIndirectAltProps.containsKey(subject)) {
-       setProp(resourceIndirectAltProps.get(subject), SKOS.ALT_LABEL, object);
-     } else if(resourceIndirectHiddenProps.containsKey(subject)) {
-       setProp(resourceIndirectHiddenProps.get(subject), SKOS.HIDDEN_LABEL, object);
-     } else {
-       //first leg not parsed yet
-       pendingLabels.put(subject,object);
-     }
+    if (resourceIndirectPrefProps.containsKey(subject)) {
+      setProp(resourceIndirectPrefProps.get(subject), SKOS.PREF_LABEL, object);
+    } else if (resourceIndirectAltProps.containsKey(subject)) {
+      setProp(resourceIndirectAltProps.get(subject), SKOS.ALT_LABEL, object);
+    } else if (resourceIndirectHiddenProps.containsKey(subject)) {
+      setProp(resourceIndirectHiddenProps.get(subject), SKOS.HIDDEN_LABEL, object);
+    } else {
+      //first leg not parsed yet
+      pendingLabels.put(subject, object);
+    }
 
   }
 
   private void setIndirectPropFirstLeg(String subject, IRI predicate, String object) {
-    if (pendingLabels.containsKey(object)){
-      setProp(subject,predicate, pendingLabels.get(object));
+    if (pendingLabels.containsKey(object)) {
+      setProp(subject, predicate, pendingLabels.get(object));
     } else {
       if (predicate.equals(SKOSXL.PREF_LABEL)) {
         resourceIndirectPrefProps.put(object, subject);
@@ -252,7 +255,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
               Direction.INCOMING)) {
         for (Relationship rel : fromNode
             .getRelationships(Direction.OUTGOING,
-                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getEndNode().equals(toNode)) {
             found = true;
             break;
@@ -261,7 +264,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
       } else {
         for (Relationship rel : toNode
             .getRelationships(Direction.INCOMING,
-                    RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                RelationshipType.withName(translateRelName(st.getPredicate())))) {
           if (rel.getStartNode().equals(fromNode)) {
             found = true;
             break;

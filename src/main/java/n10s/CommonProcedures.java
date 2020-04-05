@@ -30,7 +30,8 @@ public class CommonProcedures {
 
   protected static final String UNIQUENESS_CONSTRAINT_ON_URI = "n10s_unique_uri";
 
-  protected static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
+  protected static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML,
+      RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
 
   @Context
@@ -49,7 +50,7 @@ public class CommonProcedures {
     if (!constraintExists) {
       throw new RDFImportPreRequisitesNotMet(
           "The following constraint is required for importing RDF. Please run 'CREATE CONSTRAINT "
-              +  UNIQUENESS_CONSTRAINT_ON_URI
+              + UNIQUENESS_CONSTRAINT_ON_URI
               + " ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.");
     }
 
@@ -96,10 +97,13 @@ public class CommonProcedures {
     return true;
   }
 
-  protected void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url, @Name("rdf") String rdfFragment,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props, ConfiguredStatementHandler statementLoader) throws IOException {
+  protected void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url,
+      @Name("rdf") String rdfFragment,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props,
+      ConfiguredStatementHandler statementLoader) throws IOException {
     if (rdfFragment != null) {
-      instantiateAndKickOffParser(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+      instantiateAndKickOffParser(
+          new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
           "http://neo4j.com/base/", format, statementLoader);
     } else {
       instantiateAndKickOffParser(getInputStream(url, props), url, format, statementLoader);
@@ -153,18 +157,23 @@ public class CommonProcedures {
 
 
   public class RDFImportPreRequisitesNotMet extends Throwable {
-    public RDFImportPreRequisitesNotMet(String message){
+
+    public RDFImportPreRequisitesNotMet(String message) {
       super(message);
     }
   }
 
   public class RDFImportBadParams extends Exception {
-    public  RDFImportBadParams(String message){
+
+    public RDFImportBadParams(String message) {
       super(message);
     }
   }
 
   public class InvalidShortenedName extends Exception {
-    public InvalidShortenedName(String s) {  super(s); }
+
+    public InvalidShortenedName(String s) {
+      super(s);
+    }
   }
 }

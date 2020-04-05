@@ -17,6 +17,7 @@ import org.neo4j.graphdb.RelationshipType;
  * @since 16.03.16
  */
 public class VirtualRelationship implements Relationship {
+
   private static AtomicLong MIN_ID = new AtomicLong(-1);
   private final Node startNode;
   private final Node endNode;
@@ -31,7 +32,8 @@ public class VirtualRelationship implements Relationship {
     this.type = type;
   }
 
-  public VirtualRelationship(long id, Node startNode, Node endNode, RelationshipType type, Map<String, Object> props) {
+  public VirtualRelationship(long id, Node startNode, Node endNode, RelationshipType type,
+      Map<String, Object> props) {
     this.id = id;
     this.startNode = startNode;
     this.endNode = endNode;
@@ -46,8 +48,12 @@ public class VirtualRelationship implements Relationship {
 
   @Override
   public void delete() {
-    if (getStartNode() instanceof VirtualNode) ((VirtualNode) getStartNode()).delete(this);
-    if (getEndNode() instanceof VirtualNode) ((VirtualNode) getEndNode()).delete(this);
+    if (getStartNode() instanceof VirtualNode) {
+      ((VirtualNode) getStartNode()).delete(this);
+    }
+    if (getEndNode() instanceof VirtualNode) {
+      ((VirtualNode) getEndNode()).delete(this);
+    }
   }
 
   @Override
@@ -67,9 +73,9 @@ public class VirtualRelationship implements Relationship {
 
   @Override
   public Node[] getNodes() {
-    return new Node[] {
-            startNode, endNode
-    } ;
+    return new Node[]{
+        startNode, endNode
+    };
   }
 
   @Override
@@ -142,9 +148,9 @@ public class VirtualRelationship implements Relationship {
   }
 
   @Override
-  public String toString()
-  {
-    return "VirtualRelationship{" + "startNode=" + startNode.getLabels() + ", endNode=" + endNode.getLabels() + ", " +
-            "type=" + type + '}';
+  public String toString() {
+    return "VirtualRelationship{" + "startNode=" + startNode.getLabels() + ", endNode=" + endNode
+        .getLabels() + ", " +
+        "type=" + type + '}';
   }
 }

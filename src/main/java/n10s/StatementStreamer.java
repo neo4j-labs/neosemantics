@@ -2,12 +2,12 @@ package n10s;
 
 import java.util.ArrayList;
 import java.util.List;
+import n10s.graphconfig.RDFParserConfig;
+import n10s.result.StreamedStatement;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import n10s.graphconfig.RDFParserConfig;
-import n10s.result.StreamedStatement;
 
 public class StatementStreamer extends ConfiguredStatementHandler {
 

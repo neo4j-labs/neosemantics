@@ -16,6 +16,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import n10s.graphconfig.Params;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
@@ -26,8 +27,14 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.neo4j.graphdb.*;
-import n10s.graphconfig.Params;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 
 public class LPGToRDFProcesssor {
@@ -47,7 +54,8 @@ public class LPGToRDFProcesssor {
     this.exportOnlyMappedElems = false;
   }
 
-  public LPGToRDFProcesssor(GraphDatabaseService gds, Transaction tx, Map<String, String> exportMappings,
+  public LPGToRDFProcesssor(GraphDatabaseService gds, Transaction tx,
+      Map<String, String> exportMappings,
       boolean mappedElemsOnly) {
     this.graphdb = gds;
     this.tx = tx;
@@ -234,13 +242,15 @@ public class LPGToRDFProcesssor {
     if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
         rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
       //if it's  an ontlogy rel, it must apply to an ontology entity
-      if(!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())){
+      if (!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())) {
         ontologyEntitiesUris.put(rel.getStartNode().getId(),
-                vf.createIRI(BASE_VOCAB_NS, (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
+            vf.createIRI(BASE_VOCAB_NS,
+                (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
       }
-      if(!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())){
+      if (!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())) {
         ontologyEntitiesUris.put(rel.getEndNode().getId(),
-                vf.createIRI(BASE_VOCAB_NS, (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
+            vf.createIRI(BASE_VOCAB_NS,
+                (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
       }
       //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
       statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),

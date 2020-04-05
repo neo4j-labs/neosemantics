@@ -16,8 +16,8 @@ public class RDFPreviewProcedures extends RDFProcedures {
   @Description("Parses RDF and produces virtual Nodes and relationships for preview in the Neo4j "
       + "browser. No writing to the DB.")
   public Stream<GraphResult> fetch(@Name("url") String url, @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws RDFImportException {
-
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws RDFImportException {
 
     //TODO: add this to props (is it needed? is the commit size not ignored bby the StatementPreviewer???
     //conf.setCommitSize(Long.MAX_VALUE);

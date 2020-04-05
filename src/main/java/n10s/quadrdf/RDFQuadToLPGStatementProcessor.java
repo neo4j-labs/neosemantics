@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.Set;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
+import n10s.graphconfig.GraphConfig;
+import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -23,8 +25,6 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.RDFParserConfig;
 
 
 /**
@@ -39,7 +39,8 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
   Map<ContextResource, Map<String, Object>> resourceProps;
   Map<ContextResource, Set<String>> resourceLabels;
 
-  RDFQuadToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
+  RDFQuadToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
+      Log l) {
     super(db, tx, conf, l);
     resourceProps = new HashMap<>();
     resourceLabels = new HashMap<>();
@@ -64,13 +65,15 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
-      } else if ((parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS && predicate.equals(RDF.TYPE)||
+      } else if ((parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS
+          && predicate.equals(RDF.TYPE) ||
           parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES)
           && !(object instanceof BNode)) {
 
         setLabel(sub, handleIRI((IRI) object, LABEL));
 
-        if(parserConfig.getGraphConf().getHandleRDFTypes() == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES){
+        if (parserConfig.getGraphConf().getHandleRDFTypes()
+            == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES) {
           addResource(sub);
           addResource(obj);
           addStatement(st);
@@ -125,12 +128,15 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
       } else {
         props = resourceProps.get(contextResource);
       }
-      if (parserConfig.getGraphConf().getHandleMultival() == GraphConfig.GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
+      if (parserConfig.getGraphConf().getHandleMultival()
+          == GraphConfig.GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
         // Ok for single valued props. If applied to multivalued ones
         // only the last value read is kept.
         props.put(propName, propValue);
-      } else if (parserConfig.getGraphConf().getHandleMultival() == GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY) {
-        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf().getMultivalPropList()
+      } else if (parserConfig.getGraphConf().getHandleMultival()
+          == GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY) {
+        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf()
+            .getMultivalPropList()
             .contains(propertyIRI.stringValue())) {
           if (props.containsKey(propName)) {
             List<Object> propVals = (List<Object>) props.get(propName);

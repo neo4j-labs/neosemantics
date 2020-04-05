@@ -7,6 +7,12 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
+import n10s.RDFImportException;
+import n10s.graphconfig.GraphConfig;
+import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
+import n10s.graphconfig.RDFParserConfig;
+import n10s.rdf.RDFProcedures;
+import n10s.result.NodeResult;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
@@ -23,12 +29,6 @@ import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import n10s.rdf.RDFProcedures;
-import n10s.RDFImportException;
-import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
-import n10s.graphconfig.RDFParserConfig;
-import n10s.result.NodeResult;
 
 public class ExperimentalImports extends RDFProcedures {
 
@@ -60,7 +60,6 @@ public class ExperimentalImports extends RDFProcedures {
     // TODO: This effectively overrides the graphconfig (and can cause conflict?)
     props.put("handleVocabUris", "IGNORE");
 
-
     SkosImporter skosImporter = null;
     RDFParserConfig conf = null;
     RDFFormat rdfFormat = null;
@@ -70,15 +69,15 @@ public class ExperimentalImports extends RDFProcedures {
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       skosImporter = new SkosImporter(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e){
+    } catch (RDFImportPreRequisitesNotMet e) {
       importResults.setTerminationKO(e.getMessage());
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
     }
 
-    if (skosImporter!=null) {
+    if (skosImporter != null) {
       try {
-        parseRDFPayloadOrFromUrl(rdfFormat,url, rdfFragment, props,  skosImporter);
+        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, skosImporter);
         importResults.setTriplesLoaded(skosImporter.totalTriplesMapped);
         importResults.setTriplesParsed(skosImporter.totalTriplesParsed);
         importResults.setConfigSummary(props);
@@ -98,7 +97,8 @@ public class ExperimentalImports extends RDFProcedures {
       + "Requires a uniqueness constraint on :Resource(uri)")
   public Stream<NodeResult> importJSONAsTree(@Name("containerNode") Node containerNode,
       @Name("jsonpayload") String jsonPayload,
-      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName) throws RDFImportException {
+      @Name(value = "connectingRel", defaultValue = "_jsonTree") String relName)
+      throws RDFImportException {
 
     //emptystring, no parsing and return null
     if (jsonPayload.isEmpty()) {
@@ -109,7 +109,8 @@ public class ExperimentalImports extends RDFProcedures {
       checkConstraintExist();
       RDFParserConfig conf = new RDFParserConfig(new HashMap<>(), new GraphConfig(tx));
       String containerUri = (String) containerNode.getProperty("uri", null);
-      PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf, log);
+      PlainJsonStatementLoader plainJSONStatementLoader = new PlainJsonStatementLoader(db, tx, conf,
+          log);
       if (containerUri == null) {
         containerUri = "neo4j://indiv#" + UUID.randomUUID().toString();
         containerNode.setProperty("uri", containerUri);
@@ -123,8 +124,9 @@ public class ExperimentalImports extends RDFProcedures {
 
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
       throw new RDFImportException(e);
-    }catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException("A Graph Config is required for RDF importing procedures to run");
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException(
+          "A Graph Config is required for RDF importing procedures to run");
     }
 
     return Stream.of(new NodeResult(containerNode));

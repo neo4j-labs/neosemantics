@@ -2,12 +2,16 @@ package n10s;
 
 import static org.junit.Assert.assertTrue;
 
+import n10s.mapping.MappingUtils;
 import n10s.rdf.export.RDFExportProcedures;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.*;
+import org.neo4j.driver.Config;
+import org.neo4j.driver.Driver;
+import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Result;
+import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import n10s.mapping.MappingUtils;
 
 public class RDFExportTest {
 
@@ -20,7 +24,7 @@ public class RDFExportTest {
   @Test
   public void testStreamAsRDF() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       session
           .run(

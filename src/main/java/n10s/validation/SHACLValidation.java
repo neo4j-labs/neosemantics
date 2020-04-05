@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
-
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -135,7 +134,6 @@ public class SHACLValidation {
 
   @Context
   private Transaction tx;
-
 
 
   //@Procedure(mode = Mode.READ)

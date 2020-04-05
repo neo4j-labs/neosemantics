@@ -1,16 +1,16 @@
 package n10s.experimental;
 
+import n10s.graphconfig.RDFParserConfig;
+import n10s.rdf.DirectStatementLoader;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
-import n10s.rdf.DirectStatementLoader;
-import n10s.graphconfig.RDFParserConfig;
 
 public class PlainJsonStatementLoader extends DirectStatementLoader {
 
   PlainJsonStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
-                           Log l) {
+      Log l) {
     super(db, tx, conf, l);
   }
 

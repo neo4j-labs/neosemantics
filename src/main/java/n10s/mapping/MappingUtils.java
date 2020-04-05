@@ -4,23 +4,31 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-
-import org.neo4j.graphdb.*;
+import n10s.result.NamespacePrefixesResult;
+import org.neo4j.graphdb.Direction;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.ResourceIterator;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.ResultTransformer;
+import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
-import n10s.result.NamespacePrefixesResult;
 
 public class MappingUtils {
 
   @Context
   public GraphDatabaseService db;
-  
+
   @Context
   public Transaction tx;
-  
+
   @Context
   public Log log;
 
@@ -196,34 +204,36 @@ public class MappingUtils {
   public static Map<String, String> getExportMappingsFromDB(GraphDatabaseService gds) {
     Map<String, String> mappings = new HashMap<>();
     gds.executeTransactionally(
-            "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ", Collections.emptyMap(), new ResultTransformer<Object>() {
-              @Override
-              public Object apply(Result result) {
-                while(result.hasNext()) {
-                  Map<String, Object> row = result.next();
-                  mappings.put((String) row.get("key"),
-                          (String) row.get("ns") + (String) row.get("local"));
-                }
-                return null;
-              }
-            });
+        "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ",
+        Collections.emptyMap(), new ResultTransformer<Object>() {
+          @Override
+          public Object apply(Result result) {
+            while (result.hasNext()) {
+              Map<String, Object> row = result.next();
+              mappings.put((String) row.get("key"),
+                  (String) row.get("ns") + (String) row.get("local"));
+            }
+            return null;
+          }
+        });
     return mappings;
   }
 
   public static Map<String, String> getImportMappingsFromDB(GraphDatabaseService gds) {
     Map<String, String> mappings = new HashMap<>();
     gds.executeTransactionally(
-            "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ", Collections.emptyMap(), new ResultTransformer<Object>() {
-              @Override
-              public Object apply(Result result) {
-                while(result.hasNext()) {
-                  Map<String, Object> row = result.next();
-                  mappings.put((String) row.get("ns") + (String) row.get("local"),
-                          (String) row.get("key"));
-                }
-                return null;
-              }
-            });
+        "MATCH (mp:_MapDef)-[:_IN]->(mns:_MapNs) RETURN mp._key AS key, mp._local AS local, mns._ns AS ns ",
+        Collections.emptyMap(), new ResultTransformer<Object>() {
+          @Override
+          public Object apply(Result result) {
+            while (result.hasNext()) {
+              Map<String, Object> row = result.next();
+              mappings.put((String) row.get("ns") + (String) row.get("local"),
+                  (String) row.get("key"));
+            }
+            return null;
+          }
+        });
 
     return mappings;
   }
