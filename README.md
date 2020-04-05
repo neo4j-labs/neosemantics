@@ -23,7 +23,7 @@ You can either download a prebuilt jar from the [releases area](https://github.c
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
-  dbms.unmanaged_extension_classes=semantics.extension=/rdf
+  dbms.unmanaged_extension_classes=n10s.extension=/rdf
   ```
   
 3. Restart the server. 

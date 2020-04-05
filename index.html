@@ -548,7 +548,7 @@ lossless manner (imported RDF can subsequently be exported without losing a sing
 </div>
 <div class="listingblock">
 <div class="content">
-<pre>dbms.unmanaged_extension_classes=semantics.extension=/rdf</pre>
+<pre>dbms.unmanaged_extension_classes=n10s.extension=/rdf</pre>
 </div>
 </div>
 <div class="olist arabic">
@@ -617,7 +617,7 @@ You can check that the extension is mounted by running</p>
 <h2 id="Import"><a class="link" href="#Import">Importing RDF data</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The main method for importing RDF is <code>semantics.importRDF</code>. It imports and persists into Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically. More on how to parameterise the access to web services in section x[link].</p>
+<p>The main method for importing RDF is <code>n10s.importRDF</code>. It imports and persists into Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically. More on how to parameterise the access to web services in section x[link].</p>
 </div>
 <div class="paragraph">
 <p>All import procedures take the following three parameters:</p>
@@ -654,7 +654,7 @@ You can check that the extension is mounted by running</p>
 </tbody>
 </table>
 <div class="paragraph">
-<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>semantics.importRDF</code> procedure will remind you with an error messsage.</p>
+<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>n10s.importRDF</code> procedure will remind you with an error messsage.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -662,7 +662,7 @@ You can check that the extension is mounted by running</p>
 </div>
 </div>
 <div class="paragraph">
-<p>In its most basic form the <code>semantics.importRDF</code> method just takes the url string to access the RDF data and the serialisation format. Let&#8217;s say you&#8217;re trying to load the following set of triples into Neo4j.</p>
+<p>In its most basic form the <code>n10s.importRDF</code> method just takes the url string to access the RDF data and the serialisation format. Let&#8217;s say you&#8217;re trying to load the following set of triples into Neo4j.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -697,7 +697,7 @@ neo4ind:neo4j355 neo4voc:name "neo4j" ;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -723,7 +723,7 @@ You will also notice a terminology/vocabulary transformation applied by default.
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -801,7 +801,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "KEEP" })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://.../nsmntx.ttl","Turtle", { handleVocabUris: "KEEP" })</code></pre>
 </div>
 </div>
 <div class="imageblock">
@@ -819,7 +819,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { handleVocabUris: "IGNORE" , predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })</code></pre>
 </div>
 </div>
 </div>
@@ -842,7 +842,7 @@ RETURN n.name, MAX(n.version)</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -871,7 +871,7 @@ RETURN n.ns0__name as name, n.ns0__altName as altName</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples", { handleMultival: 'ARRAY' })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -901,7 +901,7 @@ RETURN n.ns0__name as name, n.ns0__altName as altName</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -972,7 +972,7 @@ ind:218 show:localName "Cette Série des Années Septante"@fr-be .</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -982,7 +982,7 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:Resource) RETURN coalesce(semantics.getLangValue("fr",n.ns0__localName), semantics.getLangValue("en",n.ns0__localName))</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:Resource) RETURN coalesce(n10s.getLangValue("fr",n.ns0__localName), n10s.getLangValue("en",n.ns0__localName))</code></pre>
 </div>
 </div>
 </div>
@@ -993,7 +993,7 @@ The following Cypher fragment returns the french version of a property and when 
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { languageFilter: 'es'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { languageFilter: 'es'})</code></pre>
 </div>
 </div>
 </div>
@@ -1020,7 +1020,7 @@ So if you run a straight import on that data like this:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1047,7 +1047,7 @@ But if you need to keep the custom data types the config parameter <code>keepCus
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1074,7 +1074,7 @@ In the example the list will only contain <code>'http://example.com/power'</code
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/power']})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle", {keepCustomDataTypes: true, customDataTypedPropList: ['http://example.com/power']})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1114,7 +1114,7 @@ The function <code>getDataType</code> can be used to get the data type for a par
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Car)
-RETURN semantics.getDataType(n.ns0__power)</code></pre>
+RETURN n10s.getDataType(n.ns0__power)</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1126,7 +1126,7 @@ RETURN semantics.getDataType(n.ns0__power)</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (n:ns0__Car)
-RETURN semantics.getValue(n.ns0__power)</code></pre>
+RETURN n10s.getValue(n.ns0__power)</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1144,7 +1144,7 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minionto.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1160,7 +1160,7 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call n10s.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1178,13 +1178,13 @@ If you want <code>rdf:type</code> statements (triples) to be imported in this wa
 <div class="sect2">
 <h3 id="ImportQuadRDF"><a class="link" href="#ImportQuadRDF">Handling named graphs (RDF Quads)</a></h3>
 <div class="paragraph">
-<p>You can also import RDF datasets using <code>semantics.importQuadRDF</code>. The only difference in comparison to <code>semantics.importRDF</code> is that you can import not just triples but also quads. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.</p>
+<p>You can also import RDF datasets using <code>n10s.importQuadRDF</code>. The only difference in comparison to <code>n10s.importRDF</code> is that you can import not just triples but also quads. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.</p>
 </div>
 <div class="paragraph">
 <p>Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.</p>
 </div>
 <div class="paragraph">
-<p>Similar to <code>semantics.importRDF</code> method <code>semantics.importQuadRDF</code> also takes the url string to access the RDF dataset and the serialisation format.
+<p>Similar to <code>n10s.importRDF</code> method <code>n10s.importQuadRDF</code> also takes the url string to access the RDF dataset and the serialisation format.
 Let&#8217;s say you&#8217;re trying to load the following set of quads into Neo4j.</p>
 </div>
 <div class="listingblock">
@@ -1219,7 +1219,7 @@ exDoc:G3 {
 </div>
 </div>
 <div class="paragraph">
-<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>semantics.importQuadRDF</code> procedure will remind you with an error messsage.</p>
+<p><strong>Note</strong> that for this method to run, an index needs to exist on property <code>uri</code> of nodes labeled as <code>Resource</code> so if you have not done it, just run the following command on your DB or the <code>n10s.importQuadRDF</code> procedure will remind you with an error messsage.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -1234,7 +1234,7 @@ exDoc:G3 {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importQuadRDF( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importQuadRDF( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
 </div>
 </div>
 <div class="sect3">
@@ -1325,7 +1325,7 @@ The following two parameters will help in these situations:
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;") })</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("DESCRIBE &lt;http://bnb.data.bl.uk/id/resource/018212405&gt;") })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1336,7 +1336,7 @@ But we can enrich it a bit by re-running it for a all of the URIs connected to o
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-cypher" data-lang="cypher">MATCH (:Book)--&gt;(t) WITH DISTINCT t
-CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("CONSTRUCT {&lt;" + t.uri + "&gt; ?p ?o } { &lt;" + t.uri + "&gt; ?p ?o } LIMIT 10 ")}) yield triplesLoaded
+CALL n10s.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("CONSTRUCT {&lt;" + t.uri + "&gt; ?p ?o } { &lt;" + t.uri + "&gt; ?p ?o } LIMIT 10 ")}) yield triplesLoaded
 return t.uri, triplesLoaded</code></pre>
 </div>
 </div>
@@ -1403,7 +1403,7 @@ the number of triples returned for each resource as some of them are pretty dens
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.listNamespacePrefixes()</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.listNamespacePrefixes()</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1438,7 +1438,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">call semantics.addNamespacePrefix("neo","http://neo4j.org/vocab/sw#")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">call n10s.addNamespacePrefix("neo","http://neo4j.org/vocab/sw#")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1466,7 +1466,7 @@ You can do this by calling the <code>addNamespacePrefix</code> procedure as foll
 <h2 id="DeleteRDF"><a class="link" href="#DeleteRDF">Deleting RDF</a></h2>
 <div class="sectionbody">
 <div class="paragraph">
-<p>The method to delete imported RDF data is <code>semantics.deleteRDF</code>. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
+<p>The method to delete imported RDF data is <code>n10s.deleteRDF</code>. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
 All delete procedures take the following three parameters, like the import procedures:</p>
 </div>
 <table id="common_params_delete" class="tableblock frame-all grid-all spread">
@@ -1501,12 +1501,12 @@ All delete procedures take the following three parameters, like the import proce
 </tbody>
 </table>
 <div class="paragraph">
-<p>In its most basic form the <code>semantics.deleteRDF</code> method just takes the url string to access the RDF data and the serialisation format.
+<p>In its most basic form the <code>n10s.deleteRDF</code> method just takes the url string to access the RDF data and the serialisation format.
 Let&#8217;s say you have already imported the following set of triples into Neo4j with this command:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/dataset.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/dataset.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
 </div>
 </div>
 <div class="listingblock">
@@ -1560,7 +1560,7 @@ ex:Resource2
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.deleteRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/delete.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.deleteRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/delete.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1598,7 +1598,7 @@ You <strong>must</strong> use for deletion the same set of parameters that you u
 <div class="sect2">
 <h3 id="_handling_named_graphs_rdf_quads"><a class="link" href="#_handling_named_graphs_rdf_quads">Handling named graphs (RDF Quads)</a></h3>
 <div class="paragraph">
-<p>You can also delete imported quads using <code>semantics.deleteQuadRDF</code> which takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a>.</p>
+<p>You can also delete imported quads using <code>n10s.deleteQuadRDF</code> which takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a>.</p>
 </div>
 <div class="paragraph">
 <p><strong>Note</strong> that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.</p>
@@ -1634,14 +1634,14 @@ exDoc:G2 {
 </div>
 </div>
 <div class="paragraph">
-<p>The <code>semantics.deleteQuadRDF</code> procedure takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a> at the beginning of the <a href="#DeleteRDF">Deleting RDF</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in <a href="docs/rdf/RDFDataset/RDFDataset.trig">this file</a>.</p>
+<p>The <code>n10s.deleteQuadRDF</code> procedure takes the same generic params described in <a href="#common_params_delete">[common_params_delete]</a> at the beginning of the <a href="#DeleteRDF">Deleting RDF</a> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in <a href="docs/rdf/RDFDataset/RDFDataset.trig">this file</a>.</p>
 </div>
 <div class="paragraph">
 <p>Here is the cypher snippet showing how to do that:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.deleteQuadRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.deleteQuadRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1700,7 +1700,7 @@ exDoc:G3 {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle")</code></pre>
 </div>
 </div>
 <div class="imageblock">
@@ -1744,7 +1744,7 @@ exDoc:G3 {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/vw.owl","Turtle", { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'})</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1765,7 +1765,7 @@ exDoc:G3 {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -1797,7 +1797,7 @@ exDoc:G3 {
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
 WHERE predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 RETURN object as category, count(*) as itemsInCategory</code></pre>
 </div>
@@ -1820,7 +1820,7 @@ RETURN object as category, count(*) as itemsInCategory</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL semantics.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")
+<pre class="highlight"><code class="language-cypher" data-lang="cypher">CALL n10s.streamRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle")
 YIELD subject, predicate, object, isLiteral
 WHERE NOT ( isLiteral OR predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" )
 MERGE (from:Thing { id: subject})
@@ -2366,7 +2366,7 @@ neovoc:DIRECTED a owl:ObjectProperty;
 <div class="sect3">
 <h4 id="_rdf_ontonrdf"><a class="link" href="#_rdf_ontonrdf">/rdf/ontonrdf</a></h4>
 <div class="paragraph">
-<p>Similarly, if the Neo4j graph is the result of importing RDF via <code>semantics.importRDF</code>, the Ontology can be exported by running <code>ontonrdf</code>, which will take care of expanding the namespaces shortened in the import process.</p>
+<p>Similarly, if the Neo4j graph is the result of importing RDF via <code>n10s.importRDF</code>, the Ontology can be exported by running <code>ontonrdf</code>, which will take care of expanding the namespaces shortened in the import process.</p>
 </div>
 <div class="listingblock">
 <div class="content">
@@ -2428,7 +2428,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addSchema("http://schema.org/","sch")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.addSchema("http://schema.org/","sch")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2448,7 +2448,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addCommonSchemas()</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.addCommonSchemas()</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2456,7 +2456,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.dropSchema("http://purl.org/dc/elements/1.1/")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.dropSchema("http://purl.org/dc/elements/1.1/")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2464,7 +2464,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listSchemas("rdf")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.listSchemas("rdf")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2489,7 +2489,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2497,7 +2497,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listMappings()</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.listMappings()</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2517,7 +2517,7 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.dropMapping("CHILD_CATEGORY")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.dropMapping("CHILD_CATEGORY")</code></pre>
 </div>
 </div>
 </div>
@@ -2533,20 +2533,20 @@ First we&#8217;ll create a reference to the schema.org vocabulary passing the ba
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">//set parameter uri -&gt;   :param uri: "http://schema.org/"
 
-CALL semantics.mapping.addSchema($uri,"sch");
-CALL semantics.mapping.addMappingToSchema($uri,"Order","Order");
-CALL semantics.mapping.addMappingToSchema($uri,"orderID","orderNumber");
-CALL semantics.mapping.addMappingToSchema($uri,"orderDate","orderDate");
+CALL n10s.mapping.addSchema($uri,"sch");
+CALL n10s.mapping.addMappingToSchema($uri,"Order","Order");
+CALL n10s.mapping.addMappingToSchema($uri,"orderID","orderNumber");
+CALL n10s.mapping.addMappingToSchema($uri,"orderDate","orderDate");
 
-CALL semantics.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
+CALL n10s.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
 
-CALL semantics.mapping.addMappingToSchema($uri,"Product","Product");
-CALL semantics.mapping.addMappingToSchema($uri,"productID","productID");
-CALL semantics.mapping.addMappingToSchema($uri,"productName","name");
+CALL n10s.mapping.addMappingToSchema($uri,"Product","Product");
+CALL n10s.mapping.addMappingToSchema($uri,"productID","productID");
+CALL n10s.mapping.addMappingToSchema($uri,"productName","name");
 
-CALL semantics.mapping.addMappingToSchema($uri,"PART_OF","category");
+CALL n10s.mapping.addMappingToSchema($uri,"PART_OF","category");
 
-CALL semantics.mapping.addMappingToSchema($uri,"categoryName","name");</code></pre>
+CALL n10s.mapping.addMappingToSchema($uri,"categoryName","name");</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2554,7 +2554,7 @@ CALL semantics.mapping.addMappingToSchema($uri,"categoryName","name");</code></p
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call semantics.mapping.listMappings()</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">call n10s.mapping.listMappings()</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2698,9 +2698,9 @@ permid:1-34418273443
 { neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
 "http://www.w3.org/2006/vcard/ns#" AS vcardUri
 
-CALL semantics.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+CALL n10s.mapping.addSchema(vcardUri,"vcard") YIELD namespace
 UNWIND mappings as m
-CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
+CALL n10s.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
 RETURN count(schemaElement) AS mappingsDefined</code></pre>
 </div>
 </div>
@@ -2712,7 +2712,7 @@ RETURN count(schemaElement) AS mappingsDefined</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.mapping.listMappings()</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.mapping.listMappings()</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2741,7 +2741,7 @@ RETURN count(schemaElement) AS mappingsDefined</code></pre>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.previewRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.previewRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -2775,7 +2775,7 @@ RETURN count(schemaElement) AS mappingsDefined</code></pre>
 <div class="title">Note</div>
 </td>
 <td class="content">
-The combination of a mapping definition plus the use of the <code>handleVocabUris: 'MAP'</code> configuration can be applied not only to the <code>semantics.importRDF</code> procedure but also to the preview ones <code>semantics.previewRDF</code> and <code>semantics.previewRDFSnippet</code>.
+The combination of a mapping definition plus the use of the <code>handleVocabUris: 'MAP'</code> configuration can be applied not only to the <code>n10s.importRDF</code> procedure but also to the preview ones <code>n10s.previewRDF</code> and <code>n10s.previewRDFSnippet</code>.
 </td>
 </tr>
 </table>
@@ -2851,7 +2851,7 @@ a <code>TYPE</code> or <code>IN_CATEGORY</code> (or again whatever your preferre
 inferences whatever the modeling approach you follow from the ones described before.</p>
 </div>
 <div class="sect3">
-<h4 id="_semantics_inference_nodeslabelled"><a class="link" href="#_semantics_inference_nodeslabelled">semantics.inference.nodesLabelled</a></h4>
+<h4 id="_semantics_inference_nodeslabelled"><a class="link" href="#_semantics_inference_nodeslabelled">n10s.inference.nodesLabelled</a></h4>
 <div class="paragraph">
 <p>Let&#8217;s look at the first way of annotating individuals. This script creates a few publications (books) from the
 <a href="https://bnb.data.bl.uk/">British National Library catalog</a> sets a label
@@ -2875,7 +2875,7 @@ We are using labels instead. But there is an explicit hierarchy for these labels
 <div class="paragraph">
 <p>What we want now is to be able to ask Neo4j for all the books on Crystallography and get all those
 actually labelled as Crystallography but also all those labelled as any of Crystallography&#8217;s subcategories.
-That&#8217;s exactly what the <code>semantics.inference.nodesLabelled</code> does for us. All we need to do is pass
+That&#8217;s exactly what the <code>n10s.inference.nodesLabelled</code> does for us. All we need to do is pass
 the details on how is the category hierarchy built: <code>catLabel</code> will contain the label used to describe
 categories (the default is <code>Label</code>) which in our case is <code>LCSHTopic</code>. We&#8217;ll also need to specify in the
  <code>subCatRel</code> parameter, the relationship used to define the hierarchy (the default is <code>SLO</code> for
@@ -2884,7 +2884,7 @@ categories (the default is <code>Label</code>) which in our case is <code>LCSHTo
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN" }) YIELD node
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN" }) YIELD node
 RETURN node.identifier as id, node.title as title, labels(node) as categories</code></pre>
 </div>
 </div>
@@ -2911,10 +2911,10 @@ we get the following results:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_semantics_inference_haslabel"><a class="link" href="#_semantics_inference_haslabel">semantics.inference.hasLabel</a></h4>
+<h4 id="_semantics_inference_haslabel"><a class="link" href="#_semantics_inference_haslabel">n10s.inference.hasLabel</a></h4>
 <div class="paragraph">
 <p>If what we are looking for is not an set of nodes in a given category but rather a predicate telling us
-whether a node is or not is in a category then the function we need is <code>semantics.inference.hasLabel</code>.</p>
+whether a node is or not is in a category then the function we need is <code>n10s.inference.hasLabel</code>.</p>
 </div>
 <div class="paragraph">
 <p>Let&#8217;s create a user with interests in some of the books in our database:</p>
@@ -2934,7 +2934,7 @@ CREATE (book1)&lt;-[:INTERESTED_IN]-(jb)-[:INTERESTED_IN]-&gt;(book2)</code></pr
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (:User { userId : "JB2020"})-[:INTERESTED_IN]-&gt;(b:Book)
-WHERE semantics.inference.hasLabel(b,'PhysicalOptics',$inferenceParams)
+WHERE n10s.inference.hasLabel(b,'PhysicalOptics',$inferenceParams)
 RETURN b.identifier as id, b.title as title, labels(b) as categories</code></pre>
 </div>
 </div>
@@ -2962,7 +2962,7 @@ produce the following result:</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_semantics_inference_nodesincategory"><a class="link" href="#_semantics_inference_nodesincategory">semantics.inference.nodesInCategory</a></h4>
+<h4 id="_semantics_inference_nodesincategory"><a class="link" href="#_semantics_inference_nodesincategory">n10s.inference.nodesInCategory</a></h4>
 <div class="paragraph">
 <p>Now let&#8217;s look at the second way of annotating individuals.</p>
 </div>
@@ -3004,7 +3004,7 @@ CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576
 </div>
 <div class="paragraph">
 <p>In this case, the query to get the nodes in a particular category will make use of
- the <code>semantics.inference.nodesInCategory</code> procedure. This procedure takes as
+ the <code>n10s.inference.nodesInCategory</code> procedure. This procedure takes as
  parameters, the details of how is the category hierarchy built and how are individuals connected to
  the categories: <code>inCatRel</code> specifies the relationship used to link an instance to a category (the
  default is <code>IN_CAT</code>) which in our example is <code>HAS_SUBJECT</code>. <code>subCatRel</code> specifies the relationship used
@@ -3013,7 +3013,7 @@ CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (cat:LCSHTopic { authoritativeLabel: "Crystallography"})
-CALL semantics.inference.nodesInCategory(cat, { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}) yield node
+CALL n10s.inference.nodesInCategory(cat, { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}) yield node
 return node.title as work</code></pre>
 </div>
 </div>
@@ -3040,10 +3040,11 @@ in the graph is actually explicitly connected to the <code>Crystallography</code
 </div>
 </div>
 <div class="sect3">
-<h4 id="_semantics_inference_incategory_node_category"><a class="link" href="#_semantics_inference_incategory_node_category">semantics.inference.inCategory(node, category, {})</a></h4>
+<h4 id="_semantics_inference_incategory_node_category"><a class="link" href="#_semantics_inference_incategory_node_category">n10s.inference.inCategory(node,
+  category, {})</a></h4>
 <div class="paragraph">
 <p>If what we are looking for is not an set of nodes in a given category but rather a predicate telling us
-whether a node is or not is in a category then the function we need is <code>semantics.inference.inCategory</code>.</p>
+whether a node is or not is in a category then the function we need is <code>n10s.inference.inCategory</code>.</p>
 </div>
 <div class="paragraph">
 <p>Let&#8217;s create a user with interests in some of the books in our database:</p>
@@ -3064,7 +3065,7 @@ CREATE (book1)&lt;-[:INTERESTED_IN]-(jb)-[:INTERESTED_IN]-&gt;(book2)</code></pr
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH (phyOpt:LCSHTopic { authoritativeLabel: "Physical optics"})
 MATCH (:User { userId : "JB2020"})-[:INTERESTED_IN]-&gt;(b:Work)
-WHERE semantics.inference.inCategory(b,phyOpt,$inferenceParams)
+WHERE n10s.inference.inCategory(b,phyOpt,$inferenceParams)
 RETURN b.identifier as id, b.title as title</code></pre>
 </div>
 </div>
@@ -3094,13 +3095,13 @@ produce the following result:</p>
 <div class="sect3">
 <h4 id="_a_real_world_example"><a class="link" href="#_a_real_world_example">A real  world example</a></h4>
 <div class="paragraph">
-<p>We can use the <code>semantics.importOntology</code> procedure to import <a href="http://www.obofoundry.org/ontology/ncbitaxon.html">the NCBI Taxon ontology</a>.
+<p>We can use the <code>n10s.importOntology</code> procedure to import <a href="http://www.obofoundry.org/ontology/ncbitaxon.html">the NCBI Taxon ontology</a>.
 This is an ontology representation of the National Center for Biotechnology Information (NCBI) organismal taxonomy.
 It contains 1.8 million classes (<code>Class</code>) and 3.6 million subClass of (<code>SCO</code>) relationships.</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.importOntology("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.importOntology("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -3141,7 +3142,7 @@ CREATE (:Pet:NCBITaxon_10092 { name: mouse.name, dob: mouse.dob })-[:OWNER]-&gt;
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.inference.nodesLabelled('NCBITaxon_40674',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.inference.nodesLabelled('NCBITaxon_40674',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
 RETURN node.name as name, node.dob as dob, labels(node)</code></pre>
 </div>
 </div>
@@ -3179,7 +3180,7 @@ exactly the same time to identify them. Here&#8217;s the query:</p>
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.inference.nodesLabelled('NCBITaxon_2759',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.inference.nodesLabelled('NCBITaxon_2759',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
 RETURN node.name as name, node.dob as dob, labels(node)</code></pre>
 </div>
 </div>
@@ -3190,7 +3191,7 @@ RETURN node.name as name, node.dob as dob, labels(node)</code></pre>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">MATCH path = (:Person { name : "Mr. Doglover"})&lt;-[:OWNER]-(pet)
-WHERE semantics.inference.hasLabel(pet,'NCBITaxon_2759',$inferenceParams)
+WHERE n10s.inference.hasLabel(pet,'NCBITaxon_2759',$inferenceParams)
 RETURN count(pet)</code></pre>
 </div>
 </div>
@@ -3209,11 +3210,11 @@ This is useful in situations where we want to be able to dynamically define rela
 existing ones.</p>
 </div>
 <div class="paragraph">
-<p>The <code>semantics.inference.getRels</code> stored procedure uses exactly these semantics to infer implicit
+<p>The <code>n10s.inference.getRels</code> stored procedure uses exactly these n10s to infer implicit
 relationships between nodes in the graph.</p>
 </div>
 <div class="sect3">
-<h4 id="_semantics_inference_getrels"><a class="link" href="#_semantics_inference_getrels">semantics.inference.getRels</a></h4>
+<h4 id="_semantics_inference_getrels"><a class="link" href="#_semantics_inference_getrels">n10s.inference.getRels</a></h4>
 <div class="paragraph">
 <p>Let&#8217;s take the movie database. Remember you can have it loaded in Neo4j by running <code>:play movies</code> and
 following the instructions in the guide.
@@ -3237,7 +3238,7 @@ neovoc:ACTED_IN a owl:ObjectProperty;
 </div>
 <div class="paragraph">
 <p>To see this inferencing procedure in action, we&#8217;ll start by loading the ontology. We can do this
- by either using the <code>semantics.importOntology</code> or the <code>semantics.importRDF</code> methods described in
+ by either using the <code>n10s.importOntology</code> or the <code>n10s.importRDF</code> methods described in
  the <a href="#Import">Importing RDF data</a> section.</p>
 </div>
 <div class="admonitionblock note">
@@ -3258,7 +3259,7 @@ source.
 </div>
 <div class="listingblock">
 <div class="content">
-<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")</code></pre>
+<pre class="highlight"><code class="language-Cypher" data-lang="Cypher">CALL n10s.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")</code></pre>
 </div>
 </div>
 <div class="paragraph">
@@ -3272,12 +3273,12 @@ browser.</p>
 </div>
 <div class="paragraph">
 <p>Writing a query that returns all nodes connected to the movie The Matrix through the 'virtual' <code>WORKED_IN</code> relationship
-is an easy task with the <code>semantics.inference.getRels</code> procedure.</p>
+is an easy task with the <code>n10s.inference.getRels</code> procedure.</p>
 </div>
 <div class="listingblock">
 <div class="content">
 <pre class="highlight"><code class="language-Cypher" data-lang="Cypher">match (thematrix:Movie {title: "The Matrix"})
-call semantics.inference.getRels(thematrix,"WORKED_IN", { subRelRel: "SPO" }) yield rel, node
+call n10s.inference.getRels(thematrix,"WORKED_IN", { subRelRel: "SPO" }) yield rel, node
 return type(rel) as relType, node</code></pre>
 </div>
 </div>
@@ -3352,7 +3353,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.importRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3369,7 +3370,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Fetches RDF from a url (file or http) and stores it in Neo4j as a property graph. This procedure requires and index on :Resource(uri)</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importRDFSnippet</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.importRDFSnippet</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3386,7 +3387,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Imports an RDF snippet passed as parameter and stores it in Neo4j as a property graph. Requires and index on :Resource(uri)</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importQuadRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.importQuadRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3403,7 +3404,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">importRDF for RDF Quads</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importOntology</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.importOntology</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3420,7 +3421,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.streamRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.streamRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3437,7 +3438,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Parses RDF and streams each triple as a record with &lt;S,P,O&gt; along with datatype and language tag for Literal values. No writing to the DB. This SP is useful when you want to import into your Neo4j graph fragments of an RDF dataset in a custom way.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.previewRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3454,7 +3455,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Parses RDF and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB. Notice that this is adequate for a preliminary visual analysis of a SMALL dataset. Think how many nodes you want rendered in your browser.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.previewRDFSnippet</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.previewRDFSnippet</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3471,7 +3472,7 @@ a simple link to the hierarchy and without having to modify every single instanc
 <td class="tableblock halign-left valign-top"><p class="tableblock">Parses an RDF fragment passed as parameter (no retrieval from url) and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.deleteRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.deleteRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3485,10 +3486,12 @@ a simple link to the hierarchy and without having to modify every single instanc
 </li>
 </ul>
 </div></div></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Deletes triples from Neo4j. Works on a graph resulted of importing RDF via semantics.importRDF(). Delete config must match the one used on import</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deletes triples from Neo4j.
+  Works on a graph resulted of importing RDF via n10s.importRDF(). Delete config must match the one
+  used on import</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.deleteQuadRDF</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.deleteQuadRDF</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3502,7 +3505,9 @@ a simple link to the hierarchy and without having to modify every single instanc
 </li>
 </ul>
 </div></div></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Deletes quads from Neo4j. Works on a graph resulted of importing RDF quads via semantics.importQuadRDF(). Delete config must match the one used on import</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Deletes quads from Neo4j. Works
+  on a graph resulted of importing RDF quads via n10s.importQuadRDF(). Delete config must match the
+  one used on import</p></td>
 </tr>
 </tbody>
 </table>
@@ -3718,7 +3723,7 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.addNamespacePrefix</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.addNamespacePrefix</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3732,7 +3737,7 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Adds namespace - prefix pair definition to be used for RDF import</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.listNamespacePrefixes</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.listNamespacePrefixes</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">params</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Lists all currently defined namespace prefix definitions</p></td>
 </tr>
@@ -3756,7 +3761,7 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.addSchema</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3770,7 +3775,7 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Creates a reference to a vocabulary. Needed to define mappings.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.dropSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.dropSchema</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3781,7 +3786,7 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Deletes a vocabulary reference and all associated mappings.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.listSchemas</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.listSchemas</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3792,12 +3797,12 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns all vocabulary references. When filter string is set, only schemas containing the search string in their uri or in the associated prefix are returned.</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addCommonSchemas</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.addCommonSchemas</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">no prams</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Creates references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.addMappingToSchema</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.addMappingToSchema</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3814,12 +3819,12 @@ Use helper function <code>getLangValue</code> to get specific values.</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Creates a mapping for an element in the Neo4j DB schema to a vocabulary element</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.dropMapping</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.dropMapping</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">* mapped DB element name to remove the mapping</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns an output text message indicating success/failure of the deletion</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.mapping.listMappings</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.mapping.listMappings</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3850,7 +3855,7 @@ DB element name or the schema element URI are returned</p></td>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.inference.nodesLabelled</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.inference.nodesLabelled</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3864,7 +3869,7 @@ DB element name or the schema element URI are returned</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">returns all nodes with label 'label' or its sublabels</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.inference.nodesInCategory</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.inference.nodesInCategory</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3878,7 +3883,7 @@ DB element name or the schema element URI are returned</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">returns all nodes connected to Node 'catNode' or its subcategories</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.inference.getRels</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.inference.getRels</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3895,7 +3900,7 @@ DB element name or the schema element URI are returned</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">returns all relationships of type 'virtRel' or its subtypes along with the target nodes</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.inference.hasLabel <strong>(function)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.inference.hasLabel <strong>(function)</strong></p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3912,7 +3917,7 @@ DB element name or the schema element URI are returned</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">checks whether node is explicitly or implicitly labeled as 'label'</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.inference.inCategory <strong>(function)</strong></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.inference.inCategory <strong>(function)</strong></p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -3949,42 +3954,42 @@ DB element name or the schema element URI are returned</p></td>
 </thead>
 <tbody>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRILocalName</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.getIRILocalName</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">URI string</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the local part of the URI (stripping out the namespace)</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getIRINamespace</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.getIRINamespace</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">URI string</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the namespace part of the URI (stripping out the local part)</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getDataType</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.getDataType</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">string (a property value)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the XMLSchema (or custom) datatype of a property value when present</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getLangValue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.getLangValue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">string (a property value)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the value with the language tag passed as first argument or null if there&#8217;s not a value for the provided language tag</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.getValue</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.getValue</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">string (a property value)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the value of a datatype of a property after stripping out the datatype information or language tag  when present</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.shortFromUri</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.shortFromUri</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">string (a URI)</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Returns the shortened version of an IRI using the existing namespace definitions</p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.uriFromShort</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.uriFromShort</p></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">string (a shortened URI)</p></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the expanded (full) URI given a shortened one created in the load process with <code>semantics.importRDF</code></p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">Returns the expanded (full) URI given a shortened one created in the load process with <code>n10s.importRDF</code></p></td>
 </tr>
 <tr>
-<td class="tableblock halign-left valign-top"><p class="tableblock">semantics.importJSONAsTree</p></td>
+<td class="tableblock halign-left valign-top"><p class="tableblock">n10s.importJSONAsTree</p></td>
 <td class="tableblock halign-left valign-top"><div><div class="ulist">
 <ul>
 <li>
@@ -4059,7 +4064,7 @@ DB element name or the schema element URI are returned</p></td>
 </ul>
 </div></div></td>
 <td class="tableblock halign-left valign-top"><p class="tableblock">Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset
-via <strong>semantics.importRDF</strong>, <strong>semantics.importQuadRDF</strong> or built in a way that nodes are labeled as :Resource and have an uri.</p></td>
+via <strong>n10s.importRDF</strong>, <strong>n10s.importQuadRDF</strong> or built in a way that nodes are labeled as :Resource and have an uri.</p></td>
 </tr>
 <tr>
 <td class="tableblock halign-left valign-top"><p class="tableblock">/rdf/describe/find/&lt;l&gt;/&lt;p&gt;/&lt;v&gt;</p></td>
@@ -4112,7 +4117,7 @@ via <strong>semantics.importRDF</strong>, <strong>semantics.importQuadRDF</stron
 <td class="tableblock halign-left valign-top"><div><div class="paragraph">
 <p>same parameters as <code>/rdf/cypher</code></p>
 </div></div></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Same as <code>/rdf/cypher</code> but it works on a model either imported from an RDF dataset via <strong>semantics.importRDF</strong> or built in a
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same as <code>/rdf/cypher</code> but it works on a model either imported from an RDF dataset via <strong>n10s.importRDF</strong> or built in a
 way that nodes are labeled as :Resource and have an uri.</p></td>
 </tr>
 <tr>
@@ -4137,7 +4142,7 @@ way that nodes are labeled as :Resource and have an uri.</p></td>
 </li>
 </ul>
 </div></div></td>
-<td class="tableblock halign-left valign-top"><p class="tableblock">Same as  /rdf/onto but it works on a model either imported from an RDF dataset via <strong>semantics.importRDF</strong> or built in a
+<td class="tableblock halign-left valign-top"><p class="tableblock">Same as  /rdf/onto but it works on a model either imported from an RDF dataset via <strong>n10s.importRDF</strong> or built in a
 way that nodes are labeled as :Resource and have an uri.</p></td>
 </tr>
 </tbody>
