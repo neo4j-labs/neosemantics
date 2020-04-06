@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
 import n10s.graphconfig.GraphConfig;
@@ -35,8 +36,7 @@ import org.neo4j.logging.Log;
  *
  * @author Emre Arkan
  */
-public class DirectStatementDeleter extends RDFToLPGStatementProcessor implements
-    Callable<Integer> {
+public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
 
   private static final Label RESOURCE = Label.label("Resource");
 
@@ -60,169 +60,171 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor implement
 
   @Override
   public void endRDF() throws RDFHandlerException {
-    Util.inTx(graphdb, this);
-    totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getGraphConf().getHandleVocabUris() == GraphConfig.GRAPHCONF_VOC_URI_SHORTEN) {
-      persistNamespaceNode();
-    }
-
-    log.info("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
-        "Total number of triples deleted is " + totalTriplesMapped + " out of "
-        + totalTriplesParsed + " parsed.");
+    periodicOperation();
+    log.info("Delete operation complete: Total number of triples deleted is "
+        + totalTriplesMapped + " (out of " + totalTriplesParsed + " parsed)");
   }
 
-  @Override
-  public Integer call() throws Exception {
+  public Integer runPartialTx(Transaction inThreadTransaction) {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
-      if (entry.getKey().startsWith("genid")) {
-        statementsWithBNodeCount += entry.getValue().size() + 1;
-        continue;
-      }
-      Node tempNode = null;
-      final Node node;
       try {
-        tempNode = nodeCache
-            .get(entry.getKey(), () -> tx.findNode(RESOURCE, "uri", entry.getKey()));
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
-      }
-      node = tempNode;
-      entry.getValue().forEach(l -> {
-        if (node != null && node.hasLabel(Label.label(l))) {
-          node.removeLabel(Label.label(l));
-        } else {
-          notDeletedStatementCount++;
+        if (entry.getKey().startsWith("genid")) {
+          statementsWithBNodeCount += entry.getValue().size() + 1;
+          continue;
         }
-      });
-      resourceProps.get(entry.getKey()).forEach((k, v) -> {
-        if (v instanceof List) {
-          List valuesToDelete = (List) v;
-          if (node != null && node.hasProperty(k)) {
-            ArrayList<Object> newProps = new ArrayList<>();
-            Object prop = node.getProperty(k);
-            if (prop instanceof long[]) {
-              long[] props = (long[]) prop;
-              for (long currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof double[]) {
-              double[] props = (double[]) prop;
-              for (double currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof boolean[]) {
-              boolean[] props = (boolean[]) prop;
-              for (boolean currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof LocalDateTime[]) {
-              LocalDateTime[] props = (LocalDateTime[]) prop;
-              for (LocalDateTime currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof LocalDate[]) {
-              LocalDate[] props = (LocalDate[]) prop;
-              for (LocalDate currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else {
-              Object[] props = (Object[]) prop;
-              for (Object currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            }
-            node.removeProperty(k);
-            if (!newProps.isEmpty()) {
-              node.setProperty(k, toPropertyValue(newProps));
-            }
-          } else {
-            notDeletedStatementCount += valuesToDelete.size();
-          }
-        } else {
-          if (node != null && node.hasProperty(k)) {
-            node.removeProperty(k);
+        Node tempNode = null;
+        final Node node;
+        try {
+          tempNode = nodeCache
+              .get(entry.getKey(), () -> inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey()));
+        } catch (InvalidCacheLoadException icle) {
+          icle.printStackTrace();
+        }
+        node = tempNode;
+        entry.getValue().forEach(l -> {
+          if (node != null && node.hasLabel(Label.label(l))) {
+            node.removeLabel(Label.label(l));
           } else {
             notDeletedStatementCount++;
           }
+        });
+        resourceProps.get(entry.getKey()).forEach((k, v) -> {
+          if (v instanceof List) {
+            List valuesToDelete = (List) v;
+            if (node != null && node.hasProperty(k)) {
+              ArrayList<Object> newProps = new ArrayList<>();
+              Object prop = node.getProperty(k);
+              if (prop instanceof long[]) {
+                long[] props = (long[]) prop;
+                for (long currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof double[]) {
+                double[] props = (double[]) prop;
+                for (double currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof boolean[]) {
+                boolean[] props = (boolean[]) prop;
+                for (boolean currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof LocalDateTime[]) {
+                LocalDateTime[] props = (LocalDateTime[]) prop;
+                for (LocalDateTime currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof LocalDate[]) {
+                LocalDate[] props = (LocalDate[]) prop;
+                for (LocalDate currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else {
+                Object[] props = (Object[]) prop;
+                for (Object currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              }
+              node.removeProperty(k);
+              if (!newProps.isEmpty()) {
+                node.setProperty(k, toPropertyValue(newProps));
+              }
+            } else {
+              notDeletedStatementCount += valuesToDelete.size();
+            }
+          } else {
+            if (node != null && node.hasProperty(k)) {
+              node.removeProperty(k);
+            } else {
+              notDeletedStatementCount++;
+            }
+          }
+        });
+        if (node != null) {
+          deleteNodeIfEmpty(node);
         }
-      });
-      if (node != null) {
-        deleteNodeIfEmpty(node);
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
     for (Statement st : statements) {
-      if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
-        statementsWithBNodeCount++;
-      }
-      if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
-        continue;
-      }
-      Node fromNode = null;
       try {
-        fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        });
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
-      }
-      Node toNode = null;
-      try {
-        toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        });
-      } catch (InvalidCacheLoadException icle) {
-        icle.printStackTrace();
-      }
-      if (fromNode == null || toNode == null) {
-        notDeletedStatementCount++;
-        continue;
-      }
-      // find relationship if it exists
-      if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-          Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-              Direction.INCOMING)) {
-        for (Relationship rel : fromNode
-            .getRelationships(Direction.OUTGOING,
-                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
-            )) {
-          if (rel.getEndNode().equals(toNode)) {
-            rel.delete();
-            break;
+        if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
+          statementsWithBNodeCount++;
+        }
+        if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+          continue;
+        }
+        Node fromNode = null;
+        try {
+          fromNode = nodeCache.get(st.getSubject().stringValue(), () -> {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          });
+        } catch (InvalidCacheLoadException icle) {
+          icle.printStackTrace();
+        }
+        Node toNode = null;
+        try {
+          toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          });
+        } catch (InvalidCacheLoadException icle) {
+          icle.printStackTrace();
+        }
+        if (fromNode == null || toNode == null) {
+          notDeletedStatementCount++;
+          continue;
+        }
+        // find relationship if it exists
+        if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
+            Direction.OUTGOING) <
+            toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
+                Direction.INCOMING)) {
+          for (Relationship rel : fromNode
+              .getRelationships(Direction.OUTGOING,
+                  RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
+              )) {
+            if (rel.getEndNode().equals(toNode)) {
+              rel.delete();
+              break;
+            }
+          }
+        } else {
+          for (Relationship rel : toNode
+              .getRelationships(Direction.INCOMING,
+                  RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
+              )) {
+            if (rel.getStartNode().equals(fromNode)) {
+              rel.delete();
+              break;
+            }
           }
         }
-      } else {
-        for (Relationship rel : toNode
-            .getRelationships(Direction.INCOMING,
-                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))
-            )) {
-          if (rel.getStartNode().equals(fromNode)) {
-            rel.delete();
-            break;
-          }
-        }
+        deleteNodeIfEmpty(toNode);
+        deleteNodeIfEmpty(fromNode);
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
-      deleteNodeIfEmpty(toNode);
-      deleteNodeIfEmpty(fromNode);
     }
 
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    nodeCache.invalidateAll();
     if (statementsWithBNodeCount > 0) {
       setbNodeInfo(statementsWithBNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
@@ -234,10 +236,14 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor implement
 
   @Override
   protected void periodicOperation() {
-    Util.inTx(graphdb, this);
-    totalTriplesMapped += mappedTripleCounter;
-    log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
-        (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
+    try (Transaction tempTransaction = graphdb.beginTx()) {
+      this.runPartialTx(tempTransaction);
+      tempTransaction.commit();
+      totalTriplesMapped += mappedTripleCounter;
+      log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
+          (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
+    }
+
     mappedTripleCounter = 0;
   }
 
@@ -262,12 +268,6 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor implement
         (node.getAllProperties().containsKey("uri") && nodePropertyCount == 1)) {
       node.delete();
     }
-  }
-
-  private void persistNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    graphdb.executeTransactionally("MERGE (n:NamespacePrefixDefinition) SET n+=$props", params);
   }
 
 }

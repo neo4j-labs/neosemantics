@@ -34,7 +34,7 @@ public class NsPrefixDefProcedures {
       throws InvalidNamespacePrefixDefinitionInDB, NamespacePrefixConflictException {
     NsPrefixMap map = new NsPrefixMap(tx, true);
     map.add(prefix, ns);
-    map.flushToDB();
+    map.flushToDB(tx);
 
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));
@@ -51,7 +51,7 @@ public class NsPrefixDefProcedures {
     }
     NsPrefixMap map = new NsPrefixMap(tx, true);
     map.removePrefix(prefix);
-    map.flushToDB();
+    map.flushToDB(tx);
 
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));

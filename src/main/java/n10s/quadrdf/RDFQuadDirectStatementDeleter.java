@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
@@ -38,8 +39,7 @@ import org.neo4j.logging.Log;
  * @author Emre Arkan
  */
 
-public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor implements
-    Callable<Integer> {
+public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcessor {
 
   private static final Label RESOURCE = Label.label("Resource");
 
@@ -61,238 +61,243 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
 
   @Override
   public void endRDF() throws RDFHandlerException {
-    Util.inTx(graphdb, this);
-    totalTriplesMapped += mappedTripleCounter;
-    if (parserConfig.getGraphConf().getHandleVocabUris() == GraphConfig.GRAPHCONF_VOC_URI_SHORTEN) {
-      persistNamespaceNode();
-    }
 
-    log.debug("Successful (last) partial commit of " + mappedTripleCounter + " triples. " +
-        "Total number of triples deleted is " + totalTriplesMapped + " out of "
-        + totalTriplesParsed + " parsed.");
+    periodicOperation();
+
+    log.debug("Delete operation  complete: Total number of triples deleted is "
+        + totalTriplesMapped + "(out of " + totalTriplesParsed + " parsed)");
   }
 
-  @Override
-  public Integer call() throws Exception {
+
+  public Integer runPartialTx(Transaction inThreadTransaction) {
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
-      if (entry.getKey().getUri().startsWith("genid")) {
-        statementsWithbNodeCount += entry.getValue().size() + 1;
-        continue;
-      }
-      Node tempNode = null;
-      final Node node;
       try {
-        tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(entry.getKey().getUri(),
-                entry.getKey().getGraphUri(),
-                params);
-            Result result = tx.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
-              if (result.hasNext()) {
-                String props =
-                    "{uri: " + entry.getKey().getUri() +
-                        (entry.getKey().getGraphUri() == null ? "}" :
-                            ", graphUri: " + entry.getKey().getGraphUri() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
-              }
-            }
-            return node;
-          }
-        });
-      } catch (InvalidCacheLoadException | IllegalStateException e) {
-        e.printStackTrace();
-      }
-      node = tempNode;
-      entry.getValue().forEach(l -> {
-        if (node != null && node.hasLabel(Label.label(l))) {
-          node.removeLabel(Label.label(l));
-        } else {
-          notDeletedStatementCount++;
+        if (entry.getKey().getUri().startsWith("genid")) {
+          statementsWithbNodeCount += entry.getValue().size() + 1;
+          continue;
         }
-      });
-      resourceProps.get(entry.getKey()).forEach((k, v) -> {
-        if (v instanceof List) {
-          List valuesToDelete = (List) v;
-          if (node != null && node.hasProperty(k)) {
-            ArrayList<Object> newProps = new ArrayList<>();
-            Object prop = node.getProperty(k);
-            if (prop instanceof long[]) {
-              long[] props = (long[]) prop;
-              for (long currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
+        Node tempNode = null;
+        final Node node;
+        try {
+          tempNode = nodeCache.get(entry.getKey(), new Callable<Node>() {
+            @Override
+            public Node call() {
+              Node node = null;
+              Map<String, Object> params = new HashMap<>();
+              String cypher = buildCypher(entry.getKey().getUri(),
+                  entry.getKey().getGraphUri(),
+                  params);
+              Result result = inThreadTransaction.execute(cypher, params);
+              if (result.hasNext()) {
+                node = (Node) result.next().get("n");
+                if (result.hasNext()) {
+                  String props =
+                      "{uri: " + entry.getKey().getUri() +
+                          (entry.getKey().getGraphUri() == null ? "}" :
+                              ", graphUri: " + entry.getKey().getGraphUri() + "}");
+                  throw new IllegalStateException(
+                      "There are multiple matching nodes for the given properties " + props);
                 }
               }
-            } else if (prop instanceof double[]) {
-              double[] props = (double[]) prop;
-              for (double currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof boolean[]) {
-              boolean[] props = (boolean[]) prop;
-              for (boolean currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof LocalDateTime[]) {
-              LocalDateTime[] props = (LocalDateTime[]) prop;
-              for (LocalDateTime currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else if (prop instanceof LocalDate[]) {
-              LocalDate[] props = (LocalDate[]) prop;
-              for (LocalDate currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
-            } else {
-              Object[] props = (Object[]) prop;
-              for (Object currentVal : props) {
-                if (!valuesToDelete.contains(currentVal)) {
-                  newProps.add(currentVal);
-                }
-              }
+              return node;
             }
-            node.removeProperty(k);
-            if (!newProps.isEmpty()) {
-              node.setProperty(k, toPropertyValue(newProps));
-            }
-          } else {
-            notDeletedStatementCount += valuesToDelete.size();
-          }
-        } else {
-          if (node != null && node.hasProperty(k)) {
-            node.removeProperty(k);
+          });
+        } catch (InvalidCacheLoadException | IllegalStateException e) {
+          e.printStackTrace();
+        }
+        node = tempNode;
+        entry.getValue().forEach(l -> {
+          if (node != null && node.hasLabel(Label.label(l))) {
+            node.removeLabel(Label.label(l));
           } else {
             notDeletedStatementCount++;
           }
+        });
+        resourceProps.get(entry.getKey()).forEach((k, v) -> {
+          if (v instanceof List) {
+            List valuesToDelete = (List) v;
+            if (node != null && node.hasProperty(k)) {
+              ArrayList<Object> newProps = new ArrayList<>();
+              Object prop = node.getProperty(k);
+              if (prop instanceof long[]) {
+                long[] props = (long[]) prop;
+                for (long currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof double[]) {
+                double[] props = (double[]) prop;
+                for (double currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof boolean[]) {
+                boolean[] props = (boolean[]) prop;
+                for (boolean currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof LocalDateTime[]) {
+                LocalDateTime[] props = (LocalDateTime[]) prop;
+                for (LocalDateTime currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else if (prop instanceof LocalDate[]) {
+                LocalDate[] props = (LocalDate[]) prop;
+                for (LocalDate currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              } else {
+                Object[] props = (Object[]) prop;
+                for (Object currentVal : props) {
+                  if (!valuesToDelete.contains(currentVal)) {
+                    newProps.add(currentVal);
+                  }
+                }
+              }
+              node.removeProperty(k);
+              if (!newProps.isEmpty()) {
+                node.setProperty(k, toPropertyValue(newProps));
+              }
+            } else {
+              notDeletedStatementCount += valuesToDelete.size();
+            }
+          } else {
+            if (node != null && node.hasProperty(k)) {
+              node.removeProperty(k);
+            } else {
+              notDeletedStatementCount++;
+            }
 
+          }
+        });
+        if (node != null) {
+          deleteNodeIfEmpty(node);
         }
-      });
-      if (node != null) {
-        deleteNodeIfEmpty(node);
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
     for (Statement st : statements) {
-      if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
-        statementsWithbNodeCount++;
-      }
-      if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
-        continue;
-      }
-      ContextResource from = new ContextResource(st.getSubject().stringValue(),
-          st.getContext() != null ? st.getContext().stringValue() : null);
-      Node fromNode = null;
       try {
-        fromNode = nodeCache.get(from, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getSubject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = tx.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
+        if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
+          statementsWithbNodeCount++;
+        }
+        if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+          continue;
+        }
+        ContextResource from = new ContextResource(st.getSubject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null);
+        Node fromNode = null;
+        try {
+          fromNode = nodeCache.get(from, new Callable<Node>() {
+            @Override
+            public Node call() {  //throws AnyException
+              Node node = null;
+              Map<String, Object> params = new HashMap<>();
+              String cypher = buildCypher(st.getSubject().stringValue(),
+                  st.getContext() != null ? st.getContext().stringValue() : null,
+                  params);
+              Result result = inThreadTransaction.execute(cypher, params);
               if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getSubject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
+                node = (Node) result.next().get("n");
+                if (result.hasNext()) {
+                  String props =
+                      "{uri: " + st.getSubject().stringValue() +
+                          (st.getContext() == null ? "}" :
+                              ", graphUri: " + st.getContext().stringValue() + "}");
+                  throw new IllegalStateException(
+                      "There are multiple matching nodes for the given properties " + props);
+                }
               }
+              return node;
             }
-            return node;
-          }
-        });
-      } catch (InvalidCacheLoadException | IllegalStateException e) {
-        e.printStackTrace();
-      }
-      ContextResource to = new ContextResource(st.getObject().stringValue(),
-          st.getContext() != null ? st.getContext().stringValue() : null);
-      Node toNode = null;
-      try {
-        toNode = nodeCache.get(to, new Callable<Node>() {
-          @Override
-          public Node call() {  //throws AnyException
-            Node node = null;
-            Map<String, Object> params = new HashMap<>();
-            String cypher = buildCypher(st.getObject().stringValue(),
-                st.getContext() != null ? st.getContext().stringValue() : null,
-                params);
-            Result result = tx.execute(cypher, params);
-            if (result.hasNext()) {
-              node = (Node) result.next().get("n");
+          });
+        } catch (InvalidCacheLoadException | IllegalStateException e) {
+          e.printStackTrace();
+        }
+        ContextResource to = new ContextResource(st.getObject().stringValue(),
+            st.getContext() != null ? st.getContext().stringValue() : null);
+        Node toNode = null;
+        try {
+          toNode = nodeCache.get(to, new Callable<Node>() {
+            @Override
+            public Node call() {  //throws AnyException
+              Node node = null;
+              Map<String, Object> params = new HashMap<>();
+              String cypher = buildCypher(st.getObject().stringValue(),
+                  st.getContext() != null ? st.getContext().stringValue() : null,
+                  params);
+              Result result = inThreadTransaction.execute(cypher, params);
               if (result.hasNext()) {
-                String props =
-                    "{uri: " + st.getObject().stringValue() +
-                        (st.getContext() == null ? "}" :
-                            ", graphUri: " + st.getContext().stringValue() + "}");
-                throw new IllegalStateException(
-                    "There are multiple matching nodes for the given properties " + props);
+                node = (Node) result.next().get("n");
+                if (result.hasNext()) {
+                  String props =
+                      "{uri: " + st.getObject().stringValue() +
+                          (st.getContext() == null ? "}" :
+                              ", graphUri: " + st.getContext().stringValue() + "}");
+                  throw new IllegalStateException(
+                      "There are multiple matching nodes for the given properties " + props);
+                }
               }
+              return node;
             }
-            return node;
-          }
-        });
-      } catch (InvalidCacheLoadException | IllegalStateException e) {
-        e.printStackTrace();
-      }
-      if (fromNode == null || toNode == null) {
-        notDeletedStatementCount++;
-        continue;
-      }
+          });
+        } catch (InvalidCacheLoadException | IllegalStateException e) {
+          e.printStackTrace();
+        }
+        if (fromNode == null || toNode == null) {
+          notDeletedStatementCount++;
+          continue;
+        }
 
-      // find relationship if it exists
-      if (fromNode.getDegree(RelationshipType
-              .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
-          Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType
-                  .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
-              Direction.INCOMING)) {
-        for (Relationship rel : fromNode
-            .getRelationships(Direction.OUTGOING,
-                RelationshipType.withName(
-                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
-          if (rel.getEndNode().equals(toNode)) {
-            rel.delete();
-            break;
+        // find relationship if it exists
+        if (fromNode.getDegree(RelationshipType
+                .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+            Direction.OUTGOING) <
+            toNode.getDegree(RelationshipType
+                    .withName(handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)),
+                Direction.INCOMING)) {
+          for (Relationship rel : fromNode
+              .getRelationships(Direction.OUTGOING,
+                  RelationshipType.withName(
+                      handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+            if (rel.getEndNode().equals(toNode)) {
+              rel.delete();
+              break;
+            }
+          }
+        } else {
+          for (Relationship rel : toNode
+              .getRelationships(Direction.INCOMING,
+                  RelationshipType.withName(
+                      handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
+            if (rel.getStartNode().equals(fromNode)) {
+              rel.delete();
+              break;
+            }
           }
         }
-      } else {
-        for (Relationship rel : toNode
-            .getRelationships(Direction.INCOMING,
-                RelationshipType.withName(
-                    handleIRI(st.getPredicate(), RDFToLPGStatementProcessor.RELATIONSHIP)))) {
-          if (rel.getStartNode().equals(fromNode)) {
-            rel.delete();
-            break;
-          }
-        }
+        deleteNodeIfEmpty(toNode);
+        deleteNodeIfEmpty(fromNode);
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
-      deleteNodeIfEmpty(toNode);
-      deleteNodeIfEmpty(fromNode);
     }
 
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    nodeCache.invalidateAll();
     if (statementsWithbNodeCount > 0) {
       setbNodeInfo(statementsWithbNodeCount
           + " of the statements could not be deleted, due to containing a blank node.");
@@ -304,10 +309,12 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
 
   @Override
   protected void periodicOperation() {
-    Util.inTx(graphdb, this);
+    try (Transaction tempTransaction = graphdb.beginTx()) {
+      this.runPartialTx(tempTransaction);
+      tempTransaction.commit();
+      log.debug("partial commit: " + mappedTripleCounter + " triples deleted. Total so far: " + totalTriplesMapped);
+    }
     totalTriplesMapped += mappedTripleCounter;
-    log.debug("Successful partial commit of " + mappedTripleCounter + " triples. " +
-        (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
     mappedTripleCounter = 0;
   }
 
@@ -334,12 +341,6 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
             nodePropertyCount == 1)) {
       node.delete();
     }
-  }
-
-  private void persistNamespaceNode() {
-    Map<String, Object> params = new HashMap<>();
-    params.put("props", namespaces);
-    tx.execute("MERGE (n:NamespacePrefixDefinition) SET n+={props}", params);
   }
 
 }

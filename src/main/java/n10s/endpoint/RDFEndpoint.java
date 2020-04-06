@@ -1,4 +1,4 @@
-package n10s.extension;
+package n10s.endpoint;
 
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;

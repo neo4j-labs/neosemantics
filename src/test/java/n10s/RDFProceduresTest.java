@@ -305,7 +305,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
           "','JSON-LD',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
 
@@ -329,7 +329,7 @@ public class RDFProceduresTest {
           + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
+          = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -350,7 +350,7 @@ public class RDFProceduresTest {
       session.run("CREATE INDEX ON :Person(age, country)");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
+          = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -371,7 +371,7 @@ public class RDFProceduresTest {
 
       Session session = driver.session();
 
-      Result importResults1 = session.run("CALL n10s.rdf.load.inline('" +
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
           turtleFragment +
           "','Turtle')");
 
@@ -394,11 +394,37 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD',"
           +
           "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(6L, importResults
+          .single().get("triplesLoaded").asLong());
+      assertEquals("http://me.markus-lanthaler.com/",
+          session.run(
+              "MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+              .next().get("uri").asString());
+      assertEquals(1L,
+          session.run(
+              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              .next().get("count").asLong());
+    }
+  }
+
+  @Test
+  public void REMOVE_THIS_TEST() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "");
+
+      Result importResults
+          = session.run("CALL n10s.rdf.import.fetch("
+          +  "'file:/Users/jesusbarrasa/APPS/neo4j-enterprise-3.3.1/import/OpenPermID/OpenPermID-bulk-organization-20180107_070346.ntriples'"
+          //+RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
+          + ",'N-Triples')");
 
       assertEquals(6L, importResults
           .single().get("triplesLoaded").asLong());
@@ -423,7 +449,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS'} ");
 
-      Result importResults1 = session.run("CALL n10s.rdf.load.inline('" +
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
           jsonLdFragment + "','JSON-LD',"
           + "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
       assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
@@ -447,7 +473,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD',"
           +
@@ -473,7 +499,7 @@ public class RDFProceduresTest {
       session.run(
           "CALL n10s.graphconfig.init({ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' });");
 
-      importResults = session.run("CALL n10s.rdf.load.inline('" +
+      importResults = session.run("CALL n10s.rdf.import.inline('" +
           jsonLdFragment + "','JSON-LD', { commitSize: 10 })");
       assertEquals(6L, importResults.next().get("triplesLoaded").asLong());
       assertEquals("http://me.markus-lanthaler.com/",
@@ -506,7 +532,7 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD',"
           +
@@ -516,7 +542,7 @@ public class RDFProceduresTest {
       assertTrue(false);
 
     } catch (Exception e) {
-      assertEquals("Failed to invoke procedure `n10s.rdf.load.fetch`: Caused by: "
+      assertEquals("Failed to invoke procedure `n10s.rdf.import.fetch`: Caused by: "
           + "n10s.utils.NamespaceWithUndefinedPrefix: No prefix has been defined for "
           + "namespace <http://xmlns.com/foaf/0.1/> and 'handleVocabUris' is set "
           + "to 'SHORTEN_STRICT'", e.getMessage());
@@ -528,7 +554,7 @@ public class RDFProceduresTest {
               .get("prefix").asString());
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD',"
           +
@@ -557,7 +583,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
               .toURI()
@@ -587,7 +613,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
               .toURI()
@@ -629,7 +655,7 @@ public class RDFProceduresTest {
       session.run("call n10s.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
               .toURI()
@@ -665,7 +691,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("oneTriple.rdf")
               .toURI()
           + "','RDF/XML',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
@@ -695,7 +721,7 @@ public class RDFProceduresTest {
       session.run("call n10s.nsprefixes.add('pr','http://example.org/vocab/show/')");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500, verifyUriSyntax: false})");
@@ -721,7 +747,7 @@ public class RDFProceduresTest {
           "RETURN n ");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("badUri.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
@@ -742,7 +768,7 @@ public class RDFProceduresTest {
       session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("badUris.rdf")
               .toURI()
           + "','RDF/XML',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
@@ -765,7 +791,7 @@ public class RDFProceduresTest {
       session.run("call n10s.nsprefixes.add('voc','http://example.org/vocab/show/')");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
           + "','Turtle',{ languageFilter: 'en', commitSize: 500})");
@@ -780,7 +806,7 @@ public class RDFProceduresTest {
       session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
           + "','Turtle',{ languageFilter: 'fr', commitSize: 500})");
@@ -795,7 +821,7 @@ public class RDFProceduresTest {
       session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', languageFilter: 'fr-be', commitSize: 500})");
@@ -810,7 +836,7 @@ public class RDFProceduresTest {
       session.run("MATCH (t {uri: 'http://example.org/vocab/show/218'}) DETACH DELETE t ");
 
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500})");
@@ -834,7 +860,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ keepLangTag : true, handleMultival: 'ARRAY'}");
-      String importCypher = "CALL n10s.rdf.load.fetch('" +
+      String importCypher = "CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI() + "','Turtle')";
       Result importResults
@@ -864,7 +890,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'ARRAY', " +
               "multivalPropList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] }");
-      String importCypher = "CALL n10s.rdf.load.fetch('" +
+      String importCypher = "CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
           + "','Turtle')";
@@ -902,7 +928,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'ARRAY' }");
-      String importCypher = "CALL n10s.rdf.load.fetch('" +
+      String importCypher = "CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("multival.ttl")
               .toURI()
           + "','Turtle',  { predicateExclusionList : ['http://example.org/vocab/show/availableInLang','http://example.org/vocab/show/localName'] })";
@@ -939,7 +965,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("opentox-example.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500 })");
@@ -975,7 +1001,7 @@ public class RDFProceduresTest {
       session.run("call n10s.nsprefixes.add('rdf','http://www.w3.org/1999/02/22-rdf-syntax-ns#')");
 
       Result importResults = session.run(String.format(
-          "CALL n10s.rdf.load.fetch('%s','Turtle',{nodeCacheSize: 1})",
+          "CALL n10s.rdf.import.fetch('%s','Turtle',{nodeCacheSize: 1})",
           file("myrdf/testImportTurtle02.ttl")));
       assertEquals(5, importResults.next().get("triplesLoaded").asInt());
 
@@ -1064,7 +1090,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
       Result importResults
           = session
-          .run("CALL n10s.rdf.load.inline('" + turtleFragmentTypes
+          .run("CALL n10s.rdf.import.inline('" + turtleFragmentTypes
               + "','Turtle')");
       Map<String, Object> next = importResults
           .next().asMap();
@@ -1090,7 +1116,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS_AND_NODES'}");
       Result importResults
           = session
-          .run("CALL n10s.rdf.load.inline('" + turtleFragmentTypes
+          .run("CALL n10s.rdf.import.inline('" + turtleFragmentTypes
               + "','Turtle')");
       Map<String, Object> next = importResults
           .next().asMap();
@@ -1267,7 +1293,7 @@ public class RDFProceduresTest {
       session.run(addMapping2);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(6L, importResults
@@ -1296,7 +1322,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE'}");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(6L, importResults
@@ -1327,7 +1353,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("myrdf/three.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(6L, importResults
@@ -1368,7 +1394,7 @@ public class RDFProceduresTest {
       session.run(addMapping1);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("event.json")
               .toURI()
           + "','JSON-LD', {predicateExclusionList: ['http://schema.org/price','http://schema.org/priceCurrency'] })");
@@ -1664,7 +1690,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD',"
           +
@@ -1708,7 +1734,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
-      Result res1 = session.run("CALL n10s.rdf.load.fetch('" +
+      Result res1 = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD')");
       assertTrue(res1.hasNext());
@@ -1898,7 +1924,7 @@ public class RDFProceduresTest {
               "customDataTypePropList: ['http://example.com/price', 'http://example.com/color', 'http://example.com/power'] }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI() + "','Turtle',{ commitSize: 500 })");
       assertEquals(10L, importResults
@@ -1940,7 +1966,7 @@ public class RDFProceduresTest {
               "handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI() + "','Turtle',{ commitSize: 500 })");
       assertEquals(10L, importResults
@@ -1974,7 +2000,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'OVERWRITE', handleVocabUris: 'KEEP'  }");
-      String importCypher = "CALL n10s.rdf.load.fetch('" +
+      String importCypher = "CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("testImportMultiValAfterImportSingelVal.ttl")
               .toURI() + "','Turtle')";
@@ -1991,7 +2017,7 @@ public class RDFProceduresTest {
       session
           .run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY', handleVocabUris: 'KEEP' });");
 
-      importCypher = "CALL n10s.rdf.load.fetch('" +
+      importCypher = "CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("testImportMultiValAfterImportSingelVal.ttl")
               .toURI() + "','Turtle')";
@@ -2016,7 +2042,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("reification.ttl")
               .toURI()
           + "','Turtle')");
@@ -2050,13 +2076,13 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleMultival: 'ARRAY' }");
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle')");
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step2.ttl")
               .toURI() + "','Turtle')");
       assertEquals(2L, importResults
@@ -2082,7 +2108,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("event.json")
               .toURI() + "','JSON-LD')");
       assertEquals(28L, importResults
@@ -2093,7 +2119,7 @@ public class RDFProceduresTest {
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
       assertFalse(nsDefResult.hasNext());
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(171L, importResults
@@ -2105,7 +2131,7 @@ public class RDFProceduresTest {
       assertFalse(nsDefResult.hasNext());
       assertTrue(getPrePostDelta(defsPre, defsPost).isEmpty());
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("oneTriple.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(1L, importResults
@@ -2135,7 +2161,7 @@ public class RDFProceduresTest {
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
       assertFalse(nsDefResult.hasNext());
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(171L, importResults.next().get("triplesLoaded").asLong());
@@ -2166,7 +2192,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle')");
       assertEquals(2L, importResults
@@ -2188,7 +2214,7 @@ public class RDFProceduresTest {
 
       //{ handleMultival: 'ARRAY' }
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step2.ttl")
               .toURI() + "','Turtle')");
       assertEquals(2L, importResults
@@ -2213,13 +2239,13 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step1.ttl")
               .toURI() + "','Turtle',{ handleMultival: 'ARRAY' })");
       assertEquals(2L, importResults
           .next().get("triplesLoaded").asLong());
       importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("incremental/step3.ttl")
               .toURI() + "','Turtle')");
       assertEquals(2L, importResults
@@ -2242,7 +2268,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("100k.nt").toURI() + "','N-Triples',"
           + "{ commitSize: 5 , predicateExclusionList: ['http://www.w3.org/2004/02/skos/core#prefLabel']})");
       assertEquals(92712L, importResults
@@ -2259,7 +2285,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle', { commitSize: 500 })");
@@ -2300,7 +2326,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2365,7 +2391,7 @@ public class RDFProceduresTest {
           + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
           + "\n";
 
-      Result importResults = session.run("CALL n10s.rdf.load.inline('" +
+      Result importResults = session.run("CALL n10s.rdf.import.inline('" +
           rdf
           + "','Turtle',{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
 
@@ -2410,7 +2436,7 @@ public class RDFProceduresTest {
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', " +
               "keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500 })");
@@ -2447,7 +2473,7 @@ public class RDFProceduresTest {
           " { handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', " +
               "keepCustomDataTypes: true, handleMultival: 'ARRAY'} ");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500 })");
@@ -2506,7 +2532,7 @@ public class RDFProceduresTest {
           + "  ex:Predicate4 \"400.0\"^^xsd:double .\n"
           + "\n";
 
-      Result importResults = session.run("CALL n10s.rdf.load.inline('" +
+      Result importResults = session.run("CALL n10s.rdf.import.inline('" +
           rdf
           + "','Turtle',{ commitSize: 500 })");
 
@@ -2544,7 +2570,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2580,7 +2606,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2613,7 +2639,7 @@ public class RDFProceduresTest {
           "{handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, " +
               "handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500 })");
@@ -2668,7 +2694,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
@@ -2704,7 +2730,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), "" +
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("deleteRDF/dataset1.ttl")
               .toURI()
           + "','Turtle',{ commitSize: 500 })");
@@ -2743,7 +2769,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
@@ -2775,7 +2801,7 @@ public class RDFProceduresTest {
       params.put("rdf", this.turtleOntology);
 
       Result importResults = session
-          .run("CALL n10s.onto.load.inline($rdf,'Turtle')",
+          .run("CALL n10s.onto.import.inline($rdf,'Turtle')",
               params);
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
@@ -2803,7 +2829,7 @@ public class RDFProceduresTest {
           " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop', handleVocabUris: 'IGNORE'}");
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
@@ -2853,7 +2879,7 @@ public class RDFProceduresTest {
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleOntology);
 
-      Result importResults = session.run("CALL n10s.onto.load.inline("
+      Result importResults = session.run("CALL n10s.onto.import.inline("
           + "$rdf, 'Turtle')", params);
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
@@ -2899,7 +2925,7 @@ public class RDFProceduresTest {
           + "objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' }");
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'] })");
@@ -2953,7 +2979,7 @@ public class RDFProceduresTest {
       Map<String, Object> params = new HashMap<>();
       params.put("rdf", this.turtleOntology);
 
-      Result importResults = session.run("CALL n10s.onto.load.inline($rdf,"
+      Result importResults = session.run("CALL n10s.onto.import.inline($rdf,"
           + "'Turtle', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'] })", params);
 
@@ -3002,7 +3028,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
-      session.run("CALL n10s.onto.load.fetch('" +
+      session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("schema.rdf").toURI() +
           "','RDF/XML')");
 
@@ -3037,7 +3063,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
@@ -3059,7 +3085,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
           "','RDF/XML')");
 
@@ -3079,7 +3105,7 @@ public class RDFProceduresTest {
           "{ keepLangTag: true, handleMultival: 'ARRAY', handleVocabUris: 'IGNORE' } ");
       Session session = driver.session();
 
-      Result importResults = session.run("CALL n10s.onto.load.fetch('" +
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("moviesontologyMultilabel.owl").toURI()
           + "','RDF/XML')");
@@ -3162,7 +3188,7 @@ public class RDFProceduresTest {
       params.put("rdf", this.turtleMultilangOntology);
 
       Result importResults = session
-          .run("CALL n10s.onto.load.inline($rdf,'Turtle')", params);
+          .run("CALL n10s.onto.import.inline($rdf,'Turtle')", params);
 
       assertEquals(81L, importResults.next().get("triplesLoaded").asLong());
 
@@ -3237,7 +3263,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults1 = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("datetime/datetime-simple.ttl")
               .toURI()
           + "','Turtle')");
@@ -3261,7 +3287,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      Result importResults1 = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("datetime/datetime-complex.ttl")
               .toURI()
           + "','Turtle')");
@@ -3285,7 +3311,7 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleMultival: 'ARRAY' }");
 
-      Result importResults1 = session.run("CALL n10s.rdf.load.fetch('" +
+      Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader()
               .getResource("datetime/datetime-simple-multivalued.ttl").toURI()
           + "','Turtle')");
@@ -3327,7 +3353,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ commitSize: 500 })");
@@ -3399,7 +3425,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ commitSize: 500 })");
@@ -3471,7 +3497,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ commitSize: 500 })");
@@ -3503,7 +3529,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' } ");
 
-      Result importResults = session.run("CALL n10s.quadrdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ commitSize: 500 })");
@@ -3535,7 +3561,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.quadrdf.load.fetch('" +
+      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG', { commitSize: 500 })");

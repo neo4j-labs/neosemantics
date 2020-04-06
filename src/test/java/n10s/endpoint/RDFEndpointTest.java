@@ -1,4 +1,4 @@
-package n10s.extension;
+package n10s.endpoint;
 
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static org.junit.Assert.assertEquals;
@@ -179,7 +179,7 @@ public class RDFEndpointTest {
       session
           .run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
       org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/describe/"
           + id +
           "','Turtle')");
@@ -219,7 +219,7 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({})");
-      tx.execute("CALL n10s.onto.load.fetch('" +
+      tx.execute("CALL n10s.onto.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
               .toURI() + "','RDF/XML',{})");
 
@@ -313,7 +313,7 @@ public class RDFEndpointTest {
           + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
       session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
       org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.load.fetch('" +
+          = session.run("CALL n10s.rdf.import.fetch('" +
           HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "n10s/neo4j/cypher" +
           "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
           + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
@@ -829,7 +829,7 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({})");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML')");
 
@@ -887,7 +887,7 @@ public class RDFEndpointTest {
       tx.execute(
           "call n10s.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
 
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML',{})");
       tx.commit();
@@ -941,7 +941,7 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { keepLangTag : true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
               .toURI() + "','Turtle')");
 
@@ -1140,7 +1140,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true, typesToLabels: true} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
               .toURI()
           + "','Turtle')");
@@ -1185,7 +1185,7 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, "
           + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE',"
           + " keepCustomDataTypes: true, typesToLabels: true} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
               .toURI() + "','Turtle')");
 
@@ -1232,7 +1232,7 @@ public class RDFEndpointTest {
           + "{ keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
           + "  multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
           + "  keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI()
           + "','Turtle')");
@@ -1278,7 +1278,7 @@ public class RDFEndpointTest {
           + " multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
           + " keepCustomDataTypes: true, "
           + " customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpoint.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI()
           + "','Turtle')");
@@ -1322,7 +1322,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
               .toURI()
           + "','Turtle')");
@@ -1371,7 +1371,7 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader()
               .getResource("datetime/datetime-simple-multivalued.ttl")
               .toURI()
@@ -1469,7 +1469,7 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, "
           + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
           + " keepCustomDataTypes: true } )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
               .toURI() + "','Turtle')");
 
@@ -1521,7 +1521,7 @@ public class RDFEndpointTest {
           + "{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
           + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
           + "keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI()
           + "','Turtle')");
@@ -1571,7 +1571,7 @@ public class RDFEndpointTest {
           "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
               + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
               + " keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
               .toURI()
           + "','Turtle')");
@@ -1619,7 +1619,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( "
           + " { keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true} )");
-      tx.execute("CALL n10s.rdf.load.fetch('" +
+      tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
               .toURI()
           + "','Turtle')");
@@ -1664,7 +1664,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1702,7 +1702,7 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, "
           + " handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads')");
@@ -1738,7 +1738,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1772,7 +1772,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1813,7 +1813,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads')");
@@ -1852,7 +1852,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', "
           + " handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-      tx.execute("CALL n10s.quadrdf.load.fetch('" +
+      tx.execute("CALL n10s.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource(
               "RDFDatasets/RDFDatasetBNodes.trig")
               .toURI()

@@ -12,7 +12,7 @@ import org.neo4j.procedure.Procedure;
 
 public class OntoLoadProcedures extends OntoProcedures {
 
-  @Procedure(mode = Mode.WRITE)
+  @Procedure(name = "n10s.onto.import.fetch", mode = Mode.WRITE)
   @Description("Imports classes, properties (dataType and Object), hierarchies thereof, and domain and range info.")
   public Stream<ImportResults> fetch(@Name("url") String url,
       @Name("format") String format,
@@ -23,7 +23,7 @@ public class OntoLoadProcedures extends OntoProcedures {
 
   }
 
-  @Procedure(mode = Mode.WRITE)
+  @Procedure(name = "n10s.onto.import.inline", mode = Mode.WRITE)
   @Description("Imports classes, properties (dataType and Object), hierarchies thereof, and domain and range info.")
   public Stream<ImportResults> inline(@Name("rdf") String rdf,
       @Name("format") String format,

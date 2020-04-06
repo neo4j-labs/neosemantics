@@ -4,14 +4,13 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 
-public class NsPrefixMap implements Callable<Integer> {
+public class NsPrefixMap  {
 
   private static Map<String, String> standardNamespaces = createStandardNamespacesMap();
 
@@ -45,25 +44,20 @@ public class NsPrefixMap implements Callable<Integer> {
     return ns;
   }
 
-  ;
-
-  private Transaction tx;
   Map<String, String> prefixToNs = new HashMap<>();
   Map<String, String> nsToPrefix = new HashMap<>();
-  Lock lock;
 
   public NsPrefixMap(Transaction tx, boolean acquireLock)
       throws InvalidNamespacePrefixDefinitionInDB {
     try {
 
-      this.tx = tx;
       ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
           .findNodes(Label.label("NamespacePrefixDefinition"));
 
       if (namespacePrefixDefinitionNodes.hasNext()) {
         Node nspd = namespacePrefixDefinitionNodes.next();
         if (acquireLock) {
-          lock = tx.acquireWriteLock(nspd);
+          tx.acquireWriteLock(nspd);
         }
 
         for (Entry<String, Object> entry : nspd.getAllProperties().entrySet()) {
@@ -165,7 +159,7 @@ public class NsPrefixMap implements Callable<Integer> {
     return nsToPrefix;
   }
 
-  public void flushToDB() {
+  public void flushToDB(Transaction tx) {
     Node nsPrefDefNode;
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
@@ -173,8 +167,7 @@ public class NsPrefixMap implements Callable<Integer> {
 
     if (namespacePrefixDefinitionNodes.hasNext()) {
       nsPrefDefNode = namespacePrefixDefinitionNodes.next();
-      tx.acquireWriteLock(nsPrefDefNode);
-      // get the latest from the DB and update it.
+
       Map<String, String> nsPrefDefInDB = new HashMap<>();
 
       for (Entry<String, Object> entry : nsPrefDefNode.getAllProperties().entrySet()) {
@@ -215,7 +208,7 @@ public class NsPrefixMap implements Callable<Integer> {
     return sb.toString();
   }
 
-  private boolean reloadFromDB() throws DynamicNamespacePrefixConflict {
+  private boolean reloadFromDB(Transaction tx) throws DynamicNamespacePrefixConflict {
     Node nsPrefDefNode;
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
@@ -223,6 +216,9 @@ public class NsPrefixMap implements Callable<Integer> {
 
     if (namespacePrefixDefinitionNodes.hasNext()) {
       nsPrefDefNode = namespacePrefixDefinitionNodes.next();
+
+      //to prevent concurrent updates
+      tx.acquireWriteLock(nsPrefDefNode);
 
       // get the latest from the DB and update it.
       for (Entry<String, Object> entry : nsPrefDefNode.getAllProperties().entrySet()) {
@@ -247,11 +243,10 @@ public class NsPrefixMap implements Callable<Integer> {
   }
 
 
-  @Override
-  public Integer call() throws Exception {
+  public Integer partialRefresh(Transaction tx) throws DynamicNamespacePrefixConflict {
 
-    if (reloadFromDB()) {
-      flushToDB();
+    if (reloadFromDB(tx)) {
+      flushToDB(tx);
       return 0;
     }
     return 1;

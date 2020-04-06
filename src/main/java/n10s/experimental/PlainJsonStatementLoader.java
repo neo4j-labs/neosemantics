@@ -17,7 +17,7 @@ public class PlainJsonStatementLoader extends DirectStatementLoader {
   @Override
   public void endRDF() throws RDFHandlerException {
     try {
-      this.call();
+      this.runPartialTx(tx);
       totalTriplesMapped += mappedTripleCounter;
       log.info("JSON Import complete: " + totalTriplesMapped + "  statements imported");
     } catch (Exception e) {

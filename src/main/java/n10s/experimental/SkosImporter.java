@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
@@ -29,7 +30,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
-public class SkosImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
+public class SkosImporter extends RDFToLPGStatementProcessor {
 
   protected Map<String, String> resourceIndirectAltProps = new HashMap<>();
   protected Map<String, String> resourceIndirectPrefProps = new HashMap<>();
@@ -48,7 +49,12 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
 
   @Override
   protected void periodicOperation() {
-    Util.inTx(graphdb, this);
+
+    try (Transaction tempTransaction = graphdb.beginTx()) {
+      this.runPartialTx(tempTransaction);
+      tempTransaction.commit();
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
+    }
     totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
   }
@@ -56,8 +62,8 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
   @Override
   public void endRDF() throws RDFHandlerException {
 
-    Util.inTx(graphdb, this);
-    totalTriplesMapped += mappedTripleCounter;
+    periodicOperation();
+
     // take away the unused extra triples (maybe too much for just returning a counter?)
     int unusedExtra = 0;
     for (Entry<String, Map<String, Object>> entry : resourceProps.entrySet()) {
@@ -177,72 +183,75 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
   }
 
 
-  @Override
-  public Integer call() throws Exception {
+  public Integer runPartialTx(Transaction inThreadTransaction) {
 
     for (Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
-
+      try {
       if (!entry.getValue().isEmpty()) {
-        // if the uri is for an element for which we have not parsed the
-        // onto element type (class, property, rel) then it's an extra-statement
-        // and should be processed when the element in question is parsed
+          // if the uri is for an element for which we have not parsed the
+          // onto element type (class, property, rel) then it's an extra-statement
+          // and should be processed when the element in question is parsed
 
-        final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = tx.findNode(RESOURCE, "uri", entry.getKey());
-            if (node == null) {
-              node = tx.createNode(RESOURCE);
-              node.setProperty("uri", entry.getKey());
-            }
-            return node;
-          }
-        });
-
-        entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
-
-        resourceProps.get(entry.getKey()).forEach((k, v) -> {
-          //node.setProperty(k, v);
-          if (v instanceof List) {
-            Object currentValue = node.getProperty(k, null);
-            if (currentValue == null) {
-              node.setProperty(k, toPropertyValue(v));
-            } else {
-              if (currentValue.getClass().isArray()) {
-                Object[] properties = (Object[]) currentValue;
-                for (Object property : properties) {
-                  ((List) v).add(property);
-                  //here an exception can be raised if types are conflicting
-                }
-              } else {
-                ((List) v).add(node.getProperty(k));
+          final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
+            @Override
+            public Node call() {
+              Node node = inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey());
+              if (node == null) {
+                node = inThreadTransaction.createNode(RESOURCE);
+                node.setProperty("uri", entry.getKey());
               }
-              //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-              node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+              return node;
             }
-          } else {
-            node.setProperty(k, v);
-          }
-        });
-        //and after processing the props for all uris, then we clear them from resourceProps
-        resourceProps.remove(entry.getKey());
+          });
 
+          entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
+
+          resourceProps.get(entry.getKey()).forEach((k, v) -> {
+            //node.setProperty(k, v);
+            if (v instanceof List) {
+              Object currentValue = node.getProperty(k, null);
+              if (currentValue == null) {
+                node.setProperty(k, toPropertyValue(v));
+              } else {
+                if (currentValue.getClass().isArray()) {
+                  Object[] properties = (Object[]) currentValue;
+                  for (Object property : properties) {
+                    ((List) v).add(property);
+                    //here an exception can be raised if types are conflicting
+                  }
+                } else {
+                  ((List) v).add(node.getProperty(k));
+                }
+                //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+                node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+              }
+            } else {
+              node.setProperty(k, v);
+            }
+          });
+          //and after processing the props for all uris, then we clear them from resourceProps
+          resourceProps.remove(entry.getKey());
+
+        }
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
     for (Statement st : statements) {
+      try {
 
       final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
         }
       });
 
       final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
         }
       });
 
@@ -276,6 +285,9 @@ public class SkosImporter extends RDFToLPGStatementProcessor implements Callable
         fromNode.createRelationshipTo(
             toNode,
             RelationshipType.withName(translateRelName(st.getPredicate())));
+      }
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 

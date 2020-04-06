@@ -8,9 +8,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -28,7 +28,7 @@ import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
-public class OntologyImporter extends RDFToLPGStatementProcessor implements Callable<Integer> {
+public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   protected Set<Statement> extraStatements = new HashSet<>();
   public static final Label RESOURCE = Label.label("Resource");
@@ -44,7 +44,11 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
 
   @Override
   protected void periodicOperation() {
-    Util.inTx(graphdb, this);
+    try (Transaction tempTransaction = graphdb.beginTx()) {
+      this.runPartialTx(tempTransaction);
+      tempTransaction.commit();
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
+    }
     totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
   }
@@ -52,8 +56,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   @Override
   public void endRDF() throws RDFHandlerException {
 
-    Util.inTx(graphdb, this);
-    totalTriplesMapped += mappedTripleCounter;
+    periodicOperation();
+
     // take away the unused extra triples (maybe too much for just returning a counter?)
     int unusedExtra = 0;
     for (Entry<String, Map<String, Object>> entry : resourceProps.entrySet()) {
@@ -138,111 +142,117 @@ public class OntologyImporter extends RDFToLPGStatementProcessor implements Call
   }
 
 
-  @Override
-  public Integer call() throws Exception {
+  public Integer runPartialTx(Transaction inThreadTransaction) {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
+      try{
+        if (!entry.getValue().isEmpty()) {
+          // if the uri is for an element for which we have not parsed the
+          // onto element type (class, property, rel) then it's an extra-statement
+          // and should be processed when the element in question is parsed
 
-      if (!entry.getValue().isEmpty()) {
-        // if the uri is for an element for which we have not parsed the
-        // onto element type (class, property, rel) then it's an extra-statement
-        // and should be processed when the element in question is parsed
-
-        final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-          @Override
-          public Node call() {
-            Node node = tx.findNode(RESOURCE, "uri", entry.getKey());
-            if (node == null) {
-              node = tx.createNode(RESOURCE);
-              node.setProperty("uri", entry.getKey());
-            }
-            return node;
-          }
-        });
-
-        entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
-
-        resourceProps.get(entry.getKey()).forEach((k, v) -> {
-          //node.setProperty(k, v);
-          if (v instanceof List) {
-            Object currentValue = node.getProperty(k, null);
-            if (currentValue == null) {
-              node.setProperty(k, toPropertyValue(v));
-            } else {
-              if (currentValue.getClass().isArray()) {
-                Object[] properties = (Object[]) currentValue;
-                for (Object property : properties) {
-                  ((List) v).add(property);
-                  //here an exception can be raised if types are conflicting
+          final Node node;
+            node = nodeCache.get(entry.getKey(), new Callable<Node>() {
+              @Override
+              public Node call() {
+                Node node = inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey());
+                if (node == null) {
+                  node = inThreadTransaction.createNode(RESOURCE);
+                  node.setProperty("uri", entry.getKey());
                 }
-              } else {
-                ((List) v).add(node.getProperty(k));
+                return node;
               }
-              //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-              node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
-            }
-          } else {
-            node.setProperty(k, v);
-          }
-        });
-        //and after processing the props for all uris, then we clear them from resourceProps
-        resourceProps.remove(entry.getKey());
+            });
 
+          entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
+
+          resourceProps.get(entry.getKey()).forEach((k, v) -> {
+            //node.setProperty(k, v);
+            if (v instanceof List) {
+              Object currentValue = node.getProperty(k, null);
+              if (currentValue == null) {
+                node.setProperty(k, toPropertyValue(v));
+              } else {
+                if (currentValue.getClass().isArray()) {
+                  Object[] properties = (Object[]) currentValue;
+                  for (Object property : properties) {
+                    ((List) v).add(property);
+                    //here an exception can be raised if types are conflicting
+                  }
+                } else {
+                  ((List) v).add(node.getProperty(k));
+                }
+                //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+                node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+              }
+            } else {
+              node.setProperty(k, v);
+            }
+          });
+          //and after processing the props for all uris, then we clear them from resourceProps
+          resourceProps.remove(entry.getKey());
+
+        }
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
     for (Statement st : statements) {
+      try {
+        final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          }
+        });
 
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        }
-      });
+        final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          }
+        });
 
-      final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return tx.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        }
-      });
-
-      // check if the rel is already present. If so, don't recreate.
-      // explore the node with the lowest degree
-      boolean found = false;
-      if (fromNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
-          Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
-              Direction.INCOMING)) {
-        for (Relationship rel : fromNode
-            .getRelationships(Direction.OUTGOING,
-                RelationshipType.withName(translateRelName(st.getPredicate())))) {
-          if (rel.getEndNode().equals(toNode)) {
-            found = true;
-            break;
+        // check if the rel is already present. If so, don't recreate.
+        // explore the node with the lowest degree
+        boolean found = false;
+        if (fromNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+            Direction.OUTGOING) <
+            toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+                Direction.INCOMING)) {
+          for (Relationship rel : fromNode
+              .getRelationships(Direction.OUTGOING,
+                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+            if (rel.getEndNode().equals(toNode)) {
+              found = true;
+              break;
+            }
+          }
+        } else {
+          for (Relationship rel : toNode
+              .getRelationships(Direction.INCOMING,
+                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+            if (rel.getStartNode().equals(fromNode)) {
+              found = true;
+              break;
+            }
           }
         }
-      } else {
-        for (Relationship rel : toNode
-            .getRelationships(Direction.INCOMING,
-                RelationshipType.withName(translateRelName(st.getPredicate())))) {
-          if (rel.getStartNode().equals(fromNode)) {
-            found = true;
-            break;
-          }
-        }
-      }
 
-      if (!found) {
-        fromNode.createRelationshipTo(
-            toNode,
-            RelationshipType.withName(translateRelName(st.getPredicate())));
+        if (!found) {
+          fromNode.createRelationshipTo(
+              toNode,
+              RelationshipType.withName(translateRelName(st.getPredicate())));
+        }
+      } catch (ExecutionException e) {
+        e.printStackTrace();
       }
     }
 
     statements.clear();
     resourceLabels.clear();
-
+    nodeCache.invalidateAll();
     return 0;
   }
 
