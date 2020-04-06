@@ -886,14 +886,25 @@ public class RDFEndpointTest {
       //set a prefix that we can remove afterwards
       tx.execute(
           "call n10s.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
-
-      tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-              .toURI() + "','RDF/XML',{})");
       tx.commit();
     }
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
+      Map<String, Object> importResult = tx.execute("CALL n10s.rdf.import.fetch('" +
+          RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+              .toURI() + "','RDF/XML',{})").next();
+      Map<String,Object> nsFromImportResults = (Map<String,Object>) importResult.get("namespaces");
+      assertTrue(nsFromImportResults.size() == 7);
+
+      Map<String,Object> nspd = (Map<String,Object>) tx.execute("match (n:NamespacePrefixDefinition) return properties(n) as p").next()
+          .get("p");
+      assertTrue(nspd.containsKey("fiboanno"));
+      assertTrue(nspd.get("fiboanno").equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
+      assertTrue(nspd.containsKey("dct"));
+      assertTrue(nspd.get("dct").equals("http://purl.org/dc/terms/"));
+      assertTrue(nspd.containsKey("owl"));
+      assertTrue(nspd.get("owl").equals("http://www.w3.org/2002/07/owl#"));
+
       //we try (and fail) to remove the namespace
       tx.execute("call n10s.nsprefixes.remove('fiboanno')");
       tx.execute("call n10s.nsprefixes.list()").next();

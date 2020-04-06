@@ -27,8 +27,6 @@ public class NsPrefixMap  {
     return ns;
   }
 
-  ;
-
   private static Map<String, String> standardPrefixes = createStandardPrefixesMap();
 
   private static Map<String, String> createStandardPrefixesMap() {

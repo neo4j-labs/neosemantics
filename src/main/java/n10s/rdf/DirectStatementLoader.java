@@ -43,6 +43,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
   @Override
   public void endRDF() throws RDFHandlerException {
     periodicOperation();
+    //carried out in main context tx
+    //namespaces.partialRefresh(tx);
+    //this.runPartialTx(tx);
     log.debug("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }
