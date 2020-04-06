@@ -414,32 +414,6 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void REMOVE_THIS_TEST() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(), "");
-
-      Result importResults
-          = session.run("CALL n10s.rdf.import.fetch("
-          +  "'file:/Users/jesusbarrasa/APPS/neo4j-enterprise-3.3.1/import/OpenPermID/OpenPermID-bulk-organization-20180107_070346.ntriples'"
-          //+RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
-          + ",'N-Triples')");
-
-      assertEquals(6L, importResults
-          .single().get("triplesLoaded").asLong());
-      assertEquals("http://me.markus-lanthaler.com/",
-          session.run(
-              "MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
-              .next().get("uri").asString());
-      assertEquals(1L,
-          session.run(
-              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
-              .next().get("count").asLong());
-    }
-  }
-
-  @Test
   public void testImportJSONLDImportSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
