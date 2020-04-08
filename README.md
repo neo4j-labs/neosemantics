@@ -1,19 +1,12 @@
-# NSMNTX
-![NSMNTX Logo](http://neo4j-labs.github.io/neosemantics/docs/img/nsmntx-logo.png)
-NSMNTX is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
-This effectively means that NSMNTX makes it possible to
+# neosemantics (n10s)
+![n10s Logo](http://neo4j-labs.github.io/neosemantics/docs/img/neosemantics-logo.png)
+neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
+This effectively means that neosemantics makes it possible to
 
-* **Store RDF data in Neo4j** in a
-lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
-* On-demand **export property graph data** from Neo4j *as RDF*.
+## ⇨ Temporary manual for neosemantics 4.0.0-beta ⇦ 
 
-Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
-
-## ⇨ User Manual and Blog ⇦ 
-
-⇨ Check out the complete **[user manual](https://neo4j.com/docs/labs/nsmntx/current/)** with examples of use. ⇦
-
-⇨ [Blog on NSMNTX](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
+⇨ Use this if you want to try neosemantics 4.0.0-beta. We should be publishing a complete manual 
+shortly at the [user manual pages](https://neo4j.com/docs/labs/nsmntx/current/). ⇦
 
 ## Installation
  
@@ -23,35 +16,110 @@ You can either download a prebuilt jar from the [releases area](https://github.c
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
 
   ```
-  dbms.unmanaged_extension_classes=n10s.extension=/rdf
+  dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
   ```
   
 3. Restart the server. 
-4. Check that the installation went well by running `call dbms.procedures()`. The list of procedures should include the ones documented below.
-You can check that the extension is mounted by running `:GET /rdf/ping`
+4. Check that the installation went well by:
+Running `call dbms.procedures()`. The list of procedures should include a number of them prefixed by **n10s**.
+ 
+Checking that the logs show the following line on startup:
+```
+YYYY-MM-DD HH:MM:SS.000+0000 INFO  Mounted unmanaged extension [n10s.endpoint] at [/rdf]
+```
+
+You can also test the extension is mounted by running `:get http://localhost:7474/rdf/n10s/ping` on the neo4j browser and this should return the following message
+```
+{"ping":"here!"}
+```
 
 
+## Basic flow
 
-**Note on build**
+####  0. Pre-req: Constraint Creation
 
-When you run
-  ```
-  mvn clean package
-  ```
-This will produce two jars :
-  1. A neosemantics-[...].jar This jar bundles all the dependencies.
-  2. An original-neosemantics-[...].jar This jar is just the neosemantics bit. So go this way if you want to keep the third party jars separate. In this case you will have to add all third party dependencies (look at the pom.xml). 
-  
+``` 
+CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE
+```
 
-## What's in this repository
-This repository contains a set of stored procedures, user definded functions and extensions sumarised in [the reference section of the user manual](https://neo4j.com/docs/labs/nsmntx/current/reference/).
+#### 1.  Creating a Graph Configuration
+Before any RDF import operation a `GraphConfig` needs to be created. Here we define the way the RDF data is persisted in Neo4j. 
+We'll find things like 
 
-## Contributing
+| Param        | Values           | Cool  |
+| :------------- |:-------------|:-----|
+| handleVocabUris     | "SHORTEN","KEEP","SHORTEN_STRICT","MAP"|  how namespaces are  handled |
+| handleMultival     | "OVERWRITE","ARRAY"      | how multivalued properties are handled |
+| handleRDFTypes | "LABELS","NODES","LABELS_AND_NODES"      |  how RDF datatypes are handled |
+| multivalPropList | [ list of predicate uris ] |  |
+| ...| ...|...|
 
-neosemantics code formatting follows the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
+Most of them are the same (expect some changes) as in previous versions (see [3.5 manual](https://neo4j.com/docs/labs/nsmntx/current/reference/#_rdf_import_params) for reference). 
 
-In order to contribute to this project, it is advisable to install the code formatting configuration in your preferred IDE:
-* [Eclipse settings file](https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml)
-* [IntelliJ IDEA settings file](https://github.com/google/styleguide/blob/gh-pages/eclipse-java-google-style.xml)
+You can create a graph config with all the defaults like this:
+``` 
+call n10s.graphconfig.init()
+``` 
 
-Please, make sure you format your code before commiting changes. Thanks!
+Or customize it by passing a map with your options:
+``` 
+call n10s.graphconfig.init( { handleMultival: "ARRAY", 
+                              multivalPropList: ["http://voc1.com#pred1", "http://voc1.com#pred2"],
+                              keepLangTag: true })
+``` 
+
+
+#### 2.  Importing RDF data
+
+Once the Graph config is created we can import data from a url using `fetch`:
+
+``` 
+call n10s.rdf.import.fetch( "https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl",
+                            "Turtle")
+``` 
+
+Or pass it as a parameter using `inline`:
+
+``` 
+with '
+@prefix neo4voc: <http://neo4j.org/vocab/sw#> .
+@prefix neo4ind: <http://neo4j.org/ind#> .
+
+neo4ind:nsmntx3502 neo4voc:name "NSMNTX" ;
+			   a neo4voc:Neo4jPlugin ;
+			   neo4voc:runsOn neo4ind:neo4j355 .
+
+neo4ind:apoc3502 neo4voc:name "APOC" ;
+			   a neo4voc:Neo4jPlugin ;		   
+			   neo4voc:runsOn neo4ind:neo4j355 .
+
+neo4ind:graphql3502 neo4voc:name "Neo4j-GraphQL" ;
+			   a neo4voc:Neo4jPlugin ;			   
+			   neo4voc:runsOn neo4ind:neo4j355 .			   			   
+
+neo4ind:neo4j355 neo4voc:name "neo4j" ;
+			   a neo4voc:GraphPlatform , neo4voc:AwesomePlatform .
+
+' as  payload
+
+call n10s.rdf.import.inline( payload, "Turtle") yield terminationStatus, triplesLoaded, triplesParsed, namespaces
+return terminationStatus, triplesLoaded, triplesParsed, namespaces
+``` 
+
+It is possible to pass some request specific parameters like headerParams, commitSize, languageFilter...
+(also found [in the 3.5 manual](https://neo4j.com/docs/labs/nsmntx/current/reference/#_rdf_import_params))
+
+
+#### 3.  Importing Ontologies, QuadRDF, etc
+
+Same naming scheme applies...
+
+```
+call n10s.onto.import.fetch(...)
+```
+
+Use autocompletion to discover the different procedures.
+
+Full documentation will be available soon. In the meantime, please share your feedback in the [Neo4j community portal](https://community.neo4j.com/c/integrations/linked-data-rdf-ontology).
+
+Thanks! 
