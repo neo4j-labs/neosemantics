@@ -1,6 +1,5 @@
 # neosemantics (n10s)
-![n10s Logo](http://neo4j-labs.github.io/neosemantics/docs/img/neosemantics-logo.png)
-neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
+![n10s Logo](https://guides.neo4j.com/rdf/n10s.png) neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
 This effectively means that neosemantics makes it possible to
 
 ## ⇨ Temporary manual for neosemantics 4.0.0-beta ⇦ 
