@@ -15,6 +15,7 @@ ex:PersonShape
 		sh:path neo4j:ACTED_IN ;       # constrains the values of neo4j:ACTED_IN
 		sh:class neo4j:Movie ;         # range
 		sh:nodeKind sh:IRI ;           # type of property
+		sh:severity sh:Warning ;
 	] ;
 	sh:closed true ;
 	sh:ignoredProperties ( neo4j:born neo4j:DIRECTED neo4j:FOLLOWS neo4j:REVIEWED neo4j:PRODUCED neo4j:WROTE ) .
@@ -36,5 +37,6 @@ neo4j:Movie
         sh:minInclusive 2000 ;      # numeric range
         sh:maxInclusive 2019 ;      # numeric range
 	] ;
+	sh:closed true ;
 	sh:ignoredProperties ( neo4j:tagline ) .
 

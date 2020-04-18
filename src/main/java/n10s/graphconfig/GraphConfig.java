@@ -14,13 +14,14 @@ import org.neo4j.graphdb.Transaction;
 
 public class GraphConfig {
 
+  public static final int GRAPHCONF_MODE_LPG = 1;
+  public static final int GRAPHCONF_MODE_RDF = 2;
+
   public static final int GRAPHCONF_VOC_URI_SHORTEN = 0;
   public static final int GRAPHCONF_VOC_URI_SHORTEN_STRICT = 1;
   public static final int GRAPHCONF_VOC_URI_IGNORE = 2;
   public static final int GRAPHCONF_VOC_URI_MAP = 3;
   public static final int GRAPHCONF_VOC_URI_KEEP = 4;
-
-  static final int GRAPHCONF_VOC_URI_DEFAULT = GRAPHCONF_VOC_URI_SHORTEN;
 
   public static final String GRAPHCONF_VOC_URI_SHORTEN_STR = "SHORTEN";
   public static final String GRAPHCONF_VOC_URI_SHORTEN_STRICT_STR = "SHORTEN_STRICT";
@@ -69,11 +70,12 @@ public class GraphConfig {
 
 
   public GraphConfig(Map<String, Object> props) throws InvalidParamException {
+
     this.handleVocabUris = (props.containsKey("handleVocabUris") ? parseHandleVocabUrisValue(
         (String) props.get("handleVocabUris")) : GRAPHCONF_VOC_URI_SHORTEN);
     this.handleMultival = (props.containsKey("handleMultival") ? parseHandleMultivalValue(
         (String) props.get("handleMultival")) : GRAPHCONF_MULTIVAL_PROP_OVERWRITE);
-    // this is the old typesToLabels
+
     this.handleRDFTypes = (props.containsKey("handleRDFTypes") ? parseHandleRDFTypesValue(
         (String) props
             .get("handleRDFTypes")) : GRAPHCONF_RDFTYPES_AS_LABELS);
@@ -172,6 +174,21 @@ public class GraphConfig {
       return resultSet;
     } else {
       return null;
+    }
+  }
+
+
+  public int getGraphMode() {
+    if (handleVocabUris==GRAPHCONF_VOC_URI_SHORTEN ||
+        handleVocabUris==GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
+        handleVocabUris==GRAPHCONF_VOC_URI_MAP ||
+        handleVocabUris==GRAPHCONF_VOC_URI_KEEP ){
+      return  GRAPHCONF_MODE_RDF;
+    } else if (handleVocabUris==GRAPHCONF_VOC_URI_IGNORE){
+      return  GRAPHCONF_MODE_LPG;
+    } else {
+      //Default to LPG?
+      return  GRAPHCONF_MODE_LPG;
     }
   }
 

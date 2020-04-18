@@ -47,9 +47,8 @@ import org.neo4j.procedure.UserFunction;
  */
 public class RDFProcedures extends CommonProcedures {
 
-  protected ImportResults doImport(@Name("format") String format, @Name("url") String url,
-      @Name("rdf") String rdfFragment,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+  protected ImportResults doImport(String format, String url,
+      String rdfFragment, Map<String, Object> props, GraphConfig overrideGC) {
 
     DirectStatementLoader statementLoader = null;
     RDFParserConfig conf = null;
@@ -57,7 +56,7 @@ public class RDFProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      conf = new RDFParserConfig(props, (overrideGC!=null?overrideGC:new GraphConfig(tx)));
       rdfFormat = getFormat(format);
       statementLoader = new DirectStatementLoader(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e) {

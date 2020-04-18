@@ -5,7 +5,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Lock;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
@@ -20,6 +19,7 @@ public class NsPrefixMap  {
     ns.put("http://purl.org/dc/elements/1.1/", "dc");
     ns.put("http://purl.org/dc/terms/", "dct");
     ns.put("http://www.w3.org/2004/02/skos/core#", "skos");
+    ns.put("http://www.w3.org/2008/05/skos-xl#", "skosxl");
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
@@ -35,6 +35,7 @@ public class NsPrefixMap  {
     ns.put("dc", "http://purl.org/dc/elements/1.1/");
     ns.put("dct", "http://purl.org/dc/terms/");
     ns.put("skos", "http://www.w3.org/2004/02/skos/core#");
+    ns.put("skosxl","http://www.w3.org/2008/05/skos-xl#");
     ns.put("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
     ns.put("owl", "http://www.w3.org/2002/07/owl#");
     ns.put("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
