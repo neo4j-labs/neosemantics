@@ -25,8 +25,8 @@ public class SHACLValidator {
 
   private static final String CYPHER_TX_INFIX = " focus in $touchedNodes AND ";
 
-  private static final String CYPHER_MATCH_WHERE = "MATCH (focus:%s) WHERE ";
-  private static final String CYPHER_MATCH_REL_WHERE =  "MATCH (focus:%s)-[r:`%s`]->(x) WHERE ";
+  private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
+  private static final String CYPHER_MATCH_REL_WHERE =  "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
 
   //A property shape is a shape in the shapes graph that is the subject of a triple that has sh:path as its predicate.
@@ -453,11 +453,17 @@ public class SHACLValidator {
   }
 
 
-  private boolean isRDFGraph() {
+  private boolean shallIUseUriInsteadOfId() {
     return gc!=null &&  (gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN ||
         gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN_STRICT||
         gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_MAP ||
         gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_KEEP) ;
+  }
+
+  private boolean shallIShorten() {
+    return gc!=null &&  (gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN ||
+        gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN_STRICT||
+        gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_MAP) ;
   }
 
   private String getQuery(String pref, boolean tx, String suff) {
@@ -466,29 +472,29 @@ public class SHACLValidator {
 
   private String CYPHER_DATATYPE_V_SUFF() {
     return " NOT all(x in [] +  focus.`%s` where %s x %s = x) RETURN " +
-          (isRDFGraph()?" focus.uri ":" id(focus) ") + " as nodeId, "
-          + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+          (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+          + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
           " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
           + "' as propertyShape, focus.`%s` as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
         + " '' as message ";
   }
 
   private String CYPHER_RANGETYPE1_V_SUFF() {
-    return "NOT x:`%s` RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") + " as nodeId, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+    return "NOT x:`%s` RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
         " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
-        + "' as propertyShape, " + (isRDFGraph()?" x.uri ":" id(x) ") +" as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
-        + " 'value should be of type ' + " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as message  ";
+        + "' as propertyShape, " + (shallIUseUriInsteadOfId()?" x.uri ":" id(x) ") +" as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
+        + " 'value should be of type ' + " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as message  ";
   }
 
   private String CYPHER_RANGETYPE2_V_SUFF() {
-    return "exists(focus.`%s`) RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") + " as nodeId, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+    return "exists(focus.`%s`) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
         " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
         + "' as propertyShape, null as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'%s should be a relationship but it is a property' as message  ";
   }
 
@@ -496,87 +502,87 @@ public class SHACLValidator {
     return "NOT all(x in [] +  coalesce(focus.`%s`,[]) where toString(x) =~ params.theRegex )  "
         + " UNWIND [x in [] +  coalesce(focus.`%s`,[]) where not toString(x) =~ params.theRegex ]  as offval "
         + "RETURN "
-        + (isRDFGraph()?" focus.uri ":" id(focus) ") + " as nodeId, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
+        + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
         .stringValue()
         + "' as propertyShape, offval as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'' as message  ";
   }
 
   private String CYPHER_VALRANGE_V_SUFF() {
-    return "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-        " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
+    return "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+        " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
         .stringValue()
         + "' as propertyShape, focus.`%s` as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'' as message  ";
   }
 
   private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s size((focus)-[:`%s`]->()) RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+    return "NOT %s size((focus)-[:`%s`]->()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable value count: ' + size((focus)-[:`%s`]->()) as message, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
   private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
-    return "NOT size((focus)-[:`%s`]->()) %s  RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    " as nodeId, "  + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+    return "NOT size((focus)-[:`%s`]->()) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    " as nodeId, "  + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable  value count: ' + size((focus)-[:`%s`]->()) as message, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
   private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {
-    return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+    return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable value count: ' + size((focus)<-[:`%s`]-()) as message, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
   private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {
-    return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-     " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'value count: ' + size((focus)<-[:`%s`]-()) as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "'' as message  ";
+    return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+        + "' as propertyShape,  'unacceptable value count: ' + size((focus)<-[:`%s`]-()) as message, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + "null as offendingValue  ";
   }
 
   private String CYPHER_MIN_CARDINALITY2_V_SUFF() {
-    return " NOT %s size([] + focus.`%s`) RETURN "  + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    "as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "'' as message  ";
+    return " NOT %s size([] + focus.`%s`) RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    "as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+        + "' as propertyShape, 'unacceptable value count: ' + size([] + focus.`%s`) as message, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + "null as offendingValue  ";
   }
   private String CYPHER_MAX_CARDINALITY2_V_SUFF() {
-    return " NOT size([] + focus.`%s`) %s RETURN "  + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape, 'value count: ' + size([] + focus.`%s`) as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "'' as message  ";
+    return " NOT size([] + focus.`%s`) %s RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+        + "' as propertyShape, 'unacceptable value count: ' + size([] + focus.`%s`) as message, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + "null as offendingValue  ";
   }
 
   private String CYPHER_STRLEN_V_SUFF() {
-    return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-    " as nodeId, " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+    return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
         " as nodeType, '%s' as shapeId, 'stringLength' as propertyShape, focus.`%s` as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'' as message  ";
   }
 
   private String CYPHER_NODE_STRUCTURE_V_SUFF() {
     return " true \n" +
         "UNWIND [ x in [(focus)-[r]->()| type(r)] where not x in params.allAllowedProps] + [ x in keys(focus) where " +
-        (isRDFGraph()?" x <> 'uri' and ":"")  +" not x in params.allAllowedProps] as noProp\n"
-        + "RETURN  " + (isRDFGraph()?" focus.uri ":" id(focus) ") +
-        " as nodeId , " + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '"
+        (shallIUseUriInsteadOfId()?" x <> 'uri' and ":"")  +" not x in params.allAllowedProps] as noProp\n"
+        + "RETURN  " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+        " as nodeId , " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '"
         + SHACL.CLOSED_CONSTRAINT_COMPONENT.stringValue()
-        + "' as propertyShape, substring(reduce(result='', x in [] + coalesce(focus[noProp],[(focus)-[r]-(x) where type(r)=noProp | " + (isRDFGraph()?" x.uri ":" id(x) ") + "]) | result + ', ' + x ),2) as offendingValue, "
-        + (isRDFGraph()?"n10s.rdf.fullUriFromShortForm(noProp)": " noProp ") +
+        + "' as propertyShape, substring(reduce(result='', x in [] + coalesce(focus[noProp],[(focus)-[r]-(x) where type(r)=noProp | " + (shallIUseUriInsteadOfId()?" x.uri ":" id(x) ") + "]) | result + ', ' + x ),2) as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm(noProp)": " noProp ") +
         " as propertyName, '%s' as severity, "
         + "'Closed type does not include this property/relationship' as message  ";
   }
@@ -593,10 +599,10 @@ public class SHACLValidator {
           + "WITH category, propertyOrRelationshipPath, inverse, set1, collect ({p: key, v: ps[key]}) as set2raw\n"
           + "WITH category, propertyOrRelationshipPath, inverse, set1, [ x in set2raw where x.p <> \"uri\"] as set2\n"
           + "UNWIND set1+set2 as pair\n"
-          + "RETURN " + (isRDFGraph()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
-          + (isRDFGraph()?" propertyOrRelationshipPath ":" n10s.rdf.getIRILocalName(propertyOrRelationshipPath) ")  +
-          " as propertyOrRelationshipPath , " + (isRDFGraph()?" n10s.rdf.fullUriFromShortForm(pair.p) ":" n10s.rdf.getIRILocalName(n10s.rdf.fullUriFromShortForm(pair.p)) ")
-          + " as param, " +  (isRDFGraph()?" pair.v ":" case when tostring(pair.v) =~ '^\\\\w+://.*' then n10s.rdf.getIRILocalName(toString(pair.v)) else pair.v end ") + "  as value \n"
+          + "RETURN " + (shallIUseUriInsteadOfId()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
+          + (shallIUseUriInsteadOfId()?" propertyOrRelationshipPath ":" n10s.rdf.getIRILocalName(propertyOrRelationshipPath) ")  +
+          " as propertyOrRelationshipPath , " + (shallIShorten()?" n10s.rdf.fullUriFromShortForm(pair.p) ":" n10s.rdf.getIRILocalName(n10s.rdf.fullUriFromShortForm(pair.p)) ")
+          + " as param, " +  (shallIUseUriInsteadOfId()?" pair.v ":" case when tostring(pair.v) =~ '^\\\\w+://.*' then n10s.rdf.getIRILocalName(toString(pair.v)) else pair.v end ") + "  as value \n"
           + "\n"
           + "UNION\n"
           + "\n"
@@ -606,9 +612,9 @@ public class SHACLValidator {
           + "WITH ns, coalesce(coalesce(targetClass.uri, nsAsTarget.uri),'#') AS category\n"
           + "WITH  category, null as propertyOrRelationshipPath, [{ p: \"closed\" , v: coalesce(ns.sh__closed,false)}, { p:\"ignoredProperties\",v:\n"
           + " [(ns)-[:sh__ignoredProperties]->()-[:rdf__first|rdf__rest*0..]->(prop) \n"
-          + " WHERE ()-[:rdf__first]->(prop) | " + (isRDFGraph()?" prop.uri ":" n10s.rdf.getIRILocalName(prop.uri) ") + " ] }] as pairs\n"
+          + " WHERE ()-[:rdf__first]->(prop) | " + (shallIUseUriInsteadOfId()?" prop.uri ":" n10s.rdf.getIRILocalName(prop.uri) ") + " ] }] as pairs\n"
           + "UNWIND pairs as pair\n"
-          + "RETURN " + (isRDFGraph()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
+          + "RETURN " + (shallIUseUriInsteadOfId()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
           + " propertyOrRelationshipPath , pair.p as param, pair.v as value \n"
           + "\n"
           + "\n"

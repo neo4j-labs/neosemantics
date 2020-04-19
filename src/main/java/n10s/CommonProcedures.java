@@ -28,7 +28,7 @@ import org.neo4j.procedure.Name;
 public class CommonProcedures {
 
 
-  protected static final String UNIQUENESS_CONSTRAINT_ON_URI = "n10s_unique_uri";
+  public static final String UNIQUENESS_CONSTRAINT_ON_URI = "n10s_unique_uri";
 
   protected static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML,
       RDFFormat.JSONLD,

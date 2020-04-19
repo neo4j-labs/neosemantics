@@ -25,7 +25,7 @@ public class ValidationResult {
     this.resultMessage = (String) map.get("message");
   }
 
-  public ValidationResult(String focusNode, String nodeType, String resultPath, String severity,
+  public ValidationResult(Object focusNode, String nodeType, String resultPath, String severity,
       String constraint, String  shapeId, String  message,  Object ov) {
     this.focusNode = focusNode;
     this.nodeType = nodeType;

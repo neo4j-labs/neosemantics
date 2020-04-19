@@ -1,5 +1,6 @@
 package n10s.validation;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -31,7 +32,7 @@ public class SHACLValidationProceduresTest {
       + "       [(vr)-[:sh__resultPath]->()-[:sh__inversePath*0..1]->(p) where not (p)-->() | n10s.rdf.getIRILocalName(p.uri) ][0] as path,\n"
       + "       coalesce([(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-()-[:sh__targetClass]->(tc)| n10s.rdf.getIRILocalName(tc.uri) ][0], \n"
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n"
-      + "       [(vr)-[:sh__focusNode]->(f) | f.uri ][0] as focus,\n"
+      + "       [(vr)-[:sh__focusNode]->(f) | id(f) ][0] as focus,\n"
       + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev";
 
 
@@ -250,42 +251,70 @@ public class SHACLValidationProceduresTest {
 
 
   @Test
-  public void testRunTestSuite() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
+  public void testRunTestSuite1() throws Exception {
+    runIndividualTest("core/complex", "personexample",  null, "IGNORE");
+    runIndividualTest("core/complex", "personexample", null, "SHORTEN");
+    runIndividualTest("core/complex", "personexample", null, "KEEP");
+  }
 
-      Session session = driver.session();
-      session
-          .run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
-      Result run = session.run("call db.schemaStatements");
-      assertTrue(run.hasNext());
+  @Test
+  public void testRunTestSuite2() throws Exception {
+    runIndividualTest("core/path", "path-inverse-001", null, "IGNORE");
+    runIndividualTest("core/path", "path-inverse-001", null, "SHORTEN");
+    runIndividualTest("core/path", "path-inverse-001", null, "KEEP");
+  }
 
-    } catch (Exception e){
-      e.printStackTrace();
-    }
+  @Test
+  public void testRunTestSuite3() throws Exception {
+    runIndividualTest("core/property", "datatype-001",null,  "IGNORE");
+    runIndividualTest("core/property", "datatype-001",null,  "SHORTEN");
+    runIndividualTest("core/property", "datatype-001",null,  "KEEP");
+  }
 
-    //testRunIndividualTestInTestSuite("core/complex", "personexample", null);
-    //testRunIndividualTestInTestSuite("core/path", "path-inverse-001", null);
-    //testRunIndividualTestInTestSuite("core/property", "datatype-001",
-    //    "MATCH (n { uri: 'http://datashapes.org/sh/tests/core/property/datatype-001.test#ValidResource'})"
-    //        + "SET n.dateProperty = [date(n.dateProperty[0])]");
-    testRunIndividualTestInTestSuite("core/property", "datatype-002", null);
-    //testRunIndividualTestInTestSuite("core/property", "maxCount-001", null);
-    //testRunIndividualTestInTestSuite("core/property", "minExclussive-001", null);
+  @Test
+  public void testRunTestSuite4() throws Exception {
+    runIndividualTest("core/property", "datatype-002", null, "IGNORE");
+    runIndividualTest("core/property", "datatype-002", null, "SHORTEN");
+    runIndividualTest("core/property", "datatype-002", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite5() throws Exception {
+    runIndividualTest("core/property", "maxCount-001", null, "IGNORE");
+    runIndividualTest("core/property", "maxCount-001", null, "SHORTEN");
+    runIndividualTest("core/property", "maxCount-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite6() throws Exception {
+    runIndividualTest("core/property", "minExclussive-001", null, "IGNORE");
+    runIndividualTest("core/property", "minExclussive-001", null, "SHORTEN");
+    runIndividualTest("core/property", "minExclussive-001", null, "KEEP");
   }
 
 
-  public void testRunIndividualTestInTestSuite(String testGroupName, String testName,
-      String cypherScript) throws Exception {
+
+  public void runIndividualTest(String testGroupName, String testName,
+      String cypherScript, String handleVocabUris ) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
+      Result getschemastatementsResults = session.run("call db.schemaStatements() yield name return name");
+      if(getschemastatementsResults.hasNext() &&
+          getschemastatementsResults.next().get("name").asString().equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
+        //constraint exists. do nothing.
+      } else {
+        session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+        assertTrue(session.run("call db.schemaStatements").hasNext());
+      }
+
       //db is empty
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
 
-      session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY' })");  //handleVocabUris: 'IGNORE'
+      session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY'" +
+          ", handleVocabUris: '"  + handleVocabUris + "' })");
 
       //load data
       session.run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
@@ -307,11 +336,11 @@ public class SHACLValidationProceduresTest {
           .run("CALL n10s.experimental.validation.shaclValidate() ");
 
       // print out validation results
-      //System.out.println("actual: ");
+      System.out.println("actual: ");
       Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
-        String focusNode = validationResult.get("focusNode").asString();
+        Object focusNode = validationResult.get("focusNode").asObject();
         String nodeType = validationResult.get("nodeType").asString();
         String propertyName = validationResult.get("resultPath").asString();
         String severity = validationResult.get("severity").asString();
@@ -334,14 +363,14 @@ public class SHACLValidationProceduresTest {
           .toURI() + "','Turtle')");
 
       // query them in the graph and flatten the list
-      Result expectedValidationResults = session.run(VAL_RESULTS_QUERY_AS_RDF);
+      Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
 
       //print them out
-      //System.out.println("expected: ");
+      System.out.println("expected: ");
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
       while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
-        String focusNode = validationResult.get("focus").asString();
+        Object focusNode = ((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?validationResult.get("focus").asString():validationResult.get("focus").asLong());
         String nodeType = validationResult.get("targetClass").asString();
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
@@ -391,7 +420,8 @@ public class SHACLValidationProceduresTest {
 
   private boolean reasonablyEqual(ValidationResult x, ValidationResult res) {
     return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) && x.nodeType
-        .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape);
+        .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
+        .equals(res.resultPath);
   }
 
 
