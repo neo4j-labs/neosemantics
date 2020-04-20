@@ -79,14 +79,14 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result validationResults = session.run("CALL n10s.experimental.validation.shaclValidate() ");
+      Result validationResults = session.run("CALL n10s.experimental.validation.shacl.validate() ");
 
 //      Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
-//          + "CALL n10s.experimental.validation.shaclValidateTx(nodes) yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
+//          + "CALL n10s.experimental.validation.shacl.validateTx(nodes) yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
 //          + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName ");
 
       assertEquals(true, validationResults.hasNext());
@@ -118,11 +118,11 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result shapesResults = session.run("CALL n10s.experimental.validation.listShapes() ");
+      Result shapesResults = session.run("CALL n10s.experimental.validation.shacl.listShapes() ");
 
       assertEquals(true, shapesResults.hasNext());
 
@@ -160,11 +160,11 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result shapesResults = session.run("CALL n10s.experimental.validation.listShapes() ");
+      Result shapesResults = session.run("CALL n10s.experimental.validation.shacl.listShapes() ");
 
       assertEquals(true, shapesResults.hasNext());
 
@@ -215,25 +215,20 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-      session.run("CREATE (:NamespacePrefixDefinition {\n" +
-          "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: \"rdf\",\n" +
-          "  `http://www.w3.org/2002/07/owl#`: \"owl\",\n" +
-          "  `http://www.w3.org/ns/shacl#`: \"sh\",\n" +
-          "  `http://www.w3.org/2000/01/rdf-schema#`: \"rdfs\"\n" +
-          "})");
 
-      session.run("CREATE INDEX ON :Resource(uri) ");
+      session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      assertTrue(session.run("call db.schemaStatements").hasNext());
 
-      session.run("CALL semantics.importRDF(\"" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/person2-shacl.ttl")
-          .toURI() + "\",\"Turtle\", {})");
+      Result loadShapesResult = session.run(
+          "CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+              .getResource("shacl/person2-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
 
-      //StatementResult validationResults = session.run("CALL semantics.validation.shaclValidate() ");
 
       Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
-          + "call semantics.validation.shaclValidateTxForTrigger(nodes,[], {}, {}, {}) "
-          + "yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
-          + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName");
+          + "call n10s.experimental.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}) "
+          + "yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
+          + "RETURN focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage");
 
       try {
         assertEquals(true, validationResults.hasNext());
@@ -322,7 +317,7 @@ public class SHACLValidationProceduresTest {
           .toURI() + "\",\"Turtle\")");
 
       //load shapes
-      session.run("call n10s.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("call n10s.experimental.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
           .toURI() + "','Turtle')");
 
@@ -333,7 +328,7 @@ public class SHACLValidationProceduresTest {
 
       // run validation
       Result actualValidationResults = session
-          .run("CALL n10s.experimental.validation.shaclValidate() ");
+          .run("CALL n10s.experimental.validation.shacl.validate() ");
 
       // print out validation results
       System.out.println("actual: ");
@@ -358,7 +353,7 @@ public class SHACLValidationProceduresTest {
       }
 
       //load expected results
-      session.run("call n10s.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("call n10s.experimental.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 

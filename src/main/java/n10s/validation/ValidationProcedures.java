@@ -26,32 +26,36 @@ public class ValidationProcedures {
   public Transaction tx;
 
 
-  @Procedure(name="n10s.experimental.validation.shaclValidateTx", mode = Mode.READ)
-  @Description("n10s.experimental.validation.shaclValidateTx() - runs SHACL validation on selected nodes")
-  public Stream<ValidationResult> shaclValidateTx(@Name("nodeList") List<Node> touchedNodes,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    //TODO: check if passing ids is any better
-    SHACLValidator validator = new SHACLValidator(tx, log);
-    return validator.runValidations(touchedNodes);
+  @Procedure(name="n10s.experimental.validation.shacl.validateSet", mode = Mode.READ)
+  @Description("n10s.experimental.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
+  public Stream<ValidationResult> shaclValidateNodeList(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList) {
+    if(nodeList.isEmpty()){
+      return Stream.empty();
+    } else {
+      SHACLValidator validator = new SHACLValidator(tx, log);
+      //TODO: question: would passing ids be any better??
+      return validator.runValidations(nodeList);
+    }
   }
 
 
-  @Procedure(name="n10s.experimental.validation.shaclValidate", mode = Mode.READ)
-  @Description("n10s.experimental.validation.shaclValidate() - runs SHACL validation on the whole graph.")
-  public Stream<ValidationResult> shacl(
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+  @Procedure(name="n10s.experimental.validation.shacl.validate", mode = Mode.READ)
+  @Description("n10s.experimental.validation.shacl.validate() - runs SHACL validation on the whole graph.")
+  public Stream<ValidationResult> shaclValidateOnAllGraph() {
     SHACLValidator validator = new SHACLValidator(tx, log);
     return validator.runValidations(null);
   }
 
-  @Procedure(name= "n10s.experimental.validation.triggerSHACLValidateTx", mode = Mode.READ)
-  @Description("n10s.experimental.validation.triggerSHACLValidateTx() - runs SHACL validation in trigger context.")
+  @Procedure(name= "n10s.experimental.validation.shacl.validateTransaction", mode = Mode.READ)
+  @Description("n10s.experimental.validation.shacl.validateTransaction(createdNodes,createdRelationships,...) - runs SHACL validation in trigger context.")
   public Stream<ValidationResult> shaclValidateTxForTrigger(
       @Name("createdNodes") Object createdNodes,
       @Name("createdRelationships") Object createdRelationships,
       @Name("assignedLabels") Object assignedLabels, @Name("removedLabels") Object removedLabels,
       @Name("assignedNodeProperties") Object assignedNodeProperties,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
+      @Name("removedNodeProperties") Object removedNodeProperties) {
+
+    //we may need to pass additional params to this method?
 
     Map<String, Object> params = new HashMap<>();
     params.put("createdNodes", createdNodes);
@@ -59,11 +63,22 @@ public class ValidationProcedures {
     params.put("assignedLabels", assignedLabels);
     params.put("removedLabels", removedLabels);
     params.put("assignedNodeProperties", assignedNodeProperties);
-    Result validationResults = tx.execute(
-        "UNWIND reduce(nodes = [], x IN keys($removedLabels) | nodes + $removedLabels[x]) AS rln MATCH (rln)<--(x) WITH collect(DISTINCT x) AS sn UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + reduce( nodes = [] , x IN keys($assignedLabels) | nodes + $assignedLabels[x]) + reduce( nodes = [] , x IN keys($assignedNodeProperties) | nodes + [ item IN $assignedNodeProperties[x] | item.node] ) AS nd WITH collect( DISTINCT nd) AS touchedNodes\n"
-            + "CALL semantics.validation.shaclValidateTx(touchedNodes) YIELD nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName\n"
-            + "RETURN {nodeId: nodeId, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, propertyName:propertyName} AS validationResult ",
-        params);
+    params.put("removedNodeProperties", removedNodeProperties);
+
+    //removing a label cannot  make any constraint fail.  //TODO: HERE
+    String newQuery = "UNWIND reduce(nodes = [], x IN keys($removedLabels) | nodes + $removedLabels[x]) AS rln "
+                    + " MATCH (rln)<--(x) WITH collect(DISTINCT x) AS sn " //the direction makes it valid for both direct and  inverse
+                    + " UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + [x IN $createdRelationships | endNode(x)] +" //end node is also for inverse rels
+                    + "  reduce( nodes = [] , x IN keys($assignedLabels) | nodes + $assignedLabels[x]) + "
+                    + "  reduce( nodes = [] , x IN keys($assignedNodeProperties) | nodes + "
+                    + "  [ item IN $assignedNodeProperties[x] | item.node] ) +"
+                    + "  reduce( nodes = [] , x IN keys($removedNodeProperties) | nodes + "
+                    + "  [ item IN $removedNodeProperties[x] | item.node] ) AS nd "  //removed properties can cause violations too
+                    + " WITH collect( DISTINCT nd) AS touchedNodes\n"
+                    + "CALL n10s.experimental.validation.shacl.validateSet(touchedNodes) YIELD focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage\n"
+                    + "RETURN {focusNode: focusNode, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, resultPath:resultPath, severity:severity, resultMessage:resultMessage } AS validationResult ";
+
+    Result validationResults = tx.execute(newQuery, params);
     if (validationResults.hasNext()) {
       throw new SHACLValidationException(validationResults.next().toString());
     }
@@ -72,7 +87,7 @@ public class ValidationProcedures {
   }
 
 
-  @Procedure(name="n10s.experimental.validation.listShapes", mode = Mode.READ)
+  @Procedure(name="n10s.experimental.validation.shacl.listShapes", mode = Mode.READ)
   @Description("n10s.experimental.validation.listShapes() - list SHACL shapes loaded  in the Graph")
   public Stream<ConstraintComponent> listShapes() {
 
@@ -80,7 +95,7 @@ public class ValidationProcedures {
     return tx.execute(validator.getListConstraintsQuery()).stream().map(ConstraintComponent::new);
   }
 
-  @Procedure(name="n10s.experimental.validation.dropAllShapes", mode = Mode.WRITE)
+  @Procedure(name="n10s.experimental.validation.shacl.dropAllShapes", mode = Mode.WRITE)
   @Description("n10s.experimental.validation.dropAllShapes() - deletes all SHACL shapes loaded in the Graph")
   public Stream<ConstraintComponent> dropAllShapes() {
     String DROP_SHAPES =" MATCH path = (:sh__NodeShape)-[*]->()\n"
