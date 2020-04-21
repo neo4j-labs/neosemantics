@@ -6,10 +6,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.rdf.RDFProcedures;
@@ -287,6 +285,27 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "minExclussive-001", null, "KEEP");
   }
 
+  @Test
+  public void testRunTestSuite7() throws Exception {
+    runIndividualTest("core/property", "hasValue-001", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-001", null, "SHORTEN");
+    runIndividualTest("core/property", "hasValue-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite8() throws Exception {
+    runIndividualTest("core/property", "in-001", null, "IGNORE");
+    runIndividualTest("core/property", "in-001", null, "SHORTEN");
+    runIndividualTest("core/property", "in-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite9() throws Exception {
+    runIndividualTest("core/property", "maxLength-001", null, "IGNORE");
+    runIndividualTest("core/property", "maxLength-001", null, "SHORTEN");
+    runIndividualTest("core/property", "maxLength-001", null, "KEEP");
+  }
+
 
 
   public void runIndividualTest(String testGroupName, String testName,
@@ -341,7 +360,7 @@ public class SHACLValidationProceduresTest {
         String severity = validationResult.get("severity").asString();
         Object offendingValue = validationResult.get("offendingValue").asObject();
         String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessge").asString();
+        String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
@@ -386,12 +405,10 @@ public class SHACLValidationProceduresTest {
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
-        //System.out.println("about to compare: " + x );
         assertTrue(contains(actualResults, x));
       }
 
       for (ValidationResult x : actualResults) {
-        //System.out.println("about to compare: " + x );
         assertTrue(contains(expectedResults, x));
       }
 
@@ -405,7 +422,7 @@ public class SHACLValidationProceduresTest {
   private boolean contains(Set<ValidationResult> set, ValidationResult res) {
     boolean contained = false;
     for (ValidationResult vr : set) {
-      contained |= reasonablyEqual(vr, res);
+      contained |= equivalentValidationResult(vr, res);
     }
     if (!contained) {
       System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set);
@@ -413,7 +430,7 @@ public class SHACLValidationProceduresTest {
     return contained;
   }
 
-  private boolean reasonablyEqual(ValidationResult x, ValidationResult res) {
+  private boolean equivalentValidationResult(ValidationResult x, ValidationResult res) {
     return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) && x.nodeType
         .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
         .equals(res.resultPath);

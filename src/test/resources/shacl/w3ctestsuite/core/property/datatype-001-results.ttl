@@ -8,7 +8,6 @@
 @prefix sht: <http://www.w3.org/ns/shacl-test#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-
 ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:conforms "false"^^xsd:boolean ;
       sh:result [

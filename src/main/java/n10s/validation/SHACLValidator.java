@@ -28,6 +28,7 @@ public class SHACLValidator {
   private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_MATCH_REL_WHERE =  "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
+  private static final String CYPHER_WITH_PARAMS_MATCH_NO_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) ";
 
   //A property shape is a shape in the shapes graph that is the subject of a triple that has sh:path as its predicate.
   private static final String CYPHER_PROP_CONSTRAINTS =
@@ -47,7 +48,8 @@ public class SHACLValidator {
           + "      coalesce(targetClass.uri, nsAsTarget.uri) AS appliesToCat,\n"
           + "      ps.sh__pattern AS pattern,\n"
           + "      ps.sh__maxCount AS maxCount,\n"
-          + "      ps.sh__minCount AS minCount, ps.sh__minInclusive AS minInc, \n"
+          + "      ps.sh__minCount AS minCount, ps.sh__minInclusive AS minInc, "
+          + "      [ (ps)-[:sh__hasValue]->(x) | x.uri ] as hasValueUri, [] + ps.sh__hasValue AS hasValueLiteral,\n"
           + "      ps.sh__maxInclusive AS maxInc, ps.sh__minExclusive AS minExc, ps.sh__maxExclusive AS maxExc,\n"
           + "      ps.sh__minLength AS minStrLen, ps.sh__maxLength AS maxStrLen , ps.uri AS propShapeUid, \n"
           + "      case when sr=[] then null else severity.uri end AS severity\n"
@@ -64,6 +66,8 @@ public class SHACLValidator {
           + "        collect(distinct minExc)[0] as minExc,\n"
           + "        collect(distinct maxExc)[0] as maxExc,\n"
           + "        collect(distinct maxInc)[0] as maxInc,\n"
+          + "        collect(distinct hasValueUri)[0] as hasValueUri,\n"
+          + "        collect(distinct hasValueLiteral)[0] as hasValueLiteral,\n"
           + "        collect(distinct minStrLen)[0] as minStrLen,\n"
           + "        collect(distinct maxStrLen)[0] as maxStrLen,\n"
           + "        collect(distinct propShapeUid)[0] as propShapeUid,\n"
@@ -130,6 +134,32 @@ public class SHACLValidator {
               severity);
 
           //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
+        }
+
+        //this type of constraint only makes sense RDF graphs.
+        if (shallIUseUriInsteadOfId() && propConstraint.get("hasValueUri") != null) {
+
+          String paramSetId =
+              propConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
+          Map<String, Object> params = createNewSetOfParams(paramSetId);
+          params.put("theHasValueUri", (List<String>) propConstraint.get("hasValueUri"));
+
+          addCypherToValidationScript(getHasValueUriViolationQuery(nodeList != null), paramSetId, focusLabel,
+              propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+              propOrRel,severity, propOrRel);
+        }
+
+        // TODO: HERE
+        if (propConstraint.get("hasValueLiteral") != null) {
+
+          String paramSetId =
+              propConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
+          Map<String, Object> params = createNewSetOfParams(paramSetId);
+          params.put("theHasValueLiteral", (List<String>) propConstraint.get("hasValueLiteral"));
+
+          addCypherToValidationScript(getHasValueLiteralViolationQuery(nodeList != null), paramSetId, focusLabel,
+              propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+              propOrRel,severity, propOrRel);
         }
 
         if (propConstraint.get("rangeType") != null && !propConstraint.get("rangeType")
@@ -404,6 +434,15 @@ public class SHACLValidator {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_REGEX_V_SUFF());
   }
 
+  private String getHasValueUriViolationQuery(boolean tx) {
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_HAS_VALUE_URI_V_SUFF());
+  }
+
+
+  private String getHasValueLiteralViolationQuery(boolean tx) {
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_HAS_VALUE_LITERAL_V_SUFF());
+  }
+
 //  private String getCardinality1ViolationQuery(boolean tx) {
 //    return getQuery(CYPHER_CARDINALITY1_V_PREF, tx, CYPHER_CARDINALITY1_V_SUFF);
 //  }
@@ -508,6 +547,29 @@ public class SHACLValidator {
         + "' as propertyShape, offval as offendingValue, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'' as message  ";
+  }
+
+
+  private String CYPHER_HAS_VALUE_URI_V_SUFF() {
+    return " unwind params.theHasValueUri as reqVal with focus, reqVal where not reqVal in [(focus)-[:`%s`]->(v) | v.uri ] "
+        + "RETURN "
+        + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
+        .stringValue()
+        + "' as propertyShape, null as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s') ": " '%s' ") + " as message  ";
+  }
+
+  private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
+    return " unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
+        + "RETURN "
+        + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
+        .stringValue()
+        + "' as propertyShape, null as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + "'The required value \"'+ reqVal + '\" not found in property ' + " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s') ": " '%s' ") + " as message  ";
   }
 
   private String CYPHER_VALRANGE_V_SUFF() {
