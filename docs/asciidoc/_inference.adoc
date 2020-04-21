@@ -34,7 +34,7 @@ CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Isomorphism (Cry
 ----
 
 In this example we use LCSHTopic to label the categories and the `NARROWER_THAN` to link them in a
-hierarchy that as we can see in this fragment does not necessarily need to be a tree (it the general
+hierarchy that as we can see in this fragment does not necessarily need to be a tree (in the general
 case it will be a graph).
 
 image::crystallography-hierarchy.png[Topic hierarchy from the LCSH, scaledwidth="100%"]
@@ -86,7 +86,7 @@ CALL semantics.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLab
 RETURN node.identifier as id, node.title as title, labels(node) as categories
 ----
 
-When we run this query, and even thoug not a single node in our graph is actually labelled as `Crystallography`,
+When we run this query, and even though not a single node in our graph is actually labelled as `Crystallography`,
 we get the following results:
 
 [source,Cypher]
