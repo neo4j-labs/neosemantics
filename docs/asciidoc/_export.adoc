@@ -8,7 +8,7 @@ RDF is a W3C standard model for data interchange on the Web that represents data
 There are three main ways of generating RDF from your graph in Neo4j. Selecting a node in the graph by its unique identifier (id or uri), selecting a group of nodes by Label + property value and via Cypher. Let's analyse each of them in detail.
 
 [WARNING]
-The paths used in the following sections assume that NSMNTX is mounted at `/rdf`. If you've mounted the extension under a different name (instructions on how to do this can be found in the <<install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used. 
+The paths used in the following sections assume that NSMNTX is mounted at `/rdf`. If you've mounted the extension under a different name (instructions on how to do this can be found in the <<Install>> section) all you need to do is replace the `/rdf` bits in the URLs in the following examples with the name you've used. 
 
 === By node ID
 
@@ -80,7 +80,7 @@ neoind:104 neovoc:SUPPLIES neoind:11 .
 
 You can modify the output of the describe method as follows:
 * Change serialisation format by either by using the `accept` header param with any of the RDF media types: `"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig", "application/ld+json"` or the `format` request param using any of the following values: `Turtle, N-Triples, JSON-LD, TriG, RDF/XML`. The `format` request parameter if used will override the `accept` header param.
-* Exclude relationships and just return the properties and labels of the selected node by setting the request parameter `exculdeContext` to `true`.
+* Exclude relationships and just return the properties and labels of the selected node by setting the request parameter `excludeContext` to `true`.
 * Exclude unmapped elements by setting the request parameter `showOnlyMapped` to true. We'll see in section <<Mapping>> how to define basic model mappings with NSMNTX.
 
 Here's an example of using some of this modifiers. The following request (again simplified notation for the Neo4j browser):
@@ -121,7 +121,7 @@ Would filter out relationships (RDF Object Properties) and set the serialisation
 
 ==== /rdf/describe/uri
 
-If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested. You can do this in a very similar way to how you do it for any other Neo4j graph. The `/rdf/describe/uri` works exactly in the same way as the `/rdf/describe/id` but instead of taking a node's ID, it takes it's URI. Here's an example on the graph we imported in section <<import>>:
+If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested. You can do this in a very similar way to how you do it for any other Neo4j graph. The `/rdf/describe/uri` works exactly in the same way as the `/rdf/describe/id` but instead of taking a node's ID, it takes it's URI. Here's an example on the graph we imported in section <<Import>>:
 
 [source,Cypher]
 ----
@@ -162,7 +162,7 @@ Again, notice the URL enconding of the URI (the clean URI is `http://neo4j.org/i
 Additionally, you can provide a graph URI to specify the context of the given resource using the `graphuri` parameter.
 Here is how you can serialise as RDF the resource identified by URI `http://www.example.org/exampleDocument#Monica`
 but only the statements in the named graph `http://www.example.org/exampleDocument#G1`. Normally such a model will
- be the result of importing RDF Quads as described in the <<ImportQuadRDF>> section. Note that URIS are URL encoded:
+ be the result of importing RDF Quads as described in the <<ImportQuadRDF>> section. Note that URIs are URL encoded:
 
 [source,Cypher]
 ----
