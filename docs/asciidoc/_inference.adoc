@@ -377,7 +377,7 @@ relationships between nodes in the graph.
 
 Let's take the movie database. Remember you can have it loaded in Neo4j by running `:play movies` and
 following the instructions in the guide.
-Let's say we have http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl[a fragment
+Let's say we have https://raw.githubusercontent.com/neo4j-labs/neosemantics/3.5/docs/rdf/movieDBRelHierarchy.ttl[a fragment
 of a movie ontology] that contains a definition
 of a relationship hierarchy. It does it by defining a number of `rdfs:subPropertyOf` statements
 between relationships.
@@ -407,7 +407,7 @@ If  we run:
 
 [source,Cypher]
 ----
-CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
+CALL semantics.importOntology("https://raw.githubusercontent.com/neo4j-labs/neosemantics/3.5/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
 ----
 
 We should get a simple hierarchy of properties like the one in this screen capture from the Neo4j
