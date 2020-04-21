@@ -321,6 +321,13 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "maxLength-001", null, "KEEP");
   }
 
+  @Test
+  public void testRunTestSuite10() throws Exception {
+    //runIndividualTest("core/property", "minCount-001", null, "IGNORE");
+    runIndividualTest("core/property", "minCount-001", null, "SHORTEN");
+    runIndividualTest("core/property", "minCount-001", null, "KEEP");
+  }
+
 
 
   public void runIndividualTest(String testGroupName, String testName,

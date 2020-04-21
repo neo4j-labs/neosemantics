@@ -236,14 +236,8 @@ public class SHACLValidator {
             addCypherToValidationScript(getMinCardinality1ViolationQuery(nodeList != null),
                 paramSetId, focusLabel,
                 " params.minCount <= ",
-                propOrRel,
-                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                severity);
-            addCypherToValidationScript(getMinCardinality2ViolationQuery(nodeList != null),
-                paramSetId, focusLabel,
-                " params.minCount <= ",
-                propOrRel,
-                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                propOrRel,propOrRel,
+                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
                 severity);
           } else {
             // multivalued attributes not checked for cardinality in the case of inverse??
@@ -267,15 +261,9 @@ public class SHACLValidator {
 
             addCypherToValidationScript(getMaxCardinality1ViolationQuery(nodeList != null),
                 paramSetId, focusLabel,
-                propOrRel,
+                propOrRel,propOrRel,
                 " <= params.maxCount ",
-                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                severity);
-            addCypherToValidationScript(getMaxCardinality2ViolationQuery(nodeList != null),
-                paramSetId, focusLabel,
-                propOrRel,
-                " <= params.maxCount ",
-                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,propOrRel,
                 severity);
           } else {
             // multivalued attributes not checked for cardinality in the case of inverse??
@@ -510,9 +498,9 @@ public class SHACLValidator {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
   }
 
-  private String getMinCardinality2ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MIN_CARDINALITY2_V_SUFF());
-  }
+//  private String getMinCardinality2ViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MIN_CARDINALITY2_V_SUFF());
+//  }
 
   private String getMaxCardinality1ViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY1_V_SUFF());
@@ -522,9 +510,9 @@ public class SHACLValidator {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF());
   }
 
-  private String getMaxCardinality2ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY2_V_SUFF());
-  }
+//  private String getMaxCardinality2ViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY2_V_SUFF());
+//  }
 
   private String getStrLenViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_STRLEN_V_SUFF());
@@ -651,17 +639,17 @@ public class SHACLValidator {
   }
 
   private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s size((focus)-[:`%s`]->()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + focus.`%s`) )  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable value count: ' + size((focus)-[:`%s`]->()) as message, "
+        + "' as propertyShape,  'unnacceptable cardinality: ' + ( size((focus)-[:`%s`]->()) +  size([] + focus.`%s`))  as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
   private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
-    return "NOT size((focus)-[:`%s`]->()) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    return "NOT (size((focus)-[:`%s`]->()) + size([] + focus.`%s`)) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, "  + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable  value count: ' + size((focus)-[:`%s`]->()) as message, "
+        + "' as propertyShape,  'unnacceptable  cardinality: ' + (size((focus)-[:`%s`]->()) + size([] + focus.`%s`)) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
@@ -669,7 +657,7 @@ public class SHACLValidator {
   private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {
     return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable value count: ' + size((focus)<-[:`%s`]-()) as message, "
+        + "' as propertyShape,  'unnacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
@@ -677,30 +665,30 @@ public class SHACLValidator {
   private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {
     return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
      " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unacceptable value count: ' + size((focus)<-[:`%s`]-()) as message, "
+        + "' as propertyShape,  'unacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
-  private String CYPHER_MIN_CARDINALITY2_V_SUFF() {
-    return " NOT %s size([] + focus.`%s`) RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
-    "as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape, 'unacceptable value count: ' + size([] + focus.`%s`) as message, "
-        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
-  }
-  private String CYPHER_MAX_CARDINALITY2_V_SUFF() {
-    return " NOT size([] + focus.`%s`) %s RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
-    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape, 'unacceptable value count: ' + size([] + focus.`%s`) as message, "
-        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
-  }
+//  private String CYPHER_MIN_CARDINALITY2_V_SUFF() {
+//    return " NOT %s size([] + focus.`%s`) RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+//    "as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, 'unacceptable cardinality: ' + size([] + focus.`%s`) as message, "
+//        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+//        + "null as offendingValue  ";
+//  }
+//  private String CYPHER_MAX_CARDINALITY2_V_SUFF() {
+//    return " NOT size([] + focus.`%s`) %s RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+//    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, 'unacceptable cardinality: ' + size([] + focus.`%s`) as message, "
+//        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+//        + "null as offendingValue  ";
+//  }
 
   private String CYPHER_STRLEN_V_SUFF() {
     return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
-        " as nodeType, '%s' as shapeId, 'stringLength' as propertyShape, focus.`%s` as offendingValue, "
+        " as nodeType, '%s' as shapeId, '" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT + "' as propertyShape, focus.`%s` as offendingValue, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "'' as message  ";
   }
