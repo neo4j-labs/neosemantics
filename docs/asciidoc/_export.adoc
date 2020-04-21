@@ -79,6 +79,7 @@ neoind:104 neovoc:SUPPLIES neoind:11 .
 ----
 
 You can modify the output of the describe method as follows:
+
 * Change serialisation format by either by using the `accept` header param with any of the RDF media types: `"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig", "application/ld+json"` or the `format` request param using any of the following values: `Turtle, N-Triples, JSON-LD, TriG, RDF/XML`. The `format` request parameter if used will override the `accept` header param.
 * Exclude relationships and just return the properties and labels of the selected node by setting the request parameter `excludeContext` to `true`.
 * Exclude unmapped elements by setting the request parameter `showOnlyMapped` to true. We'll see in section <<Mapping>> how to define basic model mappings with NSMNTX.
