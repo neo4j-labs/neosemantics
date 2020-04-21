@@ -293,11 +293,26 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite7b() throws Exception {
+    runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-001b", null, "SHORTEN");
+    runIndividualTest("core/property", "hasValue-001b", null, "KEEP");
+  }
+
+  @Test
   public void testRunTestSuite8() throws Exception {
     runIndividualTest("core/property", "in-001", null, "IGNORE");
     runIndividualTest("core/property", "in-001", null, "SHORTEN");
     runIndividualTest("core/property", "in-001", null, "KEEP");
   }
+
+  @Test
+  public void testRunTestSuite8b() throws Exception {
+    runIndividualTest("core/property", "in-001b", null, "IGNORE");
+    runIndividualTest("core/property", "in-001b", null, "SHORTEN");
+    runIndividualTest("core/property", "in-001b", null, "KEEP");
+  }
+
 
   @Test
   public void testRunTestSuite9() throws Exception {

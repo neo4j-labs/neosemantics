@@ -17,8 +17,8 @@ ex:ShapeClass-property
   sh:path ex:property ;
   sh:datatype xsd:string ;
   sh:in (
-      "A"
-      "B"
-      "C"
+      ex:A
+      ex:B
+      ex:C
     ) ;
 .

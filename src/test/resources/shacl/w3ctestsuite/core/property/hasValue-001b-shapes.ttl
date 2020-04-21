@@ -1,5 +1,5 @@
 @prefix dash: <http://datashapes.org/dash#> .
-@prefix ex: <neo4j://> .
+@prefix ex: <neo4j://#> .
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -8,17 +8,15 @@
 @prefix sht: <http://www.w3.org/ns/shacl-test#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-ex:ShapeClass
-  rdf:type rdfs:Class ;
+ex:PersonShape
   rdf:type sh:NodeShape ;
-  sh:property ex:ShapeClass-property ;
+  rdfs:label "Person shape" ;
+  sh:property ex:PersonShape-gender ;
+  sh:targetClass ex:MalePerson ;
 .
-ex:ShapeClass-property
-  sh:path ex:property ;
+ex:PersonShape-gender
+  sh:path ex:gender ;
+  rdfs:label "gender" ;
   sh:datatype xsd:string ;
-  sh:in (
-      "A"
-      "B"
-      "C"
-    ) ;
+  sh:hasValue ex:Male ;
 .
