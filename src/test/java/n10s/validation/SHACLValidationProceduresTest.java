@@ -294,7 +294,8 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testRunTestSuite7b() throws Exception {
-    runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
+    // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
+    // runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
     runIndividualTest("core/property", "hasValue-001b", null, "SHORTEN");
     runIndividualTest("core/property", "hasValue-001b", null, "KEEP");
   }
