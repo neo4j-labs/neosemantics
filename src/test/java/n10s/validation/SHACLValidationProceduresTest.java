@@ -374,32 +374,6 @@ public class SHACLValidationProceduresTest {
         session.run(cypherScript);
       }
 
-      // run validation
-      Result actualValidationResults = session
-          .run("CALL n10s.experimental.validation.shacl.validate() ");
-
-      // print out validation results
-      System.out.println("actual: ");
-      Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
-      while (actualValidationResults.hasNext()) {
-        Record validationResult = actualValidationResults.next();
-        Object focusNode = validationResult.get("focusNode").asObject();
-        String nodeType = validationResult.get("nodeType").asString();
-        String propertyName = validationResult.get("resultPath").asString();
-        String severity = validationResult.get("severity").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessage").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
-
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
-
-      }
-
       //load expected results
       session.run("call n10s.experimental.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
@@ -428,6 +402,74 @@ public class SHACLValidationProceduresTest {
         System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
             propertyName + ", severity: " + severity + ", constraint: " + constraint
             + ", offendingValue: " + null  + ", message: " + message);
+      }
+
+      // run validation
+      Result actualValidationResults = session
+          .run("CALL n10s.experimental.validation.shacl.validate() ");
+
+      // print out validation results
+      System.out.println("actual: ");
+      Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
+      while (actualValidationResults.hasNext()) {
+        Record validationResult = actualValidationResults.next();
+        Object focusNode = validationResult.get("focusNode").asObject();
+        String nodeType = validationResult.get("nodeType").asString();
+        String propertyName = validationResult.get("resultPath").asString();
+        String severity = validationResult.get("severity").asString();
+        Object offendingValue = validationResult.get("offendingValue").asObject();
+        String constraint = validationResult.get("propertyShape").asString();
+        String message = validationResult.get("resultMessage").asString();
+        String shapeId = validationResult.get("shapeId").asString();
+        actualResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+
+        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+            propertyName + ", severity: " + severity + ", constraint: " + constraint
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
+
+      }
+
+      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
+      assertEquals(expectedResults.size(), actualResults.size());
+
+      for (ValidationResult x : expectedResults) {
+        assertTrue(contains(actualResults, x));
+      }
+
+      for (ValidationResult x : actualResults) {
+        assertTrue(contains(expectedResults, x));
+      }
+
+      //re-run it on set of nodes
+
+      // run validation
+      actualValidationResults = session
+          .run("MATCH (n) with collect(n) as nodelist "
+              + "CALL n10s.experimental.validation.shacl.validateSet(nodelist) "
+              + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
+              + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
+
+      // print out validation results
+      System.out.println("actual on set of nodes: ");
+      actualResults = new HashSet<ValidationResult>();
+      while (actualValidationResults.hasNext()) {
+        Record validationResult = actualValidationResults.next();
+        Object focusNode = validationResult.get("focusNode").asObject();
+        String nodeType = validationResult.get("nodeType").asString();
+        String propertyName = validationResult.get("resultPath").asString();
+        String severity = validationResult.get("severity").asString();
+        Object offendingValue = validationResult.get("offendingValue").asObject();
+        String constraint = validationResult.get("propertyShape").asString();
+        String message = validationResult.get("resultMessage").asString();
+        String shapeId = validationResult.get("shapeId").asString();
+        actualResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+
+        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+            propertyName + ", severity: " + severity + ", constraint: " + constraint
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
+
       }
 
       System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
