@@ -28,7 +28,7 @@ public class SHACLValidator {
   private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_MATCH_REL_WHERE =  "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
-  private static final String CYPHER_WITH_PARAMS_MATCH_NO_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) ";
+
 
   //A property shape is a shape in the shapes graph that is the subject of a triple that has sh:path as its predicate.
   private static final String CYPHER_PROP_CONSTRAINTS =
@@ -168,6 +168,18 @@ public class SHACLValidator {
                 paramSetId, focusLabel,
                 propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
                 propOrRel, severity, propOrRel);
+          }
+        }
+
+        if (propConstraint.get("rangeKind") != null) {
+          if (propConstraint.get("rangeKind").equals(SHACL.LITERAL.stringValue())) {
+            addCypherToValidationScript(getRangeIRIKindViolationQuery(nodeList != null), focusLabel,
+                propOrRel,
+                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
+          } else if (propConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue())){
+            addCypherToValidationScript(getRangeLiteralKindViolationQuery(nodeList != null), focusLabel,
+                propOrRel,
+                focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
           }
         }
 
@@ -449,6 +461,14 @@ public class SHACLValidator {
     return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_DATATYPE_V_SUFF());
   }
 
+  private String getRangeIRIKindViolationQuery(boolean tx) {
+    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_IRI_KIND_V_SUFF());
+  }
+
+  private String getRangeLiteralKindViolationQuery(boolean tx) {
+    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_LITERAL_KIND_V_SUFF());
+  }
+
   private String getRangeType1ViolationQuery(boolean tx) {
     return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_RANGETYPE1_V_SUFF());
   }
@@ -462,20 +482,20 @@ public class SHACLValidator {
   }
 
   private String getHasValueUriViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_HAS_VALUE_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_URI_V_SUFF());
   }
 
 
   private String getHasValueLiteralViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_HAS_VALUE_LITERAL_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_LITERAL_V_SUFF());
   }
 
   private String getInLiteralsViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_IN_LITERAL_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_IN_LITERAL_V_SUFF());
   }
 
   private String getInUrisViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_NO_WHERE, tx, CYPHER_IN_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_IN_URI_V_SUFF());
   }
 
 //  private String getCardinality1ViolationQuery(boolean tx) {
@@ -554,6 +574,24 @@ public class SHACLValidator {
         + " '' as message ";
   }
 
+  private String CYPHER_IRI_KIND_V_SUFF(){
+    return " (focus)-[:`%s`]->() RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+        + "' as propertyShape, null as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " + ' should be a property ' as message  ";
+  }
+
+  private String CYPHER_LITERAL_KIND_V_SUFF(){
+    return " exists(focus.`%s`) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+        + "' as propertyShape, null as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " + ' should be a relationship ' as message  ";
+  }
+
   private String CYPHER_RANGETYPE1_V_SUFF() {
     return "NOT x:`%s` RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
@@ -586,7 +624,7 @@ public class SHACLValidator {
 
 
   private String CYPHER_HAS_VALUE_URI_V_SUFF() {
-    return " unwind params.theHasValueUri as reqVal with focus, reqVal where not reqVal in [(focus)-[:`%s`]->(v) | v.uri ] "
+    return " true with params, focus unwind params.theHasValueUri as reqVal with focus, reqVal where not reqVal in [(focus)-[:`%s`]->(v) | v.uri ] "
         + "RETURN "
         + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
@@ -597,7 +635,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
-    return " unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
+    return " true with params, focus unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
         + "RETURN "
         + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
@@ -608,7 +646,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_IN_LITERAL_V_SUFF() {
-    return " unwind [] + focus.`%s` as val with focus, val where not val in params.theInLiterals "
+    return " true with params, focus unwind [] + focus.`%s` as val with focus, val where not val in params.theInLiterals "
         + "RETURN "
         + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
@@ -619,7 +657,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_IN_URI_V_SUFF() {
-    return " unwind [(focus)-[:`%s`]->(x) | x.uri ] as val with focus, val where not val in params.theInUris "
+    return " true with params, focus unwind [(focus)-[:`%s`]->(x) | x.uri ] as val with focus, val where not val in params.theInUris "
         + "RETURN "
         + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
@@ -639,7 +677,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + focus.`%s`) )  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable cardinality: ' + ( size((focus)-[:`%s`]->()) +  size([] + focus.`%s`))  as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
@@ -647,14 +685,14 @@ public class SHACLValidator {
   }
 
   private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
-    return "NOT (size((focus)-[:`%s`]->()) + size([] + focus.`%s`)) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
+    return "NOT (size((focus)-[:`%s`]->()) + size([] + coalesce(focus.`%s`,[]))) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, "  + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable  cardinality: ' + (size((focus)-[:`%s`]->()) + size([] + focus.`%s`)) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
 
-  private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {
+  private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
     return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unnacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
@@ -662,7 +700,7 @@ public class SHACLValidator {
         + "null as offendingValue  ";
   }
 
-  private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {
+  private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {   //Same as previous
     return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
      " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
         + "' as propertyShape,  'unacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
