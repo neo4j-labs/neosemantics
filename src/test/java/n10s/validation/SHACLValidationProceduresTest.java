@@ -20,6 +20,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class SHACLValidationProceduresTest {
@@ -31,7 +32,8 @@ public class SHACLValidationProceduresTest {
       + "       coalesce([(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-()-[:sh__targetClass]->(tc)| n10s.rdf.getIRILocalName(tc.uri) ][0], \n"
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | id(f) ][0] as focus,\n"
-      + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev";
+      + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
+      + "       ([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0] as offendingValue ";
 
 
   final String VAL_RESULTS_QUERY_AS_RDF = "MATCH (vr:sh__ValidationResult)\n"
@@ -41,12 +43,104 @@ public class SHACLValidationProceduresTest {
       + "       coalesce([(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-()-[:sh__targetClass]->(tc)| tc.uri ][0], \n"
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| tc.uri ][0]) as targetClass,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | f.uri ][0] as focus,\n"
-      + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev";
+      + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
+      + "       ([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0] as offendingValue ";
 
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(ValidationProcedures.class).withProcedure(GraphConfigProcedures.class)
       .withProcedure(RDFLoadProcedures.class).withFunction(RDFProcedures.class);
+
+
+  @Test
+  public void testTestTestTest() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      Result loadDataResults = session.run(
+          "CREATE (SleeplessInSeattle:Movie {title:'Sleepless in Seattle', released:1993, tagline:'What if someone you never met, someone you never saw, someone you never knew was the only someone for you?'})\n"
+              +
+              "CREATE (NoraE:Person {name:'Nora Ephron', born:1941})\n" +
+              "CREATE (RitaW:Person {name:'Rita Wilson', born:1956})\n" +
+              "CREATE (BillPull:Person {name:'Bill Pullman', born:1953})\n" +
+              "CREATE (VictorG:Person {name:'Victor Garber', born:1949})\n" +
+              "CREATE (RosieO:Person {name:\"Rosie O'Donnell\", born:1962})\n" +
+              "CREATE\n" +
+              "  (RitaW)-[:ACTED_IN {roles:['Suzy']}]->(SleeplessInSeattle),\n" +
+              "  (BillPull)-[:ACTED_IN {roles:['Walter']}]->(SleeplessInSeattle),\n" +
+              "  (VictorG)-[:ACTED_IN {roles:['Greg']}]->(SleeplessInSeattle),\n" +
+              "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
+              "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
+
+      loadDataResults.hasNext();
+
+      String SHACL_SNIPPET = "@prefix ex: <http://example/> .\n"
+          + "@prefix neo4j: <neo4j://voc#> .\n"
+          + "@prefix sh: <http://www.w3.org/ns/shacl#> .\n"
+          + "\n"
+          + "ex:PersonShape\n"
+          + "\ta sh:NodeShape ;\n"
+          + "\tsh:targetClass neo4j:Person ;    # Applies to all Person nodes in Neo4j\n"
+          + "\tsh:property [\n"
+          + "\t\tsh:path neo4j:name ;           # constrains the values of neo4j:name\n"
+          + "\t\tsh:maxCount 1 ;                # cardinality\n"
+          + "\t\tsh:datatype xsd:string ;       # data type\n"
+          + "\t] ;\n"
+          + "\tsh:property [\n"
+          + "\t\tsh:path neo4j:ACTED_IN ;       # constrains the values of neo4j:ACTED_IN\n"
+          + "\t\tsh:class neo4j:Movie ;         # range\n"
+          + "\t\tsh:nodeKind sh:IRI ;           # type of property\n"
+          + "\t\tsh:severity sh:Warning ;\n"
+          + "\t] ;\n"
+          + "\tsh:closed true ;\n"
+          + "\tsh:ignoredProperties ( neo4j:born neo4j:DIRECTED neo4j:FOLLOWS neo4j:REVIEWED neo4j:PRODUCED neo4j:WROTE ) .\n"
+          + "\n"
+          + "\n"
+          + "neo4j:Movie\n"
+          + "\ta sh:NodeShape , rdfs:Class;\n"
+          + "\tsh:property [\n"
+          + "\t\tsh:path neo4j:title ;           # constrains the values of neo4j:title\n"
+          + "\t\tsh:maxCount 1 ;                 # cardinality\n"
+          + "\t\tsh:datatype xsd:string ;        # data type\n"
+          + "\t\tsh:minLength 10 ;               # string length\n"
+          + "\t\tsh:maxLength 20 ;               # string length\n"
+          + "\t] ;\n"
+          + "\tsh:property [\n"
+          + "\t\tsh:path neo4j:released ;        # constrains the values of neo4j:title\n"
+          + "\t\tsh:datatype xsd:integer ;       # data type\n"
+          + "\t\tsh:nodeKind sh:Literal ;        # type of property\n"
+          + "        sh:minInclusive 2000 ;      # numeric range\n"
+          + "        sh:maxInclusive 2019 ;      # numeric range\n"
+          + "\t] ;\n"
+          + "\tsh:closed true ;\n"
+          + "\tsh:ignoredProperties ( neo4j:tagline ) .";
+
+      Result results = session
+          .run("CALL n10s.validation.shacl.load.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
+
+      if(results.hasNext()){
+        System.out.println("results returned");
+      } else{
+        System.out.println("no results");
+      }
+
+      results = session
+          .run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
+      assertTrue(results.hasNext());
+      Node vc = results.next().get("vc").asNode();
+      assertFalse(vc.get("_engineGlobal").isNull());
+
+      Result loadCompiled = session.run("call n10s.validation.shacl.va()");
+      assertTrue(loadCompiled.hasNext());
+      while(loadCompiled.hasNext()){
+        System.out.println(loadCompiled.next());
+      }
+    }
+  }
 
 
   @Test
@@ -73,19 +167,13 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-      //session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
-
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result validationResults = session.run("CALL n10s.experimental.validation.shacl.validate() ");
-
-//      Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
-//          + "CALL n10s.experimental.validation.shacl.validateTx(nodes) yield nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName  "
-//          + "RETURN nodeId, nodeType, shapeId, propertyShape, offendingValue, propertyName ");
+      Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
 
       assertEquals(true, validationResults.hasNext());
 
@@ -106,6 +194,94 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testDropShapes() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+
+      Result shapeLoadResult = session.run(
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/person2-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      Record shapeLoadSummary = shapeLoadResult.next();
+      assertEquals("OK", shapeLoadSummary.get("terminationStatus").asString());
+      assertTrue(shapeLoadSummary.get("triplesLoaded").asLong() > 0);
+
+      List<String> expectedShapes = new ArrayList<>();
+      expectedShapes.add("http://example/PersonShape");
+      expectedShapes.add("neo4j://voc#Movie");
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+      session.run("call n10s.validation.shacl.drop('http://example/PersonShape')");
+
+      expectedShapes.remove("http://example/PersonShape");
+
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+      session.run("call n10s.validation.shacl.drop()");
+
+      expectedShapes.remove("neo4j://voc#Movie");
+
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+
+    }
+  }
+
+
+  @Test
+  public void testDropShapesRemovesActualData() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+
+      assertTrue(false);
+      Result shapeLoadResult = session.run(
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/person2-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      Record shapeLoadSummary = shapeLoadResult.next();
+      assertEquals("OK", shapeLoadSummary.get("terminationStatus").asString());
+      assertTrue(shapeLoadSummary.get("triplesLoaded").asLong() > 0);
+
+      List<String> expectedShapes = new ArrayList<>();
+      expectedShapes.add("http://example/PersonShape");
+      expectedShapes.add("neo4j://voc#Movie");
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+      session.run("call n10s.validation.shacl.drop('http://example/PersonShape')");
+
+      expectedShapes.remove("http://example/PersonShape");
+
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+      session.run("call n10s.validation.shacl.drop()");
+
+      expectedShapes.remove("neo4j://voc#Movie");
+
+      assertEquals(expectedShapes,session.run("match (ns:sh__NodeShape) with ns.uri as nsuri order by nsuri "
+          + " return  collect(nsuri) as  shapes").next().get("shapes").asList());
+
+
+    }
+  }
+
+  @Test
   public void testListShapesInRDFIgnoreGraph() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
@@ -116,11 +292,11 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result shapesResults = session.run("CALL n10s.experimental.validation.shacl.listShapes() ");
+      Result shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
 
       assertEquals(true, shapesResults.hasNext());
 
@@ -158,11 +334,11 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
-      Result shapesResults = session.run("CALL n10s.experimental.validation.shacl.listShapes() ");
+      Result shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
 
       assertEquals(true, shapesResults.hasNext());
 
@@ -218,13 +394,13 @@ public class SHACLValidationProceduresTest {
       assertTrue(session.run("call db.schemaStatements").hasNext());
 
       Result loadShapesResult = session.run(
-          "CALL n10s.experimental.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
 
       Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
-          + "call n10s.experimental.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}) "
+          + "call n10s.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}) "
           + "yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
           + "RETURN focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage");
 
@@ -366,7 +542,7 @@ public class SHACLValidationProceduresTest {
           .toURI() + "\",\"Turtle\")");
 
       //load shapes
-      session.run("call n10s.experimental.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
           .toURI() + "','Turtle')");
 
@@ -376,7 +552,7 @@ public class SHACLValidationProceduresTest {
       }
 
       //load expected results
-      session.run("call n10s.experimental.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 
@@ -395,19 +571,20 @@ public class SHACLValidationProceduresTest {
         String constraint = validationResult.get("constraint").asString();
         String message = validationResult.get("messge").asString();
         String shapeId = validationResult.get("shapeId").asString();
+        String offendingValue = validationResult.get("offendingValue").asString();
 
         //TODO:  add the value to the results query and complete  below
         expectedResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, null));
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
 
         System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
             propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + null  + ", message: " + message);
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
       }
 
       // run validation
       Result actualValidationResults = session
-          .run("CALL n10s.experimental.validation.shacl.validate() ");
+          .run("CALL n10s.validation.shacl.validate() ");
 
       // print out validation results
       System.out.println("actual: ");
@@ -447,7 +624,7 @@ public class SHACLValidationProceduresTest {
       // run validation
       actualValidationResults = session
           .run("MATCH (n) with collect(n) as nodelist "
-              + "CALL n10s.experimental.validation.shacl.validateSet(nodelist) "
+              + "CALL n10s.validation.shacl.validateSet(nodelist) "
               + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
               + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
 

@@ -8,6 +8,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -138,6 +139,10 @@ public class SHACLValidator {
               severity);
 
           //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
+
+          addCypherToValidationScript(getDataTypeViolationQuery2(nodeList != null), focusLabel,
+              propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel,
+              severity,propOrRel);
         }
 
         //this type of constraint only makes sense RDF graphs.
@@ -364,6 +369,265 @@ public class SHACLValidator {
     return tx.execute(cypherU.toString(), paramsU).stream().map(ValidationResult::new);
   }
 
+
+
+  protected ValidatorConfig compileValidations(Iterator<Map<String,Object>> propertyConstraints) {
+
+    ValidatorConfig vc = new ValidatorConfig();
+
+    while (propertyConstraints.hasNext()) {
+
+      Map<String, Object> propConstraint = propertyConstraints.next();
+      if (propConstraint.get("appliesToCat") == null) {
+
+        log.info("Only class-based targets (sh:targetClass) and implicit class targets are validated.");
+
+      } else {
+        processConstraint(propConstraint, false, vc.getEngineGlobal(), vc.getAllParams());
+        processConstraint(propConstraint, true, vc.getEngineForNodeSet(), new HashMap<>());
+      }
+    }
+
+//    Result nodeConstraints = tx.execute(CYPHER_NODE_VALIDATIONS);
+
+//    while (nodeConstraints.hasNext()) {
+//      Map<String, Object> nodeConstraint = nodeConstraints.next();
+//      String focusLabel = translateUri((String) nodeConstraint.get("target"));
+//
+//      //String severity = (String) validation.get("severity");
+//      //AFAIK there's no way to set severity on these type of constraints??? TODO: confirm
+//      String paramSetId = nodeConstraint.get("nodeShapeUid") + "_" + SHACL.CLOSED.stringValue();
+//      Map<String, Object> params = createNewSetOfParams(paramSetId);
+//      List<String> allowedPropsTranslated = new ArrayList<>();
+//      if(nodeConstraint.get("allAllowedProps") != null){
+//        for (String uri:(List<String>)nodeConstraint.get("allAllowedProps")) {
+//          allowedPropsTranslated.add(translateUri(uri));
+//        }
+//      }
+//      params.put("allAllowedProps", allowedPropsTranslated);
+//
+//      addCypherToValidationScript(getNodeStructureViolationQuery(nodeList != null), paramSetId, focusLabel,
+//          focusLabel,
+//          (String) nodeConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation");
+//
+//    }
+    return vc;
+  }
+
+  protected void processConstraint(Map<String,Object>propConstraint, boolean withNodeList, StringBuilder sb, Map<String, Object> allParams){
+
+    String focusLabel = translateUri((String) propConstraint.get("appliesToCat"));
+    String propOrRel = translateUri((String) propConstraint.get("item"));
+    String severity = (String) propConstraint.get("severity");
+
+    if (propConstraint.get("dataType") != null) {
+      //TODO: this will be safer via APOC? maybe exclude some of them? and log the ignored ones?
+      addCypherToValidationScript(sb,getDataTypeViolationQuery(withNodeList), focusLabel,
+          propOrRel,
+          getDatatypeCastExpressionPref((String) propConstraint.get("dataType")),
+          getDatatypeCastExpressionSuff((String) propConstraint.get("dataType")),
+          focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+          severity);
+
+      //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
+
+      addCypherToValidationScript(sb,getDataTypeViolationQuery2(withNodeList), focusLabel,
+          propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel,
+          severity,propOrRel);
+    }
+
+    //this type of constraint only makes sense RDF graphs.
+    if (shallIUseUriInsteadOfId() && propConstraint.get("hasValueUri") != null) {
+      List<String> valueUriList = (List<String>) propConstraint.get("hasValueUri");
+      if (!valueUriList.isEmpty()) {
+        String paramSetId =
+            propConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
+        Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+        params.put("theHasValueUri", valueUriList);
+
+        addCypherToValidationScript(sb,getHasValueUriViolationQuery(withNodeList), paramSetId,
+            focusLabel,
+            propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+            propOrRel, severity, propOrRel);
+      }
+    }
+
+    if (propConstraint.get("hasValueLiteral") != null) {
+      List<String> valueLiteralList = (List<String>) propConstraint.get("hasValueLiteral");
+      if(!valueLiteralList.isEmpty()) {
+        String paramSetId =
+            propConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
+        Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+        params.put("theHasValueLiteral", valueLiteralList);
+
+        addCypherToValidationScript(sb,getHasValueLiteralViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+            propOrRel, severity, propOrRel);
+      }
+    }
+
+    if (propConstraint.get("rangeKind") != null) {
+      if (propConstraint.get("rangeKind").equals(SHACL.LITERAL.stringValue())) {
+        addCypherToValidationScript(sb,getRangeIRIKindViolationQuery(withNodeList), focusLabel,
+            propOrRel,
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
+      } else if (propConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue())){
+        addCypherToValidationScript(sb,getRangeLiteralKindViolationQuery(withNodeList), focusLabel,
+            propOrRel,
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
+      }
+    }
+
+    if (propConstraint.get("rangeType") != null && !propConstraint.get("rangeType")
+        .equals("")) {
+      addCypherToValidationScript(sb,getRangeType1ViolationQuery(withNodeList), focusLabel,
+          propOrRel,
+          translateUri((String) propConstraint.get("rangeType")),
+          focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity,
+          translateUri((String) propConstraint.get("rangeType")));
+      addCypherToValidationScript(sb,getRangeType2ViolationQuery(withNodeList), focusLabel,
+          propOrRel,
+          focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, severity,
+          propOrRel);
+    }
+
+    if (propConstraint.get("inLiterals") != null) {
+      List<String> valueLiteralList = (List<String>) propConstraint.get("inLiterals");
+      if(!valueLiteralList.isEmpty()) {
+        String paramSetId =
+            propConstraint.get("propShapeUid") + "_" + SHACL.IN.stringValue();
+        Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+        params.put("theInLiterals", valueLiteralList);
+
+        addCypherToValidationScript(sb,getInLiteralsViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+            propOrRel, severity, propOrRel);
+      }
+    }
+
+    if (propConstraint.get("inUris") != null) {
+      List<String> valueLiteralList = (List<String>) propConstraint.get("inUris");
+      if(!valueLiteralList.isEmpty()) {
+        String paramSetId =
+            propConstraint.get("propShapeUid") + "_" + SHACL.IN.stringValue();
+        Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+        params.put("theInUris", valueLiteralList);
+
+        addCypherToValidationScript(sb,getInUrisViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            propOrRel, focusLabel, (String) propConstraint.get("propShapeUid"),
+            propOrRel, severity, propOrRel);
+      }
+    }
+
+    if (propConstraint.get("pattern") != null) {
+      String paramSetId =
+          propConstraint.get("propShapeUid") + "_" + SHACL.PATTERN.stringValue();
+      Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+      params.put("theRegex", (String) propConstraint.get("pattern"));
+      addCypherToValidationScript(sb,getRegexViolationQuery(withNodeList), paramSetId,
+          focusLabel, propOrRel, propOrRel, focusLabel,
+          (String) propConstraint.get("propShapeUid"), propOrRel, severity);
+
+    }
+
+    if (propConstraint.get("minCount") != null) {
+      String paramSetId =
+          propConstraint.get("propShapeUid") + "_" + SHACL.MIN_COUNT.stringValue();
+      Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+      params.put("minCount", propConstraint.get("minCount"));
+
+      if (!(boolean) propConstraint.get("inverse")) {
+
+        addCypherToValidationScript(sb,getMinCardinality1ViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            " params.minCount <= ",
+            propOrRel,propOrRel,
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
+            severity);
+      } else {
+        // multivalued attributes not checked for cardinality in the case of inverse??
+        // does not make sense in an LPG
+        addCypherToValidationScript(sb,getMinCardinality1InverseViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            " params.minCount <= ",
+            propOrRel,
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+            severity);
+      }
+    }
+
+    if (propConstraint.get("maxCount") != null) {
+      String paramSetId =
+          propConstraint.get("propShapeUid") + "_" + SHACL.MAX_COUNT.stringValue();
+      Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+      params.put("maxCount", propConstraint.get("maxCount"));
+
+      if (!(boolean) propConstraint.get("inverse")) {
+
+        addCypherToValidationScript(sb,getMaxCardinality1ViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            propOrRel,propOrRel,
+            " <= params.maxCount ",
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,propOrRel,
+            severity);
+      } else {
+        // multivalued attributes not checked for cardinality in the case of inverse??
+        // does not make sense in an LPG
+        addCypherToValidationScript(sb,getMaxCardinality1InverseViolationQuery(withNodeList),
+            paramSetId, focusLabel,
+            propOrRel,
+            " <= params.maxCount ",
+            focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+            severity);
+      }
+    }
+
+    if (propConstraint.get("minStrLen") != null || propConstraint.get("maxStrLen") != null) {
+
+      String paramSetId =
+          propConstraint.get("propShapeUid") + "_" + SHACL.MIN_LENGTH.stringValue();
+      Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+      params.put("minStrLen", propConstraint.get("minStrLen"));
+      params.put("maxStrLen", propConstraint.get("maxStrLen"));
+
+      addCypherToValidationScript(sb,getStrLenViolationQuery(withNodeList), paramSetId,
+          focusLabel,
+          propOrRel,
+          propConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
+          propConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
+          focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+          severity);
+
+    }
+
+    if (propConstraint.get("minInc") != null || propConstraint.get("maxInc") != null
+        || propConstraint.get("minExc") != null || propConstraint.get("maxExc") != null) {
+
+      String paramSetId =
+          propConstraint.get("propShapeUid") + "_" + SHACL.MIN_EXCLUSIVE.stringValue();
+      Map<String, Object> params = createNewSetOfParams(allParams, paramSetId);
+      params.put("min",
+          propConstraint.get("minInc") != null ? propConstraint.get("minInc")
+              : propConstraint.get("minExc"));
+      params.put("max",
+          propConstraint.get("maxInc") != null ? propConstraint.get("maxInc")
+              : propConstraint.get("maxExc"));
+
+      addCypherToValidationScript(sb,getValueRangeViolationQuery(withNodeList), paramSetId,
+          focusLabel, propOrRel,
+          propConstraint.get("minInc") != null ? " params.min <="
+              : (propConstraint.get("minExc") != null ? " params.min < " : ""),
+          propConstraint.get("maxInc") != null ? " <= params.max "
+              : (propConstraint.get("maxExc") != null ? " < params.max " : ""),
+          focusLabel, (String) propConstraint.get("propShapeUid"), propOrRel, propOrRel,
+          severity);
+    }
+
+  }
+
   private String translateUri(String uri) {
     if( gc == null || gc.getGraphMode()==GRAPHCONF_MODE_LPG){
       return uri.substring(URIUtil.getLocalNameIndex(uri));
@@ -384,6 +648,14 @@ public class SHACLValidator {
     paramsU.put(id, params);
     return params;
   }
+
+  private Map<String, Object> createNewSetOfParams(Map<String, Object> allParams, String id) {
+    Map<String, Object> params = new HashMap<>();
+    allParams.put(id, params);
+    return params;
+  }
+
+
 
 //  private void addCardinalityValidations(Map<String, Object> allParams, StringBuilder cypherUnion,
 //      String appliesToCat, String item, String severity, Map<String, Object> validation, boolean tx) {
@@ -453,12 +725,20 @@ public class SHACLValidator {
     }
   }
 
+  private void addCypherToValidationScript(StringBuilder sb, String querystr, String... args) {
+    sb.append("\n UNION \n").append(String.format(querystr, args));
+  }
+
   private void addCypherToValidationScript(String querystr, String... args) {
     cypherU.append("\n UNION \n").append(String.format(querystr, args));
   }
 
   private String getDataTypeViolationQuery(boolean tx ) {
     return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_DATATYPE_V_SUFF());
+  }
+
+  private String getDataTypeViolationQuery2(boolean tx ) {
+    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_DATATYPE2_V_SUFF());
   }
 
   private String getRangeIRIKindViolationQuery(boolean tx) {
@@ -574,6 +854,15 @@ public class SHACLValidator {
         + " '' as message ";
   }
 
+  private String CYPHER_DATATYPE2_V_SUFF() {
+    return " true RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
+        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+        + "' as propertyShape, " + (shallIUseUriInsteadOfId()?" x.uri ":" 'node id: ' + id(x) ") + "as offendingValue, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
+        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " + ' should be a property, instead it  is a relationship' as message ";
+  }
+
   private String CYPHER_IRI_KIND_V_SUFF(){
     return " (focus)-[:`%s`]->() RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") +
@@ -657,14 +946,14 @@ public class SHACLValidator {
   }
 
   private String CYPHER_IN_URI_V_SUFF() {
-    return " true with params, focus unwind [(focus)-[:`%s`]->(x) | x.uri ] as val with focus, val where not val in params.theInUris "
+    return " true with params, focus unwind [(focus)-[:`%s`]->(x) | x ] as val with focus, val where not val.uri in params.theInUris "
         + "RETURN "
         + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") + " as nodeId, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
         .stringValue()
-        + "' as propertyShape, val as offendingValue, "
+        + "' as propertyShape, " +  (shallIUseUriInsteadOfId()?"val.uri":"id(val)") +" as offendingValue, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-        + "'The value \"'+ val + '\" in property ' + " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s') ": " '%s'") + "+ 'is not in  the accepted list' as message  ";
+        + "'The value \"'+ " + (shallIUseUriInsteadOfId()?" val.uri ":" 'node id: '  + id(val) ") +" + '\" in property ' + " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s') ": " '%s'") + "+ ' is not in  the accepted list' as message  ";
   }
 
   private String CYPHER_VALRANGE_V_SUFF() {

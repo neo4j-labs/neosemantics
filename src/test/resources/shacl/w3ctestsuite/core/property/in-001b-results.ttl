@@ -17,8 +17,17 @@ ex:ValidationResult1 rdf:type sh:ValidationReport ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:InConstraintComponent ;
           sh:sourceShape ex:ShapeClass-property ;
-          sh:value "D" ;
+          sh:value ex:D ;
         ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidInstance1 ;
+          sh:resultPath ex:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value ex:D ;
+              ] ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:ValidInstance1 ;
@@ -26,6 +35,44 @@ ex:ValidationResult1 rdf:type sh:ValidationReport ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:InConstraintComponent ;
           sh:sourceShape ex:ShapeClass-property ;
-          sh:value "D" ;
+          sh:value ex:F ;
               ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:ValidInstance1 ;
+          sh:resultPath ex:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value ex:C ;
+              ] ;
+       sh:result [
+         rdf:type sh:ValidationResult ;
+         sh:focusNode ex:ValidInstance1 ;
+         sh:resultPath ex:property ;
+         sh:resultSeverity sh:Violation ;
+         sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+         sh:sourceShape ex:ShapeClass-property ;
+         sh:value ex:F ;
+             ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:ValidInstance2 ;
+          sh:resultPath ex:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value ex:A ;
+              ] ;
+       sh:result [
+         rdf:type sh:ValidationResult ;
+         sh:focusNode ex:ValidInstance2 ;
+         sh:resultPath ex:property ;
+         sh:resultSeverity sh:Violation ;
+         sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+         sh:sourceShape ex:ShapeClass-property ;
+         sh:value ex:B ;
+             ] ;
+
 .
+
