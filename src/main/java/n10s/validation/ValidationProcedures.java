@@ -3,50 +3,24 @@ package n10s.validation;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.Reader;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
+import n10s.CommonProcedures;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
-import n10s.rdf.RDFProcedures.ImportResults;
-import org.eclipse.rdf4j.model.Literal;
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.repository.Repository;
-import org.eclipse.rdf4j.repository.RepositoryConnection;
-import org.eclipse.rdf4j.repository.sail.SailRepository;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.sail.memory.MemoryStore;
-import org.neo4j.cypher.internal.ir.HasHeaders;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
-import org.neo4j.logging.Log;
-import org.neo4j.procedure.Context;
 import org.neo4j.procedure.Description;
 import org.neo4j.procedure.Mode;
 import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
-public class ValidationProcedures {
-
-  @Context
-  public Log log;
-
-  @Context
-  public Transaction tx;
-
+public class ValidationProcedures extends CommonProcedures {
 
   @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
   @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
@@ -124,24 +98,46 @@ public class ValidationProcedures {
   public Stream<ConstraintComponent> loadInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException {
+      throws IOException, RDFImportBadParams {
 
-    ;
+    return doLoad(format, null, rdfFragment, props).stream();
+  }
+
+  @Procedure(name = "n10s.validation.shacl.load.fetch", mode = Mode.WRITE)
+  @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
+      + "graph. Requires a unique constraint on :Resource(uri)")
+  public Stream<ConstraintComponent> loadSHACLFromURl(@Name("url") String url, @Name("format") String format,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws IOException, RDFImportBadParams {
+
+    return doLoad(format, url, null, props).stream();
+
+  }
+
+  private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment, Map<String, Object> props)
+      throws IOException, RDFImportBadParams {
+
+    InputStream is;
+    if (rdfFragment != null) {
+      is = new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset()));
+    } else {
+      is = getInputStream(url, props);
+    }
 
     SHACLValidator validator = new SHACLValidator(tx, log);
-      ValidatorConfig validatorConfig = validator.compileValidations(validator.parseConstraints(rdfFragment));
+    ValidatorConfig validatorConfig = validator.compileValidations(validator.parseConstraints(is, getFormat(format)));
 
-      Map<String,Object> params =  new HashMap<>();
-      params.put("eg", validatorConfig.getEngineGlobal().toString().getBytes(Charset.defaultCharset()));
-      params.put("ens", validatorConfig.getEngineForNodeSet().toString().getBytes(Charset.defaultCharset()));
-      params.put("cl", serialiseObject(validatorConfig.getConstraintList()));
-      params.put("params", serialiseObject(validatorConfig.getAllParams()));
+    Map<String,Object> params =  new HashMap<>();
+    params.put("eg", validatorConfig.getEngineGlobal().toString().getBytes(Charset.defaultCharset()));
+    params.put("ens", validatorConfig.getEngineForNodeSet().toString().getBytes(Charset.defaultCharset()));
+    params.put("cl", serialiseObject(validatorConfig.getConstraintList()));
+    params.put("params", serialiseObject(validatorConfig.getAllParams()));
 
-      tx.execute("MERGE (vc:_n10sValidatorConfig { _id: 1}) "
-          + "SET vc._engineGlobal = $eg, vc._engineForNodeSet = $ens, vc._params = $params, "
-          + " vc._constraintList = $cl  ", params);
+    tx.execute("MERGE (vc:_n10sValidatorConfig { _id: 1}) "
+        + "SET vc._engineGlobal = $eg, vc._engineForNodeSet = $ens, vc._params = $params, "
+        + " vc._constraintList = $cl  ", params);
 
-    return validatorConfig.getConstraintList().stream();
+    return validatorConfig.getConstraintList();
   }
 
   private byte[] serialiseObject(Object o) throws IOException {
@@ -153,6 +149,35 @@ public class ValidationProcedures {
     objectOutputStream.close();
     return baos.toByteArray();
   }
+
+private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFoundException {
+  ObjectInputStream objectInputStream
+      = new ObjectInputStream(new ByteArrayInputStream(bytes));
+  return objectInputStream.readObject();
+  //objectInputStream.close();
+}
+
+
+  @Procedure(name = "n10s.validation.shacl.vaSet", mode = Mode.READ)
+  @Description("Runs the SHACL validation previously loaded and compiled")
+  public Stream<ValidationResult> validateSetFromCompiled(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
+      throws InvalidParamException, IOException, ClassNotFoundException {
+
+
+    Result loadValidatorFromDBResult = tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN vc");
+    if(!loadValidatorFromDBResult.hasNext()) {
+      throw new SHACLValidationException("No shapes compiled");
+    }
+    else {
+      Node validationConfigNode = (Node)loadValidatorFromDBResult.next().get("vc");
+      Map<String,Object> params = (Map<String,Object>) deserialiseObject((byte[])validationConfigNode.getProperty("_params"));
+      params.put("touchedNodes", nodeList);
+      String engineForNodeSet = new String((byte[])validationConfigNode.getProperty("_engineForNodeSet"));
+      return tx.execute(engineForNodeSet, params).stream().map(ValidationResult::new);
+
+    }
+  }
+
 
   @Procedure(name = "n10s.validation.shacl.va", mode = Mode.READ)
   @Description("Runs the SHACL validation previously loaded and compiled")

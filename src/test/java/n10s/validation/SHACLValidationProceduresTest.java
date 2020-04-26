@@ -33,7 +33,7 @@ public class SHACLValidationProceduresTest {
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | id(f) ][0] as focus,\n"
       + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
-      + "       ([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0] as offendingValue ";
+      + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue ";
 
 
   final String VAL_RESULTS_QUERY_AS_RDF = "MATCH (vr:sh__ValidationResult)\n"
@@ -44,7 +44,7 @@ public class SHACLValidationProceduresTest {
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| tc.uri ][0]) as targetClass,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | f.uri ][0] as focus,\n"
       + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
-      + "       ([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0] as offendingValue ";
+      + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue ";
 
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
@@ -417,6 +417,12 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+  @Test
+  public void testRunTestSuite1_2() throws Exception {
+    runIndividualTest2("core/complex", "personexample",  null, "IGNORE");
+    runIndividualTest2("core/complex", "personexample", null, "SHORTEN");
+    runIndividualTest2("core/complex", "personexample", null, "KEEP");
+  }
 
   @Test
   public void testRunTestSuite1() throws Exception {
@@ -538,23 +544,37 @@ public class SHACLValidationProceduresTest {
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
           .toURI() + "\",\"Turtle\")");
 
-      //load shapes #HERE
-      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
-          .toURI() + "','Turtle')");
+      //load shapes
+      Result results = session
+          .run("CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
+              .toURI() + "\",\"Turtle\", {})");
 
-      //Run any additional change to modify the imported RDF into LPG
-      if (cypherScript != null) {
-        session.run(cypherScript);
+      //TOD: remove this
+      while(results.hasNext()){
+        Record next = results.next();
+        System.out.println(next);
       }
 
+      //load shapes for test completeness
+      session
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
+              .toURI() + "\",\"Turtle\", {})");
       //load expected results
       session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 
+//      results = session
+//          .run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
+//      assertTrue(results.hasNext());
+//      Node vc = results.next().get("vc").asNode();
+//      assertFalse(vc.get("_engineGlobal").isNull());
+
       // query them in the graph and flatten the list
       Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
+
 
       //print them out
       System.out.println("expected: ");
@@ -581,7 +601,7 @@ public class SHACLValidationProceduresTest {
 
       // run validation
       Result actualValidationResults = session
-          .run("CALL n10s.validation.shacl.validate() ");
+          .run("call n10s.validation.shacl.va() ");
 
       // print out validation results
       System.out.println("actual: ");
@@ -621,7 +641,7 @@ public class SHACLValidationProceduresTest {
       // run validation
       actualValidationResults = session
           .run("MATCH (n) with collect(n) as nodelist "
-              + "CALL n10s.validation.shacl.validateSet(nodelist) "
+              + "call n10s.validation.shacl.va(nodelist)"
               + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
               + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
 

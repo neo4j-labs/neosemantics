@@ -8,6 +8,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.Charset;
@@ -799,7 +800,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
 
     if (propConstraint.get("ignoredProps") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.IGNORED_PROPERTIES.stringValue():SHACL.MAX_LENGTH.getLocalName(),
+          shallIUseUriInsteadOfId()?SHACL.IGNORED_PROPERTIES.stringValue():SHACL.IGNORED_PROPERTIES.getLocalName(),
           propConstraint.get("ignoredProps")));
     }
 
@@ -832,17 +833,13 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
     return params;
   }
 
-  protected Iterator<Map<String,Object>> parseConstraints(@Name("rdf") String rdfFragment) {
+  protected Iterator<Map<String,Object>> parseConstraints(InputStream is, RDFFormat format) {
     Repository repo = new SailRepository(new MemoryStore());
 
     List<Map<String,Object>> constraints = new ArrayList<>();
     try (RepositoryConnection conn = repo.getConnection()) {
       conn.begin();
-      Reader shaclRules = new InputStreamReader(new ByteArrayInputStream(rdfFragment.getBytes(
-          Charset.defaultCharset())));
-      //getInputStream(url, props) [in CommonProcedures]
-
-      conn.add(shaclRules, "", RDFFormat.TURTLE);
+      conn.add(new InputStreamReader(is), "http://neo4j.com/base/", format);
       conn.commit();
       String sparqlQueryPropertyConstraints= "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
           + "SELECT ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype "
