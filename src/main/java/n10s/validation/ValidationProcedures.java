@@ -9,7 +9,9 @@ import java.io.ObjectOutputStream;
 import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -115,174 +117,41 @@ public class ValidationProcedures {
     return tx.execute(validator.getListConstraintsQuery()).stream().map(ConstraintComponent::new);
   }
 
-  @Procedure(name="n10s.validation.shacl.drop", mode = Mode.WRITE)
-  @Description("n10s.validation.shacl.drop() - deletes all SHACL shapes loaded in the Graph")
-  public Stream<ConstraintComponent> dropShapes(@Name(value = "nodeShapeUri", defaultValue = "") String nodeShapeUri) {
-    String DROP_SHAPES;
-    Map<String,Object> params = new HashMap<>();
-    if(nodeShapeUri==null || nodeShapeUri.equals("")){
-      //Delete all node shapes
-      DROP_SHAPES =" MATCH path = (:sh__NodeShape)-[*]->()\n"
-          + "UNWIND nodes(path) as node DETACH DELETE node ";
-    } else {
-      params.put("nodeShapeUri",nodeShapeUri);
-      DROP_SHAPES =" MATCH path = (root:sh__NodeShape { uri: $nodeShapeUri})-[*]->() where all(node IN nodes(path) WHERE (not node:sh__NodeShape) or (node.uri = $nodeShapeUri)) \n"
-          + "UNWIND nodes(path) as node DETACH DELETE node ";
-    }
-
-
-    tx.execute(DROP_SHAPES, params);
-
-    return Stream.empty();
-  }
-
 
   @Procedure(name = "n10s.validation.shacl.load.inline", mode = Mode.WRITE)
   @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
       + "graph. Requires a unique constraint on :Resource(uri)")
-  public Stream<ImportResults> loadInlineSHACL(@Name("rdf") String rdfFragment,
+  public Stream<ConstraintComponent> loadInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws InvalidParamException {
+      throws IOException {
 
+    ;
 
-    Repository repo = new SailRepository(new MemoryStore());
-    try (RepositoryConnection conn = repo.getConnection()) {
-      conn.begin();
-
-      Reader shaclRules = new InputStreamReader(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())));
-      //getInputStream(url, props) [in CommonProcedures]
-
-      conn.add(shaclRules, "", RDFFormat.TURTLE);
-      conn.commit();
-      String sparqlQuery= "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
-          + "SELECT ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype "
-          + "?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc "
-          + "?minStrLen ?maxStrLen ?hasValue (GROUP_CONCAT (?in; separator=\"---\") AS ?ins) "
-          + "(isLiteral(?inFirst) as ?isliteralIns)\n"
-          + "{ ?ns a sh:NodeShape ;\n"
-          + "     sh:property ?ps .\n"
-          + "\n"
-          + "  optional { ?ps sh:path/sh:inversePath ?invPath }\n"
-          + "  optional { ?ps sh:path  ?path }\n"
-          + "  optional { ?ps sh:class  ?rangeClass }\n"
-          + "  optional { ?ps sh:nodeKind  ?rangeKind }  \n"
-          + "  optional { ?ps sh:datatype  ?datatype }\n"
-          + "  optional { ?ps sh:severity  ?severity }\n"
-          + "  optional { \n"
-          + "    { ?ns sh:targetClass  ?targetClass }\n"
-          + "    union\n"
-          + "    { ?targetClass sh:property ?ps;\n"
-          + "          a rdfs:Class . }\n"
-          + "  }\n"
-          + "  optional { ?ps sh:pattern  ?pattern }\n"
-          + "  optional { ?ps sh:maxCount  ?maxCount }\n"
-          + "  \n"
-          + "    optional { ?ps sh:minCount  ?minCount }\n"
-          + "    optional { ?ps sh:minInclusive  ?minInc }\n"
-          + "  \n"
-          + "    optional { ?ps sh:maxInclusive  ?maxInc }\n"
-          + "    optional { ?ps sh:minExclusive  ?minExc }\n"
-          + "    optional { ?ps sh:maxExclusive  ?maxExc }  \n"
-          + "  optional { ?ps sh:minLength  ?minStrLen }\n"
-          + "  \n"
-          + "    optional { ?ps sh:minLength  ?minStrLen }\n"
-          + "    optional { ?ps sh:maxLength  ?maxStrLen }\n"
-          + "  \n"
-          + "    optional { ?ps sh:hasValue  ?hasValue } #hasValueUri and hasValueLiteral\n"
-          + "  \n"
-          + "    optional { ?ps sh:in/rdf:rest*/rdf:first ?in } \n"
-          + "    optional { ?ps sh:in/rdf:first ?inFirst }\n"
-          + "    optional { ?ps sh:minLength  ?minStrLen }\n"
-          + "  \n"
-          + "} group by \n"
-          + "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?hasValue ?inFirst";
-
-      TupleQuery tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, sparqlQuery);
-      TupleQueryResult queryResult = tupleQuery.evaluate();
-      List<Map<String,Object>>  constraints = new ArrayList<>();
-      while(queryResult.hasNext()){
-        Map<String,Object> record = new HashMap<>();
-        BindingSet next = queryResult.next();
-//        System.out.println(next.getBindingNames());
-//        [path, ps, ns, datatype, targetClass, minInc, rangeKind, ins]
-//        ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxExc ?minStrLen ?maxStrLen ?hasValue (GROUP_CONCAT (?in; separator="---") AS ?ins) (isLiteral(?inFirst) as ?isliteralIns)
-
-
-        record.put("item", next.hasBinding("invPath")?next.getValue("invPath").stringValue():next.getValue("path").stringValue());
-        record.put("inverse", next.hasBinding("invPath"));
-        record.put("appliesToCat", next.getValue("targetClass").stringValue());
-        record.put("rangeType", next.hasBinding("rangeClass")?next.getValue("rangeClass").stringValue():null);
-        record.put("rangeKind", next.hasBinding("rangeKind")?next.getValue("rangeKind").stringValue():null);
-        record.put("dataType", next.hasBinding("datatype")?next.getValue("datatype").stringValue():null);
-        record.put("pattern", next.hasBinding("pattern")?next.getValue("pattern").stringValue():null);
-        record.put("maxCount", next.hasBinding("maxCount")?((Literal)next.getValue("maxCount")).intValue():null);
-        record.put("minCount", next.hasBinding("minCount")?((Literal)next.getValue("minCount")).intValue():null);
-        record.put("minInc", next.hasBinding("minInc")?((Literal)next.getValue("minInc")).intValue():null);
-        record.put("minExc", next.hasBinding("minExc")?((Literal)next.getValue("minExc")).intValue():null);
-        record.put("maxInc", next.hasBinding("maxInc")?((Literal)next.getValue("maxInc")).intValue():null);
-        record.put("maxExc", next.hasBinding("maxExc")?((Literal)next.getValue("maxExc")).intValue():null);
-
-        if(next.hasBinding("hasValue")) {
-          Value val = next.getValue("hasValue");
-          if(val instanceof Literal) {
-            record.put("hasValueLiteral", val.stringValue());
-          } else {
-            record.put("hasValueUri", val.stringValue());
-          }
-        }
-
-        if(next.hasBinding("isliteralIns")) {
-          String[] insArray = next.getValue("ins").stringValue().split("---");
-          List<String> inVals = new ArrayList<>();
-          int i;
-          for (i = 0; i < insArray.length; i++) {
-            inVals.add(insArray[i]);
-          }
-          Literal val = (Literal)next.getValue("isliteralIns");
-          if(val.booleanValue()) {
-            record.put("hasValueLiteral", inVals);
-           } else {
-            record.put("hasValueUri", inVals);
-          }
-        }
-
-        record.put("minStrLen", next.hasBinding("minStrLen")?((Literal)next.getValue("minStrLen")).intValue():null);
-        record.put("maxStrLen", next.hasBinding("maxStrLen")?((Literal)next.getValue("maxStrLen")).intValue():null);
-        record.put("propShapeUid", next.hasBinding("ps")?next.getValue("ps").stringValue():null);
-        record.put("severity", next.hasBinding("severity")?next.getValue("severity").stringValue():"http://www.w3.org/ns/shacl#Violation");
-
-        constraints.add(record);
-
-      }
-
-      SHACLValidator validator = new SHACLValidator(tx, log);
-      ValidatorConfig validatorConfig = validator.compileValidations(constraints.iterator());
+    SHACLValidator validator = new SHACLValidator(tx, log);
+      ValidatorConfig validatorConfig = validator.compileValidations(validator.parseConstraints(rdfFragment));
 
       Map<String,Object> params =  new HashMap<>();
-      params.put("eg", validatorConfig.getEngineGlobal().toString().getBytes());
-      params.put("ens", validatorConfig.getEngineForNodeSet().toString().getBytes());
+      params.put("eg", validatorConfig.getEngineGlobal().toString().getBytes(Charset.defaultCharset()));
+      params.put("ens", validatorConfig.getEngineForNodeSet().toString().getBytes(Charset.defaultCharset()));
+      params.put("cl", serialiseObject(validatorConfig.getConstraintList()));
+      params.put("params", serialiseObject(validatorConfig.getAllParams()));
 
+      tx.execute("MERGE (vc:_n10sValidatorConfig { _id: 1}) "
+          + "SET vc._engineGlobal = $eg, vc._engineForNodeSet = $ens, vc._params = $params, "
+          + " vc._constraintList = $cl  ", params);
 
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      ObjectOutputStream objectOutputStream
-          = new ObjectOutputStream(baos);
-      objectOutputStream.writeObject(validatorConfig.getAllParams());
-      objectOutputStream.flush();
-      objectOutputStream.close();
+    return validatorConfig.getConstraintList().stream();
+  }
 
-      params.put("params", baos.toByteArray());
-      tx.execute("MERGE (vc:_n10sValidatorConfig { _id: 1}) SET vc._engineGlobal = $eg, vc._engineForNodeSet = $ens, vc._params = $params ", params);
-
-      return Stream.empty();
-
-    } catch (IOException e) {
-      //TODO: deal  with this properly
-      e.printStackTrace();
-    }
-
-    //TODO: think what this should return
-    return Stream.empty();
+  private byte[] serialiseObject(Object o) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream objectOutputStream
+        = new ObjectOutputStream(baos);
+    objectOutputStream.writeObject(o);
+    objectOutputStream.flush();
+    objectOutputStream.close();
+    return baos.toByteArray();
   }
 
   @Procedure(name = "n10s.validation.shacl.va", mode = Mode.READ)

@@ -1,8 +1,9 @@
 package n10s.validation;
 
+import java.io.Serializable;
 import java.util.Map;
 
-public class ConstraintComponent {
+public class ConstraintComponent implements Serializable {
 
   public String target;
   public String propertyOrRelationshipPath;

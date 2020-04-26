@@ -66,7 +66,7 @@ public class SHACLValidationProceduresTest {
               +
               "CREATE (NoraE:Person {name:'Nora Ephron', born:1941})\n" +
               "CREATE (RitaW:Person {name:'Rita Wilson', born:1956})\n" +
-              "CREATE (BillPull:Person {name:'Bill Pullman', born:1953})\n" +
+              "CREATE (BillPull:Person {name:['Bill Pullman','B.P.'], born:1953})\n" +
               "CREATE (VictorG:Person {name:'Victor Garber', born:1949})\n" +
               "CREATE (RosieO:Person {name:\"Rosie O'Donnell\", born:1962})\n" +
               "CREATE\n" +
@@ -107,7 +107,7 @@ public class SHACLValidationProceduresTest {
           + "\t\tsh:maxCount 1 ;                 # cardinality\n"
           + "\t\tsh:datatype xsd:string ;        # data type\n"
           + "\t\tsh:minLength 10 ;               # string length\n"
-          + "\t\tsh:maxLength 20 ;               # string length\n"
+          + "\t\tsh:maxLength 18 ;               # string length\n"
           + "\t] ;\n"
           + "\tsh:property [\n"
           + "\t\tsh:path neo4j:released ;        # constrains the values of neo4j:title\n"
@@ -122,10 +122,9 @@ public class SHACLValidationProceduresTest {
       Result results = session
           .run("CALL n10s.validation.shacl.load.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
 
-      if(results.hasNext()){
-        System.out.println("results returned");
-      } else{
-        System.out.println("no results");
+      while(results.hasNext()){
+        Record next = results.next();
+        System.out.println(next);
       }
 
       results = session
@@ -512,7 +511,159 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "nodeKind-001", null, "KEEP");
   }
 
+  public void runIndividualTest2(String testGroupName, String testName,
+      String cypherScript, String handleVocabUris ) throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build())) {
 
+      Session session = driver.session();
+      Result getschemastatementsResults = session.run("call db.schemaStatements() yield name return name");
+      if(getschemastatementsResults.hasNext() &&
+          getschemastatementsResults.next().get("name").asString().equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
+        //constraint exists. do nothing.
+      } else {
+        session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+        assertTrue(session.run("call db.schemaStatements").hasNext());
+      }
+
+      //db is empty
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+
+      session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY'" +
+          ", handleVocabUris: '"  + handleVocabUris + "' })");
+
+      //load data
+      session.run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
+          .toURI() + "\",\"Turtle\")");
+
+      //load shapes #HERE
+      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
+          .toURI() + "','Turtle')");
+
+      //Run any additional change to modify the imported RDF into LPG
+      if (cypherScript != null) {
+        session.run(cypherScript);
+      }
+
+      //load expected results
+      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
+          .toURI() + "','Turtle')");
+
+      // query them in the graph and flatten the list
+      Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
+
+      //print them out
+      System.out.println("expected: ");
+      Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
+      while (expectedValidationResults.hasNext()) {
+        Record validationResult = expectedValidationResults.next();
+        Object focusNode = ((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?validationResult.get("focus").asString():validationResult.get("focus").asLong());
+        String nodeType = validationResult.get("targetClass").asString();
+        String propertyName = validationResult.get("path").asString();
+        String severity = validationResult.get("sev").asString();
+        String constraint = validationResult.get("constraint").asString();
+        String message = validationResult.get("messge").asString();
+        String shapeId = validationResult.get("shapeId").asString();
+        String offendingValue = validationResult.get("offendingValue").asString();
+
+        //TODO:  add the value to the results query and complete  below
+        expectedResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+
+        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+            propertyName + ", severity: " + severity + ", constraint: " + constraint
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
+      }
+
+      // run validation
+      Result actualValidationResults = session
+          .run("CALL n10s.validation.shacl.validate() ");
+
+      // print out validation results
+      System.out.println("actual: ");
+      Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
+      while (actualValidationResults.hasNext()) {
+        Record validationResult = actualValidationResults.next();
+        Object focusNode = validationResult.get("focusNode").asObject();
+        String nodeType = validationResult.get("nodeType").asString();
+        String propertyName = validationResult.get("resultPath").asString();
+        String severity = validationResult.get("severity").asString();
+        Object offendingValue = validationResult.get("offendingValue").asObject();
+        String constraint = validationResult.get("propertyShape").asString();
+        String message = validationResult.get("resultMessage").asString();
+        String shapeId = validationResult.get("shapeId").asString();
+        actualResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+
+        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+            propertyName + ", severity: " + severity + ", constraint: " + constraint
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
+
+      }
+
+      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
+      assertEquals(expectedResults.size(), actualResults.size());
+
+      for (ValidationResult x : expectedResults) {
+        assertTrue(contains(actualResults, x));
+      }
+
+      for (ValidationResult x : actualResults) {
+        assertTrue(contains(expectedResults, x));
+      }
+
+      //re-run it on set of nodes
+
+      // run validation
+      actualValidationResults = session
+          .run("MATCH (n) with collect(n) as nodelist "
+              + "CALL n10s.validation.shacl.validateSet(nodelist) "
+              + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
+              + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
+
+      // print out validation results
+      System.out.println("actual on set of nodes: ");
+      actualResults = new HashSet<ValidationResult>();
+      while (actualValidationResults.hasNext()) {
+        Record validationResult = actualValidationResults.next();
+        Object focusNode = validationResult.get("focusNode").asObject();
+        String nodeType = validationResult.get("nodeType").asString();
+        String propertyName = validationResult.get("resultPath").asString();
+        String severity = validationResult.get("severity").asString();
+        Object offendingValue = validationResult.get("offendingValue").asObject();
+        String constraint = validationResult.get("propertyShape").asString();
+        String message = validationResult.get("resultMessage").asString();
+        String shapeId = validationResult.get("shapeId").asString();
+        actualResults
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+
+        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+            propertyName + ", severity: " + severity + ", constraint: " + constraint
+            + ", offendingValue: " + offendingValue  + ", message: " + message);
+
+      }
+
+      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
+      assertEquals(expectedResults.size(), actualResults.size());
+
+      for (ValidationResult x : expectedResults) {
+        assertTrue(contains(actualResults, x));
+      }
+
+      for (ValidationResult x : actualResults) {
+        assertTrue(contains(expectedResults, x));
+      }
+
+      session.run("MATCH (n) DETACH DELETE n ").hasNext();
+
+    }
+
+
+  }
 
   public void runIndividualTest(String testGroupName, String testName,
       String cypherScript, String handleVocabUris ) throws Exception {

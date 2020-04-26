@@ -56,6 +56,16 @@
       <artifactId>rdf4j-rio-nquads</artifactId>
       <version>${sesame.version}</version>
     </dependency>
+    <dependency>
+      <groupId>org.eclipse.rdf4j</groupId>
+      <artifactId>rdf4j-sail-memory</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.eclipse.rdf4j</groupId>
+      <artifactId>rdf4j-repository-sail</artifactId>
+      <version>${sesame.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>org.codehaus.jackson</groupId>
