@@ -5,6 +5,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_KEEP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
+import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -20,10 +21,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import n10s.CommonProcedures.InvalidShortenedName;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.NsPrefixMap;
+import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
@@ -130,7 +136,8 @@ public class SHACLValidator {
 
   }
 
-  protected Stream<ValidationResult> runValidations(List<Node> nodeList) {
+  protected Stream<ValidationResult> runValidations(List<Node> nodeList)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     paramsU.put("touchedNodes", nodeList);
 
@@ -391,7 +398,8 @@ public class SHACLValidator {
 
 
 
-  protected ValidatorConfig compileValidations(Iterator<Map<String,Object>> constraints) {
+  protected ValidatorConfig compileValidations(Iterator<Map<String,Object>> constraints)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     ValidatorConfig vc = new ValidatorConfig();
 
@@ -399,10 +407,10 @@ public class SHACLValidator {
 
       Map<String, Object> propConstraint = constraints.next();
       if (propConstraint.get("appliesToCat") == null) {
-
         log.info("Only class-based targets (sh:targetClass) and implicit class targets are validated.");
-
-      } else {
+      } else if (propConstraint.containsKey("item")&&propConstraint.get("item").equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+        log.info("Constraints on rdf:type are ignored  (temporary solution until we figure out how can they be used).");
+      } else{
         processConstraint(propConstraint, vc);
         addPropertyConstraintsToList(propConstraint, vc);
       }
@@ -411,7 +419,8 @@ public class SHACLValidator {
     return vc;
   }
 
-  protected void processConstraint(Map<String,Object> theConstraint, ValidatorConfig vc){
+  protected void processConstraint(Map<String,Object> theConstraint, ValidatorConfig vc)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     String focusLabel = translateUri((String) theConstraint.get("appliesToCat"));
     String propOrRel = theConstraint.containsKey("item")?translateUri((String) theConstraint.get("item")):null;
@@ -630,11 +639,15 @@ public class SHACLValidator {
       Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
       List<String> allowedPropsTranslated = new ArrayList<>();
       for (String uri:(List<String>)theConstraint.get("ignoredProps")) {
-        allowedPropsTranslated.add(translateUri(uri));
+        if(!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+          allowedPropsTranslated.add(translateUri(uri));
+        }
       }
       if(theConstraint.get("definedProps") != null) {
         for (String uri:(List<String>)theConstraint.get("definedProps")) {
-          allowedPropsTranslated.add(translateUri(uri));
+          if(!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+            allowedPropsTranslated.add(translateUri(uri));
+          }
         }
       }
       params.put("allAllowedProps", allowedPropsTranslated);
@@ -649,44 +662,8 @@ public class SHACLValidator {
   }
 
 void addPropertyConstraintsToList(Map<String, Object> propConstraint,
-    ValidatorConfig vc) {
-
-
-
-  String  s = "call {\n"
-            + "MATCH  (ns:sh__NodeShape)-[:sh__property]->(ps)-[:sh__path]->(path)-[inv:sh__inversePath*0..1]->(rel:Resource)\n"
-            + "WHERE NOT (rel)-->() // no multihop rel (what happens with alternatives? -> //TODO)\n"
-            + "WITH coalesce(([(targetClass)<-[:sh__targetClass]-(ns)| targetClass] + [(nsAsTarget:rdfs__Class)-[:sh__property]->(ps) | nsAsTarget])[0].uri,'#') AS category, rel.uri AS propertyOrRelationshipPath, ps, inv<>[] as inverse\n"
-            + "MATCH (ps)-[r]->(val) where (type(r)<>\"sh__path\"  and type(r) <> \"sh__severity\")  \n"
-            + "WITH category, propertyOrRelationshipPath, ps, inverse, collect({ p: type(r), v: val.uri}) as set1\n"
-            + "UNWIND keys(ps) as key \n"
-            + "WITH category, propertyOrRelationshipPath, inverse, set1, collect ({p: key, v: ps[key]}) as set2raw\n"
-            + "WITH category, propertyOrRelationshipPath, inverse, set1, [ x in set2raw where x.p <> \"uri\"] as set2\n"
-            + "UNWIND set1+set2 as pair\n"
-            + "RETURN " + (shallIUseUriInsteadOfId()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
-            + (shallIUseUriInsteadOfId()?" propertyOrRelationshipPath ":" n10s.rdf.getIRILocalName(propertyOrRelationshipPath) ")  +
-            " as propertyOrRelationshipPath , " + (shallIShorten()?" n10s.rdf.fullUriFromShortForm(pair.p) ":" n10s.rdf.getIRILocalName(n10s.rdf.fullUriFromShortForm(pair.p)) ")
-            + " as param, " +  (shallIUseUriInsteadOfId()?" pair.v ":" case when tostring(pair.v) =~ '^\\\\w+://.*' then n10s.rdf.getIRILocalName(toString(pair.v)) else pair.v end ") + "  as value \n"
-            + "\n"
-            + "UNION\n"
-            + "\n"
-            + "MATCH  (ns:sh__NodeShape)\n"
-            + "OPTIONAL MATCH (targetClass)<-[:sh__targetClass]-(ns)\n"
-            + "OPTIONAL MATCH (nsAsTarget:rdfs__Class)-[:sh__property]->(ps) \n"
-            + "WITH ns, coalesce(coalesce(targetClass.uri, nsAsTarget.uri),'#') AS category\n"
-            + "WITH  category, null as propertyOrRelationshipPath, [{ p: \"closed\" , v: coalesce(ns.sh__closed,false)}, { p:\"ignoredProperties\",v:\n"
-            + " [(ns)-[:sh__ignoredProperties]->()-[:rdf__first|rdf__rest*0..]->(prop) \n"
-            + " WHERE ()-[:rdf__first]->(prop) | " + (shallIUseUriInsteadOfId()?" prop.uri ":" n10s.rdf.getIRILocalName(prop.uri) ") + " ] }] as pairs\n"
-            + "UNWIND pairs as pair\n"
-            + "RETURN " + (shallIUseUriInsteadOfId()?" category ":" n10s.rdf.getIRILocalName(category) ")  + " as category , "
-            + " propertyOrRelationshipPath , pair.p as param, pair.v as value \n"
-            + "\n"
-            + "\n"
-            + "} \n"
-            + "\n"
-            + "RETURN category, propertyOrRelationshipPath, param, value\n"
-            + "\n"
-            + "ORDER BY category, propertyOrRelationshipPath, param";
+    ValidatorConfig vc)
+    throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     String focusLabel = translateUri((String) propConstraint.get("appliesToCat"));
     String propOrRel = propConstraint.containsKey("item")?translateUri((String) propConstraint.get("item")):null;
@@ -696,25 +673,26 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
 
     if (propConstraint.get("dataType") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.DATATYPE.stringValue():SHACL.DATATYPE.getLocalName(),
-          (String) propConstraint.get("dataType")));
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.DATATYPE.getLocalName():SHACL.DATATYPE.getLocalName(),
+          shallIUseUriInsteadOfId()?propConstraint.get("dataType"):((String)propConstraint.get("dataType"))
+              .substring(URIUtil.getLocalNameIndex((String)propConstraint.get("dataType")))));
     }
 
     if (propConstraint.get("hasValueUri") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.HAS_VALUE.stringValue():SHACL.HAS_VALUE.getLocalName(),
-          (List<String>) propConstraint.get("hasValueUri")));
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.HAS_VALUE.getLocalName():SHACL.HAS_VALUE.getLocalName(),
+          (List<String>) propConstraint.get("hasValueUri"))); //TODO: there  should be a translate here??
     }
 
     if (propConstraint.get("hasValueLiteral") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.HAS_VALUE.stringValue():SHACL.HAS_VALUE.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.HAS_VALUE.getLocalName():SHACL.HAS_VALUE.getLocalName(),
           (List<String>) propConstraint.get("hasValueLiteral")));
     }
 
     if (propConstraint.get("rangeKind") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.NODE_KIND.stringValue():SHACL.NODE_KIND.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.NODE_KIND.getLocalName():SHACL.NODE_KIND.getLocalName(),
           shallIUseUriInsteadOfId()?propConstraint.get("rangeKind"):
               ((String)propConstraint.get("rangeKind"))
                   .substring(URIUtil.getLocalNameIndex((String)propConstraint.get("rangeKind")))));
@@ -723,13 +701,13 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
     if (propConstraint.get("rangeType") != null && !propConstraint.get("rangeType")
         .equals("")) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.NODE_KIND.stringValue():SHACL.NODE_KIND.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.CLASS.getLocalName():SHACL.CLASS.getLocalName(),
           translateUri((String)propConstraint.get("rangeType"))));
     }
 
     if (propConstraint.get("inLiterals") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.IN.stringValue():SHACL.IN.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.IN.getLocalName():SHACL.IN.getLocalName(),
           (List<String>)propConstraint.get("inLiterals")));
     }
 
@@ -738,87 +716,104 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
       List<String> inUrisLocal = new ArrayList<>();
       inUrisRaw.forEach(x ->  inUrisLocal.add(x.substring(URIUtil.getLocalNameIndex(x))));
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.IN.stringValue():SHACL.IN.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.IN.getLocalName():SHACL.IN.getLocalName(),
           shallIUseUriInsteadOfId()?inUrisRaw:inUrisLocal));
     }
 
     if (propConstraint.get("pattern") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.PATTERN.stringValue():SHACL.PATTERN.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.PATTERN.getLocalName():SHACL.PATTERN.getLocalName(),
           propConstraint.get("pattern")));
     }
 
     if (propConstraint.get("minCount") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.MIN_COUNT.stringValue():SHACL.MIN_COUNT.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.MIN_COUNT.getLocalName():SHACL.MIN_COUNT.getLocalName(),
           propConstraint.get("minCount")));
     }
 
     if (propConstraint.get("maxCount") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.MAX_COUNT.stringValue():SHACL.MAX_COUNT.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.MAX_COUNT.getLocalName():SHACL.MAX_COUNT.getLocalName(),
           propConstraint.get("maxCount")));
     }
 
     if (propConstraint.get("minStrLen") != null) {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId() ? SHACL.MIN_LENGTH.stringValue()
+          shallIUseUriInsteadOfId() ?"sh:"+SHACL.MIN_LENGTH.getLocalName()
               : SHACL.MIN_LENGTH.getLocalName(),
           propConstraint.get("minStrLen")));
     }
 
     if(propConstraint.get("maxStrLen") != null){
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.MAX_LENGTH.stringValue():SHACL.MAX_LENGTH.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.MAX_LENGTH.getLocalName():SHACL.MAX_LENGTH.getLocalName(),
           propConstraint.get("maxStrLen")));
     }
 
     if (propConstraint.get("minInc") != null){
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-        shallIUseUriInsteadOfId() ? SHACL.MIN_INCLUSIVE.stringValue()
-            : SHACL.MAX_LENGTH.getLocalName(),
+        shallIUseUriInsteadOfId() ? "sh:"+ SHACL.MIN_INCLUSIVE.getLocalName()
+            : SHACL.MIN_INCLUSIVE.getLocalName(),
         propConstraint.get("minInc")));
     }
 
     if (propConstraint.get("maxInc") != null){
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.MAX_INCLUSIVE.stringValue():SHACL.MAX_LENGTH.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.MAX_INCLUSIVE.getLocalName():SHACL.MAX_INCLUSIVE.getLocalName(),
           propConstraint.get("maxInc")));
     }
 
     if (propConstraint.get("minExc") != null){
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.MIN_EXCLUSIVE.stringValue():SHACL.MAX_LENGTH.getLocalName(),
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.MIN_EXCLUSIVE.getLocalName():SHACL.MIN_EXCLUSIVE.getLocalName(),
           propConstraint.get("minExc")));
     }
 
     if (propConstraint.get("maxExc") != null){
     vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-        shallIUseUriInsteadOfId()?SHACL.MAX_EXCLUSIVE.stringValue():SHACL.MAX_LENGTH.getLocalName(),
+        shallIUseUriInsteadOfId()?"sh:"+SHACL.MAX_EXCLUSIVE.getLocalName():SHACL.MAX_EXCLUSIVE.getLocalName(),
         propConstraint.get("maxExc")));
     }
 
     if (propConstraint.get("ignoredProps") != null) {
+      List<String> ignoredUrisRaw = (List<String>) propConstraint.get("ignoredProps");
+      List<String> ignoredUrisTranslated = new ArrayList<>();
+      for (String x:ignoredUrisRaw) {
+        if(!x.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+          ignoredUrisTranslated.add(translateUri(x));
+        }
+      }
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-          shallIUseUriInsteadOfId()?SHACL.IGNORED_PROPERTIES.stringValue():SHACL.IGNORED_PROPERTIES.getLocalName(),
-          propConstraint.get("ignoredProps")));
+          shallIUseUriInsteadOfId()?"sh:"+SHACL.IGNORED_PROPERTIES.getLocalName():SHACL.IGNORED_PROPERTIES.getLocalName(),
+          ignoredUrisTranslated));
     }
 
   }
 
-  private String translateUri(String uri) {
+  private String translateUri(String uri)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
     if( gc == null || gc.getGraphMode()==GRAPHCONF_MODE_LPG){
       return uri.substring(URIUtil.getLocalNameIndex(uri));
     } else if(gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN ||
         gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_SHORTEN_STRICT||
         gc.getHandleVocabUris()==GRAPHCONF_VOC_URI_MAP){
-        Map<String, Object> params = new HashMap<>();
-        params.put("uri",uri);
-        return (String)tx.execute("return n10s.rdf.shortFormFromFullUri($uri) as shortenedUri", params).next().get("shortenedUri");
+        return getShortForm(uri);
     } else {
       //it's GRAPHCONF_VOC_URI_KEEP
       return uri;
     }
+  }
+
+  private String getShortForm(String str)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+    IRI iri = SimpleValueFactory.getInstance().createIRI(str);
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
+    if (!prefixDefs.hasNs(iri.getNamespace())) {
+      throw new ShapesUsingNamespaceWithUndefinedPrefix(
+          "Prefix Undefined: No prefix defined for namespace <" + str + ">. Use n10s.nsprefixes.add(...) procedure.");
+    }
+    return prefixDefs.getPrefixForNs(iri.getNamespace()) + PREFIX_SEPARATOR + iri.getLocalName();
   }
 
   private Map<String, Object> createNewSetOfParams(String id) {
@@ -842,9 +837,11 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
       conn.add(new InputStreamReader(is), "http://neo4j.com/base/", format);
       conn.commit();
       String sparqlQueryPropertyConstraints= "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
-          + "SELECT ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype "
-          + "?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc "
-          + "?minStrLen ?maxStrLen ?hasValue (GROUP_CONCAT (?in; separator=\"---\") AS ?ins) "
+          + "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity "
+          + "?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen "
+          + "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) "
+          + "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) "
+          + "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) "
           + "(isLiteral(?inFirst) as ?isliteralIns)\n"
           + "{ ?ns a sh:NodeShape ;\n"
           + "     sh:property ?ps .\n"
@@ -875,14 +872,15 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
           + "    optional { ?ps sh:minLength  ?minStrLen }\n"
           + "    optional { ?ps sh:maxLength  ?maxStrLen }\n"
           + "  \n"
-          + "    optional { ?ps sh:hasValue  ?hasValue } #hasValueUri and hasValueLiteral\n"
+          + "   optional { ?ps sh:hasValue  ?hasValueUri . filter(isIRI(?hasValueUri)) } \n"
+          + "    optional { ?ps sh:hasValue  ?hasValueLiteral . filter(isLiteral(?hasValueLiteral)) } \n"
           + "  \n"
           + "    optional { ?ps sh:in/rdf:rest*/rdf:first ?in } \n"
           + "    optional { ?ps sh:in/rdf:first ?inFirst }\n"
           + "    optional { ?ps sh:minLength  ?minStrLen }\n"
           + "  \n"
           + "} group by \n"
-          + "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?hasValue ?inFirst";
+          + "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?inFirst";
 
       String sparqlQueryNodeConstraints = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
           + "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
@@ -911,7 +909,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
         BindingSet next = queryResult.next();
         record.put("item", next.hasBinding("invPath")?next.getValue("invPath").stringValue():next.getValue("path").stringValue());
         record.put("inverse", next.hasBinding("invPath"));
-        record.put("appliesToCat", next.getValue("targetClass").stringValue());
+        record.put("appliesToCat", next.hasBinding("targetClass")?next.getValue("targetClass").stringValue():null);
         record.put("rangeType", next.hasBinding("rangeClass")?next.getValue("rangeClass").stringValue():null);
         record.put("rangeKind", next.hasBinding("rangeKind")?next.getValue("rangeKind").stringValue():null);
         record.put("dataType", next.hasBinding("datatype")?next.getValue("datatype").stringValue():null);
@@ -923,22 +921,22 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
         record.put("maxInc", next.hasBinding("maxInc")?((Literal)next.getValue("maxInc")).intValue():null);
         record.put("maxExc", next.hasBinding("maxExc")?((Literal)next.getValue("maxExc")).intValue():null);
 
-        if(next.hasBinding("hasValue")) {
-          Value val = next.getValue("hasValue");
-          if(val instanceof Literal) {
-            record.put("hasValueLiteral", val.stringValue());
-          } else {
-            record.put("hasValueUri", val.stringValue());
-          }
+        if(next.hasBinding("hasValueLiterals") && !next.getValue("hasValueLiterals").stringValue().equals("")) {
+          List<String> hasValueLiterals = Arrays.asList(next.getValue("hasValueLiterals").stringValue().split("---"));
+          record.put("hasValueLiteral", hasValueLiterals);
+        }
+        if(next.hasBinding("hasValueUris") && !next.getValue("hasValueUris").stringValue().equals("")) {
+          List<String> hasValueUris = Arrays.asList(next.getValue("hasValueUris").stringValue().split("---"));
+          record.put("hasValueUri", hasValueUris);
         }
 
         if(next.hasBinding("isliteralIns")) {
           List<String> inVals = Arrays.asList(next.getValue("ins").stringValue().split("---"));
           Literal val = (Literal)next.getValue("isliteralIns");
           if(val.booleanValue()) {
-            record.put("hasValueLiteral", inVals);
+            record.put("inLiterals", inVals);
           } else {
-            record.put("hasValueUri", inVals);
+            record.put("inUris", inVals);
           }
         }
 
@@ -1389,5 +1387,12 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
           + "RETURN category, propertyOrRelationshipPath, param, value\n"
           + "\n"
           + "ORDER BY category, propertyOrRelationshipPath, param";
+  }
+
+  protected class ShapesUsingNamespaceWithUndefinedPrefix extends Exception {
+
+    public ShapesUsingNamespaceWithUndefinedPrefix(String message) {
+      super(message);
+    }
   }
 }

@@ -13,6 +13,8 @@ import java.util.Map;
 import java.util.stream.Stream;
 import n10s.CommonProcedures;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.validation.SHACLValidator.ShapesUsingNamespaceWithUndefinedPrefix;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.procedure.Description;
@@ -24,7 +26,8 @@ public class ValidationProcedures extends CommonProcedures {
 
   @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
   @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
-  public Stream<ValidationResult> shaclValidateNodeList(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList) {
+  public Stream<ValidationResult> shaclValidateNodeList(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
     if(nodeList.isEmpty()){
       return Stream.empty();
     } else {
@@ -37,7 +40,8 @@ public class ValidationProcedures extends CommonProcedures {
 
   @Procedure(name="n10s.validation.shacl.validate", mode = Mode.READ)
   @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")
-  public Stream<ValidationResult> shaclValidateOnAllGraph() {
+  public Stream<ValidationResult> shaclValidateOnAllGraph()
+      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
     SHACLValidator validator = new SHACLValidator(tx, log);
     return validator.runValidations(null);
   }
@@ -98,7 +102,7 @@ public class ValidationProcedures extends CommonProcedures {
   public Stream<ConstraintComponent> loadInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams {
+      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     return doLoad(format, null, rdfFragment, props).stream();
   }
@@ -108,14 +112,14 @@ public class ValidationProcedures extends CommonProcedures {
       + "graph. Requires a unique constraint on :Resource(uri)")
   public Stream<ConstraintComponent> loadSHACLFromURl(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams {
+      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     return doLoad(format, url, null, props).stream();
 
   }
 
   private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment, Map<String, Object> props)
-      throws IOException, RDFImportBadParams {
+      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     InputStream is;
     if (rdfFragment != null) {

@@ -17,6 +17,6 @@ ex:PersonShape
 ex:PersonShape-gender
   sh:path ex:gender ;
   rdfs:label "gender" ;
-  sh:datatype xsd:string ;
+  sh:nodeKind sh:BlankNodeOrIRI;
   sh:hasValue ex:Male ;
 .
