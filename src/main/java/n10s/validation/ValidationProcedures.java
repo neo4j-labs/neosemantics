@@ -24,27 +24,27 @@ import org.neo4j.procedure.Procedure;
 
 public class ValidationProcedures extends CommonProcedures {
 
-  @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
-  @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
-  public Stream<ValidationResult> shaclValidateNodeList(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
-    if(nodeList.isEmpty()){
-      return Stream.empty();
-    } else {
-      SHACLValidator validator = new SHACLValidator(tx, log);
-      //TODO: question: would passing ids be any better??
-      return validator.runValidations(nodeList);
-    }
-  }
+//  @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
+//  @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
+//  public Stream<ValidationResult> shaclValidateNodeList(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
+//      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+//    if(nodeList.isEmpty()){
+//      return Stream.empty();
+//    } else {
+//      SHACLValidator validator = new SHACLValidator(tx, log);
+//      //TODO: question: would passing ids be any better??
+//      return validator.runValidations(nodeList);
+//    }
+//  }
 
 
-  @Procedure(name="n10s.validation.shacl.validate", mode = Mode.READ)
-  @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")
-  public Stream<ValidationResult> shaclValidateOnAllGraph()
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
-    SHACLValidator validator = new SHACLValidator(tx, log);
-    return validator.runValidations(null);
-  }
+//  @Procedure(name="n10s.validation.shacl.validate", mode = Mode.READ)
+//  @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")
+//  public Stream<ValidationResult> shaclValidateOnAllGraph()
+//      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+//    SHACLValidator validator = new SHACLValidator(tx, log);
+//    return validator.runValidations(null);
+//  }
 
   @Procedure(name= "n10s.validation.shacl.validateTransaction", mode = Mode.READ)
   @Description("n10s.validation.shacl.validateTransaction(createdNodes,createdRelationships,...) - runs SHACL validation in trigger context.")
@@ -65,7 +65,7 @@ public class ValidationProcedures extends CommonProcedures {
     params.put("assignedNodeProperties", assignedNodeProperties);
     params.put("removedNodeProperties", removedNodeProperties);
 
-    //removing a label cannot  make any constraint fail.  //TODO: HERE
+    //TODO: removing a label cannot  make any constraint fail, no?? -> check
     String newQuery = "UNWIND reduce(nodes = [], x IN keys($removedLabels) | nodes + $removedLabels[x]) AS rln "
                     + " MATCH (rln)<--(x) WITH collect(DISTINCT x) AS sn " //the direction makes it valid for both direct and  inverse
                     + " UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + [x IN $createdRelationships | endNode(x)] +" //end node is also for inverse rels
@@ -86,20 +86,9 @@ public class ValidationProcedures extends CommonProcedures {
     return Stream.empty();
   }
 
-
-  @Procedure(name="n10s.validation.shacl.listShapes", mode = Mode.READ)
-  @Description("n10s.validation.listShapes() - list SHACL shapes loaded  in the Graph")
-  public Stream<ConstraintComponent> listShapes() {
-
-    SHACLValidator validator = new SHACLValidator(tx, log);
-    return tx.execute(validator.getListConstraintsQuery()).stream().map(ConstraintComponent::new);
-  }
-
-
-  @Procedure(name = "n10s.validation.shacl.load.inline", mode = Mode.WRITE)
-  @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
-      + "graph. Requires a unique constraint on :Resource(uri)")
-  public Stream<ConstraintComponent> loadInlineSHACL(@Name("rdf") String rdfFragment,
+  @Procedure(name = "n10s.validation.shacl.import.inline", mode = Mode.WRITE)
+  @Description("Imports a SHACL shapes snippet passed as parameter and compiles a validator into neo4j")
+  public Stream<ConstraintComponent> importInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
@@ -107,10 +96,9 @@ public class ValidationProcedures extends CommonProcedures {
     return doLoad(format, null, rdfFragment, props).stream();
   }
 
-  @Procedure(name = "n10s.validation.shacl.load.fetch", mode = Mode.WRITE)
-  @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
-      + "graph. Requires a unique constraint on :Resource(uri)")
-  public Stream<ConstraintComponent> loadSHACLFromURl(@Name("url") String url, @Name("format") String format,
+  @Procedure(name = "n10s.validation.shacl.import.fetch", mode = Mode.WRITE)
+  @Description("Imports SHACL shapes from a URL and compiles a validator into neo4j")
+  public Stream<ConstraintComponent> importSHACLFromURl(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
@@ -154,18 +142,18 @@ public class ValidationProcedures extends CommonProcedures {
     return baos.toByteArray();
   }
 
-private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFoundException {
-  ObjectInputStream objectInputStream
-      = new ObjectInputStream(new ByteArrayInputStream(bytes));
-  return objectInputStream.readObject();
-  //objectInputStream.close();
-}
+  private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFoundException {
+    ObjectInputStream objectInputStream
+        = new ObjectInputStream(new ByteArrayInputStream(bytes));
+    return objectInputStream.readObject();
+    //objectInputStream.close();
+  }
 
 
-  @Procedure(name = "n10s.validation.shacl.vaSet", mode = Mode.READ)
-  @Description("Runs the SHACL validation previously loaded and compiled")
+  @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
+  @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
   public Stream<ValidationResult> validateSetFromCompiled(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
-      throws InvalidParamException, IOException, ClassNotFoundException {
+      throws IOException, ClassNotFoundException {
 
 
     Result loadValidatorFromDBResult = tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN vc");
@@ -182,11 +170,9 @@ private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFound
     }
   }
 
-
-  @Procedure(name = "n10s.validation.shacl.va", mode = Mode.READ)
-  @Description("Runs the SHACL validation previously loaded and compiled")
-  public Stream<ValidationResult> validateFromCompiled()
-      throws InvalidParamException, IOException, ClassNotFoundException {
+  @Procedure(name="n10s.validation.shacl.listShapes", mode = Mode.READ)
+  @Description("n10s.validation.listShapes() - list SHACL shapes loaded in the Graph")
+  public Stream<ConstraintComponent> listShapes() throws IOException, ClassNotFoundException {
 
     Result loadValidatorFromDBResult = tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN vc");
     if(!loadValidatorFromDBResult.hasNext()) {
@@ -194,16 +180,29 @@ private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFound
     }
     else {
       Node validationConfigNode = (Node)loadValidatorFromDBResult.next().get("vc");
-      byte[] byteArray = (byte[])validationConfigNode.getProperty("_params");
+      List<ConstraintComponent> ccList = (List<ConstraintComponent>)
+          deserialiseObject((byte[])validationConfigNode.getProperty("_constraintList"));
 
-      ObjectInputStream objectInputStream
-          = new ObjectInputStream(new ByteArrayInputStream(byteArray));
-      Map<String,Object> params = (Map<String,Object>) objectInputStream.readObject();
+      return ccList.stream();
 
-      objectInputStream.close();
+    }
+  }
 
+
+  @Procedure(name="n10s.validation.shacl.validate", mode = Mode.READ)
+  @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")
+  public Stream<ValidationResult> validateFromCompiled()
+      throws IOException, ClassNotFoundException {
+
+    Result loadValidatorFromDBResult = tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN vc");
+    if(!loadValidatorFromDBResult.hasNext()) {
+      throw new SHACLValidationException("No shapes compiled");
+    }
+    else {
+
+      Node validationConfigNode = (Node)loadValidatorFromDBResult.next().get("vc");
+      Map<String,Object> params = (Map<String,Object>) deserialiseObject((byte[])validationConfigNode.getProperty("_params"));
       String engineGlobal = new String((byte[])validationConfigNode.getProperty("_engineGlobal"));
-
       return tx.execute(engineGlobal, params).stream().map(ValidationResult::new);
 
     }

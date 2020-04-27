@@ -207,7 +207,7 @@ public class SHACLValidationProceduresTest {
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
       session.run("CALL n10s.graphconfig.init()");
       Result result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -221,7 +221,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");
       result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -240,7 +240,7 @@ public class SHACLValidationProceduresTest {
 
       //On pure LPG
       Result result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -282,7 +282,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.nsprefixes.add('ex','http://example/')");
 
       result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -324,7 +324,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
 
       result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -365,7 +365,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'KEEP' })");
 
       result = session.run(
-          "CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -454,6 +454,12 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
+      String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
+                                + "@prefix neo4j: <neo4j://voc#> .\n"
+                                + "@prefix sh: <http://www.w3.org/ns/shacl#> .";
+      
+      session.run("CALL n10s.nsprefixes.addFromText(' " + turtleNsDefinition + " ')");
+      
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
@@ -661,7 +667,7 @@ public class SHACLValidationProceduresTest {
 
       //load shapes
       Result results = session
-          .run("CALL n10s.validation.shacl.load.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
