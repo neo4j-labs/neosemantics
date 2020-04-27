@@ -32,7 +32,6 @@ public class ValidationProcedures extends CommonProcedures {
 //      return Stream.empty();
 //    } else {
 //      SHACLValidator validator = new SHACLValidator(tx, log);
-//      //TODO: question: would passing ids be any better??
 //      return validator.runValidations(nodeList);
 //    }
 //  }

@@ -56,7 +56,7 @@ public class SHACLValidationProceduresTest {
 
 
   @Test
-  public void testTestTestTest() throws Exception {
+  public void testCompiledValidatorIsPersisted() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
@@ -123,24 +123,17 @@ public class SHACLValidationProceduresTest {
           + "\tsh:ignoredProperties ( neo4j:tagline ) .";
 
       Result results = session
-          .run("CALL n10s.validation.shacl.load.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
+          .run("CALL n10s.validation.shacl.import.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
 
-      while(results.hasNext()){
-        Record next = results.next();
-        System.out.println(next);
-      }
+      assertTrue(results.hasNext());
 
-      results = session
-          .run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
+      results = session.run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
       assertTrue(results.hasNext());
       Node vc = results.next().get("vc").asNode();
       assertFalse(vc.get("_engineGlobal").isNull());
 
-      Result loadCompiled = session.run("call n10s.validation.shacl.va()");
+      Result loadCompiled = session.run("call n10s.validation.shacl.validate()");
       assertTrue(loadCompiled.hasNext());
-      while(loadCompiled.hasNext()){
-        System.out.println(loadCompiled.next());
-      }
     }
   }
 
@@ -290,7 +283,6 @@ public class SHACLValidationProceduresTest {
       matches = 0;
       while (result.hasNext()) {
         Record next = result.next();
-        System.out.println(next);
         if ((next.get("target").asString().equals("neo__Person") &&
             next.get("propertyOrRelationshipPath").asString().equals("neo__ACTED_IN") &&
             next.get("param").asString().equals("sh:class") &&
@@ -313,7 +305,6 @@ public class SHACLValidationProceduresTest {
                     List.of("neo__born", "neo__DIRECTED", "neo__FOLLOWS", "neo__REVIEWED",
                         "neo__PRODUCED", "neo__WROTE")))) {
           matches++;
-          System.out.println("yes");
         }
       }
       assertEquals(4, matches);
@@ -470,20 +461,20 @@ public class SHACLValidationProceduresTest {
 
       while(shapesResults.hasNext()) {
         Record next = shapesResults.next();
-        assertTrue(next.get("target").asString().equals("neo4j://voc#Movie") || next.get("target").asString().equals("neo4j://voc#Person"));
-        if (next.get("target").asString().equals("neo4j://voc#Movie") && next.get("propertyOrRelationshipPath").asString().equals("neo4j://voc#released")
-            && next.get("param").asString().equals("http://www.w3.org/ns/shacl#maxInclusive")) {
+        assertTrue(next.get("target").asString().equals("neo4j__Movie") || next.get("target").asString().equals("neo4j__Person"));
+        if (next.get("target").asString().equals("neo4j__Movie") && next.get("propertyOrRelationshipPath").asString().equals("neo4j__released")
+            && next.get("param").asString().equals("sh:maxInclusive")) {
           assertEquals(2019, next.get("value").asInt());
         }
-        if (next.get("target").equals("neo4j://voc#Person") && next.get("propertyOrRelationshipPath").isNull()
-            && next.get("param").equals("http://www.w3.org/ns/shacl#ignoredProperties")) {
+        if (next.get("target").equals("neo4j__Person") && next.get("propertyOrRelationshipPath").isNull()
+            && next.get("param").equals("sh:ignoredProperties")) {
           List<Object> expected = new ArrayList<>();
-          expected.add("neo4j://voc#WROTE");
-          expected.add("neo4j://voc#PRODUCED");
-          expected.add("neo4j://voc#REVIEWED");
-          expected.add("neo4j://voc#FOLLOWS");
-          expected.add("neo4j://voc#DIRECTED");
-          expected.add("neo4j://voc#born");
+          expected.add("neo4j__WROTE");
+          expected.add("neo4j__PRODUCED");
+          expected.add("neo4j__REVIEWED");
+          expected.add("neo4j__FOLLOWS");
+          expected.add("neo4j__DIRECTED");
+          expected.add("neo4j__born");
           assertEquals(expected, next.get("value").asList());
         }
       }
@@ -671,12 +662,6 @@ public class SHACLValidationProceduresTest {
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
-      //TOD: remove this
-      while(results.hasNext()){
-        Record next = results.next();
-        System.out.println(next);
-      }
-
       //load shapes for test completeness
       session
           .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
@@ -687,18 +672,12 @@ public class SHACLValidationProceduresTest {
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 
-//      results = session
-//          .run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
-//      assertTrue(results.hasNext());
-//      Node vc = results.next().get("vc").asNode();
-//      assertFalse(vc.get("_engineGlobal").isNull());
-
       // query them in the graph and flatten the list
       Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
 
 
       //print them out
-      System.out.println("expected: ");
+      //System.out.println("expected: ");
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
       while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
@@ -715,17 +694,17 @@ public class SHACLValidationProceduresTest {
         expectedResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
 
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
+//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+//            propertyName + ", severity: " + severity + ", constraint: " + constraint
+//            + ", offendingValue: " + offendingValue  + ", message: " + message);
       }
 
       // run validation
       Result actualValidationResults = session
-          .run("call n10s.validation.shacl.va() ");
+          .run("call n10s.validation.shacl.validate() ");
 
       // print out validation results
-      System.out.println("actual: ");
+      //System.out.println("actual: ");
       Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
@@ -740,13 +719,13 @@ public class SHACLValidationProceduresTest {
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
 
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
+//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+//            propertyName + ", severity: " + severity + ", constraint: " + constraint
+//            + ", offendingValue: " + offendingValue  + ", message: " + message);
 
       }
 
-      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
+      //System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -762,12 +741,12 @@ public class SHACLValidationProceduresTest {
       // run validation
       actualValidationResults = session
           .run("MATCH (n) with collect(n) as nodelist "
-              + "call n10s.validation.shacl.vaSet(nodelist)"
+              + "call n10s.validation.shacl.validateSet(nodelist)"
               + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
               + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
 
       // print out validation results
-      System.out.println("actual on set of nodes: ");
+      //System.out.println("actual on set of nodes: ");
       actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
@@ -782,167 +761,13 @@ public class SHACLValidationProceduresTest {
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
 
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
+//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
+//            propertyName + ", severity: " + severity + ", constraint: " + constraint
+//            + ", offendingValue: " + offendingValue  + ", message: " + message);
 
       }
 
-      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
-      assertEquals(expectedResults.size(), actualResults.size());
-
-      for (ValidationResult x : expectedResults) {
-        assertTrue(contains(actualResults, x));
-      }
-
-      for (ValidationResult x : actualResults) {
-        assertTrue(contains(expectedResults, x));
-      }
-
-      session.run("MATCH (n) DETACH DELETE n ").hasNext();
-
-    }
-
-
-  }
-
-  public void runIndividualTestOld(String testGroupName, String testName,
-      String cypherScript, String handleVocabUris ) throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-      Result getschemastatementsResults = session.run("call db.schemaStatements() yield name return name");
-      if(getschemastatementsResults.hasNext() &&
-          getschemastatementsResults.next().get("name").asString().equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
-        //constraint exists. do nothing.
-      } else {
-        session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
-        assertTrue(session.run("call db.schemaStatements").hasNext());
-      }
-
-      //db is empty
-      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-
-
-      session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY'" +
-          ", handleVocabUris: '"  + handleVocabUris + "' })");
-
-      //load data
-      session.run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
-          .toURI() + "\",\"Turtle\")");
-
-      //load shapes
-      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
-          .toURI() + "','Turtle')");
-
-      //Run any additional change to modify the imported RDF into LPG
-      if (cypherScript != null) {
-        session.run(cypherScript);
-      }
-
-      //load expected results
-      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
-          .toURI() + "','Turtle')");
-
-      // query them in the graph and flatten the list
-      Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
-
-      //print them out
-      System.out.println("expected: ");
-      Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
-      while (expectedValidationResults.hasNext()) {
-        Record validationResult = expectedValidationResults.next();
-        Object focusNode = ((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?validationResult.get("focus").asString():validationResult.get("focus").asLong());
-        String nodeType = validationResult.get("targetClass").asString();
-        String propertyName = validationResult.get("path").asString();
-        String severity = validationResult.get("sev").asString();
-        String constraint = validationResult.get("constraint").asString();
-        String message = validationResult.get("messge").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        String offendingValue = validationResult.get("offendingValue").asString();
-
-        //TODO:  add the value to the results query and complete  below
-        expectedResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
-
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
-      }
-
-      // run validation
-      Result actualValidationResults = session
-          .run("CALL n10s.validation.shacl.validate() ");
-
-      // print out validation results
-      System.out.println("actual: ");
-      Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
-      while (actualValidationResults.hasNext()) {
-        Record validationResult = actualValidationResults.next();
-        Object focusNode = validationResult.get("focusNode").asObject();
-        String nodeType = validationResult.get("nodeType").asString();
-        String propertyName = validationResult.get("resultPath").asString();
-        String severity = validationResult.get("severity").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessage").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
-
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
-
-      }
-
-      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
-      assertEquals(expectedResults.size(), actualResults.size());
-
-      for (ValidationResult x : expectedResults) {
-        assertTrue(contains(actualResults, x));
-      }
-
-      for (ValidationResult x : actualResults) {
-        assertTrue(contains(expectedResults, x));
-      }
-
-      //re-run it on set of nodes
-
-      // run validation
-      actualValidationResults = session
-          .run("MATCH (n) with collect(n) as nodelist "
-              + "CALL n10s.validation.shacl.validateSet(nodelist) "
-              + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
-              + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
-
-      // print out validation results
-      System.out.println("actual on set of nodes: ");
-      actualResults = new HashSet<ValidationResult>();
-      while (actualValidationResults.hasNext()) {
-        Record validationResult = actualValidationResults.next();
-        Object focusNode = validationResult.get("focusNode").asObject();
-        String nodeType = validationResult.get("nodeType").asString();
-        String propertyName = validationResult.get("resultPath").asString();
-        String severity = validationResult.get("severity").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessage").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
-
-        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-            propertyName + ", severity: " + severity + ", constraint: " + constraint
-            + ", offendingValue: " + offendingValue  + ", message: " + message);
-
-      }
-
-      System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
+      //System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -965,9 +790,9 @@ public class SHACLValidationProceduresTest {
     for (ValidationResult vr : set) {
       contained |= equivalentValidationResult(vr, res);
     }
-    if (!contained) {
-      System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set);
-    }
+//    if (!contained) {
+//      System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set);
+//    }
     return contained;
   }
 
