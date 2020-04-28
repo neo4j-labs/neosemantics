@@ -8,6 +8,9 @@ import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NamespacePrefixConflictException;
 import n10s.utils.NsPrefixMap;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -55,6 +58,26 @@ public class NsPrefixDefProcedures {
 
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));
+
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  @Description("removes all namespace prefixes")
+  public Stream<NamespacePrefixesResult> removeAll()
+      throws InvalidNamespacePrefixDefinitionInDB, NsPrefixOperationNotAllowed {
+    if (!graphIsEmpty()) {
+      throw new NsPrefixOperationNotAllowed("Namespace prefix definitions cannot be removed "
+          + "when the graph is non-empty.");
+    }
+
+    ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
+        .findNodes(Label.label("NamespacePrefixDefinition"));
+
+    if (namespacePrefixDefinitionNodes.hasNext()) {
+      namespacePrefixDefinitionNodes.next().delete();
+    }
+
+    return Stream.empty();
 
   }
 

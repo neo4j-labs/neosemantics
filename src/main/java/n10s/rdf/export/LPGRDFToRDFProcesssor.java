@@ -40,7 +40,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 
-public class LPGRDFToRDFProcesssor {
+public class LPGRDFToRDFProcesssor extends ExportProcessor{
 
   private final Pattern customDataTypedLiteralShortenedURIPattern = Pattern.compile(
       "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(\\w+)" + Pattern

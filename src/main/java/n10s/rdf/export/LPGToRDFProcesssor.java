@@ -37,7 +37,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 
-public class LPGToRDFProcesssor {
+public class LPGToRDFProcesssor extends ExportProcessor {
 
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;

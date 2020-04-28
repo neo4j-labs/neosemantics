@@ -7,6 +7,9 @@ import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
 import n10s.result.GraphConfigItemResult;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -83,6 +86,24 @@ public class GraphConfigProcedures {
     } catch (GraphConfigNotFound e) {
       return Stream.empty();
     }
+  }
+
+  @Procedure(mode = Mode.WRITE)
+  @Description("removes the current graph config")
+  public Stream<GraphConfigItemResult> drop() throws GraphConfigException {
+    if (!graphIsEmpty()) {
+      throw new GraphConfigException("The graph is non-empty. Config cannot be changed.");
+    }
+
+    ResourceIterator<Node> graphConfigs = tx
+        .findNodes(Label.label("_GraphConfig"));
+
+    if (graphConfigs.hasNext()) {
+      graphConfigs.next().delete();
+    }
+
+    return Stream.empty();
+
   }
 
   private boolean graphIsEmpty() {

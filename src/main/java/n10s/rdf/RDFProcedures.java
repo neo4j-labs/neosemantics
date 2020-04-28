@@ -18,9 +18,10 @@ import java.util.stream.Stream;
 import n10s.CommonProcedures;
 import n10s.RDFImportException;
 import n10s.StatementPreviewer;
-import n10s.StatementStreamer;
+import n10s.rdf.stream.StatementStreamer;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
+import n10s.rdf.stream.StatementStreamer.StreamerLimitReached;
 import n10s.result.GraphResult;
 import n10s.result.StreamedStatement;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
@@ -139,7 +140,9 @@ public class RDFProcedures extends CommonProcedures {
     try {
       parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementStreamer);
 
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+    }catch (StreamerLimitReached e) {
+      //streaming interrupted when limit reached. This is fine.
+    } catch (IOException | QueryExecutionException | RDFParseException e) {
       throw new RDFImportException(e.getMessage());
     }
     return statementStreamer.getStatements().stream();
