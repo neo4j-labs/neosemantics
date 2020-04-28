@@ -896,7 +896,7 @@ public class RDFEndpointTest {
       Map<String,Object> nsFromImportResults = (Map<String,Object>) importResult.get("namespaces");
       assertTrue(nsFromImportResults.size() == 7);
 
-      Map<String,Object> nspd = (Map<String,Object>) tx.execute("match (n:NamespacePrefixDefinition) return properties(n) as p").next()
+      Map<String,Object> nspd = (Map<String,Object>) tx.execute("match (n:_NsPrefDef) return properties(n) as p").next()
           .get("p");
       assertTrue(nspd.containsKey("fiboanno"));
       assertTrue(nspd.get("fiboanno").equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
@@ -917,7 +917,7 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       //now we force delete it from the node
-      tx.execute("match (n:NamespacePrefixDefinition) remove n.fiboanno ");
+      tx.execute("match (n:_NsPrefDef) remove n.fiboanno ");
       tx.commit();
     }
 
@@ -931,14 +931,14 @@ public class RDFEndpointTest {
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
         + "<rdf:RDF\n"
         + "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n"
-        + "<!-- RDF Serialization ERROR: Prefix fiboanno in use but not defined in the 'NamespacePrefixDefinition' node -->\n"
+        + "<!-- RDF Serialization ERROR: Prefix fiboanno in use but not defined in the '_NsPrefDef' node -->\n"
         + "\n"
         + "</rdf:RDF>";
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
 
     assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno in use "
-        + "but not defined in the 'NamespacePrefixDefinition' node"));
+        + "but not defined in the '_NsPrefDef' node"));
 
   }
 

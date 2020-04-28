@@ -116,7 +116,7 @@ public class NsPrefixDefProceduresTest {
       Result res2 = session
           .run("CALL n10s.nsprefixes.add('" + ns_prefix + "','http://myvoc#')");
       assertTrue(res2.hasNext());
-      Result res3 = session.run("MATCH (n:NamespacePrefixDefinition) RETURN n");
+      Result res3 = session.run("MATCH (n:_NsPrefDef) RETURN n");
       assertTrue(res3.hasNext());
       Map<String, Object> postAddition = res3.next().get("n").asNode().asMap();
       assertFalse(res3.hasNext());
@@ -263,7 +263,7 @@ public class NsPrefixDefProceduresTest {
       res = session.run("CALL n10s.nsprefixes.list()");
       assertFalse(res.hasNext());
 
-      res =  session.run("MATCH (nspd:NamespacePrefixDefinition) return nspd");
+      res =  session.run("MATCH (nspd:_NsPrefDef) return nspd");
       assertFalse(res.hasNext());
 
     }

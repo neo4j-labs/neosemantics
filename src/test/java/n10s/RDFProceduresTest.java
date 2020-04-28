@@ -716,7 +716,7 @@ public class RDFProceduresTest {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       session.run("WITH {`http://example.org/vocab/show/`:'pr' } as nslist\n" +
-          "MERGE (n:NamespacePrefixDefinition)\n" +
+          "MERGE (n:_NsPrefDef)\n" +
           "SET n+=nslist " +
           "RETURN n ");
 
@@ -1975,7 +1975,7 @@ public class RDFProceduresTest {
               .toURI() + "','JSON-LD')");
       assertEquals(28L, importResults
           .next().get("triplesLoaded").asLong());
-      Result nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      Result nsDefResult = session.run("MATCH (n:_NsPrefDef) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
@@ -1986,7 +1986,7 @@ public class RDFProceduresTest {
               .toURI() + "','RDF/XML')");
       assertEquals(171L, importResults
           .next().get("triplesLoaded").asLong());
-      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      nsDefResult = session.run("MATCH (n:_NsPrefDef) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPost = nsDefResult.next().get("defs").asMap();
@@ -1998,7 +1998,7 @@ public class RDFProceduresTest {
               .toURI() + "','RDF/XML')");
       assertEquals(1L, importResults
           .next().get("triplesLoaded").asLong());
-      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      nsDefResult = session.run("MATCH (n:_NsPrefDef) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPost2 = nsDefResult.next().get("defs").asMap();
@@ -2015,10 +2015,10 @@ public class RDFProceduresTest {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
-      session.run("CREATE (:NamespacePrefixDefinition {\n"
+      session.run("CREATE (:_NsPrefDef {\n"
           + "  `http://www.w3.org/2000/01/rdf-schema#`: 'myschema',\n"
           + "  `http://www.w3.org/1999/02/22-rdf-syntax-ns#`: 'myrdf'})");
-      Result nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      Result nsDefResult = session.run("MATCH (n:_NsPrefDef) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPre = nsDefResult.next().get("defs").asMap();
@@ -2027,7 +2027,7 @@ public class RDFProceduresTest {
           RDFProceduresTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML')");
       assertEquals(171L, importResults.next().get("triplesLoaded").asLong());
-      nsDefResult = session.run("MATCH (n:NamespacePrefixDefinition) "
+      nsDefResult = session.run("MATCH (n:_NsPrefDef) "
           + "RETURN properties(n) as defs");
       assertTrue(nsDefResult.hasNext());
       Map<String, Object> defsPost = nsDefResult.next().get("defs").asMap();

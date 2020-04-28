@@ -72,7 +72,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
       // Resource and NamespacePrefix should be named _Resource... to avoid conflicts
-      if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+      if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")) {
         IRI subject = vf.createIRI(BASE_VOCAB_NS, catName);
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf

@@ -71,7 +71,7 @@ public class NsPrefixDefProcedures {
     }
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
-        .findNodes(Label.label("NamespacePrefixDefinition"));
+        .findNodes(Label.label("_NsPrefDef"));
 
     if (namespacePrefixDefinitionNodes.hasNext()) {
       namespacePrefixDefinitionNodes.next().delete();
@@ -129,7 +129,7 @@ public class NsPrefixDefProcedures {
   public Stream<NamespacePrefixesResult> list() {
 
     return tx
-        .execute("MATCH (n:NamespacePrefixDefinition) \n" +
+        .execute("MATCH (n:_NsPrefDef) \n" +
             "UNWIND keys(n) AS prefix\n" +
             "RETURN prefix, n[prefix] AS namespace").stream().map(
             n -> new NamespacePrefixesResult((String) n.get("prefix"),

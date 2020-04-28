@@ -51,7 +51,7 @@ public class NsPrefixMap  {
     try {
 
       ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
-          .findNodes(Label.label("NamespacePrefixDefinition"));
+          .findNodes(Label.label("_NsPrefDef"));
 
       if (namespacePrefixDefinitionNodes.hasNext()) {
         Node nspd = namespacePrefixDefinitionNodes.next();
@@ -67,7 +67,7 @@ public class NsPrefixMap  {
 
     } catch (NamespacePrefixConflictException e) {
       throw new InvalidNamespacePrefixDefinitionInDB("The namespace prefix definition in the DB "
-          + "is invalid. Check the 'NamespacePrefixDefinition' node. Detail: " + e.getMessage());
+          + "is invalid. Detail: " + e.getMessage());
     }
   }
 
@@ -188,7 +188,7 @@ public class NsPrefixMap  {
       }
 
     } else if (!prefixToNs.isEmpty()) {
-      nsPrefDefNode = (Node) tx.execute("MERGE (n:NamespacePrefixDefinition) RETURN n ")
+      nsPrefDefNode = (Node) tx.execute("MERGE (n:_NsPrefDef) RETURN n ")
           .next().get("n");
       for (Entry<String, String> entry : prefixToNs.entrySet()) {
         nsPrefDefNode.setProperty(entry.getKey(), entry.getValue());
