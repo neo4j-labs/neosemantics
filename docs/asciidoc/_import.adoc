@@ -841,6 +841,14 @@ headerParams: { Accept: "application/turtle"}, payload: "query=DESCRIBE <http://
 We obviously need a query producing RDF so we can import it into Neo4j. I'm using a https://www.w3.org/TR/sparql11-query/#describe[SPARQL DESCRIBE] query in the following example but a https://www.w3.org/TR/sparql11-query/#construct[SPARQL CONSTRUCT] query could be used too. If you want to import all the details available in the British Library about 'The world of yesterday' by Stefan Zweig's, which by the way, if you haven't read, you should really take a break after this section and go read.  
 
 
+.The following deletes all Resource nodes and sets config to ignore vocab URIs
+[source,cypher]
+----
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({handleVocabUris: "IGNORE"});
+----
+
+. The following imports data from the British Library's SPARQL API
 [source,cypher]
 ----
 CALL n10s.rdf.import.fetch("https://bnb.data.bl.uk/sparql","Turtle", {
@@ -863,48 +871,31 @@ CALL n10s.rdf.import.fetch("https://bnb.data.bl.uk/sparql","Turtle", {
   payload: "query=" + apoc.text.urlencode("CONSTRUCT {<" + t.uri + "> ?p ?o } { <" + t.uri + "> ?p ?o } LIMIT 10 ")
 })
 yield triplesLoaded
-return t.uri, triplesLoaded
+return t.uri, triplesLoaded;
 ----
 
 
 Which returns: 
 
-[source,cypher]
-----
-╒══════════════════════════════════════════════════════════════════════╤═══════════════╕
-│"t.uri"                                                               │"triplesLoaded"│
-╞══════════════════════════════════════════════════════════════════════╪═══════════════╡
-│"http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                │5              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDACarrierType/1018"                │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                  │4              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury" │5              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/GBB721847"                         │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/place/Europe"                               │3              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://lexvo.org/id/iso639-3/eng"                                    │0              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"    │5              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAMediaType/1003"                  │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiogr│5              │
-│aphy"                                                                 │               │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/resource/018212405/publicationevent/Placeofp│4              │
-│ublicationnotidentifiedPushkinPress2009"                              │               │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://rdaregistry.info/termList/RDAContentType/1020"                │1              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                  │3              │
-├──────────────────────────────────────────────────────────────────────┼───────────────┤
-│"http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"   │5              │
-└──────────────────────────────────────────────────────────────────────┴───────────────┘
-----
+.Results
+[opts="header"]
+|===
+| t.uri                                                                                                          | triplesLoaded
+| "http://bnb.data.bl.uk/id/place/Europe"                                                                        | 3
+| "http://bnb.data.bl.uk/id/resource/GBB721847"                                                                  | 1
+| "http://rdaregistry.info/termList/RDAContentType/1020"                                                         | 1
+| "http://lexvo.org/id/iso639-3/eng"                                                                             | 0
+| "http://bnb.data.bl.uk/id/concept/ddc/e22/838.91209"                                                           | 3
+| "http://bnb.data.bl.uk/id/person/ZweigStefan1881-1942"                                                         | 5
+| "http://bnb.data.bl.uk/id/concept/place/lcsh/Europe"                                                           | 4
+| "http://bnb.data.bl.uk/id/concept/lcsh/WorldWar1914-1918Influence"                                             | 5
+| "http://rdaregistry.info/termList/RDAMediaType/1003"                                                           | 1
+| "http://rdaregistry.info/termList/RDACarrierType/1018"                                                         | 1
+| "http://bnb.data.bl.uk/id/concept/person/lcsh/ZweigStefan1881-1942"                                            | 5
+| "http://bnb.data.bl.uk/id/concept/lcsh/AuthorsAustrian20thcenturyBiography"                                    | 5
+| "http://bnb.data.bl.uk/id/concept/lcsh/EuropeCivilization20thcentury"                                          | 5
+| "http://bnb.data.bl.uk/id/resource/018212405/publicationevent/PlaceofpublicationnotidentifiedPushkinPress2009" | 4
+|===
 
 And produces this graph:
 
@@ -930,7 +921,7 @@ Before running your first import this method should return no results but after 
 .Results
 [opts="header"]
 |===
-|"prefix" |"namespace"
+|prefix |namespace
 |"skos"  |"http://www.w3.org/2004/02/skos/core#"
 |"sch"   |"http://schema.org/"
 |"sh"    |"http://www.w3.org/ns/shacl#"
@@ -953,7 +944,7 @@ CALL n10s.nsprefixes.add("neo", "http://neo4j.org/vocab/sw#");
 .Results
 [opts="header"]
 |===
-|"prefix" |"namespace"
+|prefix |namespace
 |"neo"  |"http://neo4j.org/vocab/sw#"
 |===
 
