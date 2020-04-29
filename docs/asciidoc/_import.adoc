@@ -1,9 +1,15 @@
 [[Import]]
 == Importing RDF data 
 
-The main method for importing RDF is `semantics.importRDF`. It imports and persists into Neo4j
-the triples returned by an url. This url can point to an RDF file (local or remote) or a service
-producing RDF dynamically. More on how to parameterise the access to web services in section <<#advancedfetching>>.
+[abstract]
+--
+This chapter describes procedures that import RDF data into Neo4j.
+--
+
+The main method for importing RDF is `n10s.rdf.import.fetch`.
+It imports and persists into Neo4j the triples returned by an URI.
+This URI can point to an RDF file (local or remote) or a service producing RDF dynamically.
+More on how to parameterise the access to web services in section <<#advancedfetching>>.
 
 All import procedures take the following three parameters:
 [#common_params]
@@ -16,40 +22,42 @@ All import procedures take the following three parameters:
 | params | Map  | Optional set of parameters (see description in table below)
 |===
 
-For all import methods to run, a uniqueness constraint needs to exist on the property `uri` of
-nodes of type `Resource`. If the constraint is not present, just run the following command on your
-DB, otherwise all RDF import procedures will remind you with an error messsage.
+[NOTE]
+====
+For all import methods to run, a uniqueness constraint needs to exist on the property `uri` of nodes with the label `Resource`.
+If the constraint is not present, run the following command on your DB, otherwise all RDF import procedures will throw an error message.
 
 [source,cypher]
 ----
-CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE
----- 
+CREATE CONSTRAINT n10s_unique_uri ON (r:Resource)
+ASSERT r.uri IS UNIQUE;
+----
+====
 
 === Before Importing RDF: Setting the configuration of the graph
 There is another pre-requisite before effectively carrying out any data import into Neo4j with
 neosemantics: we need to define the characteristics of the graph we will be creating. These are
-kept in the `GrapConfig`.
+kept in the `GraphConfig`.
 
-The method `semantics.graphconfig.init()` can help us with this setup. Calling the procedure
-without parameters will set all the default values:
+The method `n10s.graphconfig.init` can help us with this setup.
+Calling the procedure without parameters will set all the default values:
 
 [source,cypher]
 ----
-call semantics.graphconfig.init()
+CALL n10s.graphconfig.init();
 ----
 
 Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll
 see that in more detail in the following examples.
 
 [WARNING]
-If we try to run any RDF import procedure without having defined the uniqueness constraint or created
-a GraphConfig first, the import will fail showing an error message indicating what's missing.
+If we try to run any RDF import procedure without having defined the uniqueness constraint or created a GraphConfig first, the import will fail showing an error message indicating what's missing.
 
 === The actual RDF import
-Once a basic `GraphConfig` has been created, we can call the RDF import procedures. Let's look at the first
-of them: In its most basic form the `semantics.importRDF` method just takes the url string to
-access the RDF data and the serialisation format. Let's say you're trying to load the following
-RDF document into Neo4j.
+Once a basic `GraphConfig` has been created, we can call the RDF import procedures.
+Let's look at the first of them:
+In its most basic form the `n10s.rdf.import.fetch` method just takes the url string to access the RDF data and the serialisation format.
+Let's say you're trying to load the following RDF document into Neo4j.
 
 [source,RDF]
 ----
@@ -80,11 +88,14 @@ neo4ind:neo4j355 neo4voc:name "neo4j" ;
 
 ----
 
-You can save it to your local drive or access them directly https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl[here]. All you'll need to provide to NSMNTX is the location (`file://` or `http://`) and the serialisation used, `Turtle` in this case.
+You can save it to your local drive or access them directly https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl[here].
+All you'll need to provide to n10s is the location (`file://` or `http://`) and the serialisation used, `Turtle` in this case.
 
+
+.The following imports the `nsmntx.ttl` file hosted on GitHub
 [source,cypher]
 ----
-CALL semantics.importRDF("https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl","Turtle")
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle");
 ----
 
 ////
@@ -95,17 +106,24 @@ file:///d:/datasets/myfile.ttl
 ----
 ////
 
-NSMNTX will import the RDF data and persist it into your Neo4j graph as the following structure
+n10s will import the RDF data and persist it into your Neo4j graph as the following structure
 
 image::nsmntx-annotated.png[RDF data imported in Neo4j,scaledwidth="100%"]
 
 
-The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes. Every node represents a resource and has a property with its uri. Similarly, rdf:type statements are transformed into node labels. That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post]. 
-You will also notice a terminology/vocabulary transformation applied by default. The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher. 
+The first thing we notice is that dataType properties in your RDF have been converted into node properties and object properties are now relationships connecting nodes.
+Every node represents a resource and has a property with its uri.
+Similarly, rdf:type statements are transformed into node labels.
+That's pretty much it but if you are interested, there is a complete description of the way triple data is transformed into Property Graph data for storage in Neo4j in https://jesusbarrasa.wordpress.com/2016/06/07/importing-rdf-data-into-neo4j/[this post].
+You will also notice a terminology/vocabulary transformation applied by default.
+The URIs identifying the elments in the RDF data (resources, properties, etc) have their namespace part shortened to make them more human readable and easier to query with Cypher.
 
-In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0\_\_name` (notice the double underscore separator used between the prefix and the local name in the URI). Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf\_\_type` and so on...
+In our example, `http://neo4j.org/vocab/sw#name` has been shortened to `ns0\_\_name` (notice the double underscore separator used between the prefix and the local name in the URI).
+Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened to `rdf\_\_type` and so on...
 
-Prefixes for custom namespaces are assigned dynamically in sequence (`ns0`, `ns1`, etc) as they appear in the imported RDF. This is the default behavior but we'll see later on that it is possible to control that, and use custom prefixes. More details in section <<custom_ns>>.
+Prefixes for custom namespaces are assigned dynamically in sequence (`ns0`, `ns1`, etc) as they appear in the imported RDF.
+This is the default behavior but we'll see later on that it is possible to control that, and use custom prefixes.
+More details in section <<custom_ns>>.
 
 Keeping namespaces can be important if you care about being able to regenerate the imported RDF as we will see in section <<Export>>.
 However, if you don't care about that, you can tell Neo4j to ignore the namespaces by setting
@@ -113,16 +131,16 @@ the `handleVocabUris` parameter to `'IGNORE'` in the `GraphConfig`.
 
 [source,cypher]
 ----
-call semantics.graphconfig.set({ handleVocabUris: "IGNORE" })
+CALL n10s.graphconfig.set({ handleVocabUris: "IGNORE" });
 ----
 
-After applying this setting, namespaces will be discarded on all subsequent imports. So if you run
-the import, only the local names of URIs will be kept. The `importRDF` method call is identical: here's
-what that would look like:
+After applying this setting, namespaces will be discarded on all subsequent imports.
+So if you run the import, only the local names of URIs will be kept.
+The `importRDF` method call is identical: here's what that would look like:
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle")
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle");
 ----
 
 In this case, the imported graph will look something like this, in which the names for labels,
@@ -177,16 +195,18 @@ There is a third option: You can keep the complete uris in property names, label
 in the graph by setting the `handleVocabUris` property to `"KEEP"`. The result will not be pretty
 and your cypher queries on the imported model will look pretty horrible, but hey, the option is there.
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-call semantics.graphconfig.set({ handleVocabUris: "KEEP" })
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({ handleVocabUris: "KEEP" })
 ----
 
 And we can re-import with the usual command:
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://.../nsmntx.ttl","Turtle"})
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle"})
 ----
 
 image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces,scaledwidth="100%"]
@@ -197,18 +217,24 @@ relationships an property names.
 
 === Filtering triples by predicate
 
-Something you may need to do when importing RDF data into Neo4j is exclude certain triples so that
-they are not persisted in your Neo4j graph. This is useful when only a portion of the RDF data
-is relevant to your project. The exclusion is done by predicate type __"I don't need to load the
-version property, or the release date"__, all you'll need to do is provide the list of URIs of the
-predicates you want excluded in parameter `predicateExclList`. Note that the list needs to contain
-full URIs.
+Something you may need to do when importing RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph.
+This is useful when only a portion of the RDF data is relevant to your project.
+The exclusion is done by predicate type __"I don't need to load the version property, or the release date"__, all you'll need to do is provide the list of URIs of the predicates you want excluded in parameter `predicateExclList`.
+Note that the list needs to contain full URIs.
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-CALL semantics.graphconfig.set({ handleVocabUris: "IGNORE" });
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({ handleVocabUris: "IGNORE" });
+----
 
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/nsmntx.ttl","Turtle", { predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate"] })
+.The following imports data from the `nsmntx.ttl` Turtle file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl", "Turtle", {
+  predicateExclusionList : [ "http://neo4j.org/vocab/sw#version", "http://neo4j.org/vocab/sw#releaseDate" ]
+});
 ----
 
 === Handling multivalued properties
@@ -225,15 +251,21 @@ multiple alternative names for an individual like in the next RDF fragment:
 <neo4j://individual/JB> <http://neo4j.org/voc#altName> "Dr J" .
 ----
 
-NSMNTX default behavior is to keep only one value for literal properties and it will be the last one
-read in the triples parsed. So if you run a straight import on that data like this
+n10s default behavior is to keep only one value for literal properties and it will be the last one read in the triples parsed.
+So if you run a straight import on that data like this:
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-//sets defailt config, including handleVocabUris: "SHORTEN"
-CALL semantics.graphconfig.init();
+include::includes/delete_nodes.cypher[]
+//sets default config, including handleVocabUris: "SHORTEN"
+CALL n10s.graphconfig.init();
+----
 
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")
+.The following imports data from the `multivalued1.nt` N-Triples file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/multivalued1.nt","N-Triples");
 ----
 
 Only the last value for the multivalued `altName` property will be kept. 
@@ -241,36 +273,39 @@ Only the last value for the multivalued `altName` property will be kept.
 [source,cypher]
 ----
 MATCH (n:ns0__Person)
-RETURN n.ns0__name as name, n.ns0__altName as altName
+RETURN n.ns0__name as name, n.ns0__altName as altName;
 ----
 
-returns
-
-[source,cypher]
-----
-╒════════════╤═════════╕
-│"name"      │"altName"│
-╞════════════╪═════════╡
-│"J. Barrasa"│"Dr J"   │
-└────────────┴─────────┘
-----
+.Results
+[opts="header"]
+|===
+| name         | altName
+| "J. Barrasa" | "Dr J"
+|===
 
 This makes things simple and will be perfect if your dataset does not have multivalued properties.
 It can also be fine if keeping only one value is acceptable, either because the property is not critical or because one value is enough.
-There will be other cases though, where we do need to keep all the values, and here's where the config parameter `handleMultival` will help. Here's how:
+There will be other cases though, where we do need to keep all the values, and here's where the config parameter `handleMultival` will help.
+Here's how:
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-CALL semantics.graphconfig.set({ handleMultival: 'ARRAY' });
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({ handleMultival: 'ARRAY' });
+----
 
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued1.nt","N-Triples")
+.The following imports data from the `multivalued1.nt` N-Triples file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/multivalued1.nt","N-Triples");
 ----
 
 Now all properties are stored as arrays in Neo4j. Even the ones that have one value only!
 But we can do better than that, let's have a look at another example.
 
-The following Turtle RDF fragment with the description of a news article. The article has a number
-of keykeywords associated with it.
+The following Turtle RDF fragment with the description of a news article.
+The article has a number of keywords associated with it.
 
 [source,RDF]
 ----
@@ -295,30 +330,37 @@ Here's the config setting and import commands that we need.
 Note that I'm combining the multivalued property config setting with the `handleVocabUris` set
 to false (the interested reader can try to drop this config and get URIS shortened with prefixes instead):
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-CALL semantics.graphconfig.set({ handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({
+  handleVocabUris: "IGNORE",
+  handleMultival: 'ARRAY',
+  multivalPropList : ['http://nyt.com/voc/keyword']
+});
+----
 
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multivalued2.ttl","Turtle")
+.The following imports data from the `multivalued2.ttl` Turtle file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/multivalued2.ttl","Turtle");
 ----
 
 And here's what the result of the import would look like:
 
 image::multivalued1.png[Multivalued properties loaded as arrays in Neo4j,scaledwidth="100%"]
 
-When we analyse the result in the Neo4j browser we realise that there's only one node for the nine
-triples imported! Yes, keep in mind that all triples in our RDF fragment are datatype properties,
-or in other words, properties with literal values, which are stored in Neo4j as node properties.
+When we analyse the result in the Neo4j browser we realise that there's only one node for the nine triples imported!
+Yes, keep in mind that all triples in our RDF fragment are datatype properties, or in other words, properties with literal values, which are stored in Neo4j as node properties.
 All the statements are there, *no data is lost*, it's just stored as the internal structure of the node.
 We can see all properties on the table view on the left hand side of the image.
 
-Note that this time only the properties enumerated in the `multivalPropList` config parameter are
-stored as arrays, the rest are kept as atomic values.
+Note that this time only the properties enumerated in the `multivalPropList` config parameter are stored as arrays, the rest are kept as atomic values.
 
 [WARNING]
 Remember that if we set `handleMultival` to `'ARRAY'` in our `GraphConfig` but we don't provide a
-list of property URIs as `multivalPropList` ALL literal properties will be stored as arrays in every
-subsequent import.
+list of property URIs as `multivalPropList` ALL literal properties will be stored as arrays in every subsequent import.
 
 Here's an example of how to query the multiple values of the keyword property:
 _Give me articles tagged with the "Global Warming" keyword_.
@@ -327,17 +369,16 @@ _Give me articles tagged with the "Global Warming" keyword_.
 ----
 MATCH (a:article) 
 WHERE "Global Warming" IN a.keyword 
-RETURN a.title as title
+RETURN a.title as title;
 ----
 
-[source,cypher]
-----
-╒══════════════════════════════════════════════╕
-│"title"                                       │
-╞══════════════════════════════════════════════╡
-│"Bengal Tigers May Not Survive Climate Change"│
-└──────────────────────────────────────────────┘
-----
+
+.Results
+[opts="header"]
+|===
+| title
+| "Bengal Tigers May Not Survive Climate Change"
+|===
 
 === Handling language tags
 
@@ -363,11 +404,21 @@ By default, NSMNTX will strip out the language tags but if you want to keep them
 set the `keepLangTag` to `true`. If we uset it in combination with the setting required to keep
 all values of a property stored in an array, the import invocation would look something like this:
 
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
-CALL semantics.graphconfig.init({keepLangTag: true, handleMultival: 'ARRAY', multivalPropList : ['http://example.org/vocab/show/localName']});
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({
+  keepLangTag: true,
+  handleMultival: 'ARRAY',
+  multivalPropList : ['http://example.org/vocab/show/localName']
+});
+----
 
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle")
+.The following imports data from the `multilang.ttl` Turtle file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/multilang.ttl","Turtle");
 ----
 
 When you import literal values keeping the language annotation, you'll see that string values have a suffix like `@fr` for French language, `@zh-cmn-Hant` for Mandarin Chinese traditional, and so on.
@@ -376,62 +427,78 @@ The following Cypher fragment returns the french version of a property and when 
 
 [source,cypher]
 ----
-MATCH (n:Resource) RETURN coalesce(semantics.getLangValue("fr",n.ns0__localName), semantics.getLangValue("en",n.ns0__localName))
+MATCH (n:Resource)
+RETURN coalesce(n10s.rdf.getLangValue("fr",n.ns0__localName), n10s.rdf.getLangValue("en",n.ns0__localName));
 ----
 
 There are two additional functions for handling language-tagged property values: `semantics.hasLangTag` and `semantics.getLangTag`.
 
-* `semantics.getLangTag` returns the language tag (when present) from a property value.
-* `semantics.hasLangTag` returns true if a property value is tagged with a given language tag or false if not.
+* `n10s.rdf.getLangTag` returns the language tag (when present) from a property value.
+* `n10s.rdf.hasLangTag` returns true if a property value is tagged with a given language tag or false if not.
 
 Here is an example of both functions:
 
 First we create a node with a multivalued  property where each value is language-tagged:
 [source,cypher]
 ----
-CREATE (n:Thing { prop: ["That Seventies Show@en-US", "Cette Série des Années Soixante-dix@fr-custom-tag", "你好@zh-Hans-CN"] });
+CREATE (n:Thing {
+  prop: [
+    "That Seventies Show@en-US",
+    "Cette Série des Années Soixante-dix@fr-custom-tag",
+    "你好@zh-Hans-CN"
+  ]
+});
 ----
 
 We can use `semantics.getLanguageTag` to get the language tag for any specific value
 [source,cypher]
 ----
-MATCH (n:Thing) RETURN semantics.getLangTag(n.prop[0]) AS tag;
-
-╒═══════╕
-│"tag"  │
-╞═══════╡
-│"en-US"│
-└───────┘
+MATCH (n:Thing)
+RETURN n10s.rdf.getLangTag(n.prop[0]) AS tag;
 ----
+
+.Results
+[opts="header"]
+|===
+| tag
+| "en-US"
+|===
 
 or for all of them:
 
 [source,cypher]
 ----
-MATCH (n:Thing) RETURN [x in n.prop | semantics.getLangTag(x)] AS tags;
-
-╒══════════════════════════════════════╕
-│"tags"                                │
-╞══════════════════════════════════════╡
-│["en-US","fr-custom-tag","zh-Hans-CN"]│
-└──────────────────────────────────────┘
+MATCH (n:Thing)
+RETURN [x in n.prop | n10s.rdf.getLangTag(x)] AS tags;
 ----
+
+.Results
+[opts="header"]
+|===
+| tags
+| ["en-US", "fr-custom-tag", "zh-Hans-CN"]
+
+|===
 
 And similarly, we can use `semantics.hasLangTag` to check whether the first value matches a given language tag:
 [source,cypher]
 ----
-match (n:Thing) return semantics.getValue(n.prop[0]) as val, semantics.hasLangTag("es",n.prop[0]) as isSpanish;
-
-╒═════════════════════╤═══════════╕
-│"val"                │"isSpanish"│
-╞═════════════════════╪═══════════╡
-│"That Seventies Show"│false      │
-└─────────────────────┴───────────┘
+MATCH (n:Thing)
+RETURN n10s.rdf.getValue(n.prop[0]) as val,
+       n10s.rdf.hasLangTag("es",n.prop[0]) as isSpanish;
 ----
+
+.Results
+[opts="header"]
+|===
+| val                   | isSpanish
+| "That Seventies Show" | FALSE
+|===
 
 
 
 === Filtering triples by language tag
+
 Language tags can also be used as a filter criteria. If we are only interested in a particular
 language when loading a multilingual dataset, we can set a filter so only literal values with a
 given language tag (or untagged ones) are imported into Neo4j. The configuration parameter that
@@ -444,7 +511,9 @@ the import method param section. Here's what it would look like:
 
 [source,cypher]
 ----
-CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multilang.ttl","Turtle", { languageFilter: 'es'})
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/multilang.ttl","Turtle", {
+  languageFilter: 'es'
+});
 ----
 
 === Handling custom data types
@@ -452,6 +521,7 @@ CALL semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/multil
 In RDF custom data types are annotated to literals after the seperator `^^` in form of an IRI.
 For example, you can have a custom data type for a currency like in the following Turtle RDF fragment:
 
+.customDataTypes.ttl
 [source,RDF]
 ----
 @prefix ex: <http://example.com/> .
@@ -468,7 +538,7 @@ So if you run a straight import on that data like this:
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")
+CALL n10s.rdf.import.fetch("file://tmp/customDataTypes.ttl","Turtle")
 ----
 
 Only the value for the properties will be kept.
@@ -476,39 +546,37 @@ Only the value for the properties will be kept.
 [source,cypher]
 ----
 MATCH (n:ns0__Car)
-RETURN n.ns0__price, n.ns0__power, n.ns0__color
-----
-[source,cypher]
-----
-╒══════════════╤══════════════╤══════════════╕
-│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
-╞══════════════╪══════════════╪══════════════╡
-│"10000"       │"300"         │"red"         │
-└──────────────┴──────────────┴──────────────┘
+RETURN n.ns0__price, n.ns0__power, n.ns0__color;
 ----
 
-This makes things simple and will be perfect if your dataset does not have properties with custom data
-types.
-But if you need to keep the custom data types, you'll want to set the config parameter
-`keepCustomDataTypes` in your `GraphConfig`. Here's how:
+.Results
+[opts="header"]
+|===
+| n.ns0__price | n.ns0__power | n.ns0__color
+| "10000"      | "300"        | "red"
+|===
+
+This makes things simple and will be perfect if your dataset does not have properties with custom data types.
+But if you need to keep the custom data types, you'll want to set the config parameter `keepCustomDataTypes` in your `GraphConfig`.
+Here's how:
 
 [source,cypher]
 ----
-CALL semantics.graphconfig.init({keepCustomDataTypes: true});
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({keepCustomDataTypes: true});
 
-CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")
+CALL n10s.rdf.import.fetch("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle");
 ----
 
 Now all properties that have a custom data type are saved as strings with their respective custom data type IRIs in Neo4j.
 
-[source,cypher]
-----
-╒═════════════════╤══════════════╤═════════════════╕
-│"n.ns0__price"   │"n.ns0__power"│"n.ns0__color"   │
-╞═════════════════╪══════════════╪═════════════════╡
-│"10000^^ns0__EUR"│"300^^ns0__HP"│"red^^ns0__Color"│
-└─────────────────┴──────────────┴─────────────────┘
-----
+.Results
+[opts="header"]
+|===
+| n.ns0__price      | n.ns0__power   | n.ns0__color
+| "10000^^ns0__EUR" | "300^^ns0__HP" | "red^^ns0__Color"
+|===
+
 
 But we can do better than that, let's have a look at another example. We will use the same Turtle file from above for this example.
 
@@ -521,21 +589,24 @@ Here is the import command that we need:
 
 [source,cypher]
 ----
-CALL semantics.graphconfig.init({keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/power']});
+include::includes/delete_nodes.cypher[]
+CALL n10s.graphconfig.set({
+  keepCustomDataTypes: true,
+  customDataTypePropList: ['http://example.com/power']
+});
 
-CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle")
+CALL n10s.rdf.import.fetch("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle");
 ----
 
 And here's what the result of the cypher query above would look like after this import:
 
-[source,cypher]
-----
-╒══════════════╤══════════════╤══════════════╕
-│"n.ns0__price"│"n.ns0__power"│"n.ns0__color"│
-╞══════════════╪══════════════╪══════════════╡
-│"10000"       │"300^^ns0__HP"│"red"         │
-└──────────────┴──────────────┴──────────────┘
-----
+.Results
+[opts="header"]
+|===
+| n.ns0__price      | n.ns0__power   | n.ns0__color
+| "10000"      | "300^^ns0__HP" | "red"        |
+|===
+
 
 Note that this time only the custom data types of the properties listed in the `customDataTypedPropList` are kept, the rest will only have the literal value.
 
@@ -550,7 +621,7 @@ The following Cypher fragment returns the data type of `power`.
 [source,cypher]
 ----
 MATCH (n:ns0__Car)
-RETURN semantics.getDataType(n.ns0__power)
+RETURN n10s.rdf.getDataType(n.ns0__power);
 ----
 
 The function `getValue` can be used to get the raw value of a particular property without custom data types or language tags.
@@ -560,7 +631,7 @@ The following Cypher fragment returns the raw value of `power`.
 [source,cypher]
 ----
 MATCH (n:ns0__Car)
-RETURN semantics.getValue(n.ns0__power)
+RETURN n10s.rdf.getValue(n.ns0__power);
 ----
 
 The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
@@ -574,7 +645,7 @@ Here's an example: Let's say we want to load an ontology (notice that it's actua
 
 [source,cypher]
 ----
-call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/minionto.ttl","Turtle")
+call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/minionto.ttl","Turtle");
 ----
 
 We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
@@ -585,7 +656,7 @@ Now we want to load the instance data and we want it to link to the ontology gra
 
 [source,cypher]
 ----
-call semantics.importRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false })
+call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false });
 ----
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
@@ -597,11 +668,16 @@ More on the usefulness of representing the ontology in the neo4j graph in sectio
 [[ImportQuadRDF]]
 === Handling named graphs (RDF Quads)
 
-You can also import RDF datasets using `semantics.importQuadRDF`. The only difference in comparison to `semantics.importRDF` is that you can import not just triples but also quads. RDF statements can have an extra IRI containing the context of the statement. It enables the partitioning of the data into multiple so called named graphs. When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri". This property contains the context IRI from the statement.
+You can also import RDF datasets using `n10s.quadrdf.import.fetch`.
+The only difference in comparison to `n10s.rdf.import.fetch` is that you can import not just triples but also quads.
+RDF statements can have an extra IRI containing the context of the statement.
+It enables the partitioning of the data into multiple so called named graphs.
+When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri".
+This property contains the context IRI from the statement.
 
 Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
 
-Similar to `semantics.importRDF` method `semantics.importQuadRDF` also takes the url string to access the RDF dataset and the serialisation format.
+Similar to the `n10s.rdf.import.fetch` procedure, `n10s.quadrdf.import.fetch` also takes the url string to access the RDF dataset and the serialisation format.
 Let's say you're trying to load the following set of quads into Neo4j.
 
 [source,RDF]
@@ -644,11 +720,15 @@ CREATE INDEX ON :Resource(uri)
 
 This procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
 
-You can use the following cypher snippet to import the set of quads from above:
+You can use the following Cypher snippet to import the set of quads from above:
 
 [source,cypher]
 ----
-CALL semantics.importQuadRDF( "file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+CALL n10s.quadrdf.import.fetch( "https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {
+  typesToLabels: true,
+  keepCustomDataTypes: true,
+  handleMultival: 'ARRAY'
+});
 ----
 
 ==== Merging nodes virtually
@@ -663,25 +743,17 @@ RETURN monica
 
 As a result you will get three distinct nodes, which look like this in text mode:
 
-[source, cypher]
-----
-╒══════════════════════════════════════════════════════════════════════╕
-│"monica"                                                              │
-╞══════════════════════════════════════════════════════════════════════╡
-│{"http://www.example.org/vocabulary#name":["Monica Murphy"],"uri":"htt│
-│p://www.example.org/exampleDocument#Monica","graphUri":"http://www.exa│
-│mple.org/exampleDocument#G1"}                                         │
-├──────────────────────────────────────────────────────────────────────┤
-│{"http://www.example.org/vocabulary#city":["New York"],"http://www.exa│
-│mple.org/vocabulary#country":["USA"],"uri":"http://www.example.org/exa│
-│mpleDocument#Monica","graphUri":"http://www.example.org/exampleDocumen│
-│t#G2"}                                                                │
-├──────────────────────────────────────────────────────────────────────┤
-│{"uri":"http://www.example.org/exampleDocument#Monica"}               │
-└──────────────────────────────────────────────────────────────────────┘
-----
+.Results
+[opts="header"]
+|===
+| monica
+| {"http://www.example.org/vocabulary#name":["Monica Murphy"],"uri":"http://www.example.org/exampleDocument#Monica","graphUri":"http://www.example.org/exampleDocument#G1"}
+| {"http://www.example.org/vocabulary#city":["New York"],"http://www.example.org/vocabulary#country":["USA"],"uri":"http://www.example.org/exampleDocument#Monica","graphUri":"http://www.example.org/exampleDocument#G2"}
+| {"uri":"http://www.example.org/exampleDocument#Monica"}
+|===
 
-To avoid this, you can use link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse]. `apoc.nodes.collapse` merges the set of nodes into a virtual node.
+To avoid this, you can use link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse].
+`apoc.nodes.collapse` merges the set of nodes into a virtual node.
 
 Here is the cypher snippet showing how to do that with the `exDoc:Monica` example:
 
@@ -689,7 +761,8 @@ Here is the cypher snippet showing how to do that with the `exDoc:Monica` exampl
 ----
 MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
 WITH collect(monica) AS nodes
-CALL apoc.nodes.collapse(nodes,{properties:'combine'}) YIELD from, rel, to
+CALL apoc.nodes.collapse(nodes,{properties:'combine'})
+YIELD from, rel, to
 RETURN DISTINCT from AS monica
 ----
 
