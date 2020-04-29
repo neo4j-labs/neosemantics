@@ -1,13 +1,19 @@
 [[Mapping]]
 == Mapping graph models 
 Mappings can be used for applying transformations to the RDF as it's imported into Neo4j and they can also be used to transform the vocabulary used in a Neo4j graph as it's exported through the different RDF export methods described in <<Export>>.
-Mappings are based on terminology but they will not modify the structure of the graph. In other words, as we will see in this section, you will be able to use them to rename a property, a relationship or a label but not to change a property into a relationship. 
+Mappings are based on terminology but they will not modify the structure of the graph.
+In other words, as we will see in this section, you will be able to use them to rename a property, a relationship or a label but not to change a property into a relationship.
 
 === Public Vocabularies/Ontologies
 
-A public graph model is also called an Ontology (or a schema, or a vocabulary). We will not go into the details of the subtle differences between each flavour in this manual. All we need to know is that a graph model normally defines a set of terms (categories, properties, relationships...) and how they relate to each other. Some common examples are https://schema.org/[schema.org], https://edmcouncil.org/page/aboutfiboreview[FIBO] or the http://geneontology.org/[Gene Ontology]. Public vocabularies like the ones mentioned, typically uniquely identify the terms in it by using namespaces, so roughly speaking, a namespace identifies a vocabulary (or at least a portion of it). 
+A public graph model is also called an Ontology (or a schema, or a vocabulary).
+We will not go into the details of the subtle differences between each flavour in this manual.
+All we need to know is that a graph model normally defines a set of terms (categories, properties, relationships...) and how they relate to each other.
+Some common examples are https://schema.org/[schema.org], https://edmcouncil.org/page/aboutfiboreview[FIBO] or the http://geneontology.org/[Gene Ontology].
+Public vocabularies like the ones mentioned, typically uniquely identify the terms in it by using namespaces, so roughly speaking, a namespace identifies a vocabulary (or at least a portion of it).
 
-To create a mapping with NSMNTX we need to do two things: first, create a reference to a public schema, and then use that reference to create individual mappings from elements in the Neo4j schema to elements in the public schema. Here's how to do it:
+To create a mapping with n10s we need to do two things: first, create a reference to a public schema, and then use that reference to create individual mappings from elements in the Neo4j schema to elements in the public schema.
+Here's how to do it:
 
 === Defining mappings
 
@@ -16,53 +22,46 @@ First we'll create a reference to the schema.org vocabulary passing the base URI
 
 [source,Cypher]
 ----
-call semantics.mapping.addSchema("http://schema.org/","sch")
+CALL n10s.mapping.addSchema("http://schema.org/","sch");
 ----
 
 The call to create a reference to a public vocabulary will produce as output, the newly created reference, or alternatively an error message indicating what went wrong:
 
-[source,Cypher]
-----
-╒════════╤════════════════════╕
-│"prefix"│"namespace"         │
-╞════════╪════════════════════╡
-│"sch"   │"http://schema.org/"│
-└────────┴────────────────────┘
-----
+.Results
+[options="header"]
+|===
+| prefix | namespace
+| "sch"  | "http://schema.org/"
+|===
 
 We can create as many references to public vocabularies as needed, and there is also useful method (`mapping.addCommonSchemas`) that can be used to include a set of the most common schemas in one go:
 
 [source,Cypher]
 ----
-call semantics.mapping.addCommonSchemas()
+CALL n10s.mapping.addCommonSchemas();
 ---- 
 
 References to schemas can be removed using the `mapping.dropSchema` method and passing as single parameter the exact URI of the vocabulary we want to have deleted. Notice that this will remove both the schema and all element mappings defined on it.
 
 [source,Cypher]
 ----
-call semantics.mapping.dropSchema("http://purl.org/dc/elements/1.1/")
+call n10s.mapping.dropSchema("http://purl.org/dc/elements/1.1/");
 ---- 
 
 And we can list the currently existing schemas by running `mapping.listSchemas`. This method takes an optional string parameter that can be used to filter the list to the ones that match a particular search string in the schema uri or in the prefix. If we run the following after running the `mapping.addCommonSchemas`:
 
 [source,Cypher]
 ----
-call semantics.mapping.listSchemas("rdf")
+call n10s.mapping.listSchemas("rdf");
 ----
 
-We would get the following results:
-
-[source,Cypher]
-----
-╒════════╤═════════════════════════════════════════════╕
-│"prefix"│"namespace"                                  │
-╞════════╪═════════════════════════════════════════════╡
-│"rdfs"  │"http://www.w3.org/2000/01/rdf-schema#"      │
-├────────┼─────────────────────────────────────────────┤
-│"rdf"   │"http://www.w3.org/1999/02/22-rdf-syntax-ns#"│
-└────────┴─────────────────────────────────────────────┘
-----
+.Results
+[options="header"]
+|===
+| prefix | namespace
+| "rdfs" | "http://www.w3.org/2000/01/rdf-schema#"
+| "rdf"  | "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+|===
 
 Once we have defined a reference to a public vocabulary/schema, we can now create actual mappings for elements in our graph to elements in the public schemas. The `mapping.addMappingToSchema` procedure. This method takes three parameters, the URI of a public schema previously added via `mapping.addSchema` and a pair formed by the name of the element in our graph (a property name, a label or a relationship type) and the matching element in the public schema.
 
@@ -70,32 +69,29 @@ The following example shows how to define a map from a `CHILD_CATEGORY` relation
 
 [source,Cypher]
 ----
-call semantics.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower")
+CALL n10s.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower");
 ----
 
 Just like we did with schema references, we can list existing mappings using `mapping.listMappings` and filter the list with an optional search string parameter to return only mappings where either the graph element name or the schema element name match the search string. 
 
 [source,Cypher]
 ----
-call semantics.mapping.listMappings()
+call n10s.mapping.listMappings();
 ----
 
-Producing a listing with the following structure:
+.Results
+[options="header"]
+|===
+| schemaNs                                | schemaPrefix | schemaElement | elemName
+| "http://www.w3.org/2004/02/skos/core#"  | "skos"       | "narrower"    | "CHILD_CATEGORY"
+|===
 
-[source,Cypher]
-----
-╒══════════════════════════════════════╤══════════════╤═══════════════╤════════════════╕
-│"schemaNs"                            │"schemaPrefix"│"schemaElement"│"elemName"      │
-╞══════════════════════════════════════╪══════════════╪═══════════════╪════════════════╡
-│"http://www.w3.org/2004/02/skos/core#"│"skos"        │"narrower"     │"CHILD_CATEGORY"│
-└──────────────────────────────────────┴──────────────┴───────────────┴────────────────┘
-----
 
 It is also possible to remove individual ones with `mapping.dropMapping` passing as single parameter the name of the graph model element on which the mapping is defined.
 
 [source,Cypher]
 ----
-call semantics.mapping.dropMapping("CHILD_CATEGORY")
+call n10s.mapping.dropMapping("CHILD_CATEGORY")
 ----
 
 === Mappings for export
@@ -108,57 +104,49 @@ Here's the script that defines the reference to the `schema.org` public vocabula
 ----
 //set parameter uri ->   :param uri: "http://schema.org/"
 
-CALL semantics.mapping.addSchema($uri,"sch");
-CALL semantics.mapping.addMappingToSchema($uri,"Order","Order");
-CALL semantics.mapping.addMappingToSchema($uri,"orderID","orderNumber");
-CALL semantics.mapping.addMappingToSchema($uri,"orderDate","orderDate");
+CALL n10s.mapping.addSchema($uri,"sch");
+CALL n10s.mapping.addMappingToSchema($uri,"Order","Order");
+CALL n10s.mapping.addMappingToSchema($uri,"orderID","orderNumber");
+CALL n10s.mapping.addMappingToSchema($uri,"orderDate","orderDate");
 
-CALL semantics.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
+CALL n10s.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
 
-CALL semantics.mapping.addMappingToSchema($uri,"Product","Product");
-CALL semantics.mapping.addMappingToSchema($uri,"productID","productID");
-CALL semantics.mapping.addMappingToSchema($uri,"productName","name");
+CALL n10s.mapping.addMappingToSchema($uri,"Product","Product");
+CALL n10s.mapping.addMappingToSchema($uri,"productID","productID");
+CALL n10s.mapping.addMappingToSchema($uri,"productName","name");
 
-CALL semantics.mapping.addMappingToSchema($uri,"PART_OF","category");
+CALL n10s.mapping.addMappingToSchema($uri,"PART_OF","category");
 
-CALL semantics.mapping.addMappingToSchema($uri,"categoryName","name");
+CALL n10s.mapping.addMappingToSchema($uri,"categoryName","name");
 ----
 
 After running the previous script, we can check that the mappings have been correctly defined with
 
 [source,Cypher]
 ----
-call semantics.mapping.listMappings()
+call n10s.mapping.listMappings();
 ----
 
 That should return:
 
-[source,Cypher]
-----
-╒════════════════════╤══════════════╤═══════════════╤══════════════╕
-│"schemaNs"          │"schemaPrefix"│"schemaElement"│"elemName"    │
-╞════════════════════╪══════════════╪═══════════════╪══════════════╡
-│"http://schema.org/"│"sch"         │"Order"        │"Order"       │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"orderNumber"  │"orderID"     │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"orderDate"    │"orderDate"   │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"orderedItem"  │"ORDERS"      │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"Product"      │"Product"     │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"productID"    │"productID"   │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"name"         │"productName" │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"category"     │"PART_OF"     │
-├────────────────────┼──────────────┼───────────────┼──────────────┤
-│"http://schema.org/"│"sch"         │"name"         │"categoryName"│
-└────────────────────┴──────────────┴───────────────┴──────────────┘
----- 
+.Results
+[options="header"]
+|===
+| schemaNs                                | schemaPrefix | schemaElement | elemName
+|"http://schema.org/"|"sch"         |"Order"        |"Order"       
+|"http://schema.org/"|"sch"         |"orderNumber"  |"orderID"     
+|"http://schema.org/"|"sch"         |"orderDate"    |"orderDate"   
+|"http://schema.org/"|"sch"         |"orderedItem"  |"ORDERS"      
+|"http://schema.org/"|"sch"         |"Product"      |"Product"     
+|"http://schema.org/"|"sch"         |"productID"    |"productID"   
+|"http://schema.org/"|"sch"         |"name"         |"productName" 
+|"http://schema.org/"|"sch"         |"category"     |"PART_OF"     
+|"http://schema.org/"|"sch"         |"name"         |"categoryName"
+|===
 
-Now we can see these mappings in action by running any of the RDF generating methods described in <<Export>> (`/describe/id`, `/describe/find/` or `/cypher`). Let's use the `/cypher` method to serialise as RDF an order given its `orderID`.
+
+Now we can see these mappings in action by running any of the RDF generating methods described in <<Export>> (`/describe/id`, `/describe/find/` or `/cypher`).
+Let's use the `/cypher` method to serialise as RDF an order given its `orderID`.
 
 
 [source,Cypher]
@@ -254,37 +242,31 @@ WITH
 { neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
 "http://www.w3.org/2006/vcard/ns#" AS vcardUri
 
-CALL semantics.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+CALL n10s.mapping.addSchema(vcardUri,"vcard") YIELD namespace
 UNWIND mappings as m
-CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement 
-RETURN count(schemaElement) AS mappingsDefined
+CALL n10s.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
+RETURN count(schemaElement) AS mappingsDefined;
 ----
 
-Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`. If there were multiple vocabularies to map, we would just need repeat the process for each of them.
+Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`.
+If there were multiple vocabularies to map, we would just need repeat the process for each of them.
 
 Now we can check that the mappings are correctly defined by running:
 
 [source,Cypher]
 ----
-CALL semantics.mapping.listMappings()
+CALL n10s.mapping.listMappings();
 ----
 
-which produces:
-
-[source,Cypher]
-----
-╒══════════════════════════════════╤══════════════╤═════════════════╤════════════════╕
-│"schemaNs"                        │"schemaPrefix"│"schemaElement"  │"elemName"      │
-╞══════════════════════════════════╪══════════════╪═════════════════╪════════════════╡
-│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"given-name"     │"givenName"     │
-├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
-│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"family-name"    │"familyName"    │
-├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
-│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"additional-name"│"additionalName"│
-├──────────────────────────────────┼──────────────┼─────────────────┼────────────────┤
-│"http://www.w3.org/2006/vcard/ns#"│"vcard"       │"friend-of"      │"FRIEND_OF"     │
-└──────────────────────────────────┴──────────────┴─────────────────┴────────────────┘
-----
+.Results
+[options="header"]
+|===
+| schemaNs                                | schemaPrefix | schemaElement | elemName
+|"http://www.w3.org/2006/vcard/ns#"|"vcard"       |"given-name"     |"givenName"     
+|"http://www.w3.org/2006/vcard/ns#"|"vcard"       |"family-name"    |"familyName"    
+|"http://www.w3.org/2006/vcard/ns#"|"vcard"       |"additional-name"|"additionalName"
+|"http://www.w3.org/2006/vcard/ns#"|"vcard"       |"friend-of"      |"FRIEND_OF"     
+|===
 
 Important to note that when using the option `handleVocabUris: "MAP"`, all non-mapped vocabulary elements will get the default treatment they get when the `'IGNORE'` option is selected.
 
@@ -292,30 +274,29 @@ Once the mappings are defined, we can run the import process as described in <<I
 
 [source,Cypher]
 ----
-CALL semantics.previewRDF("http://jbarrasa.github.io/neosemantics/docs/rdf/permid-person-fragment.ttl","Turtle", { handleVocabUris: 'MAP' })
+CALL n10s.rdf.stream.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/permid-person-fragment.ttl","Turtle", {
+  handleVocabUris: 'MAP'
+});
 ----
 
 After data load, we will be able to query the imported graph with a much more friendly cypher:
 
 [source,Cypher]
 ----
-MATCH (n:Person) RETURN n.uri AS uri, n.familyName as familyName LIMIT 10
+MATCH (n:Person)
+RETURN n.uri AS uri, n.familyName as familyName
+LIMIT 10;
 ----
 
-to get:
+.Results
+[options="header"]
+|===
+| uri                                | familyName
+|"https://permid.org/1-34419230351"|null          
+|"https://permid.org/1-34418273443"|"Benner"      
+|"https://permid.org/1-34419198943"|"Peltz"        
+|===
 
-[source,Cypher]
-----
-╒══════════════════════════════════╤══════════════╕
-│"uri"                             │"familyName"  │
-╞══════════════════════════════════╪══════════════╡
-│"https://permid.org/1-34419230351"│null          │
-├──────────────────────────────────┼──────────────┤
-│"https://permid.org/1-34418273443"│"Benner"      │
-├──────────────────────────────────┼──────────────┤
-│"https://permid.org/1-34419198943"│"Peltz"       │
-└──────────────────────────────────┴──────────────┘
-----
 
 [NOTE]
 The combination of a mapping definition plus the use of the `handleVocabUris: 'MAP'` configuration can be applied not only to the `semantics.importRDF` procedure but also to the preview ones `semantics.previewRDF` and `semantics.previewRDFSnippet`.
