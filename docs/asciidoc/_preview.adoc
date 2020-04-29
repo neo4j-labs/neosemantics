@@ -1,0 +1,78 @@
+[[Preview]]
+== Previewing RDF data
+
+Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.
+
+=== Streaming triples
+The streaming procedure take the following parameters:
+
+[options="header"]
+|===
+| Parameter        | Type |  Description
+| url | String | URL of the dataset
+| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, *TriG and N-Quads* (For named graphs)
+| params | Map  | Optional set of parameters (see description in table below)
+|===
+
+We will invoke it with a URL and a serialisation format just as we would invoke the `n10s.rdf.import.fetch` procedure:
+
+[source,cypher]
+----
+CALL n10s.rdf.stream.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle");
+----
+
+It will produce a stream of records, each one representing a triple parsed. So you will get fields for the subject, predicate and object plus three additional ones:
+
+1. *isLiteral*: a boolean indicating whether the object of the statement is a literal
+2. *literalType*: The datatype of the literal value when available
+3. *literalLang*: The language when available
+
+In the previous example the output would look something like this:
+
+image::streamRDF.png[RDF parsed and streamed in Neo4j, scaledwidth="100%"]
+
+The procedure is read-only and nothing is written to the graph, however, it is possible to use cypher on the output of the procedure to analyse the triples returned like in this first example:
+
+[source,cypher]
+----
+CALL n10s.rdf.stream.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle") yield subject, predicate, object
+WHERE predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
+RETURN object as category, count(*) as itemsInCategory;
+----
+
+[options="header"]
+|===
+| category                                    | itemsInCategory
+| "http://neo4j.org/vocab/sw#Neo4jPlugin"     | 3
+| "http://neo4j.org/vocab/sw#GraphPlatform"   | 1
+| "http://neo4j.org/vocab/sw#AwesomePlatform" | 1
+|===
+
+Or even to write to the Graph to create your own custom structure like in this second one:
+
+[source,cypher]
+----
+CALL n10s.rdf.stream.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl","Turtle")
+YIELD subject, predicate, object, isLiteral
+WHERE NOT ( isLiteral OR predicate = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type" )
+MERGE (from:Thing { id: subject})
+MERGE (to:Thing { id: object })
+MERGE (from)-[:CONNECTED_TO { id: predicate }]->(to);
+----
+
+There is also a `streamRDFSnippet` procedure identical to `streamRDF` but taking the RDF input (first parameter) in the form of a string, here's an example of how can it be used:
+
+[source,cypher]
+----
+WITH '<http://ind#123> <http://voc#property1> "Value"@en, "Valeur"@fr, "Valor"@es ; <http://voc#property2> 123 .' as rdfPayload
+CALL n10s.rdf.stream.inline(rdfPayload,"Turtle")
+YIELD subject, predicate, object, isLiteral, literalType, literalLang
+WHERE predicate = 'http://voc#property1' AND literalLang = "es"
+CREATE (:Thing { uri: subject, prop: object });
+----
+
+=== Previewing RDF data
+
+The `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import.
+Like all methods in the <<Preview>> section, both `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` are read only so will not persist anything in the graph.
+The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `n10s.rdf.stream.inline` takes an RDF fragment as text instead.

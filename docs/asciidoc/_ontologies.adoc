@@ -1,0 +1,75 @@
+[[OntoImport]]
+== Importing Ontologies
+
+Ontologies are serialised as RDF, so they can be imported using plain `n10s.rdf.import.fetch` but the `n10s.onto.import.fetch` method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j.
+It's important to note that this procedure exclusively imports the following:
+
+1. Named class (category) declarations with both `rdfs:Class` and `owl:Class`.
+2. Explicit class hierarchies defined with `rdf:subClassOf` statements.
+3. Property definitions with `owl:ObjectProperty`, `owl:DatatypeProperty` and `rdfs:Property`
+4. Explicit property hierarchies defined with `rdfs:subPropertyOf` statements.
+5. Domain and range information for properties described as `rdfs:domain` and `rdfs:range` statements.
+
+All other elements will be ignored by this loader.
+
+The `n10s.onto.import.fetch` procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the ontology in link:docs/rdf/vw.owl[this file].
+
+[source,cypher]
+----
+CALL n10s.onto.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/vw.owl","Turtle");
+---- 
+
+image::vwonto.png[VW ontology imported in Neo4j, scaledwidth="100%"]
+
+We can see in the ingested graph that by default, classes are persisted as nodes with label `Class` with two properties: `uri` and `name` and `rdf:subClassOf` statements are stored as relationships of type `SCO` between `Class` nodes.
+Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively.
+Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
+
+These graph model elements can be overridden by using the following configuration params:
+
+* *classLabel*: Label to be used for Ontology Classes (categories). Default is `Class`.
+* *subClassOfRel*: Relationship to be used for `rdfs:subClassOf` hierarchies. Default is `SCO`.
+* *dataTypePropertyLabel*: Label to be used for DataType properties in the Ontology. Default is `Property`. 
+* *objectPropertyLabel*: Label to be used for Object properties in the Ontology. Default is `Relationship`. 
+* *subPropertyOfRel*: Relationship to be used for `rdfs:subPropertyOf` hierarchies. Default is `SPO`.
+* *domainRel*: Relationship to be used for `rdfs:domain`. Default is `DOMAIN`.
+* *rangeRel*: Relationship to be used for `rdfs:range`. Default is `RANGE`.
+
+Here's an example of how to load an ontology using some of these parameters:
+
+[source,cypher]
+----
+CALL n10s.onto.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/vw.owl","Turtle", {
+  classLabel : 'Category',
+  objectPropertyLabel: 'Rel',
+  dataTypePropertyLabel: 'Prop'
+});
+---- 
+
+Imported nodes (both Classes and Properties/Relationships) can be labeled as `Resource` for compatibility/consistency with the `n10s.rdf.import.fetch` procedure.
+This is done by setting the `addResourceLabels` parameter to `true`.
+
+
+Finally, it is possible to pass the ontology as text instead of by reference (url), the `importOntologySnippet` procedure works in this  mode. Here's an example:
+
+We first import a public vocabulary...
+[source,cypher]
+----
+CALL n10s.onto.import.fetch("http://www.nsmntx.org/2019/10/clothingMaterials","Turtle", {
+  classLabel : 'Category',
+  objectPropertyLabel: 'Rel',
+  dataTypePropertyLabel: 'Prop'
+});
+----
+
+and then we extend it with some additiona statements (triples) passed as text to the `importOntologySnippet` procedure
+[source,cypher]
+----
+CALL n10s.onto.preview.inline("<http://www.nsmntx.org/2019/10/clothingMaterials#Leather> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://www.nsmntx.org/customCats#AnimalBasedMaterial2> .","N-Triples", {
+  classLabel : 'Category',
+  objectPropertyLabel: 'Rel',
+  dataTypePropertyLabel: 'Prop'
+});
+----
+
+Check <<Reference>> for a complete list of available parameters.

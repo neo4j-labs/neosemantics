@@ -55,6 +55,9 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 
 include::_install.adoc[]
 include::_import.adoc[]
+include::_delete.adoc[]
+include::_ontologies.adoc[]
+include::_preview.adoc[]
 include::_export.adoc[]
 include::_mapping.adoc[]
 include::_inference.adoc[]
