@@ -315,7 +315,7 @@ public class GraphConfig {
     configAsMap.put("_objectPropertyLabel", this.objectPropertyLabelName);
     configAsMap.put("_subPropertyOfRell", this.subPropertyOfRelName);
     configAsMap.put("_domainRel", this.domainRelName);
-    configAsMap.put("_rangeRel", this.objectPropertyLabelName);
+    configAsMap.put("_rangeRel", this.rangeRelName);
 
     return configAsMap;
   }

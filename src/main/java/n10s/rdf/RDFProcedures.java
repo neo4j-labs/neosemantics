@@ -16,9 +16,13 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.stream.Stream;
 import n10s.CommonProcedures;
+import n10s.ConfiguredStatementHandler.TripleLimitReached;
 import n10s.RDFImportException;
-import n10s.StatementPreviewer;
-import n10s.StatementStreamer;
+import n10s.graphconfig.GraphConfig.InvalidParamException;
+import n10s.rdf.delete.DirectStatementDeleter;
+import n10s.rdf.load.DirectStatementLoader;
+import n10s.rdf.preview.StatementPreviewer;
+import n10s.rdf.stream.StatementStreamer;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.result.GraphResult;
@@ -104,12 +108,14 @@ public class RDFProcedures extends CommonProcedures {
       throw new RDFImportException(e);
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
-          "A Graph Config is required for RDF importing procedures to run");
+          "A Graph Config is required for the RDF preview method to run");
     }
 
     if (statementViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
+      } catch (TripleLimitReached e){
+        //preview interrupted by reaching the triple limit. All good.
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         throw new RDFImportException(e.getMessage());
       }
@@ -127,19 +133,20 @@ public class RDFProcedures extends CommonProcedures {
     RDFParserConfig conf = null;
     try {
       rdfFormat = getFormat(format);
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      conf = new RDFParserConfig(props, new GraphConfig(new HashMap<>()));
       statementStreamer = new StatementStreamer(conf);
     } catch (RDFImportBadParams e) {
       throw new RDFImportException(e);
-    } catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException(
-          "A Graph Config is required for RDF importing procedures to run");
+    } catch (InvalidParamException e) {
+      //no params being passed to the config
     }
 
     try {
       parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementStreamer);
 
-    } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
+    } catch (TripleLimitReached e) {
+      //streaming interrupted when limit reached. This is fine.
+    } catch (IOException | QueryExecutionException | RDFParseException e) {
       throw new RDFImportException(e.getMessage());
     }
     return statementStreamer.getStatements().stream();

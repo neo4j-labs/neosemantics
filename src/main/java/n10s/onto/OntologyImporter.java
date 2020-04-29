@@ -256,7 +256,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
     return 0;
   }
 
-  private String translateRelName(IRI iri) {
+  protected String translateRelName(IRI iri) {
     if (iri.equals(RDFS.SUBCLASSOF)) {
       return parserConfig.getGraphConf().getSubClassOfRelName();
     } else if (iri.equals(RDFS.SUBPROPERTYOF)) {

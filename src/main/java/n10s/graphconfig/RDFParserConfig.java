@@ -12,13 +12,15 @@ public class RDFParserConfig {
   private static final long DEFAULT_COMMIT_SIZE = 25000;
   //nodes kept in the cache when writing to disk
   private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
+  //number of triples streamed by default
+  private static final int DEFAULT_STREAM_TRIPLE_LIMIT = 1000;
   private final Set<String> predicateExclusionList;
   private final boolean verifyUriSyntax;
   private final long nodeCacheSize;
   private final String languageFilter;
   private long commitSize;
+  private long streamTripleLimit;
   private GraphConfig graphConf;
-
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
@@ -35,6 +37,7 @@ public class RDFParserConfig {
         .get("languageFilter") : null);
     verifyUriSyntax = props.containsKey("verifyUriSyntax") ? (Boolean) props
         .get("verifyUriSyntax") : true;
+    streamTripleLimit =  props.containsKey("limit")? (Long) props.get("limit"): DEFAULT_STREAM_TRIPLE_LIMIT;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -65,6 +68,12 @@ public class RDFParserConfig {
     return graphConf;
   }
 
+  public long getStreamTripleLimit() { return streamTripleLimit; }
+
+  public void setStreamTripleLimit(long streamTripleLimit) {
+    this.streamTripleLimit = streamTripleLimit;
+  }
+
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
 
@@ -86,6 +95,10 @@ public class RDFParserConfig {
 
     if (!verifyUriSyntax) {
       summary.put("verifyUriSyntax", verifyUriSyntax);
+    }
+
+    if (streamTripleLimit!=DEFAULT_STREAM_TRIPLE_LIMIT) {
+      summary.put("limit", streamTripleLimit);
     }
 
     return summary;

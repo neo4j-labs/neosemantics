@@ -1,4 +1,4 @@
-package n10s.rdf;
+package n10s.rdf.load;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 

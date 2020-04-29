@@ -1,7 +1,7 @@
 package n10s.experimental;
 
 import n10s.graphconfig.RDFParserConfig;
-import n10s.rdf.DirectStatementLoader;
+import n10s.rdf.load.DirectStatementLoader;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;

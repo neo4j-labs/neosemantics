@@ -20,9 +20,7 @@ public class OntoPreviewProcedures extends OntoProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    //TODO: add this to props (is it needed? is the commit size not ignored bby the StatementPreviewer???
-    //conf.setCommitSize(Long.MAX_VALUE);
-
+    props.put("commitSize",Long.MAX_VALUE);
     GraphResult graphResult = doPreviewOnto(url, null, format, props);
     return Stream.of(graphResult);
   }
@@ -34,6 +32,8 @@ public class OntoPreviewProcedures extends OntoProcedures {
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
+
+    props.put("commitSize",Long.MAX_VALUE);
     GraphResult graphResult = doPreviewOnto(null, rdfFragment, format, props);
     return Stream.of(graphResult);
   }

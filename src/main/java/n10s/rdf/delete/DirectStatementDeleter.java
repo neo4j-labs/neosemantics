@@ -1,4 +1,4 @@
-package n10s.rdf;
+package n10s.rdf.delete;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;

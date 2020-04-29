@@ -37,7 +37,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 
-public class LPGToRDFProcesssor {
+public class LPGToRDFProcesssor extends ExportProcessor {
 
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
@@ -72,7 +72,7 @@ public class LPGToRDFProcesssor {
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
       // Resource and NamespacePrefix should be named _Resource... to avoid conflicts
-      if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")) {
+      if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")) {
         IRI subject = vf.createIRI(BASE_VOCAB_NS, catName);
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf

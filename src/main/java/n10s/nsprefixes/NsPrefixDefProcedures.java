@@ -8,6 +8,9 @@ import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NamespacePrefixConflictException;
 import n10s.utils.NsPrefixMap;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.Label;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 import org.neo4j.procedure.Context;
@@ -59,6 +62,26 @@ public class NsPrefixDefProcedures {
   }
 
   @Procedure(mode = Mode.WRITE)
+  @Description("removes all namespace prefixes")
+  public Stream<NamespacePrefixesResult> removeAll()
+      throws InvalidNamespacePrefixDefinitionInDB, NsPrefixOperationNotAllowed {
+    if (!graphIsEmpty()) {
+      throw new NsPrefixOperationNotAllowed("Namespace prefix definitions cannot be removed "
+          + "when the graph is non-empty.");
+    }
+
+    ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
+        .findNodes(Label.label("_NsPrefDef"));
+
+    if (namespacePrefixDefinitionNodes.hasNext()) {
+      namespacePrefixDefinitionNodes.next().delete();
+    }
+
+    return Stream.empty();
+
+  }
+
+  @Procedure(mode = Mode.WRITE)
   @Description("Adds namespaces from a prefix declaration header fragment")
   public Stream<NamespacePrefixesResult> addFromText(
       @Name("prefix") String textFragment)
@@ -106,7 +129,7 @@ public class NsPrefixDefProcedures {
   public Stream<NamespacePrefixesResult> list() {
 
     return tx
-        .execute("MATCH (n:NamespacePrefixDefinition) \n" +
+        .execute("MATCH (n:_NsPrefDef) \n" +
             "UNWIND keys(n) AS prefix\n" +
             "RETURN prefix, n[prefix] AS namespace").stream().map(
             n -> new NamespacePrefixesResult((String) n.get("prefix"),

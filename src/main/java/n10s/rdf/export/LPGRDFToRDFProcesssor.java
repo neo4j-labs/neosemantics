@@ -40,7 +40,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
 
-public class LPGRDFToRDFProcesssor {
+public class LPGRDFToRDFProcesssor extends ExportProcessor{
 
   private final Pattern customDataTypedLiteralShortenedURIPattern = Pattern.compile(
       "(.+)" + Pattern.quote(CUSTOM_DATA_TYPE_SEPERATOR) + "(\\w+)" + Pattern
@@ -69,7 +69,7 @@ public class LPGRDFToRDFProcesssor {
     List<Node> nodeList = (List<Node>) next.get("nodes");
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
-      if (!catName.equals("Resource") && !catName.equals("NamespacePrefixDefinition")
+      if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")
           && !catName.equals("_GraphConfig")) {
         IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
@@ -111,7 +111,7 @@ public class LPGRDFToRDFProcesssor {
       String uriNsPart = namespaces.getNsForPrefix(prefix);
       if (uriNsPart == null) {
         throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
-            .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+            .concat(" in use but not in the namespace prefix definition"));
       }
       String localName = matcher.group(2);
       return uriNsPart + localName;
@@ -343,7 +343,7 @@ public class LPGRDFToRDFProcesssor {
       String uriNsPart = namespaces.getNsForPrefix(prefix);
       if (uriNsPart == null) {
         throw new MissingNamespacePrefixDefinition("Prefix ".concat(prefix)
-            .concat(" in use but not defined in the 'NamespacePrefixDefinition' node"));
+            .concat(" in use but not in the namespace prefix definition"));
       }
       String localName = matcher.group(3);
       return value + CUSTOM_DATA_TYPE_SEPERATOR + uriNsPart + localName;
