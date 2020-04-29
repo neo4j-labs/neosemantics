@@ -67,6 +67,7 @@ public class RDFProceduresTest {
       .withProcedure(MappingUtils.class)
       .withProcedure(GraphConfigProcedures.class).withProcedure(NsPrefixDefProcedures.class)
       .withProcedure(ExperimentalImports.class);
+
   private String jsonLdFragment = "{\n" +
       "  \"@context\": {\n" +
       "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
@@ -1056,6 +1057,78 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testPreviewFromSnippetLimit() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
+
+      Result importResults
+          = session
+          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle')",  params);
+      Map<String, Object> next = importResults
+          .next().asMap();
+      List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(18, nodes.size());
+      List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(31, rels.size());
+
+      //now  limiting it to 5 triples
+      importResults
+          = session
+          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle',  { limit: 5 })",  params);
+      next = importResults
+          .next().asMap();
+      nodes = (List<Node>) next.get("nodes");
+      assertEquals(4, nodes.size());
+      rels = (List<Relationship>) next.get("relationships");
+      assertEquals(2, rels.size());
+    }
+  }
+
+  @Test
+  public void testPreviewFromFileLimit() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
+
+      Result importResults
+          = session
+          .run("CALL n10s.rdf.preview.fetch('"+ RDFProceduresTest.class.getClassLoader()
+              .getResource("moviesontology.owl")
+              .toURI() +"','RDF/XML')",  params);
+      Map<String, Object> next = importResults
+          .next().asMap();
+      List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(18, nodes.size());
+      List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(31, rels.size());
+
+      //now  limiting it to 5 triples
+      importResults
+          = session
+          .run("CALL n10s.rdf.preview.fetch(' " + RDFProceduresTest.class.getClassLoader()
+              .getResource("moviesontology.owl")
+              .toURI() + "','RDF/XML',  { limit: 5 })",  params);
+      next = importResults
+          .next().asMap();
+      nodes = (List<Node>) next.get("nodes");
+      assertEquals(4, nodes.size());
+      rels = (List<Relationship>) next.get("relationships");
+      assertEquals(2, rels.size());
+    }
+  }
+
+  @Test
   public void testLoadFromSnippetCreateNodes() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -1400,8 +1473,6 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
-
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("oneTriple.rdf")
@@ -1422,8 +1493,6 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
-
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("event.json")
@@ -1439,8 +1508,6 @@ public class RDFProceduresTest {
   public void testStreamFromString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       String rdf = "<rdf:RDF xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n"
           + "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n"
@@ -1469,8 +1536,6 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
-
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("badUri.ttl")
@@ -1490,8 +1555,6 @@ public class RDFProceduresTest {
   public void testStreamFromBadUriString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       String rdf = "@prefix pr: <http://example.org/vocab/show/> .\n"
           + "pr:ent\n"
@@ -1515,8 +1578,6 @@ public class RDFProceduresTest {
   public void testStreamFromBadUriFileFail() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       try {
         Result importResults

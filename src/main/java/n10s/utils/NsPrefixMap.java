@@ -162,7 +162,7 @@ public class NsPrefixMap  {
     Node nsPrefDefNode;
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
-        .findNodes(Label.label("NamespacePrefixDefinition"));
+        .findNodes(Label.label("_NsPrefDef"));
 
     if (namespacePrefixDefinitionNodes.hasNext()) {
       nsPrefDefNode = namespacePrefixDefinitionNodes.next();
@@ -211,7 +211,7 @@ public class NsPrefixMap  {
     Node nsPrefDefNode;
 
     ResourceIterator<Node> namespacePrefixDefinitionNodes = tx
-        .findNodes(Label.label("NamespacePrefixDefinition"));
+        .findNodes(Label.label("_NsPrefDef"));
 
     if (namespacePrefixDefinitionNodes.hasNext()) {
       nsPrefDefNode = namespacePrefixDefinitionNodes.next();

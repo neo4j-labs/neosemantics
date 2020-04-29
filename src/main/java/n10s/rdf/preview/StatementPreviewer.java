@@ -1,12 +1,15 @@
-package n10s;
+package n10s.rdf.preview;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import n10s.RDFToLPGStatementProcessor;
+import n10s.Util;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.result.VirtualNode;
 import n10s.result.VirtualRelationship;
 import n10s.utils.NamespacePrefixConflictException;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -31,7 +34,21 @@ public class StatementPreviewer extends RDFToLPGStatementProcessor {
     vRels = virtualRels;
   }
 
+  @Override
+  public void handleStatement(Statement st) {
+    if(mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
+      super.handleStatement(st);
+    } else{
+      conclude();
+      throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples added to preview");
+    }
+  }
+
   public void endRDF() throws RDFHandlerException {
+    conclude();
+  }
+
+  private void conclude() {
     for (String uri : resourceLabels.keySet()) {
       vNodes.put(uri, new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),
           getPropsPlusUri(uri)));

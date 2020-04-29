@@ -937,8 +937,8 @@ public class RDFEndpointTest {
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
 
-    assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno in use "
-        + "but not defined in the '_NsPrefDef' node"));
+    assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno "
+        + "in use but not in the namespace prefix definition"));
 
   }
 

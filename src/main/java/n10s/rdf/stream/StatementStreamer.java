@@ -1,6 +1,5 @@
 package n10s.rdf.stream;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import n10s.ConfiguredStatementHandler;
@@ -49,7 +48,7 @@ public class StatementStreamer extends ConfiguredStatementHandler {
           (object instanceof Literal ? ((Literal) object).getLanguage().orElse(null) : null));
       statements.add(statement);
     }  else {
-      throw new StreamerLimitReached(parserConfig.getStreamTripleLimit() + " triples parsed");
+      throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples streamed");
     }
 
   }
@@ -69,10 +68,4 @@ public class StatementStreamer extends ConfiguredStatementHandler {
     return parserConfig;
   }
 
-  public class StreamerLimitReached extends RDFParseException {
-
-    public StreamerLimitReached(String s) {
-      super(s);
-    }
-  }
 }

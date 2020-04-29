@@ -67,7 +67,11 @@ public class NsPrefixDefProceduresTest {
       assertEquals("abc", next.get("prefix").asString());
       assertEquals("http://myvoc#", next.get("namespace").asString());
       assertFalse(res.hasNext());
+
       session.run("CALL n10s.nsprefixes.remove('abc')");
+      session.run("CALL n10s.nsprefixes.list()");
+      assertFalse(res.hasNext());
+
       res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
       next = res.next();
       assertEquals("abc", next.get("prefix").asString());
