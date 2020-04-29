@@ -288,7 +288,6 @@ So if you run a straight import on that data like this:
 [source,cypher]
 ----
 include::includes/delete_nodes.cypher[]
-//sets default config, including handleVocabUris: "SHORTEN"
 CALL n10s.graphconfig.init();
 ----
 
@@ -592,12 +591,18 @@ This makes things simple and will be perfect if your dataset does not have prope
 But if you need to keep the custom data types, you'll want to set the config parameter `keepCustomDataTypes` in your `GraphConfig`.
 Here's how:
 
+
+.The following deletes existing `Resource` nodes and updates the GraphConfig
 [source,cypher]
 ----
 include::includes/delete_nodes.cypher[]
 CALL n10s.graphconfig.set({keepCustomDataTypes: true});
+----
 
-CALL n10s.rdf.import.fetch("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle");
+.The following imports data from the `customDataTypes.ttl` Turtle file
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/customDataTypes.ttl","Turtle");
 ----
 
 Now all properties that have a custom data type are saved as strings with their respective custom data type IRIs in Neo4j.
@@ -627,7 +632,7 @@ CALL n10s.graphconfig.set({
   customDataTypePropList: ['http://example.com/power']
 });
 
-CALL n10s.rdf.import.fetch("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/customDataTypes.ttl","Turtle");
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/customDataTypes.ttl","Turtle");
 ----
 
 And here's what the result of the cypher query above would look like after this import:
@@ -973,7 +978,8 @@ RETURN prefix, namespace;
 [[DeleteRDF]]
 == Deleting RDF
 
-The method to delete imported RDF data is `semantics.deleteRDF`. It deletes from Neo4j the triples returned by an url. This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
+The method to delete imported RDF data is `n10s.rdf.delete.fetch`. It deletes from Neo4j the triples returned by an url.
+This url can point to an RDF file (local or remote) or a service producing RDF dynamically.
 All delete procedures take the following three parameters, like the import procedures:
 [#common_params_delete]
 
@@ -985,12 +991,16 @@ All delete procedures take the following three parameters, like the import proce
 | params | Map  | Set of parameters (see description in table below)
 |===
 
-In its most basic form the `semantics.deleteRDF` method just takes the url string to access the RDF data and the serialisation format.
+In its most basic form the `n10s.rdf.delete.fetch` method just takes the url string to access the RDF data and the serialisation format.
 Let's say you have already imported the following set of triples into Neo4j with this command:
 
 [source,cypher]
 ----
-CALL semantics.importRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/dataset.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+CALL n10s.rdf.delete.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/deleteRDF/dataset.ttl","Turtle", {
+  typesToLabels: true,
+  keepCustomDataTypes: true,
+  handleMultival: 'ARRAY'
+});
 ----
 
 [source,RDF]
@@ -1043,10 +1053,15 @@ Here is the cypher snippet showing how to do that:
 
 [source,cypher]
 ----
-CALL semantics.deleteRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/deleteRDF/delete.ttl","Turtle",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
+CALL n10s.rdf.delete.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/deleteRDF/delete.ttl","Turtle", {
+  typesToLabels: true,
+  keepCustomDataTypes: true,
+  handleMultival: 'ARRAY'
+});
 ----
 
-NSMNTX will delete the RDF data in your Neo4j graph. After this deletion your RDF data will look like this:
+n10s will delete the RDF data in your Neo4j graph.
+After this deletion your RDF data will look like this:
 
 [source,RDF]
 ----
@@ -1065,26 +1080,32 @@ ex:Resource1
 [IMPORTANT]
 You *must* use for deletion the same set of parameters that you used during import, otherwise you will not get the expected results.
 
-**Note** that currently blank nodes cannot be deleted using `semantics.deleteRDF` because we assume that blank node ids are not kept during parsing.
+**Note** that currently blank nodes cannot be deleted using `n10s.rdf.delete.fetch` because we assume that blank node ids are not kept during parsing.
 
 It is also possible to delete triples passed as text (as opposed to passing them by url like in the previous methods).
-The `semantics.deleteRDFSnippet` procedure can be used for that purpose. `semantics.deleteRDFSnippet` takes the same parameters  and  operates in exactly
-the same manner as `semantics.deleteRDF`. Here is an example of usage:
+The `n10s.rdf.delete.inline` procedure can be used for that purpose. `n10s.rdf.delete.inline` takes the same parameters  and  operates in exactly the same manner as `n10s.rdf.delete.fetch`.
+Here is an example of usage:
 
-A first call to `importRDFSnippet` reates a node in Neo4j based on a set of triples...
+A first call to `n10s.rdf.delete.inline` creates a node in Neo4j based on a set of triples...
 [source,cypher]
 ----
-CALL semantics.importRDFSnippet('<http://ind#123> a <http://voc#Type> ; <http://voc#property1> "Value"@en, "Valeur"@fr, "Valor"@es ; <http://voc#property2> 123 .',"Turtle", { handleMultival: 'ARRAY', keepLangTag: true })
+CALL n10s.rdf.import.inline('<http://ind#123> a <http://voc#Type> ; <http://voc#property1> "Value"@en, "Valeur"@fr, "Valor"@es ; <http://voc#property2> 123 .',"Turtle", {
+  handleMultival: 'ARRAY',
+  keepLangTag: true
+});
 ----
-The previous example stores all values of property `property1` in an array keeping the language annotaion. Notice that this import
-could have equally been carried out using `importRDF`.
+The previous example stores all values of property `property1` in an array keeping the language annotaion.
+Notice that this import could have equally been carried out using `importRDF`.
 
 Now we can delete a triples by passing them as text to the `deleteRDFSnippet` procedure. In this example we are removing the value of the property `property1`
 tagged as english ('en').
 
 [source,cypher]
 ----
-CALL semantics.deleteRDFSnippet('<http://ind#123> <http://voc#property1> "Value"@en .',"Turtle",{ handleMultival: 'ARRAY', keepLangTag: true })
+CALL n10s.rdf.delete.inline('<http://ind#123> <http://voc#property1> "Value"@en .',"Turtle", {
+  handleMultival: 'ARRAY',
+  keepLangTag: true
+});
 ----
 
 
