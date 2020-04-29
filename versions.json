@@ -186,6 +186,12 @@
         "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/3.5.0.1/neosemantics-3.5.0.1.jar"
     },
     {
+        "neo4j": "3.4.18",
+        "n10s": "3.4.0.2",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/3.4.0.2",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/3.4.0.2/neosemantics-3.4.0.2.jar"
+    },
+    {
         "neo4j": "3.4.17",
         "n10s": "3.4.0.2",
         "url": "http://github.com/neo4j-labs/neosemantics/releases/3.4.0.2",
