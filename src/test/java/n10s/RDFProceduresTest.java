@@ -1129,6 +1129,99 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testOntoPreviewFromSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleMultilangOntology);
+
+      Result importResults
+          = session
+          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
+      Map<String, Object> next = importResults
+          .next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(14, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(17, rels.size());
+    }
+  }
+
+  @Test
+  public void testOntoPreviewFromSnippetLimit() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.turtleOntology);
+
+      Result importResults
+          = session
+          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')",  params);
+      Map<String, Object> next = importResults
+          .next().asMap();
+      List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(14, nodes.size());
+      List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(17, rels.size());
+
+      //now  limiting it to 5 triples
+      importResults
+          = session
+          .run("CALL n10s.onto.preview.inline($rdf,'Turtle',  { limit: 14 })",  params);
+      next = importResults
+          .next().asMap();
+      nodes = (List<Node>) next.get("nodes");
+      assertEquals(5, nodes.size());
+      rels = (List<Relationship>) next.get("relationships");
+      assertEquals(1, rels.size());
+    }
+  }
+
+  @Test
+  public void testOntoPreviewFromFileLimit() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{}");
+
+      Result importResults
+          = session
+          .run("CALL n10s.onto.preview.fetch('"+ RDFProceduresTest.class.getClassLoader()
+              .getResource("moviesontology.owl")
+              .toURI() +"','RDF/XML')");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(14, nodes.size());
+      List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(17, rels.size());
+
+      //now  limiting it to 5 triples
+      importResults
+          = session
+          .run("CALL n10s.onto.preview.fetch(' " + RDFProceduresTest.class.getClassLoader()
+              .getResource("moviesontology.owl")
+              .toURI() + "','RDF/XML',  { limit: 6 })");
+      next = importResults
+          .next().asMap();
+      nodes = (List<Node>) next.get("nodes");
+      assertEquals(2, nodes.size());
+      rels = (List<Relationship>) next.get("relationships");
+      assertEquals(0, rels.size());
+    }
+  }
+
+
+  @Test
   public void testLoadFromSnippetCreateNodes() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {

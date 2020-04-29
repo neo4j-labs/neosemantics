@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import n10s.CommonProcedures;
+import n10s.ConfiguredStatementHandler.TripleLimitReached;
 import n10s.RDFImportException;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
@@ -92,12 +93,14 @@ public class OntoProcedures extends CommonProcedures {
       throw new RDFImportException(e);
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
-          "A Graph Config is required for RDF importing procedures to run");
+          "A Graph Config is required for the Ontology preview procedure to run");
     }
 
     if (ontoViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, ontoViewer);
+      } catch (TripleLimitReached e){
+        //preview interrupted by reaching the triple limit. All good.
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         throw new RDFImportException(e.getMessage());
       }

@@ -8,6 +8,7 @@ import n10s.graphconfig.RDFParserConfig;
 import n10s.result.VirtualNode;
 import n10s.result.VirtualRelationship;
 import n10s.utils.NamespacePrefixConflictException;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
@@ -31,6 +32,21 @@ public class OntologyPreviewer extends OntologyImporter {
 
 
   public void endRDF() throws RDFHandlerException {
+    conclude();
+  }
+
+  @Override
+  public void handleStatement(Statement st) {
+    if(mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
+      super.handleStatement(st);
+    } else{
+      conclude();
+      throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples added to preview");
+    }
+  }
+
+  //TODO:Refactor with the one in preview RDF
+  private void conclude() {
     for (String uri : resourceLabels.keySet()) {
       vNodes.put(uri, new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),
           getPropsPlusUri(uri)));
@@ -47,6 +63,7 @@ public class OntologyPreviewer extends OntologyImporter {
       }
     });
   }
+
 
   private Map<String, Object> getPropsPlusUri(String uri) {
     Map<String, Object> props = resourceProps.get(uri);

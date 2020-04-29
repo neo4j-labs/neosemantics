@@ -114,7 +114,7 @@ public class RDFProcedures extends CommonProcedures {
     if (statementViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
-      }catch (TripleLimitReached e){
+      } catch (TripleLimitReached e){
         //preview interrupted by reaching the triple limit. All good.
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         throw new RDFImportException(e.getMessage());

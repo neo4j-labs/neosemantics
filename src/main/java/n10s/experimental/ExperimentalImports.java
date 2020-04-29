@@ -47,7 +47,7 @@ public class ExperimentalImports extends RDFProcedures {
   public Stream<ImportResults> importSKOS(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws GraphConfigNotFound {
+      throws RDFImportException {
 
     return Stream.of(doSkosImport(format, url, null, props));
 
@@ -55,7 +55,7 @@ public class ExperimentalImports extends RDFProcedures {
 
 
   private ImportResults doSkosImport(String format, String url,
-      String rdfFragment, Map<String, Object> props) throws GraphConfigNotFound {
+      String rdfFragment, Map<String, Object> props) throws RDFImportException {
 
     // TODO: This effectively overrides the graphconfig (and can cause conflict?)
     props.put("handleVocabUris", "IGNORE");
@@ -73,6 +73,9 @@ public class ExperimentalImports extends RDFProcedures {
       importResults.setTerminationKO(e.getMessage());
     } catch (RDFImportBadParams e) {
       importResults.setTerminationKO(e.getMessage());
+    } catch (GraphConfig.GraphConfigNotFound e) {
+      throw new RDFImportException(
+          "A Graph Config is required for the SKOS import procedure to run");
     }
 
     if (skosImporter != null) {
