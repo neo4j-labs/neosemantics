@@ -9,7 +9,33 @@ This chapter describes procedures that import RDF data into Neo4j.
 The main method for importing RDF is `n10s.rdf.import.fetch`.
 It imports and persists into Neo4j the triples returned by an URI.
 This URI can point to an RDF file (local or remote) or a service producing RDF dynamically.
-More on how to parameterise the access to web services in section <<#advancedfetching>>.
+More on how to parameterise the access to web services in section <<advancedfetching>>.
+
+This section includes:
+
+* <<import-available-procedures>>
+* <<create-resource-uniqueness-constraint>>
+* <<graph-configuration>>
+* <<actual-rdf-import>>
+* <<filtering-triples-by-predicate>>
+* <<handling-multivalued-properties>>
+* <<handling-language-tags>>
+* <<filtering-triples-by-language-tag>>
+* <<handling-custom-data-types>>
+* <<classes-as-nodes>>
+* <<ImportQuadRDF>>
+* <<advancedfetching>>
+* <<custom-prefixes-for-namespaces>>
+
+[[import-available-procedures]]
+=== Procedure Overview
+
+The table below describes the available procedures:
+
+[separator=¦,opts=header,cols="1,1m,1m,5"]
+|===
+include::../../build/generated-documentation/n10s.rdf.import.fetch.csv[]
+|===
 
 All import procedures take the following three parameters:
 [#common_params]
@@ -22,8 +48,9 @@ All import procedures take the following three parameters:
 | params | Map  | Optional set of parameters (see description in table below)
 |===
 
-[NOTE]
-====
+[[create-resource-uniqueness-constraint]]
+=== Create uniqueness constraint
+
 For all import methods to run, a uniqueness constraint needs to exist on the property `uri` of nodes with the label `Resource`.
 If the constraint is not present, run the following command on your DB, otherwise all RDF import procedures will throw an error message.
 
@@ -32,12 +59,11 @@ If the constraint is not present, run the following command on your DB, otherwis
 CREATE CONSTRAINT n10s_unique_uri ON (r:Resource)
 ASSERT r.uri IS UNIQUE;
 ----
-====
 
-=== Before Importing RDF: Setting the configuration of the graph
-There is another pre-requisite before effectively carrying out any data import into Neo4j with
-neosemantics: we need to define the characteristics of the graph we will be creating. These are
-kept in the `GraphConfig`.
+[[graph-configuration]]
+=== Setting the configuration of the graph
+There is another pre-requisite before effectively carrying out any data import into Neo4j with neosemantics: we need to define the characteristics of the graph we will be creating.
+These are kept in the `GraphConfig`.
 
 The method `n10s.graphconfig.init` can help us with this setup.
 Calling the procedure without parameters will set all the default values:
@@ -47,16 +73,16 @@ Calling the procedure without parameters will set all the default values:
 CALL n10s.graphconfig.init();
 ----
 
-Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll
-see that in more detail in the following examples.
+Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll see that in more detail in the following examples.
 
 [WARNING]
 If we try to run any RDF import procedure without having defined the uniqueness constraint or created a GraphConfig first, the import will fail showing an error message indicating what's missing.
 
+[[actual-rdf-import]]
 === The actual RDF import
 Once a basic `GraphConfig` has been created, we can call the RDF import procedures.
 Let's look at the first of them:
-In its most basic form the `n10s.rdf.import.fetch` method just takes the url string to access the RDF data and the serialisation format.
+In its most basic form the `n10s.rdf.import.fetch` method takes a URL string to access the RDF data and the serialisation format.
 Let's say you're trying to load the following RDF document into Neo4j.
 
 [source,RDF]
@@ -123,7 +149,7 @@ Similarly, `http://www.w3.org/1999/02/22-rdf-syntax-ns#type` would be shortened 
 
 Prefixes for custom namespaces are assigned dynamically in sequence (`ns0`, `ns1`, etc) as they appear in the imported RDF.
 This is the default behavior but we'll see later on that it is possible to control that, and use custom prefixes.
-More details in section <<custom_ns>>.
+More details in section <<custom-prefixes-for-namespaces>>.
 
 Keeping namespaces can be important if you care about being able to regenerate the imported RDF as we will see in section <<Export>>.
 However, if you don't care about that, you can tell Neo4j to ignore the namespaces by setting
@@ -211,10 +237,9 @@ CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/d
 
 image::nsmntx-keep-annotated.png[RDF data imported in Neo4j keeping namespaces,scaledwidth="100%"]
 
-The imported graph in this case has the same structure, of course, but uses full uris as labels,
-relationships an property names.
+The imported graph in this case has the same structure, but uses full URIs as labels, relationships, and property names.
 
-
+[[filtering-triples-by-predicate]]
 === Filtering triples by predicate
 
 Something you may need to do when importing RDF data into Neo4j is exclude certain triples so that they are not persisted in your Neo4j graph.
@@ -237,6 +262,7 @@ CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/d
 });
 ----
 
+[[handling-multivalued-properties]]
 === Handling multivalued properties
 
 In RDF multiple values for the same property are just multiple triples. For example, you can have
@@ -380,6 +406,7 @@ RETURN a.title as title;
 | "Bengal Tigers May Not Survive Climate Change"
 |===
 
+[[handling-language-tags]]
 === Handling language tags
 
 Literal values in RDF can be tagged with language information. This can be used in any context
@@ -431,7 +458,7 @@ MATCH (n:Resource)
 RETURN coalesce(n10s.rdf.getLangValue("fr",n.ns0__localName), n10s.rdf.getLangValue("en",n.ns0__localName));
 ----
 
-There are two additional functions for handling language-tagged property values: `semantics.hasLangTag` and `semantics.getLangTag`.
+There are two additional functions for handling language-tagged property values: `n10s.rdf.hasLangTag` and `n10s.rdf.getLangTag`.
 
 * `n10s.rdf.getLangTag` returns the language tag (when present) from a property value.
 * `n10s.rdf.hasLangTag` returns true if a property value is tagged with a given language tag or false if not.
@@ -450,7 +477,7 @@ CREATE (n:Thing {
 });
 ----
 
-We can use `semantics.getLanguageTag` to get the language tag for any specific value
+We can use `n10s.rdf.getLangTag` to get the language tag for any specific value
 [source,cypher]
 ----
 MATCH (n:Thing)
@@ -480,7 +507,7 @@ RETURN [x in n.prop | n10s.rdf.getLangTag(x)] AS tags;
 
 |===
 
-And similarly, we can use `semantics.hasLangTag` to check whether the first value matches a given language tag:
+And similarly, we can use `n10s.rdf.hasLangTag` to check whether the first value matches a given language tag:
 [source,cypher]
 ----
 MATCH (n:Thing)
@@ -496,7 +523,7 @@ RETURN n10s.rdf.getValue(n.prop[0]) as val,
 |===
 
 
-
+[[filtering-triples-by-language-tag]]
 === Filtering triples by language tag
 
 Language tags can also be used as a filter criteria. If we are only interested in a particular
@@ -516,6 +543,7 @@ CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/d
 });
 ----
 
+[[handling-custom-data-types]]
 === Handling custom data types
 
 In RDF custom data types are annotated to literals after the seperator `^^` in form of an IRI.
@@ -636,6 +664,7 @@ RETURN n10s.rdf.getValue(n.ns0__power);
 
 The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
 
+[[classes-as-nodes]]
 === Classes as Nodes (instead of Labels)
 
 The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you'll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes. 
@@ -656,7 +685,9 @@ Now we want to load the instance data and we want it to link to the ontology gra
 
 [source,cypher]
 ----
-call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle", { typesToLabels: false });
+call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle", {
+  typesToLabels: false
+});
 ----
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically. 
@@ -711,7 +742,7 @@ exDoc:G3 {
     exDoc:John a ex:Person . }
 ----
 
-**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, just run the following command on your DB or the `semantics.importQuadRDF` procedure will remind you with an error messsage.
+**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, run the following command on your DB or the `n10s.quadrdf.import.fetch` procedure will remind you with an error message.
 
 [source,cypher]
 ----
@@ -752,7 +783,7 @@ As a result you will get three distinct nodes, which look like this in text mode
 | {"uri":"http://www.example.org/exampleDocument#Monica"}
 |===
 
-To avoid this, you can use link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse].
+To avoid this, you can use link:https://neo4j.com/docs/labs/apoc/current/virtual/nodes-collapse/[APOC Nodes collapse].
 `apoc.nodes.collapse` merges the set of nodes into a virtual node.
 
 Here is the cypher snippet showing how to do that with the `exDoc:Monica` example:
@@ -781,9 +812,9 @@ As a result you will get a single node which looks like this in text mode:
 └──────────────────────────────────────────────────────────────────────┘
 ----
 
-You can find more information about the parameter configuration of `apoc.nodes.collapse` on link:https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_nodes_collapse[APOC Nodes collapse].
+You can find more information about the parameter configuration of `apoc.nodes.collapse` on link:https://neo4j.com/docs/labs/apoc/current/virtual/nodes-collapse/[APOC Nodes collapse].
 
-[#advancedfetching]
+[[advancedfetching]]
 === Advanced settings for fetching RDF
 
 Sometimes the RDF data will be a static file, and other times it'll be dynamically generated in response to an HTTP request (`GET` or `POST`) possibly containg parameters, even a SPARQL query.
@@ -802,17 +833,26 @@ We obviously need a query producing RDF so we can import it into Neo4j. I'm usin
 
 [source,cypher]
 ----
-CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>") })
+CALL n10s.rdf.import.fetch("https://bnb.data.bl.uk/sparql","Turtle", {
+  handleVocabUris: "IGNORE",
+  headerParams: { Accept: "application/turtle"},
+  payload: "query=" + apoc.text.urlencode("DESCRIBE <http://bnb.data.bl.uk/id/resource/018212405>")
+});
 ----
 
-Notice that the Bristish Library service requires you to encode the SPARQL query. We do this with https://neo4j-contrib.github.io/neo4j-apoc-procedures/#_overview_text_functions[APOC's apoc.text.urlencode function]. After running this you get a pretty poor graph, because the
-DESCRIBE query only returns the statements having 'The world of yesterday' (`<http://bnb.data.bl.uk/id/resource/018212405>`) as subject or object.
+Notice that the British Library service requires you to encode the SPARQL query. We do this with https://neo4j.com/docs/labs/apoc/current/misc/text-functions/[APOC's apoc.text.urlencode function].
+After running this you get a pretty poor graph, because the DESCRIBE query only returns the statements having 'The world of yesterday' (`<http://bnb.data.bl.uk/id/resource/018212405>`) as subject or object.
 But we can enrich it a bit by re-running it for a all of the URIs connected to our book as follows:
 
 [source,cypher]
 ----
 MATCH (:Book)-->(t) WITH DISTINCT t
-CALL semantics.importRDF("https://bnb.data.bl.uk/sparql","Turtle",{ handleVocabUris: "IGNORE", headerParams: { Accept: "application/turtle"}, payload: "query=" + apoc.text.urlencode("CONSTRUCT {<" + t.uri + "> ?p ?o } { <" + t.uri + "> ?p ?o } LIMIT 10 ")}) yield triplesLoaded
+CALL n10s.rdf.import.fetch("https://bnb.data.bl.uk/sparql","Turtle", {
+  handleVocabUris: "IGNORE",
+  headerParams: { Accept: "application/turtle"},
+  payload: "query=" + apoc.text.urlencode("CONSTRUCT {<" + t.uri + "> ?p ?o } { <" + t.uri + "> ?p ?o } LIMIT 10 ")
+})
+yield triplesLoaded
 return t.uri, triplesLoaded
 ----
 
@@ -863,80 +903,68 @@ image::worldofyesterday.png[Graph resulting of importing the data in the British
 Of course you could do achieve this -or something similar- in different ways, in this case we are using a SPARQL CONSTRUCT query in order to be able to limit
 the number of triples returned for each resource as some of them are pretty dense.
 
-[#custom_ns]
+[[custom-prefixes-for-namespaces]]
 === Defining custom prefixes for namespaces
 
 When applying url shortening on RDF ingestion (either explicitly or implicitly), we have the option of letting neosemantics automatically assign prefixes to namespaces as they appear in the imported RDF. But before doing that, a few popular ones will be set with familiar prefixes. These include `"http://www.w3.org/1999/02/22-rdf-syntax-ns#"` prefixed as `rdf` and `"http://www.w3.org/2004/02/skos/core#"` prefixed as `skos`.
 
-At any point you can check the prefixes in use by running the `listNamespacePrefixes` procedure.
+At any point you can check the prefixes in use by running the `n10s.nsprefixes.list` procedure.
 
 [source,cypher]
 ----
-CALL semantics.listNamespacePrefixes()
+call n10s.nsprefixes.list();
 ----
 
 Before running your first import this method should return no results but after your first run, it should return a list containing at least the following entries.
 
-[source,cypher]
-----
-╒════════╤═════════════════════════════════════════════╕
-│"prefix"│"namespace"                                  │
-╞════════╪═════════════════════════════════════════════╡
-│"skos"  │"http://www.w3.org/2004/02/skos/core#"       │
-├────────┼─────────────────────────────────────────────┤
-│"sch"   │"http://schema.org/"                         │
-├────────┼─────────────────────────────────────────────┤
-│"sh"    │"http://www.w3.org/ns/shacl#"                │
-├────────┼─────────────────────────────────────────────┤
-│"rdfs"  │"http://www.w3.org/2000/01/rdf-schema#"      │
-├────────┼─────────────────────────────────────────────┤
-│"dc"    │"http://purl.org/dc/elements/1.1/"           │
-├────────┼─────────────────────────────────────────────┤
-│"dct"   │"http://purl.org/dc/terms/"                  │
-├────────┼─────────────────────────────────────────────┤
-│"rdf"   │"http://www.w3.org/1999/02/22-rdf-syntax-ns#"│
-├────────┼─────────────────────────────────────────────┤
-│"owl"   │"http://www.w3.org/2002/07/owl#"             │
-└────────┴─────────────────────────────────────────────┘
-----
+.Results
+[opts="header"]
+|===
+|"prefix" |"namespace"
+|"skos"  |"http://www.w3.org/2004/02/skos/core#"
+|"sch"   |"http://schema.org/"
+|"sh"    |"http://www.w3.org/ns/shacl#"
+|"rdfs"  |"http://www.w3.org/2000/01/rdf-schema#"
+|"dc"    |"http://purl.org/dc/elements/1.1/"
+|"dct"   |"http://purl.org/dc/terms/"
+|"rdf"   |"http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+|"owl"   |"http://www.w3.org/2002/07/owl#"
+|===
+
 
 Let's say the RDF dataset that you are going to import uses the namespace `http://neo4j.org/voc/sw#` and you want it to be prefixed as `neo` instead of `ns0` (or `ns7`) as would happen if the prefix was assigned automatically by neosemantics.
 You can do this by calling the `addNamespacePrefix` procedure as follows:
 
 [source,cypher]
 ----
-call semantics.addNamespacePrefix("neo","http://neo4j.org/vocab/sw#")
+CALL n10s.nsprefixes.add("neo", "http://neo4j.org/vocab/sw#");
 ----
 
-This will return:
+.Results
+[opts="header"]
+|===
+|"prefix" |"namespace"
+|"neo"  |"http://neo4j.org/vocab/sw#"
+|===
 
-[source,cypher]
-----
-╒════════╤════════════════════════════╕
-│"prefix"│"namespace"                 │
-╞════════╪════════════════════════════╡
-│"neo"   │"http://neo4j.org/vocab/sw#"│
-└────────┴────────────────────────────┘
-----
 And then when the namespace is detected during the ingestion of the RDF data, the `neo` prefix will be used.
 
 Make sure you know what you're doing if you manipulate the prefix definition, especially after loading RDF data as you can overwrite namespaces in use, which would affect the possibility of regenerating the imported RDF.
 
-Sometimes we have an RDF header with a bunch of prefix definitions. This can come from a SPARQL query, from a Turtle document header or from an RDF/XML document root.
-You can grab this fragment from your RDF document and pass it to the (experimental) `addNamespacePrefixesFromText` method and it will try to extract the namespace definitions and add
-each of them individually by invoking `addNamespacePrefix`. Here's an example of how it works:
+Sometimes we have an RDF header with a bunch of prefix definitions.
+This can come from a SPARQL query, from a Turtle document header or from an RDF/XML document root.
+You can grab this fragment from your RDF document and pass it to the (experimental) `addNamespacePrefixesFromText` method and it will try to extract the namespace definitions and add each of them individually by invoking `n10s.nsprefixes.addFromText`.
+Here's an example of how it works:
 
 [source,cypher]
 ----
 WITH '<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
          xmlns:foaf="http://xmlns.com/foaf/0.1/"
          xmlns:cert="http://www.w3.org/ns/auth/cert#"
-         xmlns:dc="http://purl.org/dc/terms/">' as txt
-call semantics.addNamespacePrefixesFromText(txt) yield prefix, namespace
-return prefix, namespace
+         xmlns:dcterms="http://purl.org/dc/terms/"' as txt
+CALL n10s.nsprefixes.addFromText(txt) yield prefix, namespace
+RETURN prefix, namespace;
 ----
-
-
 
 [[DeleteRDF]]
 == Deleting RDF
@@ -1141,9 +1169,11 @@ CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/v
 
 image::vwonto.png[VW ontology imported in Neo4j, scaledwidth="100%"]
 
-We can see in the ingested graph that by default, classes are persissted as nodes with label `Class` with two properties: `uri` and `name` and `rdf:subClassOf` statements are stored ass relationships of type `SCO` between `Class` nodes. Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively. Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
+We can see in the ingested graph that by default, classes are persisted as nodes with label `Class` with two properties: `uri` and `name` and `rdf:subClassOf` statements are stored as relationships of type `SCO` between `Class` nodes.
+Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively.
+Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
 
-These graph model elements can be overriden by using the following configuration params:
+These graph model elements can be overridden by using the following configuration params:
 
 * *classLabel*: Label to be used for Ontology Classes (categories). Default is `Class`.
 * *subClassOfRel*: Relationship to be used for `rdfs:subClassOf` hierarchies. Default is `SCO`.
@@ -1246,8 +1276,8 @@ WHERE predicate = 'http://voc#property1' AND literalLang = "es"
 CREATE (:Thing { uri: subject, prop: object })
 ----
 
-
-
 === Previewing RDF data
 
-The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import. Like all methods in the <<Preview>> section, both `previewRDF` and `previewRDFSnippet` are read only so will not persist anything in the graph. The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `previewRDFSnippet` takes an RDF fragment as text instead.
+The `previewRDF` and `previewRDFSnippet` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import.
+Like all methods in the <<Preview>> section, both `previewRDF` and `previewRDFSnippet` are read only so will not persist anything in the graph.
+The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  <<advancedfetching>>) whereas `previewRDFSnippet` takes an RDF fragment as text instead.
