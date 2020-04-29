@@ -51,7 +51,7 @@ a `TYPE` or `IN_CATEGORY` (or again whatever your preferred name for that relati
 The following methods will help you leveraging explicit class hierarchies in your graph to run
 inferences whatever the modeling approach you follow from the ones described before.
 
-==== semantics.inference.nodesLabelled
+==== n10s.inference.nodesLabelled
 
 Let's look at the first way of annotating individuals. This script creates a few publications (books) from the
 https://bnb.data.bl.uk/[British National Library catalog] sets a label
@@ -73,7 +73,7 @@ We are using labels instead. But there is an explicit hierarchy for these labels
 
 What we want now is to be able to ask Neo4j for all the books on Crystallography and get all those
 actually labelled as Crystallography but also all those labelled as any of Crystallography's subcategories.
-That's exactly what the `semantics.inference.nodesLabelled` does for us. All we need to do is pass
+That's exactly what the `n10s.inference.nodesLabelled` does for us. All we need to do is pass
 the details on how is the category hierarchy built: `catLabel` will contain the label used to describe
 categories (the default is `Label`) which in our case is `LCSHTopic`. We'll also need to specify in the
  `subCatRel` parameter, the relationship used to define the hierarchy (the default is `SLO` for
@@ -82,34 +82,33 @@ categories (the default is `Label`) which in our case is `LCSHTopic`. We'll also
 
 [source,Cypher]
 ----
-CALL semantics.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN" }) YIELD node
-RETURN node.identifier as id, node.title as title, labels(node) as categories
+CALL n10s.inference.nodesLabelled('Crystallography',  {
+  catNameProp: "dbLabel",
+  catLabel: "LCSHTopic",
+  subCatRel: "NARROWER_THAN"
+})
+YIELD node
+RETURN node.identifier as id, node.title as title, labels(node) as categories;
 ----
 
 When we run this query, and even thoug not a single node in our graph is actually labelled as `Crystallography`,
 we get the following results:
 
-[source,Cypher]
-----
-╒══════════╤══════════════════════════════════╤═════════════════════════════════════╕
-│"id"      │"title"                           │"categories"                         │
-╞══════════╪══════════════════════════════════╪═════════════════════════════════════╡
-│"2167673" │"Crystals and light"              │["CrystalOptics","Book"]             │
-├──────────┼──────────────────────────────────┼─────────────────────────────────────┤
-│"11916857"│"Optical crystallography"         │["CrystalOptics","Book"]             │
-├──────────┼──────────────────────────────────┼─────────────────────────────────────┤
-│"12873809"│"Crystals and life"               │["Crystals","Book"]                  │
-├──────────┼──────────────────────────────────┼─────────────────────────────────────┤
-│"20234576"│"Highlights in applied mineralogy"│["Crystals","Book"]                  │
-├──────────┼──────────────────────────────────┼─────────────────────────────────────┤
-│"8096161" │"Isomorphism in minerals"         │["IsomorphismCrystallography","Book"]│
-└──────────┴──────────────────────────────────┴─────────────────────────────────────┘
-----
+.Results
+[options="header"]
+|===
+|id      | title                           | categories
+|"2167673" |"Crystals and light"              |["CrystalOptics","Book"]
+|"11916857"|"Optical crystallography"         |["CrystalOptics","Book"]
+|"12873809"|"Crystals and life"               |["Crystals","Book"]
+|"20234576"|"Highlights in applied mineralogy"|["Crystals","Book"]
+|"8096161" |"Isomorphism in minerals"         |["IsomorphismCrystallography","Book"]
+|===
 
-==== semantics.inference.hasLabel
+==== n10s.inference.hasLabel
 
 If what we are looking for is not an set of nodes in a given category but rather a predicate telling us
-whether a node is or not is in a category then the function we need is `semantics.inference.hasLabel`.
+whether a node is or not is in a category then the function we need is `n10s.inference.hasLabel`.
 
 Let's create a user with interests in some of the books in our database:
 
@@ -122,37 +121,38 @@ WITH jb, book1, book2
 CREATE (book1)<-[:INTERESTED_IN]-(jb)-[:INTERESTED_IN]->(book2)
 ----
 
-Now we can query for the books about `Physical optics` that he's interested in. Here's how:
+Now we can query for the books about `Physical optics` that he's interested in.
+
+
+Let's first setup a parameter that defines the inference query:
+
+[source,Cypher]
+----
+:param inferenceParams =>  ({ catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN" });
+----
+
+And now we can run our query:
 
 [source,Cypher]
 ----
 MATCH (:User { userId : "JB2020"})-[:INTERESTED_IN]->(b:Book)
-WHERE semantics.inference.hasLabel(b,'PhysicalOptics',$inferenceParams)
-RETURN b.identifier as id, b.title as title, labels(b) as categories
+WHERE n10s.inference.hasLabel(b,'PhysicalOptics',$inferenceParams)
+RETURN b.identifier as id, b.title as title, labels(b) as categories;
 ----
 
-Notice that now we're passing the function configuration as a parameter. So we'll have to set the param
-value upfront if we're using the Neo4j browser.
-[source,Cypher]
-----
-:param inferenceParams: { catNameProp: "dbLabel", catLabel: "LCSHTopic", subCatRel: "NARROWER_THAN" }
-----
+And again, even though there's no book explicitly labelled as 'PhysicalOptics', the query will produce the following result:
 
-And again, even though there's no book explicitly labelled as 'PhysicalOptics', the query will
-produce the following result:
+.Results
+[options="header"]
+|===
+| id         | title                     | categories
+| "11916857" | "Optical crystallography" | ["Book", "CrystalOptics"]
+|===
 
-[source,Cypher]
-----
-╒══════════╤═════════════════════════╤════════════════════════╕
-│"id"      │"title"                  │"categories"            │
-╞══════════╪═════════════════════════╪════════════════════════╡
-│"11916857"│"Optical crystallography"│["CrystalOptics","Book"]│
-└──────────┴─────────────────────────┴────────────────────────┘
-----
 
 Check the <<Reference>> section for a complete list of methods and configuration parameters for these methods and functions.
 
-==== semantics.inference.nodesInCategory
+==== n10s.inference.nodesInCategory
 
 Now let's look at the second way of annotating individuals.
 [WARNING]
@@ -173,13 +173,13 @@ CREATE (:Work { title: "Optical crystallography", identifier: "11916857"})-[:HAS
 CREATE (:Work { title: "Isomorphism in minerals", identifier: "8096161"})-[:HAS_SUBJECT]->(is)
 
 CREATE (:Work { title: "Crystals and life", identifier: "12873809"})-[:HAS_SUBJECT]->(cr)
-CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576"})-[:HAS_SUBJECT]->(cr)
+CREATE (:Work { title: "Highlights in applied mineralogy", identifier: "20234576"})-[:HAS_SUBJECT]->(cr);
 ----
 
 image::crystallography-with-instances.png[Topic hierarchy with instances, scaledwidth="100%"]
 
 In this case, the query to get the nodes in a particular category will make use of
- the `semantics.inference.nodesInCategory` procedure. This procedure takes as
+ the `n10s.inference.nodesInCategory` procedure. This procedure takes as
  parameters, the details of how is the category hierarchy built and how are individuals connected to
  the categories: `inCatRel` specifies the relationship used to link an instance to a category (the
  default is `IN_CAT`) which in our example is `HAS_SUBJECT`. `subCatRel` specifies the relationship used
@@ -188,34 +188,28 @@ In this case, the query to get the nodes in a particular category will make use 
 [source,Cypher]
 ----
 MATCH (cat:LCSHTopic { authoritativeLabel: "Crystallography"})
-CALL semantics.inference.nodesInCategory(cat, { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}) yield node
-return node.title as work
+CALL n10s.inference.nodesInCategory(cat, { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}) yield node
+return node.title as work;
 ----
 
-When we run this Cypher fragment, we get the following list of results, even though not a single node
-in the graph is actually explicitly connected to the `Crystallography` category.
+When we run this Cypher fragment, we get the following list of results, even though not a single node in the graph is actually explicitly connected to the `Crystallography` category.
 
-[source,Cypher]
-----
-╒══════════════════════════════════╕
-│"work"                            │
-╞══════════════════════════════════╡
-│"Optical crystallography"         │
-├──────────────────────────────────┤
-│"Crystals and light"              │
-├──────────────────────────────────┤
-│"Isomorphism in minerals"         │
-├──────────────────────────────────┤
-│"Crystals and life"               │
-├──────────────────────────────────┤
-│"Highlights in applied mineralogy"│
-└──────────────────────────────────┘
-----
+.Results
+[options="header"]
+|===
+| work
+| "Isomorphism in minerals"
+| "Crystals and life"
+| "Highlights in applied mineralogy"
+| "Optical crystallography"
+| "Crystals and light"
 
-==== semantics.inference.inCategory(node, category, {})
+|===
+
+==== n10s.inference.inCategory(node, category, {})
 
 If what we are looking for is not an set of nodes in a given category but rather a predicate telling us
-whether a node is or not is in a category then the function we need is `semantics.inference.inCategory`.
+whether a node is or not is in a category then the function we need is `n10s.inference.inCategory`.
 
 Let's create a user with interests in some of the books in our database:
 
@@ -225,60 +219,58 @@ MERGE (jb:User { userId : "JB2020"}) with jb
 MATCH (book1:Work { identifier : "20234576" })
 MATCH (book2:Work { identifier : "11916857" })
 WITH jb, book1, book2
-CREATE (book1)<-[:INTERESTED_IN]-(jb)-[:INTERESTED_IN]->(book2)
+CREATE (book1)<-[:INTERESTED_IN]-(jb)-[:INTERESTED_IN]->(book2);
 ----
 
-Now we can query for the books about `Physical optics` that he's interested in. Here's how:
+Now we can query for the books about `Physical optics` that he's interested in.
+
+Let's update our inference parameter by running the following query:
+
+[source,Cypher]
+----
+:param inferenceParams =>  ({ inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"});
+----
+
+And now we can run the query:
 
 [source,Cypher]
 ----
 MATCH (phyOpt:LCSHTopic { authoritativeLabel: "Physical optics"})
 MATCH (:User { userId : "JB2020"})-[:INTERESTED_IN]->(b:Work)
-WHERE semantics.inference.inCategory(b,phyOpt,$inferenceParams)
-RETURN b.identifier as id, b.title as title
+WHERE n10s.inference.inCategory(b,phyOpt,$inferenceParams)
+RETURN b.identifier as id, b.title as title;
 ----
 
-Notice that now we're passing the function configuration as a parameter. So we'll have to set the param
-value upfront if we're using the Neo4j browser.
-[source,Cypher]
-----
-:param inferenceParams: { inCatRel: "HAS_SUBJECT", subCatRel: "NARROWER_THAN"}
-----
+And again, even though there's no book explicitly connected to the 'PhysicalOptics' category, the query will produce the following result:
 
-And again, even though there's no book explicitly connected to the 'PhysicalOptics' category, the query will
-produce the following result:
+.Results
+[options="header"]
+|===
+| id         | title
+| "11916857" | "Optical crystallography"
+|===
 
-[source,Cypher]
-----
-╒══════════╤═════════════════════════╕
-│"id"      │"title"                  │
-╞══════════╪═════════════════════════╡
-│"11916857"│"Optical crystallography"│
-└──────────┴─────────────────────────┘
-----
 
 Remember to check the <<Reference>> section for a complete list of methods and configuration parameters for these methods and functions.
 
 ==== A real  world example
 
-We can use the `semantics.importOntology` procedure to import http://www.obofoundry.org/ontology/ncbitaxon.html[the NCBI Taxon ontology].
+We can use the `n10s.onto.import.fetch` procedure to import http://www.obofoundry.org/ontology/ncbitaxon.html[the NCBI Taxon ontology].
 This is an ontology representation of the National Center for Biotechnology Information (NCBI) organismal taxonomy.
 It contains 1.8 million classes (`Class`) and 3.6 million subClass of (`SCO`) relationships.
 
 [source,Cypher]
 ----
-CALL semantics.importOntology("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML")
+CALL n10s.onto.import.fetch("http://purl.obolibrary.org/obo/ncbitaxon.owl","RDF/XML");
 ----
-It takes just over a couple of minutes to load it into Neo4j.
 
-[source,Cypher]
-----
-╒═══════════════════╤═══════════════╤═══════════════╤════════════╤═══════════╤═══════════════╕
-│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"│"extraInfo"│"configSummary"│
-╞═══════════════════╪═══════════════╪═══════════════╪════════════╪═══════════╪═══════════════╡
-│"OK"               │5480841        │12581469       │null        │""         │{}             │
-└───────────────────┴───────────────┴───────────────┴────────────┴───────────┴───────────────┘
-----
+.Results
+[options="header"]
+|===
+| terminationStatus | triplesLoaded | triplesParsed | namespaces | extraInfo | configSummary
+|"OK"               |5480841        |12581469       |null        |""         |{}             
+|===
+
 
 //We could have done it too using importRDF
 //[source,Cypher]
@@ -292,7 +284,7 @@ Let's add to the hierarchy a few individuals. Some dogs (`NCBITaxon_9615`, _"Can
 ----
 CREATE (p:Person { name: "Mr. Doglover"}) WITH p
 UNWIND [ { name: "Perdita" , dob: "30/11/2016"}, { name: "Toby" , dob: "14/03/2019"}, { name: "Lucky" , dob: "14/11/2018"}, { name: "Pongo" , dob: "4/10/2012"}] as doggy
-CREATE (:Pet:NCBITaxon_9615 { name: doggy.name, dob: doggy.dob })-[:OWNER]->(p)
+CREATE (:Pet:NCBITaxon_9615 { name: doggy.name, dob: doggy.dob })-[:OWNER]->(p);
 ----
 
 And why not? some mice (`NCBITaxon_10092`, _"Mus musculus domesticus"_):
@@ -301,7 +293,7 @@ And why not? some mice (`NCBITaxon_10092`, _"Mus musculus domesticus"_):
 ----
 CREATE (p:Person { name: "Mr. Mouselover"}) WITH p
 UNWIND [ { name: "Mickey" , dob: "30/11/2016"}, { name: "Minnie" , dob: "14/03/2019"}, { name: "Topo" , dob: "14/11/2018"}, { name: "Rastamouse" , dob: "4/10/2012"}] as mouse
-CREATE (:Pet:NCBITaxon_10092 { name: mouse.name, dob: mouse.dob })-[:OWNER]->(p)
+CREATE (:Pet:NCBITaxon_10092 { name: mouse.name, dob: mouse.dob })-[:OWNER]->(p);
 ----
 
 If we're looking for instances of mammals in our database, we'd look for nodes labelled as `NCBITaxon_40674`
@@ -309,34 +301,25 @@ If we're looking for instances of mammals in our database, we'd look for nodes l
 
 [source,Cypher]
 ----
-CALL semantics.inference.nodesLabelled('NCBITaxon_40674',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
-RETURN node.name as name, node.dob as dob, labels(node)
+CALL n10s.inference.nodesLabelled('NCBITaxon_40674',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
+RETURN node.name as name, node.dob as dob, labels(node);
 ----
 
 Only a few milliseconds needed to identify them in the nearly 11k categories under _Mammalia_.
 
-[source,Cypher]
-----
-╒════════════╤════════════╤═════════════════════════╕
-│"name"      │"dob"       │"labels(node)"           │
-╞════════════╪════════════╪═════════════════════════╡
-│"Mickey"    │"30/11/2016"│["Pet","NCBITaxon_10092"]│
-├────────────┼────────────┼─────────────────────────┤
-│"Minnie"    │"14/03/2019"│["Pet","NCBITaxon_10092"]│
-├────────────┼────────────┼─────────────────────────┤
-│"Topo"      │"14/11/2018"│["Pet","NCBITaxon_10092"]│
-├────────────┼────────────┼─────────────────────────┤
-│"Rastamouse"│"4/10/2012" │["Pet","NCBITaxon_10092"]│
-├────────────┼────────────┼─────────────────────────┤
-│"Perdita"   │"30/11/2016"│["NCBITaxon_9615","Pet"] │
-├────────────┼────────────┼─────────────────────────┤
-│"Toby"      │"14/03/2019"│["NCBITaxon_9615","Pet"] │
-├────────────┼────────────┼─────────────────────────┤
-│"Lucky"     │"14/11/2018"│["NCBITaxon_9615","Pet"] │
-├────────────┼────────────┼─────────────────────────┤
-│"Pongo"     │"4/10/2012" │["NCBITaxon_9615","Pet"] │
-└────────────┴────────────┴─────────────────────────┘
-----
+.Results
+[options="header"]
+|===
+| name      | dob       | labels(node)
+|"Mickey"    |"30/11/2016"|["Pet","NCBITaxon_10092"]
+|"Minnie"    |"14/03/2019"|["Pet","NCBITaxon_10092"]
+|"Topo"      |"14/11/2018"|["Pet","NCBITaxon_10092"]
+|"Rastamouse"|"4/10/2012" |["Pet","NCBITaxon_10092"]
+|"Perdita"   |"30/11/2016"|["NCBITaxon_9615","Pet"] 
+|"Toby"      |"14/03/2019"|["NCBITaxon_9615","Pet"] 
+|"Lucky"     |"14/11/2018"|["NCBITaxon_9615","Pet"] 
+|"Pongo"     |"4/10/2012" |["NCBITaxon_9615","Pet"] 
+|===
 
 Interestingly, and because Neo4j is a native Graph DB implementing index free adjacency, if we were
 to search across the 1.2 million categories for all instances of _"Eukaryota"_ (`NCBITaxon_2759`),
@@ -345,7 +328,7 @@ exactly the same time to identify them. Here's the query:
 
 [source,Cypher]
 ----
-CALL semantics.inference.nodesLabelled('NCBITaxon_2759',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
+CALL n10s.inference.nodesLabelled('NCBITaxon_2759',{ catLabel: "Class", subCatRel: "SCO" }) YIELD node
 RETURN node.name as name, node.dob as dob, labels(node)
 ----
 
@@ -355,8 +338,8 @@ _"Eukaryota"_. Here's how:
 [source,Cypher]
 ----
 MATCH path = (:Person { name : "Mr. Doglover"})<-[:OWNER]-(pet)
-WHERE semantics.inference.hasLabel(pet,'NCBITaxon_2759',$inferenceParams)
-RETURN count(pet)
+WHERE n10s.inference.hasLabel(pet,'NCBITaxon_2759',$inferenceParams)
+RETURN count(pet);
 ----
 
 === Hierarchies of Relationships
@@ -370,19 +353,17 @@ between Keanu and The Matrix.
 This is useful in situations where we want to be able to dynamically define relationships by composing
 existing ones.
 
-The `semantics.inference.getRels` stored procedure uses exactly these semantics to infer implicit
+The `n10s.inference.getRels` stored procedure uses exactly these semantics to infer implicit
 relationships between nodes in the graph.
 
-==== semantics.inference.getRels
+==== n10s.inference.getRels
 
-Let's take the movie database. Remember you can have it loaded in Neo4j by running `:play movies` and
-following the instructions in the guide.
-Let's say we have http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl[a fragment
-of a movie ontology] that contains a definition
-of a relationship hierarchy. It does it by defining a number of `rdfs:subPropertyOf` statements
-between relationships.
-For instance, it states that every `ACTED_IN` relationship is also a `WORKED_IN` one. This is
-the triple in question:
+Let's take the movie database.
+Remember you can have it loaded in Neo4j by running `:play movies` and following the instructions in the guide.
+Let's say we have http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl[a fragment of a movie ontology] that contains a definition of a relationship hierarchy.
+It does it by defining a number of `rdfs:subPropertyOf` statements between relationships.
+For instance, it states that every `ACTED_IN` relationship is also a `WORKED_IN` one.
+This is the triple in question:
 
 [source,RDF]
 ----
@@ -395,9 +376,9 @@ neovoc:ACTED_IN a owl:ObjectProperty;
 ...
 ----
 
-To see this inferencing procedure in action, we'll start by loading the ontology. We can do this
- by either using the `semantics.importOntology` or the `semantics.importRDF` methods described in
- the <<Import>> section.
+To see this inferencing procedure in action, we'll start by loading the ontology.
+We can do this by either using the `n10s.onto.import.fetch` or the `n10s.rdf.import.fetch` methods described in the <<Import>> section.
+
 [NOTE]
 We can get a hierarchy from an ontology or we can create it with a cypher script from any other
 source.
@@ -407,49 +388,37 @@ If  we run:
 
 [source,Cypher]
 ----
-CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
+CALL n10s.onto.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/movieDBRelHierarchy.ttl", "Turtle");
 ----
 
-We should get a simple hierarchy of properties like the one in this screen capture from the Neo4j
-browser.
+We should get a simple hierarchy of properties like the one in this screen capture from the Neo4j browser.
 
 
 image::movieDB-PropertyHierarchy-OntoLoad.png[property hierarchy in a possible Movie Database Ontology loaded into Neo4j, scaledwidth="100%"]
 
 Writing a query that returns all nodes connected to the movie The Matrix through the 'virtual' `WORKED_IN` relationship
-is an easy task with the `semantics.inference.getRels` procedure.
+is an easy task with the `n10s.inference.getRels` procedure.
 
 [source,Cypher]
 ----
 match (thematrix:Movie {title: "The Matrix"})
-call semantics.inference.getRels(thematrix,"WORKED_IN", { subRelRel: "SPO" }) yield rel, node
+call n10s.inference.getRels(thematrix,"WORKED_IN", { subRelRel: "SPO" }) yield rel, node
 return type(rel) as relType, node
 ----
 
-Returning:
-
-[source,Cypher]
-----
-╒══════════╤═════════════════════════════════════════╕
-│"relType" │"node"                                   │
-╞══════════╪═════════════════════════════════════════╡
-│"ACTED_IN"│{"name":"Emil Eifrem","born":1978}       │
-├──────────┼─────────────────────────────────────────┤
-│"PRODUCED"│{"name":"Joel Silver","born":1952}       │
-├──────────┼─────────────────────────────────────────┤
-│"DIRECTED"│{"name":"Lana Wachowski","born":1965}    │
-├──────────┼─────────────────────────────────────────┤
-│"DIRECTED"│{"name":"Lilly Wachowski","born":1967}   │
-├──────────┼─────────────────────────────────────────┤
-│"ACTED_IN"│{"name":"Hugo Weaving","born":1960}      │
-├──────────┼─────────────────────────────────────────┤
-│"ACTED_IN"│{"name":"Laurence Fishburne","born":1961}│
-├──────────┼─────────────────────────────────────────┤
-│"ACTED_IN"│{"name":"Carrie-Anne Moss","born":1967}  │
-├──────────┼─────────────────────────────────────────┤
-│"ACTED_IN"│{"name":"Keanu Reeves","born":1964}      │
-└──────────┴─────────────────────────────────────────┘
-----
+.Results
+[options="header"]
+|===
+| relType    | node
+| "ACTED_IN" | (:Person {name: "Keanu Reeves", born: 1964})
+| "PRODUCED" | (:Person {name: "Joel Silver", born: 1952})
+| "DIRECTED" | (:Person {name: "Lana Wachowski", born: 1965})
+| "ACTED_IN" | (:Person {name: "Carrie-Anne Moss", born: 1967})
+| "ACTED_IN" | (:Person {name: "Laurence Fishburne", born: 1961})
+| "ACTED_IN" | (:Person {name: "Hugo Weaving", born: 1960})
+| "ACTED_IN" | (:Person {name: "Emil Eifrem", born: 1978})
+| "DIRECTED" | (:Person {name: "Lilly Wachowski", born: 1967})
+|===
 
 Now let's say we want to modify the meaning of the `WORKED_IN` relationship to exclude `PRODUCED` and
 keep only `artistic involvement` connections, tis is `WROTE`, `ACTED_IN` and `DIRECTED`. We don't need
@@ -461,6 +430,6 @@ MATCH (:Relationship {name:"PRODUCED"})-[r:SPO]->(:Relationship {name:"WORKED_IN
 DELETE r
 ----
 
-If we run the same query again, we'll get different results, this time excluding producers. Think
-of this in a large scale DB. We can effectively modify relationships globally by adding or deleting
-a simple link to the hierarchy and without having to modify every single instance.
+If we run the same query again, we'll get different results, this time excluding producers.
+Think of this in a large scale DB.
+We can effectively modify relationships globally by adding or deleting a simple link to the hierarchy and without having to modify every single instance.
