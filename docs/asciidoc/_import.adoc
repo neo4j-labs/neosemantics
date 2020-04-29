@@ -28,16 +28,20 @@ This section includes:
 * <<custom-prefixes-for-namespaces>>
 
 [[import-available-procedures]]
-=== Procedure Overview
+=== Procedure and Function Overview
 
-The table below describes the available procedures:
+The table below describes the available procedures and functions:
 
 [separator=¦,opts=header,cols="1,1m,1m,5"]
 |===
 include::../../build/generated-documentation/n10s.rdf.import.fetch.csv[]
+include::../../build/generated-documentation/n10s.quadrdf.import.fetch.csv[lines=2:]
+include::../../build/generated-documentation/n10s.rdf.getLangTag.csv[lines=2:]
+include::../../build/generated-documentation/n10s.rdf.hasLangTag.csv[lines=2:]
 |===
 
-All import procedures take the following three parameters:
+
+The import procedures take the following three parameters:
 [#common_params]
 
 [options="header"]

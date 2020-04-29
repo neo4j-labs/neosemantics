@@ -12,3 +12,6 @@ buildNumber.properties
 .project
 .settings/
 .idea/*
+build
+docs/build
+docs/.gradle
