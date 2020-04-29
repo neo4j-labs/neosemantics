@@ -353,8 +353,7 @@ between Keanu and The Matrix.
 This is useful in situations where we want to be able to dynamically define relationships by composing
 existing ones.
 
-The `n10s.inference.getRels` stored procedure uses exactly these semantics to infer implicit
-relationships between nodes in the graph.
+The `n10s.inference.getRels` stored procedure uses exactly these semantics to infer implicit relationships between nodes in the graph.
 
 ==== n10s.inference.getRels
 
