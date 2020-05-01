@@ -45,7 +45,7 @@ CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE
 Before any RDF import operation a `GraphConfig` needs to be created. Here we define the way the RDF data is persisted in Neo4j. 
 We'll find things like 
 
-| Param        | Values           | Cool  |
+| Param        | Values           | Desc  |
 | :------------- |:-------------|:-----|
 | handleVocabUris     | "SHORTEN","KEEP","SHORTEN_STRICT","MAP"|  how namespaces are  handled |
 | handleMultival     | "OVERWRITE","ARRAY"      | how multivalued properties are handled |
