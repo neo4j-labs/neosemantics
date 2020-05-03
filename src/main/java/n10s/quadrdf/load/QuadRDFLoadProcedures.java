@@ -11,7 +11,7 @@ import org.neo4j.procedure.Procedure;
 
 public class QuadRDFLoadProcedures extends QuadRDFProcedures {
 
-  @Procedure(name = "n10s.quadrdf.import.fetch", mode = Mode.WRITE)
+  @Procedure(name = "n10s.experimental.quadrdf.import.fetch", mode = Mode.WRITE)
   public Stream<ImportResults> fetch(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -20,7 +20,7 @@ public class QuadRDFLoadProcedures extends QuadRDFProcedures {
 
   }
 
-  @Procedure(name = "n10s.quadrdf.import.inline", mode = Mode.WRITE)
+  @Procedure(name = "n10s.experimental.quadrdf.import.inline", mode = Mode.WRITE)
   @Description("Imports an RDF snippet passed as parameter and stores it in Neo4j as a property "
       + "graph. Requires a unique constraint on :Resource(uri)")
   public Stream<ImportResults> inline(@Name("rdf") String rdfFragment,

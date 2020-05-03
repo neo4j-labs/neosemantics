@@ -227,7 +227,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
     nodeCache.invalidateAll();
     if (statementsWithBNodeCount > 0) {
       setbNodeInfo(statementsWithBNodeCount
-          + " of the statements could not be deleted, due to containing a blank node.");
+          + " of the statements could not be deleted, due to use of blank nodes.");
     }
 
     //TODO what to return here? number of nodes and rels?

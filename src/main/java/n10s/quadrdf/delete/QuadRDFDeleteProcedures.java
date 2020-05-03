@@ -10,7 +10,7 @@ import org.neo4j.procedure.Procedure;
 
 public class QuadRDFDeleteProcedures extends QuadRDFProcedures {
 
-  @Procedure(mode = Mode.WRITE)
+  @Procedure(name = "n10s.experimental.quadrdf.delete.url", mode = Mode.WRITE)
   public Stream<DeleteResults> fetch(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
@@ -19,7 +19,7 @@ public class QuadRDFDeleteProcedures extends QuadRDFProcedures {
 
   }
 
-  @Procedure(mode = Mode.WRITE)
+  @Procedure(name = "n10s.experimental.quadrdf.delete.inline", mode = Mode.WRITE)
   public Stream<DeleteResults> inline(@Name("url") String rdf,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {

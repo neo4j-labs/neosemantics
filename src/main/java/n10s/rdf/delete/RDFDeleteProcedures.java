@@ -14,7 +14,7 @@ public class RDFDeleteProcedures extends RDFProcedures {
   @Procedure(mode = Mode.WRITE)
   @Description(
       "Deletes triples (parsed from url) from Neo4j. Works on a graph resulted of importing RDF via "
-          + "semantics.importRDF(). Delete config must match the one used on import.")
+          + "n10s.rdf.import ")
   public Stream<DeleteResults> fetch(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
     return Stream.of(doDelete(format, url, null, props));
@@ -23,7 +23,7 @@ public class RDFDeleteProcedures extends RDFProcedures {
   @Procedure(mode = Mode.WRITE)
   @Description(
       "Deletes triples (passed as string) from Neo4j. Works on a graph resulted of importing RDF via "
-          + "semantics.importRDF(). Delete config must match the one used on import.")
+          + "n10s.rdf.import ")
   public Stream<DeleteResults> inline(@Name("rdf") String rdf,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {

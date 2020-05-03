@@ -160,7 +160,7 @@ public class SHACLValidator {
 
     if (theConstraint.get("dataType") != null) {
       //TODO: this will be safer via APOC? maybe exclude some of them? and log the ignored ones?
-      addCypherToValidationScripts(vc,getDataTypeViolationQuery(false), getDataTypeViolationQuery(true), focusLabel,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)), getDataTypeViolationQuery(false), getDataTypeViolationQuery(true), focusLabel,
           propOrRel,
           getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
           getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
@@ -169,7 +169,8 @@ public class SHACLValidator {
 
       //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
 
-      addCypherToValidationScripts(vc,getDataTypeViolationQuery2(false),getDataTypeViolationQuery2(true), focusLabel,
+      //TODO: This part is for custom datatypes? Think if it's needed
+      addCypherToValidationScripts(vc, Arrays.asList(focusLabel), getDataTypeViolationQuery2(false),getDataTypeViolationQuery2(true), focusLabel,
           propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
           severity,propOrRel);
     }
@@ -183,7 +184,7 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theHasValueUri", valueUriList);
 
-        addCypherToValidationScripts(vc,getHasValueUriViolationQuery(false), getHasValueUriViolationQuery(true), paramSetId,
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getHasValueUriViolationQuery(false), getHasValueUriViolationQuery(true), paramSetId,
             focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
             propOrRel, severity, propOrRel);
@@ -198,7 +199,7 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theHasValueLiteral", valueLiteralList);
 
-        addCypherToValidationScripts(vc,getHasValueLiteralViolationQuery(false),getHasValueLiteralViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getHasValueLiteralViolationQuery(false),getHasValueLiteralViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
             propOrRel, severity, propOrRel);
@@ -207,11 +208,11 @@ public class SHACLValidator {
 
     if (theConstraint.get("rangeKind") != null) {
       if (theConstraint.get("rangeKind").equals(SHACL.LITERAL.stringValue())) {
-        addCypherToValidationScripts(vc,getRangeIRIKindViolationQuery(false), getRangeIRIKindViolationQuery(true), focusLabel,
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getRangeIRIKindViolationQuery(false), getRangeIRIKindViolationQuery(true), focusLabel,
             propOrRel,
             focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
       } else if (theConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue())){
-        addCypherToValidationScripts(vc,getRangeLiteralKindViolationQuery(false),getRangeLiteralKindViolationQuery(true), focusLabel,
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getRangeLiteralKindViolationQuery(false),getRangeLiteralKindViolationQuery(true), focusLabel,
             propOrRel,
             focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
       }
@@ -219,12 +220,12 @@ public class SHACLValidator {
 
     if (theConstraint.get("rangeType") != null && !theConstraint.get("rangeType")
         .equals("")) {
-      addCypherToValidationScripts(vc,getRangeType1ViolationQuery(false), getRangeType1ViolationQuery(true), focusLabel,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType")))),getRangeType1ViolationQuery(false), getRangeType1ViolationQuery(true), focusLabel,
           propOrRel,
           translateUri((String) theConstraint.get("rangeType")),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
           translateUri((String) theConstraint.get("rangeType")));
-      addCypherToValidationScripts(vc,getRangeType2ViolationQuery(false),getRangeType2ViolationQuery(true), focusLabel,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType")))),getRangeType2ViolationQuery(false),getRangeType2ViolationQuery(true), focusLabel,
           propOrRel,
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
           propOrRel);
@@ -238,7 +239,7 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theInLiterals", valueLiteralList);
 
-        addCypherToValidationScripts(vc,getInLiteralsViolationQuery(false),getInLiteralsViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getInLiteralsViolationQuery(false),getInLiteralsViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
             propOrRel, severity, propOrRel);
@@ -253,7 +254,7 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theInUris", valueLiteralList);
 
-        addCypherToValidationScripts(vc,getInUrisViolationQuery(false),getInUrisViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getInUrisViolationQuery(false),getInUrisViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
             propOrRel, severity, propOrRel);
@@ -265,7 +266,7 @@ public class SHACLValidator {
           theConstraint.get("propShapeUid") + "_" + SHACL.PATTERN.stringValue();
       Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
       params.put("theRegex", (String) theConstraint.get("pattern"));
-      addCypherToValidationScripts(vc,getRegexViolationQuery(false), getRegexViolationQuery(true), paramSetId,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getRegexViolationQuery(false), getRegexViolationQuery(true), paramSetId,
           focusLabel, propOrRel, propOrRel, focusLabel,
           (String) theConstraint.get("propShapeUid"), propOrRel, severity);
 
@@ -279,7 +280,7 @@ public class SHACLValidator {
 
       if (!(boolean) theConstraint.get("inverse")) {
 
-        addCypherToValidationScripts(vc,getMinCardinality1ViolationQuery(false),getMinCardinality1ViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getMinCardinality1ViolationQuery(false),getMinCardinality1ViolationQuery(true),
             paramSetId, focusLabel,
             " params.minCount <= ",
             propOrRel,propOrRel,
@@ -288,7 +289,7 @@ public class SHACLValidator {
       } else {
         // multivalued attributes not checked for cardinality in the case of inverse??
         // does not make sense in an LPG
-        addCypherToValidationScripts(vc,getMinCardinality1InverseViolationQuery(false),getMinCardinality1InverseViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getMinCardinality1InverseViolationQuery(false),getMinCardinality1InverseViolationQuery(true),
             paramSetId, focusLabel,
             " params.minCount <= ",
             propOrRel,
@@ -305,7 +306,7 @@ public class SHACLValidator {
 
       if (!(boolean) theConstraint.get("inverse")) {
 
-        addCypherToValidationScripts(vc,getMaxCardinality1ViolationQuery(false),getMaxCardinality1ViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getMaxCardinality1ViolationQuery(false),getMaxCardinality1ViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel,propOrRel,
             " <= params.maxCount ",
@@ -314,7 +315,7 @@ public class SHACLValidator {
       } else {
         // multivalued attributes not checked for cardinality in the case of inverse??
         // does not make sense in an LPG
-        addCypherToValidationScripts(vc,getMaxCardinality1InverseViolationQuery(false),getMaxCardinality1InverseViolationQuery(true),
+        addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getMaxCardinality1InverseViolationQuery(false),getMaxCardinality1InverseViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel,
             " <= params.maxCount ",
@@ -331,7 +332,7 @@ public class SHACLValidator {
       params.put("minStrLen", theConstraint.get("minStrLen"));
       params.put("maxStrLen", theConstraint.get("maxStrLen"));
 
-      addCypherToValidationScripts(vc,getStrLenViolationQuery(false), getStrLenViolationQuery(true), paramSetId,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getStrLenViolationQuery(false), getStrLenViolationQuery(true), paramSetId,
           focusLabel,
           propOrRel,
           theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
@@ -354,7 +355,7 @@ public class SHACLValidator {
           theConstraint.get("maxInc") != null ? theConstraint.get("maxInc")
               : theConstraint.get("maxExc"));
 
-      addCypherToValidationScripts(vc,getValueRangeViolationQuery(false), getValueRangeViolationQuery(true),paramSetId,
+      addCypherToValidationScripts(vc,new ArrayList<String>(Arrays.asList(focusLabel)),getValueRangeViolationQuery(false), getValueRangeViolationQuery(true),paramSetId,
           focusLabel, propOrRel,
           theConstraint.get("minInc") != null ? " params.min <="
               : (theConstraint.get("minExc") != null ? " params.min < " : ""),
@@ -383,7 +384,7 @@ public class SHACLValidator {
       }
       params.put("allAllowedProps", allowedPropsTranslated);
 
-      addCypherToValidationScripts(vc,getNodeStructureViolationQuery(false), getNodeStructureViolationQuery(true),paramSetId, focusLabel,
+      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),getNodeStructureViolationQuery(false), getNodeStructureViolationQuery(true),paramSetId, focusLabel,
           focusLabel,
           (String) theConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation");
 
@@ -667,9 +668,10 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
     }
   }
 
-  private void addCypherToValidationScripts(ValidatorConfig vc, String querystrGlobal, String querystrOnNodeset, String... args) {
-    vc.getEngineGlobal().append("\n UNION \n").append(String.format(querystrGlobal, args));
-    vc.getEngineForNodeSet().append("\n UNION \n").append(String.format(querystrOnNodeset, args));
+  private void addCypherToValidationScripts(ValidatorConfig vc, List<String>triggers, String querystrGlobal, String querystrOnNodeset, String... args) {
+//    vc.getEngineGlobal().append("\n UNION \n").append(String.format(querystrGlobal, args));
+//    vc.getEngineForNodeSet().append("\n UNION \n").append(String.format(querystrOnNodeset, args));
+    vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1) , String.format(querystrGlobal, args),String.format(querystrOnNodeset, args), triggers);
   }
 
   private String getDataTypeViolationQuery(boolean tx ) {

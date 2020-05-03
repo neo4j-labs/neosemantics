@@ -130,13 +130,46 @@ public class SHACLValidationProceduresTest {
       results = session.run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
       assertTrue(results.hasNext());
       Node vc = results.next().get("vc").asNode();
-      assertFalse(vc.get("_engineGlobal").isNull());
+      assertFalse(vc.get("_gq").isNull());
 
       Result loadCompiled = session.run("call n10s.validation.shacl.validate()");
       assertTrue(loadCompiled.hasNext());
     }
   }
 
+  @Test
+  public void testLargeShapesFile() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      String data_input = " CREATE (:Lead { annualRevenue: '345', leadScore: 1.1, leadRating: 0 })-[:FOR_CO]->(:Company { id: 'co.234'}) ;";
+
+      session.run(data_input);
+
+      Result results = session
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/cim.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      assertTrue(results.hasNext());
+
+      results = session.run("MATCH (vc:_n10sValidatorConfig) RETURN vc ");
+      assertTrue(results.hasNext());
+      Node vc = results.next().get("vc").asNode();
+      assertFalse(vc.get("_gq").isNull());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      assertTrue(result.hasNext());
+      while(result.hasNext()){
+        System.out.println(result.next());
+      }
+    }
+  }
 
   @Test
   public void testRegexValidationOnMovieDB() throws Exception {

@@ -3369,7 +3369,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ commitSize: 500 })");
@@ -3441,7 +3441,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ commitSize: 500 })");
@@ -3513,7 +3513,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
 
-      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG',{ commitSize: 500 })");
@@ -3523,7 +3523,7 @@ public class RDFProceduresTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      Result deleteResult = session.run("CALL n10s.quadrdf.delete.fetch('" +
+      Result deleteResult = session.run("CALL n10s.experimental.quadrdf.delete.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', { commitSize: 500 })");
@@ -3545,7 +3545,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' } ");
 
-      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads',{ commitSize: 500 })");
@@ -3555,7 +3555,7 @@ public class RDFProceduresTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      Result deleteResult = session.run("CALL n10s.quadrdf.delete.fetch('" +
+      Result deleteResult = session.run("CALL n10s.experimental.quadrdf.delete.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.nq")
               .toURI()
           + "', 'N-Quads', { commitSize: 500 })");
@@ -3577,7 +3577,7 @@ public class RDFProceduresTest {
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
 
-      Result importResults = session.run("CALL n10s.quadrdf.import.fetch('" +
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG', { commitSize: 500 })");
@@ -3587,7 +3587,7 @@ public class RDFProceduresTest {
           + "RETURN n");
       assertEquals(12, result.list().size());
 
-      Result deleteResult = session.run("CALL n10s.quadrdf.delete.fetch('" +
+      Result deleteResult = session.run("CALL n10s.experimental.quadrdf.delete.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', { commitSize: 500 })");
@@ -3598,7 +3598,7 @@ public class RDFProceduresTest {
           + "RETURN n");
       assertEquals(5, result.list().size());
 
-      deleteResult = session.run("CALL n10s.quadrdf.delete.fetch('" +
+      deleteResult = session.run("CALL n10s.experimental.quadrdf.delete.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("RDFDatasets/RDFDatasetDelete.trig")
               .toURI()
           + "', 'TriG', { commitSize: 500 })");
