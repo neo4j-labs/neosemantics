@@ -14,6 +14,7 @@ import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -293,6 +294,39 @@ public class RDFProceduresTest {
       + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
       + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .";
 
+  private static final String SKOS_FRAGMENT_TURTLE = "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+      + "@prefix thesaurus: <http://vocabularies.unesco.org/thesaurus/> .\n"
+      + "@prefix isothes: <http://purl.org/iso25964/skos-thes#> .\n"
+      + "@prefix dc: <http://purl.org/dc/terms/> .\n"
+      + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+      + "\n"
+      + "<http://vocabularies.unesco.org/thesaurus>\n"
+      + "  a skos:ConceptScheme ;\n"
+      + "  skos:prefLabel \"UNESCO Thesaurus\"@en, \"Thésaurus de lUNESCO\"@fr, \"Тезаурус ЮНЕСКО\"@ru, \"Tesauro de la UNESCO\"@es .\n"
+      + "\n"
+      + "thesaurus:concept2094\n"
+      + "  a skos:Concept ;\n"
+      + "  skos:prefLabel \"Lengua altaica\"@es, \"Langue altaïque\"@fr, \"Алтайские языки\"@ru, \"Altaic languages\"@en ;\n"
+      + "  skos:narrower thesaurus:concept2096 .\n"
+      + "\n"
+      + "thesaurus:mt3.35\n"
+      + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#MicroThesaurus>, skos:Collection ;\n"
+      + "  skos:prefLabel \"Languages\"@en, \"Lenguas\"@es, \"Langues\"@fr, \"Языки\"@ru ;\n"
+      + "  skos:member thesaurus:concept2096 .\n"
+      + "\n"
+      + "thesaurus:concept2096\n"
+      + "  dc:modified \"2006-05-23T00:00:00\"^^xsd:dateTime ;\n"
+      + "  a skos:Concept ;\n"
+      + "  skos:inScheme <http://vocabularies.unesco.org/thesaurus> ;\n"
+      + "  skos:prefLabel \"Azerbaijani\"@en, \"Azéri\"@fr, \"Азербайджанский язык\"@ru, \"Azerbaiyano\"@es ;\n"
+      + "  skos:hiddenLabel \"Azeri\"@fr, \"Азербаиджанскии язык\"@ru ;\n"
+      + "  skos:broader thesaurus:concept2094 .\n"
+      + "\n"
+      + "thesaurus:domain3\n"
+      + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#Domain>, skos:Collection ;\n"
+      + "  skos:prefLabel \"Culture\"@en, \"Culture\"@fr, \"Культура\"@ru, \"Cultura\"@es ;\n"
+      + "  skos:member thesaurus:mt3.35 .";
+
   private static URI file(String path) {
     try {
       return RDFProceduresTest.class.getClassLoader().getResource(path).toURI();
@@ -422,6 +456,30 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'IGNORE', handleMultival: 'ARRAY' }");
+
+      Result importResults
+          = session.run("CALL n10s.skos.import.inline('" +
+          SKOS_FRAGMENT_TURTLE + "','Turtle')"); //,{   commitSize: 1000 }
+
+      assertEquals(26L, importResults
+          .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+          "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept2096'}) RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.prefLabel  as name limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      assertEquals("Class", result.get("label").asString());
+      assertEquals(Arrays.asList("Azerbaijani", "Azéri", "Азербайджанский язык", "Azerbaiyano"), result.get("name").asList());
+      assertFalse(queryResults.hasNext());
+    }
+  }
+
+  @Test
+  public void testImportSKOSFetch() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{}");
 
       Result importResults
@@ -432,7 +490,8 @@ public class RDFProceduresTest {
       assertEquals(17118L, importResults
           .single().get("triplesLoaded").asLong());
       Result queryResults = session.run(
-          "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name limit 1");
+          "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
+              + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name limit 1");
       assertTrue(queryResults.hasNext());
       Record result = queryResults.next();
       assertEquals("Class", result.get("label").asString());
@@ -440,6 +499,7 @@ public class RDFProceduresTest {
       assertFalse(queryResults.hasNext());
     }
   }
+
 
   @Test
   public void testImportJSONLDImportSnippet() throws Exception {

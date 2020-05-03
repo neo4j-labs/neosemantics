@@ -1641,7 +1641,7 @@ public class RDFEndpointTest {
       Map map = res.next();
       assertEquals(1L, map.get("triplesDeleted"));
       assertEquals(
-          "8 of the statements could not be deleted, due to containing a blank node.",
+          "8 of the statements could not be deleted, due to use of blank nodes.",
           map.get("extraInfo"));
       tx.commit();
     }
