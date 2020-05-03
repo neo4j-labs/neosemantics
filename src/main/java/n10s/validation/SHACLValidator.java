@@ -165,7 +165,7 @@ public class SHACLValidator {
           getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
           getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity);
+          severity, (String)theConstraint.get("dataType"));
 
       //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
 
@@ -669,8 +669,6 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
   }
 
   private void addCypherToValidationScripts(ValidatorConfig vc, List<String>triggers, String querystrGlobal, String querystrOnNodeset, String... args) {
-//    vc.getEngineGlobal().append("\n UNION \n").append(String.format(querystrGlobal, args));
-//    vc.getEngineForNodeSet().append("\n UNION \n").append(String.format(querystrOnNodeset, args));
     vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1) , String.format(querystrGlobal, args),String.format(querystrOnNodeset, args), triggers);
   }
 
@@ -772,7 +770,9 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
           " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
           + "' as propertyShape, focus.`%s` as offendingValue, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity,"
-        + " '' as message ";
+        + " 'property value should be of type ' + " +
+        (shallIUseUriInsteadOfId()?" '%s' ":"n10s.rdf.getIRILocalName('%s')")
+        + " as message ";
   }
 
   private String CYPHER_DATATYPE2_V_SUFF() {
@@ -889,7 +889,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
   private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
     return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable cardinality: ' + ( size((focus)-[:`%s`]->()) +  size([] + focus.`%s`))  as message, "
+        + "' as propertyShape,  'unnacceptable cardinality: ' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0))  as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
@@ -897,7 +897,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
   private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
     return "NOT (size((focus)-[:`%s`]->()) + size([] + coalesce(focus.`%s`,[]))) %s  RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, "  + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable  cardinality: ' + (size((focus)-[:`%s`]->()) + size([] + focus.`%s`)) as message, "
+        + "' as propertyShape,  'unnacceptable  cardinality: ' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
@@ -905,7 +905,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
   private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
     return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
     " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unnacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
+        + "' as propertyShape,  'unnacceptable cardinality: ' + coalesce(size((focus)<-[:`%s`]-()),0) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }
@@ -913,7 +913,7 @@ void addPropertyConstraintsToList(Map<String, Object> propConstraint,
   private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {   //Same as previous
     return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
      " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'unacceptable cardinality: ' + size((focus)<-[:`%s`]-()) as message, "
+        + "' as propertyShape,  'unacceptable cardinality: ' + coalesce(size((focus)<-[:`%s`]-()),0) as message, "
         + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
         + "null as offendingValue  ";
   }

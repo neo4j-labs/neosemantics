@@ -1,5 +1,10 @@
 package n10s.validation;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -8,6 +13,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Result;
+import org.neo4j.graphdb.Transaction;
 
 public class ValidatorConfig {
 
@@ -41,6 +49,27 @@ public class ValidatorConfig {
     this.constraintList = null;
   }
 
+  public ValidatorConfig(Transaction tx) throws IOException, ClassNotFoundException {
+    Result loadValidatorFromDBResult = tx
+        .execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN vc");
+    if (!loadValidatorFromDBResult.hasNext()) {
+      throw new SHACLValidationException("No shapes compiled");
+    } else {
+
+      Node validationConfigNode = (Node) loadValidatorFromDBResult.next().get("vc");
+
+      this.individualGlobalQueries = (Map<String, String>) deserialiseObject(
+          (byte[]) validationConfigNode.getProperty("_gq"));
+      this.individualNodeSetQueries = (Map<String, String>) deserialiseObject(
+          (byte[]) validationConfigNode.getProperty("_nsq"));
+      this.triggerList = (Map<String, Set<String>>) deserialiseObject(
+          (byte[]) validationConfigNode.getProperty("_tl"));
+      this.allParams = (Map<String, Object>) deserialiseObject(
+          (byte[]) validationConfigNode.getProperty("_params"));
+      this.constraintList = (List<ConstraintComponent>)
+          deserialiseObject((byte[])validationConfigNode.getProperty("_constraintList"));
+    }
+  }
 
   public Map<String, Object> getAllParams() { return allParams; }
 
@@ -71,7 +100,7 @@ public class ValidatorConfig {
     }
   }
 
-  public List<String> getRunnableQueries(boolean global, Set<String> triggerers) {
+  public List<String> selectQueriesAndBatchFromTriggerList(boolean global, Set<String> triggerers) {
     final Set<String> queries = new HashSet<>();
 
     Set<String> queryIds = new HashSet<>();
@@ -102,10 +131,59 @@ public class ValidatorConfig {
     return runnableQueries;
   }
 
+  public List<String> generateRunnableQueries(Transaction tx, boolean global, List<Node> nodeSet) {
+
+    List<String> labels;
+
+    if(global) {
+      labels = (List<String>) tx
+          .execute("call db.labels() yield label return collect(label) as labelsInUse").next()
+          .get("labelsInUse");
+    } else {
+      Map<String, Object> params = new HashMap<>();
+      params.put("nodeList", nodeSet);
+      labels = (List<String>) tx
+          .execute("unwind $nodeList as node\n"
+              + "with collect(distinct labels(node)) as nodeLabelSet \n"
+              + "return reduce(res=[], x in nodeLabelSet | res + x) as fullNodeLabelWithDuplicates", params).next()
+          .get("fullNodeLabelWithDuplicates");
+    }
+
+    return selectQueriesAndBatchFromTriggerList(global,  new HashSet<>(labels));
+  }
+
   private StringBuilder newInitialisedStringBuilder() {
     return new StringBuilder().append("UNWIND [] as row RETURN '' as nodeId, " +
         "'' as nodeType, '' as shapeId, '' as propertyShape, '' as offendingValue, '' as propertyName"
         + ", '' as severity , '' as message ");
   }
 
+  public void writeToDB(Transaction tx) throws IOException {
+    Map<String,Object> params =  new HashMap<>();
+    params.put("gq", serialiseObject(individualGlobalQueries));
+    params.put("nsq", serialiseObject(individualNodeSetQueries));
+    params.put("tl", serialiseObject(triggerList));
+    params.put("cl", serialiseObject(constraintList));
+    params.put("params", serialiseObject(allParams));
+
+    tx.execute("MERGE (vc:_n10sValidatorConfig { _id: 1}) "
+        + "SET vc._gq = $gq, vc._nsq = $nsq, vc._tl = $tl, vc._params = $params, "
+        + " vc._constraintList = $cl ", params);
+  }
+
+  private byte[] serialiseObject(Object o) throws IOException {
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream objectOutputStream
+        = new ObjectOutputStream(baos);
+    objectOutputStream.writeObject(o);
+    objectOutputStream.flush();
+    objectOutputStream.close();
+    return baos.toByteArray();
+  }
+
+  private Object deserialiseObject(byte[] bytes) throws IOException, ClassNotFoundException {
+    ObjectInputStream objectInputStream
+        = new ObjectInputStream(new ByteArrayInputStream(bytes));
+    return objectInputStream.readObject();
+  }
 }
