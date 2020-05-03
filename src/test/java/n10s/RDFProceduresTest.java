@@ -32,6 +32,7 @@ import n10s.rdf.delete.RDFDeleteProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import n10s.rdf.preview.RDFPreviewProcedures;
 import n10s.rdf.stream.RDFStreamProcedures;
+import n10s.skos.load.SKOSLoadProcedures;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.junit.Rule;
 import org.junit.Test;
@@ -66,7 +67,8 @@ public class RDFProceduresTest {
       .withProcedure(QuadRDFDeleteProcedures.class)
       .withProcedure(MappingUtils.class)
       .withProcedure(GraphConfigProcedures.class).withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(ExperimentalImports.class);
+      .withProcedure(ExperimentalImports.class)
+      .withProcedure(SKOSLoadProcedures.class);
 
   private String jsonLdFragment = "{\n" +
       "  \"@context\": {\n" +
@@ -411,6 +413,31 @@ public class RDFProceduresTest {
           session.run(
               "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
               .next().get("count").asLong());
+    }
+  }
+
+  @Test
+  public void testImportSKOSInline() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{}");
+
+      Result importResults
+          = session.run("CALL n10s.skos.import.fetch('" +
+          RDFProceduresTest.class.getClassLoader().getResource("unesco-thesaurus.ttl").toURI()
+          + "','Turtle')"); //,{   commitSize: 1000 }
+
+      assertEquals(17118L, importResults
+          .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+          "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      assertEquals("Class", result.get("label").asString());
+      assertEquals("concept10928", result.get("name").asString());
+      assertFalse(queryResults.hasNext());
     }
   }
 
@@ -2787,7 +2814,7 @@ public class RDFProceduresTest {
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
-          + "','RDF/XML')");
+          + "','RDF/XML', {  commitSize: 5 })");
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 

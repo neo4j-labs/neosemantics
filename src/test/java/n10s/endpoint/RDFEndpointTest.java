@@ -1675,7 +1675,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1713,7 +1713,7 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, "
           + " handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads')");
@@ -1749,7 +1749,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1783,7 +1783,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
           "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
               .toURI()
           + "','TriG')");
@@ -1824,7 +1824,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: 'KEEP', "
           + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
               .toURI()
           + "','N-Quads')");
@@ -1863,12 +1863,12 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', "
           + " handleMultival: 'ARRAY', keepCustomDataTypes: true})");
-      tx.execute("CALL n10s.quadrdf.import.fetch('" +
+      tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource(
               "RDFDatasets/RDFDatasetBNodes.trig")
               .toURI()
           + "','TriG')");
-      Result res = tx.execute("CALL n10s.quadrdf.delete.fetch('" +
+      Result res = tx.execute("CALL n10s.experimental.quadrdf.delete.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource(
               "RDFDatasets/RDFDatasetBNodesDelete.trig")
               .toURI()

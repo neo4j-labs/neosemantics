@@ -47,10 +47,10 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
+      totalTriplesMapped += mappedTripleCounter;
+      mappedTripleCounter = 0;
       log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
     }
-    totalTriplesMapped += mappedTripleCounter;
-    mappedTripleCounter = 0;
   }
 
   @Override

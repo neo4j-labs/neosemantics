@@ -40,7 +40,6 @@ public class OntoProcedures extends CommonProcedures {
   protected ImportResults doOntoImport(String format, String url,
       String rdfFragment, Map<String, Object> props) throws GraphConfigNotFound {
 
-    // TODO: This effectively overrides the graphconfig (and can cause conflict?)
     props.put("handleVocabUris", "IGNORE");
 
     OntologyImporter ontoImporter = null;

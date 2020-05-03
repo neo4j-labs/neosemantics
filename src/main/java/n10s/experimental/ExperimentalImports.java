@@ -9,10 +9,10 @@ import java.util.UUID;
 import java.util.stream.Stream;
 import n10s.RDFImportException;
 import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.rdf.RDFProcedures;
 import n10s.result.NodeResult;
+import n10s.skos.load.SkosImporter;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFParseException;
@@ -31,69 +31,6 @@ import org.neo4j.procedure.Name;
 import org.neo4j.procedure.Procedure;
 
 public class ExperimentalImports extends RDFProcedures {
-
-  @Context
-  public GraphDatabaseService db;
-
-  @Context
-  public Transaction tx;
-
-  @Context
-  public Log log;
-
-
-  @Procedure(mode = Mode.WRITE)
-  @Description("Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.")
-  public Stream<ImportResults> importSKOS(@Name("url") String url,
-      @Name("format") String format,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws RDFImportException {
-
-    return Stream.of(doSkosImport(format, url, null, props));
-
-  }
-
-
-  private ImportResults doSkosImport(String format, String url,
-      String rdfFragment, Map<String, Object> props) throws RDFImportException {
-
-    // TODO: This effectively overrides the graphconfig (and can cause conflict?)
-    props.put("handleVocabUris", "IGNORE");
-
-    SkosImporter skosImporter = null;
-    RDFParserConfig conf = null;
-    RDFFormat rdfFormat = null;
-    ImportResults importResults = new ImportResults();
-    try {
-      checkConstraintExist();
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
-      rdfFormat = getFormat(format);
-      skosImporter = new SkosImporter(db, tx, conf, log);
-    } catch (RDFImportPreRequisitesNotMet e) {
-      importResults.setTerminationKO(e.getMessage());
-    } catch (RDFImportBadParams e) {
-      importResults.setTerminationKO(e.getMessage());
-    } catch (GraphConfig.GraphConfigNotFound e) {
-      throw new RDFImportException(
-          "A Graph Config is required for the SKOS import procedure to run");
-    }
-
-    if (skosImporter != null) {
-      try {
-        parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, skosImporter);
-        importResults.setTriplesLoaded(skosImporter.totalTriplesMapped);
-        importResults.setTriplesParsed(skosImporter.totalTriplesParsed);
-        importResults.setConfigSummary(props);
-      } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
-        importResults.setTerminationKO(e.getMessage());
-        importResults.setTriplesLoaded(skosImporter.totalTriplesMapped);
-        importResults.setTriplesParsed(skosImporter.totalTriplesParsed);
-        importResults.setConfigSummary(props);
-        e.printStackTrace();
-      }
-    }
-    return importResults;
-  }
 
   @Procedure(mode = Mode.WRITE)
   @Description("Imports a json payload and maps it to nodes and relationships (JSON-LD style). "

@@ -1,4 +1,4 @@
-package n10s.experimental;
+package n10s.skos.load;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
@@ -49,14 +49,15 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   @Override
   protected void periodicOperation() {
-
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
+      totalTriplesMapped += mappedTripleCounter;
+      mappedTripleCounter = 0;
       log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
+    } catch (Exception e){
+      System.out.println(e.getMessage());
     }
-    totalTriplesMapped += mappedTripleCounter;
-    mappedTripleCounter = 0;
   }
 
   @Override
@@ -111,7 +112,6 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         instantiate(parserConfig.getGraphConf().getClassLabelName(),
             (IRI) st.getSubject());
         setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
-        mappedTripleCounter++;
       } else if (
           (st.getPredicate().equals(SKOSXL.PREF_LABEL) || st.getPredicate().equals(SKOSXL.ALT_LABEL)
               ||
@@ -240,7 +240,6 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
     for (Statement st : statements) {
       try {
-
       final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
         @Override
         public Node call() {  //throws AnyException
@@ -293,6 +292,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
     statements.clear();
     resourceLabels.clear();
+    resourceProps.clear();
 
     return 0;
   }
