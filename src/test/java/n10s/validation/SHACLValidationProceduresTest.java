@@ -14,6 +14,7 @@ import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.Config;
@@ -165,9 +166,19 @@ public class SHACLValidationProceduresTest {
 
       Result result = session.run("call n10s.validation.shacl.validate()");
       assertTrue(result.hasNext());
+      int minCountCount = 0;
+      int datatypeConstCount = 0;
       while(result.hasNext()){
-        System.out.println(result.next());
+        Record next = result.next();
+        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+          minCountCount++;
+        }
+        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+          datatypeConstCount++;
+        }
       }
+      assertEquals(3,minCountCount);
+      assertEquals(3,datatypeConstCount);
     }
   }
 
