@@ -1,11 +1,20 @@
 [[Validation]]
 == Validating Neo4j graphs against SHACL
 
-Validation
+This module makes it possible for a Neo4j graph to be validated against a formal definition of some graph constraints. By graph constraints, we mean things like "the value for the `age` property needs to be an integer", or "a `Task` node needs to be connected to at least one  `TaskOwner` node through the `OWNED_BY` relationship", or many others.
 
-We use the standard SHACL (maybe other languages)
+Neosemantics uses the W3C standard https://www.w3.org/TR/shacl/[Shapes Constraint Language (SHACL)] as the formalism to describe such graph constraints. In v.4 we cover a significant portion of the SHACL language but not all. The elements not implemented yet will be added gradually and changes will be reflected in this manual.
+
+The  validation is a two step process:
+
+1. Load the constraint definitions, described in section <<LoadConstraints>>
+2. Run the validation against the Neo4j graph to produce a detailed report of all violations. This is described in section <<RunningValidation>>. The validations can  be executed in three modes:
+* Batch validation of the whole graph
+* Validation on a selected portion of the graph (a node set)
+* Transactional validation: in-transaction validation of changes to the graph (and rollback if changes introduce violations of the constraints)
 
 
+[[LoadConstraints]]
 === Loading the model constraints
 
 SHACL constraints are described as RDF. Here is an example serialised as RDF/Turtle, where we define some conditions on nodes of type `Person`.
@@ -106,9 +115,15 @@ call n10s.validation.shacl.listShapes()
 [NOTE]
 SHACL uses the term 'node shape' and  'property shape' respectively to describe a set of constraints for a given category or for a given property. Hence the choice  of name for this procedure. Also the term shapes will be used in the manual with the same meaning.
 
-=== Running the validation on a model
+[[RunningValidation]]
+=== Running the validation on a Neo4j graph
 
-Once the shapes are loaded, the validations can be run on your data by invoking the different variants of the `validate` procedure.
+Once the shapes are loaded as described above, the validations can be run on your graph by invoking the different variants of the `validate` procedure. The three basic modes are:
+
+* Batch validation of the whole graph
+* Validation on a selected portion of the graph (a node set)
+* Transactional validation
+
 
 ==== Validating the whole graph
 In this mode, the currently loaded constraints are are run against the whole graph producing a report including all violations detected.
