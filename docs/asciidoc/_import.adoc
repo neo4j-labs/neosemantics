@@ -53,38 +53,12 @@ The import procedures take the following three parameters:
 | params | Map  | Optional set of parameters (see description in table below)
 |===
 
-[[create-resource-uniqueness-constraint]]
-=== Create uniqueness constraint
-
-For all import methods to run, a uniqueness constraint needs to exist on the property `uri` of nodes with the label `Resource`.
-If the constraint is not present, run the following command on your DB, otherwise all RDF import procedures will throw an error message.
-
-[source,cypher]
-----
-CREATE CONSTRAINT n10s_unique_uri ON (r:Resource)
-ASSERT r.uri IS UNIQUE;
-----
-
-[[graph-configuration]]
-=== Setting the configuration of the graph
-There is another pre-requisite before effectively carrying out any data import into Neo4j with neosemantics: we need to define the characteristics of the graph we will be creating.
-These are kept in the `GraphConfig`.
-
-The method `n10s.graphconfig.init` can help us with this setup.
-Calling the procedure without parameters will set all the default values:
-
-[source,cypher]
-----
-CALL n10s.graphconfig.init();
-----
-
-Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll see that in more detail in the following examples.
 
 [WARNING]
 If we try to run any RDF import procedure without having defined the uniqueness constraint or created a GraphConfig first, the import will fail showing an error message indicating what's missing.
 
 [[actual-rdf-import]]
-=== The actual RDF import
+=== The RDF import procedures
 Once a basic `GraphConfig` has been created, we can call the RDF import procedures.
 Let's look at the first of them:
 In its most basic form the `n10s.rdf.import.fetch` method takes a URL string to access the RDF data and the serialisation format.

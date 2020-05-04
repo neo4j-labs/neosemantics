@@ -1,7 +1,7 @@
 [[Reference]]
-== NSMNTX Reference 
+== Neosemantics Reference
 
-Complete list of all available stored procedures, functions and extensions in NSMNTX.
+Complete list of all available stored procedures, functions and extensions in Neosemantics.
 
 === Stored Procedures
 

@@ -1,4 +1,4 @@
-= NSMNTX User Guide 
+= Neosemantics(n10s) User Guide
 :imagesdir: docs/img
 :toc: left
 :experimental:
@@ -8,42 +8,45 @@
 
 [abstract]
 --
-This is the user guide for NSMNTX {docs-version}, authored by the Neo4j Labs Team.
+This is the user guide for Neosemantics {docs-version}, authored by the Neo4j Labs Team.
 --
 
 The guide covers the following areas:
 
-* <<intro>> -- An Introduction to the NSMNTX library.
-* <<Install>> -- Instructions for installing NSMNTX.
+* <<intro>> -- An Introduction to the Neosemantics RDF toolkit for Neo4j.
+* <<Install>> -- Instructions for installing Neosemantics.
+* <<Config>> -- Setting up your Neo4j graph to work with RDF data.
 * <<Import>> -- A detailed guide to importing RDF data.
 * <<DeleteRDF>> -- A detailed guide to deleting RDF data.
 * <<OntoImport>> -- A detailed guide to importing ontologies.
 * <<Preview>> -- A detailed guide to previewing RDF data before we import it into Neo4j.
 * <<Export>> -- A detailed guide to generating RDF from a Neo4j graph.
 * <<Mapping>> -- A detailed guide to applying transformations to RDF as it's imported into Neo4j.
+* <<Validation>> -- Validating a Neo4j graph using SHACL.
 * <<Inference>> -- A detailed guide to inferencing and reasoning.
 * <<Reference>> -- An overview of all procedures and functions in the library.
-* <<Examples>> -- A list of projects using NSMNTX.
+* <<Examples>> -- A list of projects using n10s.
 
-image::nsmntx-block-diagram.png[NSMNTX diagram, 200,float="right",align="center"]
+image::Neosemantics-block-diagram.png[Neosemantics diagram, 200,float="right",align="center"]
 
 [[intro]]
 == Introduction
 
-NSMNTX is a plugin that enables the *use of RDF in Neo4j*. https://www.w3.org/RDF/[RDF is a W3C standard model] for data interchange.
-This effectively means that NSMNTX makes it possible to
+Neosemantics is a plugin that enables the *use of RDF in Neo4j*. https://www.w3.org/RDF/[RDF is a W3C standard model] for data interchange.
+This effectively means that Neosemantics makes it possible to
 
 * *Store RDF data in Neo4j* in a
 lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
 * On-demand *export property graph data* from Neo4j *as RDF*.
 
-Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
+Other features in Neosemantics include *model mapping* and *inferencing* on Neo4j graphs.
 
 ////
 === Documentation Overview
 
 .Main Sections Here
 * <<Install>>
+* <<Config>>
 * <<Import>>
 * <<Export>>
 * <<Mapping>>
@@ -54,12 +57,14 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 ////
 
 include::_install.adoc[]
+include::_config.adoc[]
 include::_import.adoc[]
 include::_delete.adoc[]
 include::_ontologies.adoc[]
 include::_preview.adoc[]
 include::_export.adoc[]
 include::_mapping.adoc[]
+include::_validation.adoc[]
 include::_inference.adoc[]
 include::_reference.adoc[]
 include::_examples.adoc[]

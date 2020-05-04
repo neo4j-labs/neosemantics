@@ -1,0 +1,93 @@
+[[Config]]
+== Configuring Neo4j to use RDF data
+
+Before you import and work with RDF data in Neo4j you need to define how you want this data to be handled in the graph. Do you want to preserve the full names (URIs) of schema elements? Do you want multivalued properties discarded or stored as arrays in Neo4j? All these things  are  stored in a Graph Config.
+
+All settings defined in a Graph Config are global and remain valid for the whole lifetime of the graph and will drive the behaviour of functions and  procedures in n10s.
+
+In addition to the global settings in a Graph Config, there are other method-specific configuration parameters like for instance a limit in the number of triples that a particular procedure will ingest, a language filter or a SPARQL query to submit to an RDF producing endpoint. We'll talk about these in detail in later sections.
+
+[[graph-configuration]]
+=== Setting the configuration of the graph
+There is another pre-requisite before effectively carrying out any data import into Neo4j with neosemantics: we need to define the characteristics of the graph we will be creating.
+These are kept in the `GraphConfig`.
+
+The method `n10s.graphconfig.init` can help us with this setup.
+Calling the procedure without parameters will set all the default values:
+
+[source,cypher]
+----
+CALL n10s.graphconfig.init();
+----
+
+Setting specific values for configuration items is done by passing a map as parameter to same procedure but we'll see that in more detail in the following examples.
+
+[[create-resource-uniqueness-constraint]]
+=== Pre-requisite: Create uniqueness constraint
+
+All methods that persist data into Neo4j have a schema level pre-requisite: this is the existence of a uniqueness constraint on the property `uri` of nodes with the label `Resource`.
+If the constraint is not present yet, all you need to do is  run the following command on your DB, otherwise all RDF-importing procedures will throw an error message  indicating this has  to be done first.
+
+[source,cypher]
+----
+CREATE CONSTRAINT n10s_unique_uri ON (r:Resource)
+ASSERT r.uri IS UNIQUE;
+----
+
+The purpose of this constraint is to guarantee the uniqueness of resources by URI and also to  accelerate the ingestion process by having them added  to  an index.
+
+=== Setting the configuration of the graph
+
+The method `n10s.graphconfig.init()` can help us initialising  the Graph Config. Calling the procedure without parameters will set all the default values:
+
+[source,cypher]
+----
+call n10s.graphconfig.init()
+----
+This call  initialises the Graph Config  but also returns the list of all config parameters and their current values.
+
+[source,cypher]
+----
+╒════════════════════════╤══════════════╕
+│"param"                 │"value"       │
+╞════════════════════════╪══════════════╡
+│"handleVocabUris"       │"SHORTEN"     │
+├────────────────────────┼──────────────┤
+│"handleMultival"        │"OVERWRITE"   │
+├────────────────────────┼──────────────┤
+│"handleRDFTypes"        │"LABELS"      │
+├────────────────────────┼──────────────┤
+│"keepLangTag"           │false         │
+  ....
+----
+
+Optionally you can modify the defaults and set specific values for configuration items by passing a map as parameter to the procedure:
+
+[source,cypher]
+----
+call n10s.graphconfig.init( {  handleMultival: "ARRAY" })
+----
+
+[WARNING]
+If we try to run any RDF import procedure without having created
+a GraphConfig first, the import will fail showing an error message indicating what's missing.
+
+The Graph Configuration can be removed by invoking the `n10s.graphconfig.drop` procedure and its current set up listed with the `call n10s.graphconfig.show`
+
+The settings determine how n10s handles imported RDF data so this effectively means that once data is imported into Neo4j using the configuration options set int he Graph Config, these will not be changeable until the graph is emptied.
+
+After an initial Graph Config has been created  and before the data is imported, the method `n10s.graphconfig.set` will let you update individual configuration items. Here's an example:
+
+[source,cypher]
+----
+call n10s.graphconfig.init();
+
+call n10s.graphconfig.set( { keepLangTag: true, handleRDFTypes: "LABELS_AND_NODES" });
+----
+
+=== Configuration options
+A complete list of the available configuration parameters can be found in the <<Reference>>  section.
+
+
+
+
