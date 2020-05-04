@@ -44,7 +44,7 @@ References to schemas can be removed using the `mapping.dropSchema` method and p
 call semantics.mapping.dropSchema("http://purl.org/dc/elements/1.1/")
 ---- 
 
-And we can list the currently existing schemas by running `mapping.listSchemas`. This method takes an optional string parameter that can be used to filter the list to the ones that match a particular search string in the schema uri or in the prefix. If we run the following after running the `mapping.addCommonSchemas`:
+And we can list the currently existing schemas by running `mapping.listSchemas`. This method takes an optional string parameter that can be used to filter the list to the ones that match a particular search string in the schema URI or in the prefix. If we run the following after running the `mapping.addCommonSchemas`:
 
 [source,Cypher]
 ----
@@ -260,7 +260,7 @@ CALL semantics.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchem
 RETURN count(schemaElement) AS mappingsDefined
 ----
 
-Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`. If there were multiple vocabularies to map, we would just need repeat the process for each of them.
+Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`. If there were multiple vocabularies to map, we would just need to repeat the process for each of them.
 
 Now we can check that the mappings are correctly defined by running:
 

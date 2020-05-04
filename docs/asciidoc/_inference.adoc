@@ -34,7 +34,7 @@ CREATE (c)<-[:NARROWER_THAN]-(:LCSHTopic { authoritativeLabel: "Isomorphism (Cry
 ----
 
 In this example we use LCSHTopic to label the categories and the `NARROWER_THAN` to link them in a
-hierarchy that as we can see in this fragment does not necessarily need to be a tree (it the general
+hierarchy that as we can see in this fragment does not necessarily need to be a tree (in the general
 case it will be a graph).
 
 image::crystallography-hierarchy.png[Topic hierarchy from the LCSH, scaledwidth="100%"]
@@ -86,7 +86,7 @@ CALL semantics.inference.nodesLabelled('Crystallography',  { catNameProp: "dbLab
 RETURN node.identifier as id, node.title as title, labels(node) as categories
 ----
 
-When we run this query, and even thoug not a single node in our graph is actually labelled as `Crystallography`,
+When we run this query, and even though not a single node in our graph is actually labelled as `Crystallography`,
 we get the following results:
 
 [source,Cypher]
@@ -377,7 +377,7 @@ relationships between nodes in the graph.
 
 Let's take the movie database. Remember you can have it loaded in Neo4j by running `:play movies` and
 following the instructions in the guide.
-Let's say we have http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl[a fragment
+Let's say we have https://raw.githubusercontent.com/neo4j-labs/neosemantics/3.5/docs/rdf/movieDBRelHierarchy.ttl[a fragment
 of a movie ontology] that contains a definition
 of a relationship hierarchy. It does it by defining a number of `rdfs:subPropertyOf` statements
 between relationships.
@@ -407,7 +407,7 @@ If  we run:
 
 [source,Cypher]
 ----
-CALL semantics.importOntology("http://jbarrasa.github.io/neosemantics/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
+CALL semantics.importOntology("https://raw.githubusercontent.com/neo4j-labs/neosemantics/3.5/docs/rdf/movieDBRelHierarchy.ttl", "Turtle")
 ----
 
 We should get a simple hierarchy of properties like the one in this screen capture from the Neo4j
