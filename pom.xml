@@ -203,24 +203,21 @@
       </plugin>
 
       <plugin>
-        <groupId>org.jetbrains.dokka</groupId>
-        <artifactId>dokka-maven-plugin</artifactId>
-        <version>0.9.17</version>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.9.1</version>
         <executions>
           <execution>
-            <phase>prepare-package</phase>
+            <id>attach-javadocs</id>
             <goals>
-              <goal>dokka</goal>
-              <goal>javadoc</goal>
-              <goal>javadocJar</goal>
+              <goal>jar</goal>
             </goals>
           </execution>
         </executions>
         <configuration>
-          <includes>
-            <!-- TODO what to do with this part? -->
-            <file>packages.md</file>
-          </includes>
+          <additionalparam>-Xdoclint:none</additionalparam>
+          <additionalOptions>-Xdoclint:none</additionalOptions>
+          <additionalJOption>-Xdoclint:none</additionalJOption>
         </configuration>
       </plugin>
 
