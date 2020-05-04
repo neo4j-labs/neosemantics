@@ -7,6 +7,28 @@
   <artifactId>neosemantics</artifactId>
   <version>4.0.0.0</version>
   <packaging>jar</packaging>
+  <name>neosemantics</name>
+  <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
+  <url>https://github.com/neo4j-labs/neosemantics</url>
+  <scm>
+    <url>https://github.com/neo4j-labs/neosemantics</url>
+  </scm>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <comments>Note that this license is for the project itself, and not for its dependencies.</comments>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>jesusbarrasa</id>
+      <name>Jesús Barrasa</name>
+      <email>jesus.barrasa@neo4j.com</email>
+    </developer>
+  </developers>
+
   <properties>
     <neo4j.version>4.0.0</neo4j.version>
     <sesame.version>3.1.4</sesame.version>
@@ -179,6 +201,8 @@
           <target>11</target>
         </configuration>
       </plugin>
+
+
     </plugins>
   </build>
 </project>
