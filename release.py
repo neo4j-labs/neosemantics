@@ -14,7 +14,7 @@ def main(token, tag_name, file_name):
     release_id = release_json["id"]
 
     with open(file_name, "rb") as file_name_handle:
-        upload_url = "https://uploads.github.com/repos/neo4j-labs/nesemantics/releases/{release_id}/assets?name={file_name}".format(
+        upload_url = "https://uploads.github.com/repos/neo4j-labs/neosemantics/releases/{release_id}/assets?name={file_name}".format(
             release_id=release_id, file_name=file_name.split("/")[-1]
         )
         print(upload_url)
