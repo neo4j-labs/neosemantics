@@ -83,12 +83,6 @@ a|
 * serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
 * optional map with params from the table below
 | Imports an RDF snippet passed as parameter and stores it in Neo4j as a property graph. Requires a unique constraint on :Resource(uri)
-|n10s.experimental.quadrdf.import.fetch
-a|
-* URL of the dataset
-* serialization format (valid formats: TriG,N-Quads)
-* optional map with params from the table below
-| importRDF for RDF Quads
 |n10s.onto.import.fetch
 a|
 * URL of the dataset
@@ -200,6 +194,31 @@ a|
 * optional filter string
 | Returns a list with all the currently defined mappings. Whe filter string is passed, only mappings containing the string in the
 DB element name or the schema element URI are returned
+|===
+
+==== SHACL Validations
+
+[options="header"]
+|===
+| Stored Proc Name        | params           | Description
+|n10s.validation.shacl.import.fetch
+a|
+* URL of the dataset
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+|Fetches the SHACL constraint definitions from a url (file or http) and compiles them into an  executable form in Neo4j
+|n10s.validation.shacl.import.inline
+a|
+* string containing an RDF fragment
+* serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
+|Loads the the SHACL constraint passed as parameter (as an RDF fragment) and compiles them into an  executable form in Neo4j
+|n10s.validation.shacl.listShapes
+| - | Lists all constraint currently loaded (active)
+|n10s.validation.shacl.validate
+|  - | validates the Neo4j graph against the currently loaded (active) constraints producing a report with all violations
+|n10s.validation.shacl.validateSet
+| a list of nodes | validates the list of nodes passed as parameter against the currently loaded (active) constraints producing a report with all violations
+|n10s.validation.shacl.validateTransaction
+| transaction context parameters | validates the elements in the graph changed by the current transaction against the currently loaded constraints producing the transaction to roll back if the transaction introduces any violations in the graph or to succeed if not. Example of use in section <<RunningValidation>>
 |===
 
 ==== Inferencing
