@@ -325,7 +325,7 @@ The article has a number of keywords associated with it.
 ----
 
 We want to make sure we keep all values for the `nyt:keyword` property. The natural way to
-do this in Neo4j is storing them in an array, so we'll instruct NSMNTX to do that by setting
+do this in Neo4j is storing them in an array, so we'll instruct Neosemantics to do that by setting
 in the `GraphConfig` the parameters `handleMultival` to `'ARRAY'` and `multivalPropList` to the list
 of property types that are multivalued and we want stored as arrays of values.
 In the previous example the list will only contain `'http://nyt.com/voc/keyword'`.
@@ -405,7 +405,7 @@ ind:218 show:localName 'Cette Série des Années Soixante-dix'@fr .
 ind:218 show:localName "Cette Série des Années Septante"@fr-be . 
 ----
 
-By default, NSMNTX will strip out the language tags but if you want to keep them you'll need to
+By default, Neosemantics will strip out the language tags but if you want to keep them you'll need to
 set the `keepLangTag` to `true`. If we uset it in combination with the setting required to keep
 all values of a property stored in an array, the import invocation would look something like this:
 
@@ -687,7 +687,7 @@ You can also import RDF datasets using `n10s.quadrdf.import.fetch`.
 The only difference in comparison to `n10s.rdf.import.fetch` is that you can import not just triples but also quads.
 RDF statements can have an extra IRI containing the context of the statement.
 It enables the partitioning of the data into multiple so called named graphs.
-When a statement has context information NSMNTX annotates Resources from this statement with a property "graphUri".
+When a statement has context information Neosemantics annotates Resources from this statement with a property "graphUri".
 This property contains the context IRI from the statement.
 
 Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
@@ -748,7 +748,7 @@ CALL n10s.quadrdf.import.fetch( "https://github.com/neo4j-labs/neosemantics/raw/
 
 ==== Merging nodes virtually
 
-While importing the RDF dataset above NSMNTX will create a separate node for each instance of `exDoc:Monica`. That means you will have three nodes each representing a different graph. This might complicate things when you want to for example query everything about `exDoc:Monica` with the following cypher snippet:
+While importing the RDF dataset above Neosemantics will create a separate node for each instance of `exDoc:Monica`. That means you will have three nodes each representing a different graph. This might complicate things when you want to for example query everything about `exDoc:Monica` with the following cypher snippet:
 
 [source,cypher]
 ----

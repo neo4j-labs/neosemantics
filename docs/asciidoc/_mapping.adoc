@@ -229,7 +229,7 @@ permid:1-34418273443
   vcard:friend-of <https://permid.org/1-34419230351> .
 ----
 
-As part of the import process, we want to drop the namespaces (as described in <<Import>>, this can be done using the `handleVocabUris: "IGNORE"` configuration) *BUT* in this case, we also want to create more neo4j-friendly names for properties. We want to get rid of the dashes in property names like `given-name` or `additional-name` and use 'camelCase' notation instead. The way to tell NSMNTX to do that is by defining a model mapping and setting the `handleVocabUris` parameter on import to `'MAP'`.
+As part of the import process, we want to drop the namespaces (as described in <<Import>>, this can be done using the `handleVocabUris: "IGNORE"` configuration) *BUT* in this case, we also want to create more neo4j-friendly names for properties. We want to get rid of the dashes in property names like `given-name` or `additional-name` and use 'camelCase' notation instead. The way to tell Neosemantics to do that is by defining a model mapping and setting the `handleVocabUris` parameter on import to `'MAP'`.
 
 We'll start by defining a mapping like the one we defined for exporting RDF. Note that the properties we want to map are all in the same `vcard` vocabulary: `http://www.w3.org/2006/vcard/ns#`.  The following script should do the job:
 

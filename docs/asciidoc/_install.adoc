@@ -39,4 +39,4 @@ it will produce two jars
 Please provide feedback and report bugs as https://github.com/jbarrasa/neosemantics/issues[GitHub issues] or join the https://community.neo4j.com/[Neo4j Community] forum.
 
 === Acknowledgements
-NSMNTX uses https://rdf4j.eclipse.org/[rdf4j] for parsing and serialising RDF. Eclipse rdf4j is a powerful Java framework for processing and handling RDF data.
+Neosemantics uses https://rdf4j.eclipse.org/[rdf4j] for parsing and serialising RDF. Eclipse rdf4j is a powerful Java framework for processing and handling RDF data.

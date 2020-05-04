@@ -11,7 +11,7 @@ Selecting a node in the graph by its unique identifier (id or uri), selecting a 
 Let's analyse each of them in detail.
 
 [WARNING]
-The paths used in the following sections assume that NSMNTX is mounted at `/rdf`.
+The paths used in the following sections assume that Neosemantics is mounted at `/rdf`.
 If you've mounted the extension under a different name (instructions on how to do this can be found in the <<Install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used.
 
 === By node ID
@@ -32,7 +32,7 @@ As you know any node in Neo4j has a unique identifier that you can get via cyphe
 MATCH (p:Product) WHERE p.productName = "Queso Manchego La Pastora" RETURN ID(p)
 ----
 
-In my case, the `ID` returned by the previous query is `11`, so if I want NSMNTX to produce an RDF serialisation of this node, all I need to do is issue the following HTTP request:
+In my case, the `ID` returned by the previous query is `11`, so if I want Neosemantics to produce an RDF serialisation of this node, all I need to do is issue the following HTTP request:
 
 [source,HTTP]
 ----
@@ -88,7 +88,7 @@ neoind:104 neovoc:SUPPLIES neoind:11 .
 You can modify the output of the describe method as follows:
 * Change serialisation format by either by using the `accept` header param with any of the RDF media types: `"application/rdf+xml", "text/plain", "text/turtle", "text/n3", "application/trix", "application/x-trig", "application/ld+json"` or the `format` request param using any of the following values: `Turtle, N-Triples, JSON-LD, TriG, RDF/XML`. The `format` request parameter if used will override the `accept` header param.
 * Exclude relationships and just return the properties and labels of the selected node by setting the request parameter `exculdeContext` to `true`.
-* Exclude unmapped elements by setting the request parameter `showOnlyMapped` to true. We'll see in section <<Mapping>> how to define basic model mappings with NSMNTX.
+* Exclude unmapped elements by setting the request parameter `showOnlyMapped` to true. We'll see in section <<Mapping>> how to define basic model mappings with Neosemantics.
 
 Here's an example of using some of this modifiers.
 The following request (again simplified notation for the Neo4j browser):
@@ -129,7 +129,7 @@ Would filter out relationships (RDF Object Properties) and set the serialisation
 
 ==== /rdf/describe/uri
 
-If you've imported an RDF dataset using NSMNTX (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested.
+If you've imported an RDF dataset using Neosemantics (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested.
 You can do this in a very similar way to how you do it for any other Neo4j graph.
 The `/rdf/describe/uri` works exactly in the same way as the `/rdf/describe/id` but instead of taking a node's ID, it takes it's URI. Here's an example on the graph we imported in section <<import>>:
 
@@ -384,7 +384,7 @@ Here's exactly the same request but passing the customerID as a parameter to the
 
 ==== /rdf/cypheronrdf
 
-And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using NSMNTX (and of course if you did NOT use the `IGNORE` option), `rdf/cypheronrdf` will work in exactly the same way as `rdf/cypher` but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested.
+And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using Neosemantics (and of course if you did NOT use the `IGNORE` option), `rdf/cypheronrdf` will work in exactly the same way as `rdf/cypher` but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested.
 The parameters are identical to the previous case.
 Here's an example on the graph we imported in section <<import>> that returns a plugin information given a `releaseDate`:
 

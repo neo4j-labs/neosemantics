@@ -297,7 +297,7 @@ CREATE (:Pet:NCBITaxon_10092 { name: mouse.name, dob: mouse.dob })-[:OWNER]->(p)
 ----
 
 If we're looking for instances of mammals in our database, we'd look for nodes labelled as `NCBITaxon_40674`
-(_"Mammalia"_). Obviously no node has been labelled as mammal, but we expect NSMNTX to do the job for us.
+(_"Mammalia"_). Obviously no node has been labelled as mammal, but we expect Neosemantics to do the job for us.
 
 [source,Cypher]
 ----
@@ -323,7 +323,7 @@ Only a few milliseconds needed to identify them in the nearly 11k categories und
 
 Interestingly, and because Neo4j is a native Graph DB implementing index free adjacency, if we were
 to search across the 1.2 million categories for all instances of _"Eukaryota"_ (`NCBITaxon_2759`),
-(one of the top three categories that all cellular organisms are divided into) it would take NSMNTX
+(one of the top three categories that all cellular organisms are divided into) it would take Neosemantics
 exactly the same time to identify them. Here's the query:
 
 [source,Cypher]
