@@ -19,7 +19,7 @@ Complete list of all available stored procedures, functions and extensions in Ne
 | Removes the current Graph Config (only possible when graph is empty)
 |===
 
-==== Graph Config Params (global settings)
+===== Graph Config Params (global settings)
 The following settings are valid throughout the life of your Neo4j graph and across multiple invocations of import/export/delete/preview/stream procedures.
 
 [options="header"]
