@@ -23,7 +23,6 @@ This section includes:
 * <<filtering-triples-by-language-tag>>
 * <<handling-custom-data-types>>
 * <<classes-as-nodes>>
-* <<ImportQuadRDF>>
 * <<advancedfetching>>
 * <<custom-prefixes-for-namespaces>>
 
@@ -35,7 +34,6 @@ The table below describes the available procedures and functions:
 [separator=¦,opts=header,cols="1,1m,1m,5"]
 |===
 include::../../build/generated-documentation/n10s.rdf.import.fetch.csv[]
-include::../../build/generated-documentation/n10s.quadrdf.import.fetch.csv[lines=2:]
 include::../../build/generated-documentation/n10s.rdf.getLangTag.csv[lines=2:]
 include::../../build/generated-documentation/n10s.rdf.hasLangTag.csv[lines=2:]
 |===
@@ -679,124 +677,6 @@ The resulting graph connects the instance data to the ontology elements. This is
 image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j,scaledwidth="100%"]
 
 More on the usefulness of representing the ontology in the neo4j graph in section <<Inference>>.
-
-[[ImportQuadRDF]]
-=== Handling named graphs (RDF Quads)
-
-You can also import RDF datasets using `n10s.quadrdf.import.fetch`.
-The only difference in comparison to `n10s.rdf.import.fetch` is that you can import not just triples but also quads.
-RDF statements can have an extra IRI containing the context of the statement.
-It enables the partitioning of the data into multiple so called named graphs.
-When a statement has context information Neosemantics annotates Resources from this statement with a property "graphUri".
-This property contains the context IRI from the statement.
-
-Note that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
-
-Similar to the `n10s.rdf.import.fetch` procedure, `n10s.quadrdf.import.fetch` also takes the url string to access the RDF dataset and the serialisation format.
-Let's say you're trying to load the following set of quads into Neo4j.
-
-[source,RDF]
-----
-@prefix ex: <http://www.example.org/vocabulary#> .
-@prefix exDoc: <http://www.example.org/exampleDocument#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
-exDoc:G1 ex:created "2019-06-06"^^xsd:date .
-exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
-
-exDoc:Monica a ex:Person ;
-             ex:friendOf exDoc:John .
-
-exDoc:G1 {
-    exDoc:Monica
-              ex:name "Monica Murphy" ;
-              ex:homepage <http://www.monicamurphy.org> ;
-              ex:email <mailto:monica@monicamurphy.org> ;
-              ex:hasSkill ex:Management ,
-                                  ex:Programming .
-    exDoc:Monica ex:knows exDoc:John . }
-
-exDoc:G2 {
-    exDoc:Monica
-              ex:city "New York" ;
-              ex:country "USA" . }
-
-
-exDoc:G3 {
-    exDoc:John a ex:Person . }
-----
-
-**Note** that for this method to run, an index needs to exist on property `uri` of nodes labeled as `Resource` so if you have not done it, run the following command on your DB or the `n10s.quadrdf.import.fetch` procedure will remind you with an error message.
-
-[source,cypher]
-----
-CREATE INDEX ON :Resource(uri)
-----
-
-This procedure takes the same generic params described in <<common_params>> at the beginning of the <<Import>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
-
-You can use the following Cypher snippet to import the set of quads from above:
-
-[source,cypher]
-----
-CALL n10s.quadrdf.import.fetch( "https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/RDFDataset/RDFDataset.trig", "TriG", {
-  typesToLabels: true,
-  keepCustomDataTypes: true,
-  handleMultival: 'ARRAY'
-});
-----
-
-==== Merging nodes virtually
-
-While importing the RDF dataset above Neosemantics will create a separate node for each instance of `exDoc:Monica`. That means you will have three nodes each representing a different graph. This might complicate things when you want to for example query everything about `exDoc:Monica` with the following cypher snippet:
-
-[source,cypher]
-----
-MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
-RETURN monica
-----
-
-As a result you will get three distinct nodes, which look like this in text mode:
-
-.Results
-[opts="header"]
-|===
-| monica
-| {"http://www.example.org/vocabulary#name":["Monica Murphy"],"uri":"http://www.example.org/exampleDocument#Monica","graphUri":"http://www.example.org/exampleDocument#G1"}
-| {"http://www.example.org/vocabulary#city":["New York"],"http://www.example.org/vocabulary#country":["USA"],"uri":"http://www.example.org/exampleDocument#Monica","graphUri":"http://www.example.org/exampleDocument#G2"}
-| {"uri":"http://www.example.org/exampleDocument#Monica"}
-|===
-
-To avoid this, you can use link:https://neo4j.com/docs/labs/apoc/current/virtual/nodes-collapse/[APOC Nodes collapse].
-`apoc.nodes.collapse` merges the set of nodes into a virtual node.
-
-Here is the cypher snippet showing how to do that with the `exDoc:Monica` example:
-
-[source,cypher]
-----
-MATCH (monica:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})
-WITH collect(monica) AS nodes
-CALL apoc.nodes.collapse(nodes,{properties:'combine'})
-YIELD from, rel, to
-RETURN DISTINCT from AS monica
-----
-
-As a result you will get a single node which looks like this in text mode:
-
-[source, cypher]
-----
-╒══════════════════════════════════════════════════════════════════════╕
-│"monica"                                                              │
-╞══════════════════════════════════════════════════════════════════════╡
-│{"http://www.example.org/vocabulary#city":["New York"],"count":3,"http│
-│://www.example.org/vocabulary#country":["USA"],"uri":"http://www.examp│
-│le.org/exampleDocument#Monica","http://www.example.org/vocabulary#name│
-│":["Monica Murphy"],"graphUri":["http://www.example.org/exampleDocumen│
-│t#G2","http://www.example.org/exampleDocument#G1"]}                   │
-└──────────────────────────────────────────────────────────────────────┘
-----
-
-You can find more information about the parameter configuration of `apoc.nodes.collapse` on link:https://neo4j.com/docs/labs/apoc/current/virtual/nodes-collapse/[APOC Nodes collapse].
 
 [[advancedfetching]]
 === Advanced settings for fetching RDF

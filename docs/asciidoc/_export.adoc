@@ -13,19 +13,23 @@ Let's analyse each of them in detail.
 [WARNING]
 The paths used in the following sections assume that Neosemantics is mounted at `/rdf`.
 If you've mounted the extension under a different name (instructions on how to do this can be found in the <<Install>> section) all you need to do is replace the `/rdf` bits in the urls in the following examples with the name you've used.
+Also every request has to include the name of the database you're working on, so in the examples below replace <dbname> with your database ( in the examples we'll use 'neo4j' as it's the default DB)
 
-=== By node ID
+=== By node identifier (ID or URI)
 
-==== /rdf/describe/id
+==== /rdf/<dbname>/describe
+Returns an RDF description of the selected resource. This method somehow emulates the `SPARQL DESCRIBE` operation. It takes the unique identifier of an element in the graph and it produces an RDF serialisation of all information available about it. This includes properties, labels, and relationships (both incoming and outgoing).
 
-To explain how some this method works, we'll use the Northwind Graph. You can easily load it in your Neo4j instance by running `:play northwind-graph` in your browser.
+The only required parameter is node's unique identifier: If the graph is the result of importing RDF using n10s it will be the uri and if the graph is not the result of importing RDF, then we'll use the node ID. Whether we're in one case or the other will be determied by the presence of a Graph Configuration (see <<Config>>)
+
+[TIP]
+Any node in Neo4j has a unique identifier that you can get visually from the browser or via cypher using the `id(node)` function.
+
+
+===== describe method on a Property Graph
+To explain how this method works on a property graph that's not the result of importing RDF, we'll use the Northwind Graph. You can easily load it in your Neo4j instance by running `:play northwind-graph` in your browser.
 This will bring up a guide with step by step instructions on how to create it. I'll assume the graph is now loaded.
 
-The describe/id method emulates the SPARQL DESCRIBE operation. It takes the unique identifier of an element in the graph and it produces an RDF serialisation of all information available about it.
-This includes properties, labels, and relationships (both incoming and outgoing).
-
-The only required parameter is the id of the node.
-As you know any node in Neo4j has a unique identifier that you can get via cypher using the `id` function.
 
 [source,Cypher]
 ----
@@ -36,14 +40,14 @@ In my case, the `ID` returned by the previous query is `11`, so if I want Neosem
 
 [source,HTTP]
 ----
-http://localhost:7474/rdf/describe/id/11
+http://localhost:7474/rdf/neo4j/describe/11
 ----
 
 Or if you're working on your Neo4j browser, you can run it like this too:
 
 [source,Cypher]
 ----
-:GET /rdf/describe/id/11
+:GET /rdf/neo4j/describe/11
 ----
 
 And you will get a description for your node, serialised as Turtle RDF by default. Something like this:
@@ -95,7 +99,7 @@ The following request (again simplified notation for the Neo4j browser):
 
 [source,Cypher]
 ----
-:GET /rdf/describe/id/11?format=RDF/XML&excludeContext=true
+:GET /rdf/neo4j/describe/11?format=RDF/XML&excludeContext=true
 ----
 
 Would filter out relationships (RDF Object Properties) and set the serialisation format to `RDF/XML` to produce:
@@ -125,20 +129,21 @@ Would filter out relationships (RDF Object Properties) and set the serialisation
 </rdf:RDF>
 ----
 
-=== By URI
-
-==== /rdf/describe/uri
+===== describe method on a graph resulting of importing RDF
 
 If you've imported an RDF dataset using Neosemantics (and you did NOT use the `IGNORE` option) now you can export it and generate exactly the same set of RDF triples that were originally ingested.
 You can do this in a very similar way to how you do it for any other Neo4j graph.
-The `/rdf/describe/uri` works exactly in the same way as the `/rdf/describe/id` but instead of taking a node's ID, it takes it's URI. Here's an example on the graph we imported in section <<import>>:
+The method works exactly in the same way as described in the previous example but instead of taking a node's ID, it takes its URI. Here's an example on the graph we imported in section <<import>>.
+
+[IMPORTANT]
+URIs need to be encoded in `GET` requests.
 
 [source,Cypher]
 ----
-:GET /rdf/describe/uri/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
+:GET /rdf/neo4j/describe/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
 ----
 
-Again, notice the URL encoding of the URI (the clean URI is `http://neo4j.org/ind#neo4j355`) and the `format` parameter to specify the serialisation format. Here's the output of the request:
+Notice the URL encoding of the URI (the clean URI is `http://neo4j.org/ind#neo4j355`) and the `format` parameter to specify the serialisation format. Here's the output of the request:
 
 [source,Cypher]
 ----
@@ -169,18 +174,10 @@ Again, notice the URL encoding of the URI (the clean URI is `http://neo4j.org/in
 </rdf:RDF>
 ----
 
-Additionally, you can provide a graph URI to specify the context of the given resource using the `graphuri` parameter.
-Here is how you can serialise as RDF the resource identified by URI `http://www.example.org/exampleDocument#Monica` but only the statements in the named graph `http://www.example.org/exampleDocument#G1`.
-Normally such a model will be the result of importing RDF Quads as described in the <<ImportQuadRDF>> section. Note that URIS are URL encoded:
-
-[source,Cypher]
-----
-:GET /rdf/describe/uri/http%3A%2F%2Fwww.example.org%2FexampleDocument%23Monica?graphuri=http%3A%2F%2Fwww.example.org%2FexampleDocument%23G1&format=TriG
-----
 
 === By Label + property value
 
-==== /rdf/describe/find/
+==== /rdf/<dbname>/describe/find/
 
 An alternative way to select he node (or set of nodes) to serialise as RDF is to do a search by label and property.
 Let's say in our Northwind Database example we want to get the Suppliers in a given postal code.
@@ -189,7 +186,7 @@ Here's what a request of this type would look like:
 
 [source,Cypher]
 ----
-:GET /rdf/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples
+:GET /rdf/neo4j/describe/find/Supplier/postalCode/EC1%204SD?format=N-Triples
 ----
 
 In this request we are setting the serialisation to N-Triples format.
@@ -222,7 +219,7 @@ The following request returns all products with a given price point.
 
 [source,Cypher]
 ----
-:GET /rdf/describe/find/Product/unitPrice/15?valType=INTEGER&excludeContext
+:GET /rdf/neo4j/describe/find/Product/unitPrice/15?valType=INTEGER&excludeContext
 ----
 
 Notice how we are being explicit about the datatype using the `valType` request parameter.
@@ -264,20 +261,24 @@ The different values that the `valType` request parameter can take are currently
 
 === Using Cypher
 
-==== /rdf/cypher
+==== /rdf/<dbname>/cypher
 
-Finally, the most powerful way of selecting the portion of the graph that we want to serialise as cypher would obviously be to use Cypher.
+Finally, the most powerful way of selecting the portion of the graph that we want to serialise as RDF would obviously be to use Cypher.
 That's exactly what this method does.
-In this case it's a POST request that takes as payload a JSON map with at least one `cypher` key having as its value the query returning the graph objects (nodes with their properties and relationships) to be serialised.
+In this case *it's a `POST` request* that takes as payload a JSON map with at least one `cypher` key having as its value the query returning the graph objects (nodes with their properties and relationships) to be serialised.
 
 Optionally, the JSON map may include the `format` key that can be used to override the default serialization format (Turtle) and also a `showOnlyMapped` key (default value is `false`).
 When present, the returned serialisation will exclude unmapped elements (same functionality explained in the `describe` methods).
 Here's an example of use on the Northwind database.
 Note that your query needs to return graph elements: nodes, relationships or paths. Produces an RDF serialization of the nodes and relationships returned by the query.<br>
 
+This method works also on both property graphs, or graphs resulting of importing RDF into Neo4j.
+
+===== cypher on a property graph
+
 [source,Cypher]
 ----
-:POST /rdf/cypher 
+:POST /rdf/neo4j/cypher
 { "cypher" : "MATCH path = (n:Customer { customerID : 'GROSR'})-[:PURCHASED]->(o)-[:ORDERS]->()-[:PART_OF]->(:Category { categoryName : 'Beverages'}) RETURN path " , "format": "RDF/XML" }
 ----
 
@@ -378,19 +379,19 @@ Here's exactly the same request but passing the customerID as a parameter to the
 
 [source,Cypher]
 ----
-:POST /rdf/cypher 
+:POST /rdf/<dbname>/cypher
 { "cypher" : "MATCH path = (n:Customer { customerID : $custid })-[:PURCHASED]->(o)-[:ORDERS]->()-[:PART_OF]->(:Category { categoryName : 'Beverages'}) RETURN path " , "cypherParams" : { "custid": "GROSR" }, "format": "RDF/XML" }
 ----
 
-==== /rdf/cypheronrdf
+===== cypher  on a graph result of importing RDF
 
-And finally, if the graph in your Neo4j DB is the result of importing an RDF dataset using Neosemantics (and of course if you did NOT use the `IGNORE` option), `rdf/cypheronrdf` will work in exactly the same way as `rdf/cypher` but will use the stored namespace information to generate exactly the same RDF triples that were originally ingested.
+If the graph in your Neo4j DB is the result of importing an RDF dataset using Neosemantics (and of course if you did NOT use the `IGNORE` option), this method will work in exactly the same way we just described but will use the stored Graph Configuration (see <<Config>>) and Namespace prefix (see <<custom-prefixes-for-namespaces>>)  information to generate exactly the same RDF triples that were originally ingested.
 The parameters are identical to the previous case.
 Here's an example on the graph we imported in section <<import>> that returns a plugin information given a `releaseDate`:
 
 [source,Cypher]
 ----
-:POST /rdf/cypheronrdf { "cypher":"MATCH (neo4j:ns0__GraphPlatform)<-[ro:ns0__runsOn]-(plugin:ns0__Neo4jPlugin) WHERE plugin.ns0__releaseDate = '03-06-2019' RETURN plugin, ro, neo4j " , "format" : "JSON-LD"}
+:POST /rdf/neo4j/cypher { "cypher":"MATCH (neo4j:ns0__GraphPlatform)<-[ro:ns0__runsOn]-(plugin:ns0__Neo4jPlugin) WHERE plugin.ns0__releaseDate = '03-06-2019' RETURN plugin, ro, neo4j " , "format" : "JSON-LD"}
 ----
 
 We can use this example to set the serialisation format to `JSON-LD`, which would produce the following RDF fragment:
@@ -431,20 +432,20 @@ Run this cypher instead `MATCH (n:Resource)-[r]-(m) RETURN *` and you'll be retu
 
 It is possible to export your Graph schema in the form of an OWL Ontology. The same output produced by the `db.schema()` procedure can be generated as RDF/OWL through the `/onto` method.
 
-==== /rdf/onto
+==== /rdf/<dbname>/onto
 The `/onto` method will run `db.schema()` on your Neo4j graph and will generate `owl:Class` definitions for each label found, and `owl:ObjectProperty` definitions for each relationship along with `rdfs:domain` and `rdfs:range` based on the labels of their start and end nodes.
 Here's an example of the output for the Neo4j Movie database.
 
 [source,Cypher]
 ----
-:GET /rdf/onto
+:GET /rdf/neo4j/onto
 ----
 
 or 
 
 [source,shell]
 ----
-http://localhost:7474/rdf/onto
+http://localhost:7474/rdf/neo4j/onto
 ----
 
 And the ontology generated would be:
@@ -494,16 +495,15 @@ The following request would serialise the ontology as N-Triples.
 
 [source,shell]
 ----
-:GET /rdf/onto?format=N-Triples
+:GET /rdf/neo4j/onto?format=N-Triples
 ----
 
 
-==== /rdf/ontonrdf
-Similarly, if the Neo4j graph is the result of importing RDF via `n10s.rdf.import.fetch`, the Ontology can be exported by running `ontonrdf`, which will take care of expanding the namespaces shortened in the import process.
+This method  can be used also if the Neo4j graph is the result of importing RDF via any of the `n10s.rdf.import` procedures, again the info in the Graph Config and the Namespace prefix definition will be used to regenerate the originally imported RDF.
 
 [source,Cypher]
 ----
-:GET /rdf/ontonrdf
+:GET /rdf/neo4j/onto
 ----
 
 Which applied to the example dataset about neo4j plugins used in section <<Import>>, would produce the following ontology:

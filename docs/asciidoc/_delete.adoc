@@ -100,9 +100,6 @@ ex:Resource1
   ex:Predicate4 "val4" .
 ----
 
-[IMPORTANT]
-You *must* use for deletion the same set of parameters that you used during import, otherwise you will not get the expected results.
-
 **Note** that currently blank nodes cannot be deleted using `n10s.rdf.delete.fetch` because we assume that blank node ids are not kept during parsing.
 
 It is also possible to delete triples passed as text (as opposed to passing them by url like in the previous methods).
@@ -130,68 +127,3 @@ CALL n10s.rdf.delete.inline('<http://ind#123> <http://voc#property1> "Value"@en 
   keepLangTag: true
 });
 ----
-
-
-=== Handling named graphs (RDF Quads)
-
-You can also delete imported quads using `semantics.deleteQuadRDF` which takes the same generic params described in <<common_params_delete>>.
-
-*Note* that you need to use TriG or N-Quads serializations if you want to take advantage of the named graph function.
-
-For this example we will use the same dataset which was used in <<ImportQuadRDF>>.
-
-Let's say you're trying to delete the following set of quads from Neo4j after the import from the <<ImportQuadRDF>> section:
-
-[source,RDF]
-----
-@prefix ex: <http://www.example.org/vocabulary#> .
-@prefix exDoc: <http://www.example.org/exampleDocument#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
-exDoc:G2 ex:created "2019-06-07T10:15:30"^^xsd:dateTime .
-
-exDoc:Monica a ex:Person ;
-             ex:friendOf exDoc:John .
-
-exDoc:G1 {
-    exDoc:Monica
-              ex:name "Monica Murphy" ;
-              ex:email <mailto:monica@monicamurphy.org> ;
-              ex:hasSkill ex:Management ;
-              ex:knows exDoc:John . }
-
-exDoc:G2 {
-    exDoc:Monica
-              ex:city "New York" ;
-              ex:country "USA" . }
-----
-
-The `semantics.deleteQuadRDF` procedure takes the same generic params described in <<common_params_delete>> at the beginning of the <<DeleteRDF>> section, so we will invoke it with a URL and a serialisation format. In the following example we will import the RDF dataset in link:docs/rdf/RDFDataset/RDFDataset.trig[this file].
-
-
-Here is the cypher snippet showing how to do that:
-
-[source,cypher]
-----
-CALL semantics.deleteQuadRDF("file:///Users/emrearkan/IdeaProjects/neosemantics/docs/rdf/RDFDataset/RDFDataset.trig","TriG",{typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'})
-----
-
-n10s will delete the given quads in your Neo4j graph. After this deletion your RDF dataset will look like this:
-
-[source,RDF]
-----
-@prefix ex: <http://www.example.org/vocabulary#> .
-@prefix exDoc: <http://www.example.org/exampleDocument#> .
-@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-
-exDoc:G1 ex:created "2019-06-06"^^xsd:date .
-
-exDoc:G1 {
-    exDoc:Monica
-              ex:homepage <http://www.monicamurphy.org> ;
-              ex:hasSkill ex:Programming . }
-
-exDoc:G3 {
-    exDoc:John a ex:Person . }
-----
-__

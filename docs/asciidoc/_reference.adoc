@@ -67,6 +67,8 @@ capitalisation is applied to vocabulary elements (all caps for relationship type
 ==== RDF Import
 
 [options="header"]
+[cols="4,5,4"]
+
 |===
 | Procedure Name        | params           | Description and example usage
 |n10s.rdf.import.fetch
@@ -128,19 +130,13 @@ a|
 * URL of the dataset
 * serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
 * optional map with params from the table below
-| Deletes triples from Neo4j. Works on a graph resulted of importing RDF via semantics.importRDF(). Delete config must match the one used on import
+| Deletes triples from Neo4j. Works on a graph resulted of importing RDF via import. Delete config must match the one used on import
 |n10s.rdf.delete.inline
 a|
 * String containing a valid RDF fragment
 * serialization format (valid formats: Turtle, N-Triples, JSON-LD, TriG, RDF/XML)
 * optional map with params from the table below
 | Deletes from Neo4j the triples passed as first parameter. Works in the same way and takes the same parameters as `deleteRDF`.
-|n10s.experimental.delete.fetch
-a|
- * URL of the dataset
- * serialization format (valid formats: TriG,N-Quads)
- * optional map with params from the table below
-| Deletes quads from Neo4j. Works on a graph resulted of importing RDF quads via semantics.importQuadRDF(). Delete config must match the one used on import
 |===
 
 ===== RDF Import Method Params (also valid for Ontology and SKOS import)
@@ -296,22 +292,13 @@ a|
 [cols="15,5,45,35"]
 |===
 | method| type| params| Description
-| /rdf/describe/id/<nodeid>
+| /rdf/describe/<nodeid or uri>
 |GET
 a|
-* nodeid: path parameter containing the id of a node
+* the id of a node or the (urlencoded) uri
 * excludeContext: Optional named parameter. If present output will not include connected nodes, just selected one.
 * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | Produces an RDF serialization of the selected node. The format will be determined by the *accept* parameter in the header. Default is Turtle
-| /rdf/describe/uri/<nodeuri>
-|GET
-a|
-* nodeuri: path parameter containing the (urlencoded) uri of a node.
-* excludeContext: (optional) if present output will not include connected nodes, just selected one.
-* graphuri: (optional) if present and the graph includes Quad information, only statements in the selected named graph are returned.The value  of the parameter is the (urlencoded) uri of a named graph.
-* format: RDF serialisation format. When present, it overrides the header param *accept*.
-| Produces an RDF serialization of the selected node. It works on a model either imported from an RDF dataset
-via **semantics.importRDF**, **semantics.importQuadRDF** or built in a way that nodes are labeled as :Resource and have an uri.
 |/rdf/describe/find/<l>/<p>/<v>
 |GET
 a|
@@ -329,18 +316,8 @@ a| POST request taking as parameter a JSON map with the following keys:
 * showOnlyMapped: (optional, default is false) if present output will exclude unmapped elements (see how to define mappings for labels,attributes, relationships)
 * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | Produces an RDF serialization of the nodes and relationships returned by the Cypher query
-| /rdf/cypheronrdf
-| POST
-a| same parameters as `/rdf/cypher`
-| Same as `/rdf/cypher` but it works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a
-way that nodes are labeled as :Resource and have an uri.
 |/rdf/onto
 | GET
 a| * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | returns an OWL ontology based on the graph schema
-|/rdf/ontonrdf
-| GET
-a| * format: RDF serialisation format. When present, it overrides the header param *accept*.
-| Same as  /rdf/onto but it works on a model either imported from an RDF dataset via **semantics.importRDF** or built in a
-way that nodes are labeled as :Resource and have an uri.
 |===

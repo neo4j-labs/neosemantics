@@ -22,6 +22,12 @@
     <d:tocentry linkend="Mapping"><?dbhtml filename="mapping/index.html"?>
     </d:tocentry>
 
+    <d:tocentry linkend="Config"><?dbhtml filename="config/index.html"?>
+    </d:tocentry>
+
+    <d:tocentry linkend="Validation"><?dbhtml filename="validation/index.html"?>
+    </d:tocentry>
+
     <d:tocentry linkend="Reference"><?dbhtml filename="reference/index.html"?>
     </d:tocentry>
 
