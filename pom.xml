@@ -202,7 +202,38 @@
         </configuration>
       </plugin>
 
+      <plugin>
+        <groupId>org.jetbrains.dokka</groupId>
+        <artifactId>dokka-maven-plugin</artifactId>
+        <version>0.9.17</version>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>dokka</goal>
+              <goal>javadoc</goal>
+              <goal>javadocJar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <includes>
+            <!-- TODO what to do with this part? -->
+            <file>packages.md</file>
+          </includes>
+        </configuration>
+      </plugin>
+
 
     </plugins>
   </build>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>jcenter</id>
+      <name>JCenter</name>
+      <url>https://jcenter.bintray.com/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
 </project>
