@@ -7,6 +7,28 @@
   <artifactId>neosemantics</artifactId>
   <version>4.0.0.0</version>
   <packaging>jar</packaging>
+  <name>neosemantics</name>
+  <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
+  <url>https://github.com/neo4j-labs/neosemantics</url>
+  <scm>
+    <url>https://github.com/neo4j-labs/neosemantics</url>
+  </scm>
+  <licenses>
+    <license>
+      <name>The Apache Software License, Version 2.0</name>
+      <url>http://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <comments>Note that this license is for the project itself, and not for its dependencies.</comments>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <id>jesusbarrasa</id>
+      <name>Jesús Barrasa</name>
+      <email>jesus.barrasa@neo4j.com</email>
+    </developer>
+  </developers>
+
   <properties>
     <neo4j.version>4.0.0</neo4j.version>
     <sesame.version>3.1.4</sesame.version>
@@ -179,6 +201,39 @@
           <target>11</target>
         </configuration>
       </plugin>
+
+      <plugin>
+        <groupId>org.jetbrains.dokka</groupId>
+        <artifactId>dokka-maven-plugin</artifactId>
+        <version>0.9.17</version>
+        <executions>
+          <execution>
+            <phase>prepare-package</phase>
+            <goals>
+              <goal>dokka</goal>
+              <goal>javadoc</goal>
+              <goal>javadocJar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <includes>
+            <!-- TODO what to do with this part? -->
+            <file>packages.md</file>
+          </includes>
+        </configuration>
+      </plugin>
+
+
     </plugins>
   </build>
+
+  <pluginRepositories>
+    <pluginRepository>
+      <id>jcenter</id>
+      <name>JCenter</name>
+      <url>https://jcenter.bintray.com/</url>
+    </pluginRepository>
+  </pluginRepositories>
+
 </project>
