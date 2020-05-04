@@ -40,7 +40,7 @@ import org.neo4j.logging.Log;
 /**
  * Created by jbarrasa on 08/09/2016.
  */
-@Path("/n10s")
+@Path("/")
 public class RDFEndpoint {
 
   private static final ObjectMapper objectMapper = new ObjectMapper();
@@ -62,7 +62,7 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("{dbname}/describe/{nodeidentifier}")
+  @Path("/{dbname}/describe/{nodeidentifier}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodebyIdOrUri(@Context DatabaseManagementService gds,
@@ -110,7 +110,7 @@ public class RDFEndpoint {
 
 
   @GET
-  @Path("{dbname}/describe/find/{label}/{property}/{propertyValue}")
+  @Path("/{dbname}/describe/find/{label}/{property}/{propertyValue}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response nodefind(@Context DatabaseManagementService gds,
@@ -141,7 +141,7 @@ public class RDFEndpoint {
   }
 
   @POST
-  @Path("{dbname}/cypher")
+  @Path("/{dbname}/cypher")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response cypher(@Context DatabaseManagementService gds,
@@ -181,7 +181,7 @@ public class RDFEndpoint {
   }
 
   @GET
-  @Path("{dbname}/onto")
+  @Path("/{dbname}/onto")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads"})
   public Response exportOnto(@Context DatabaseManagementService gds,
