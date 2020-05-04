@@ -6,12 +6,10 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
@@ -23,11 +21,11 @@ public class ValidatorConfig {
 
   private final Map<String, Object> allParams;
   private final List<ConstraintComponent> constraintList;
-  private final Map<String, String>  individualGlobalQueries;
-  private final Map<String, String>  individualNodeSetQueries;
+  private final Map<String, String> individualGlobalQueries;
+  private final Map<String, String> individualNodeSetQueries;
   private final Map<String, Set<String>> triggerList;
 
-  public ValidatorConfig(){
+  public ValidatorConfig() {
 
     this.allParams = new HashMap<>();
 
@@ -41,7 +39,8 @@ public class ValidatorConfig {
 
   }
 
-  public ValidatorConfig(Map<String, String> globalQueries, Map<String, String> nodeSetQueries, Map<String, Set<String>> triggerList, Map<String, Object> params) {
+  public ValidatorConfig(Map<String, String> globalQueries, Map<String, String> nodeSetQueries,
+      Map<String, Set<String>> triggerList, Map<String, Object> params) {
     this.individualGlobalQueries = globalQueries;
     this.individualNodeSetQueries = nodeSetQueries;
     this.triggerList = triggerList;
@@ -67,30 +66,40 @@ public class ValidatorConfig {
       this.allParams = (Map<String, Object>) deserialiseObject(
           (byte[]) validationConfigNode.getProperty("_params"));
       this.constraintList = (List<ConstraintComponent>)
-          deserialiseObject((byte[])validationConfigNode.getProperty("_constraintList"));
+          deserialiseObject((byte[]) validationConfigNode.getProperty("_constraintList"));
     }
   }
 
-  public Map<String, Object> getAllParams() { return allParams; }
+  public Map<String, Object> getAllParams() {
+    return allParams;
+  }
 
-  public List<ConstraintComponent> getConstraintList() { return  constraintList; }
+  public List<ConstraintComponent> getConstraintList() {
+    return constraintList;
+  }
 
-  public Map<String,String> getIndividualGlobalQueries(){  return individualGlobalQueries; }
+  public Map<String, String> getIndividualGlobalQueries() {
+    return individualGlobalQueries;
+  }
 
-  public Map<String,String> getIndividualNodeSetQueries(){  return individualNodeSetQueries; }
+  public Map<String, String> getIndividualNodeSetQueries() {
+    return individualNodeSetQueries;
+  }
 
-  public Map<String,Set<String>> getTriggerList(){  return triggerList; }
+  public Map<String, Set<String>> getTriggerList() {
+    return triggerList;
+  }
 
   public void addConstraintToList(ConstraintComponent cc) {
     constraintList.add(cc);
   }
 
   public void addQueryAndTriggers(String queryId, String queryGlobal, String queryOnNodeSet,
-      List<String> triggers){
-    individualGlobalQueries.put(queryId,queryGlobal);
-    individualNodeSetQueries.put(queryId,queryOnNodeSet);
-    for(String trigger:triggers){
-      if(triggerList.containsKey(trigger)) {
+      List<String> triggers) {
+    individualGlobalQueries.put(queryId, queryGlobal);
+    individualNodeSetQueries.put(queryId, queryOnNodeSet);
+    for (String trigger : triggers) {
+      if (triggerList.containsKey(trigger)) {
         triggerList.get(trigger).add(queryId);
       } else {
         Set<String> queryIdSet = new HashSet<>();
@@ -104,28 +113,29 @@ public class ValidatorConfig {
     final Set<String> queries = new HashSet<>();
 
     Set<String> queryIds = new HashSet<>();
-    for (String triggerer:triggerers) {
+    for (String triggerer : triggerers) {
       Set<String> querySet = triggerList.get(triggerer);
-      if (querySet!= null && querySet.size()>0){
+      if (querySet != null && querySet.size() > 0) {
         queryIds.addAll(querySet);
       }
     }
 
-    queryIds.forEach(x -> queries.add(global?individualGlobalQueries.get(x):individualNodeSetQueries.get(x)));
+    queryIds.forEach(x -> queries
+        .add(global ? individualGlobalQueries.get(x) : individualNodeSetQueries.get(x)));
 
     List<String> runnableQueries = new ArrayList<>();
     int i = 0;
     StringBuilder sb = newInitialisedStringBuilder();
-    for (String q :queries) {
+    for (String q : queries) {
       sb.append("\n UNION \n").append(q);
       i++;
-      if (i >= UNION_BATCH_SIZE){
+      if (i >= UNION_BATCH_SIZE) {
         runnableQueries.add(sb.toString());
         i = 0;
         sb = newInitialisedStringBuilder();
       }
     }
-    if(sb.length()>0){
+    if (sb.length() > 0) {
       runnableQueries.add(sb.toString());
     }
     return runnableQueries;
@@ -135,7 +145,7 @@ public class ValidatorConfig {
 
     List<String> labels;
 
-    if(global) {
+    if (global) {
       labels = (List<String>) tx
           .execute("call db.labels() yield label return collect(label) as labelsInUse").next()
           .get("labelsInUse");
@@ -144,12 +154,13 @@ public class ValidatorConfig {
       params.put("nodeList", nodeSet);
       labels = (List<String>) tx
           .execute("unwind $nodeList as node\n"
-              + "with collect(distinct labels(node)) as nodeLabelSet \n"
-              + "return reduce(res=[], x in nodeLabelSet | res + x) as fullNodeLabelWithDuplicates", params).next()
+                  + "with collect(distinct labels(node)) as nodeLabelSet \n"
+                  + "return reduce(res=[], x in nodeLabelSet | res + x) as fullNodeLabelWithDuplicates",
+              params).next()
           .get("fullNodeLabelWithDuplicates");
     }
 
-    return selectQueriesAndBatchFromTriggerList(global,  new HashSet<>(labels));
+    return selectQueriesAndBatchFromTriggerList(global, new HashSet<>(labels));
   }
 
   private StringBuilder newInitialisedStringBuilder() {
@@ -159,7 +170,7 @@ public class ValidatorConfig {
   }
 
   public void writeToDB(Transaction tx) throws IOException {
-    Map<String,Object> params =  new HashMap<>();
+    Map<String, Object> params = new HashMap<>();
     params.put("gq", serialiseObject(individualGlobalQueries));
     params.put("nsq", serialiseObject(individualNodeSetQueries));
     params.put("tl", serialiseObject(triggerList));

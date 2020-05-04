@@ -11,7 +11,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -54,8 +53,9 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
       tempTransaction.commit();
       totalTriplesMapped += mappedTripleCounter;
       mappedTripleCounter = 0;
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
-    } catch (Exception e){
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+          + totalTriplesMapped);
+    } catch (Exception e) {
       System.out.println(e.getMessage());
     }
   }
@@ -187,7 +187,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
     for (Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       try {
-      if (!entry.getValue().isEmpty()) {
+        if (!entry.getValue().isEmpty()) {
           // if the uri is for an element for which we have not parsed the
           // onto element type (class, property, rel) then it's an extra-statement
           // and should be processed when the element in question is parsed
@@ -223,7 +223,8 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
                   ((List) v).add(node.getProperty(k));
                 }
                 //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-                node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+                node.setProperty(k,
+                    toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
               }
             } else {
               node.setProperty(k, v);
@@ -240,51 +241,51 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
     for (Statement st : statements) {
       try {
-      final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
-        }
-      });
+        final Node fromNode = nodeCache.get(st.getSubject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
+          }
+        });
 
-      final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
-        @Override
-        public Node call() {  //throws AnyException
-          return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        }
-      });
+        final Node toNode = nodeCache.get(st.getObject().stringValue(), new Callable<Node>() {
+          @Override
+          public Node call() {  //throws AnyException
+            return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
+          }
+        });
 
-      // check if the rel is already present. If so, don't recreate.
-      // explore the node with the lowest degree
-      boolean found = false;
-      if (fromNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
-          Direction.OUTGOING) <
-          toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
-              Direction.INCOMING)) {
-        for (Relationship rel : fromNode
-            .getRelationships(Direction.OUTGOING,
-                RelationshipType.withName(translateRelName(st.getPredicate())))) {
-          if (rel.getEndNode().equals(toNode)) {
-            found = true;
-            break;
+        // check if the rel is already present. If so, don't recreate.
+        // explore the node with the lowest degree
+        boolean found = false;
+        if (fromNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+            Direction.OUTGOING) <
+            toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+                Direction.INCOMING)) {
+          for (Relationship rel : fromNode
+              .getRelationships(Direction.OUTGOING,
+                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+            if (rel.getEndNode().equals(toNode)) {
+              found = true;
+              break;
+            }
+          }
+        } else {
+          for (Relationship rel : toNode
+              .getRelationships(Direction.INCOMING,
+                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+            if (rel.getStartNode().equals(fromNode)) {
+              found = true;
+              break;
+            }
           }
         }
-      } else {
-        for (Relationship rel : toNode
-            .getRelationships(Direction.INCOMING,
-                RelationshipType.withName(translateRelName(st.getPredicate())))) {
-          if (rel.getStartNode().equals(fromNode)) {
-            found = true;
-            break;
-          }
-        }
-      }
 
-      if (!found) {
-        fromNode.createRelationshipTo(
-            toNode,
-            RelationshipType.withName(translateRelName(st.getPredicate())));
-      }
+        if (!found) {
+          fromNode.createRelationshipTo(
+              toNode,
+              RelationshipType.withName(translateRelName(st.getPredicate())));
+        }
       } catch (ExecutionException e) {
         e.printStackTrace();
       }

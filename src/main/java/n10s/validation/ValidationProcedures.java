@@ -20,7 +20,7 @@ import org.neo4j.procedure.Procedure;
 
 public class ValidationProcedures extends CommonProcedures {
 
-  @Procedure(name= "n10s.validation.shacl.validateTransaction", mode = Mode.READ)
+  @Procedure(name = "n10s.validation.shacl.validateTransaction", mode = Mode.READ)
   @Description("n10s.validation.shacl.validateTransaction(createdNodes,createdRelationships,...) - runs SHACL validation in trigger context.")
   public Stream<ValidationResult> shaclValidateTxForTrigger(
       @Name("createdNodes") Object createdNodes,
@@ -31,7 +31,7 @@ public class ValidationProcedures extends CommonProcedures {
 
     //we may want to add additional params to this method like the max duration of the validation?
 
-    if(tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN id(vc) as id").hasNext()) {
+    if (tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) RETURN id(vc) as id").hasNext()) {
       Map<String, Object> params = new HashMap<>();
       params.put("createdNodes", createdNodes);
       params.put("createdRelationships", createdRelationships);
@@ -62,7 +62,8 @@ public class ValidationProcedures extends CommonProcedures {
 
   @Procedure(name = "n10s.validation.shacl.import.fetch", mode = Mode.WRITE)
   @Description("Imports SHACL shapes from a URL and compiles a validator into neo4j")
-  public Stream<ConstraintComponent> importSHACLFromURL(@Name("url") String url, @Name("format") String format,
+  public Stream<ConstraintComponent> importSHACLFromURL(@Name("url") String url,
+      @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
@@ -70,7 +71,8 @@ public class ValidationProcedures extends CommonProcedures {
 
   }
 
-  private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment, Map<String, Object> props)
+  private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment,
+      Map<String, Object> props)
       throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
 
     InputStream is;
@@ -81,7 +83,8 @@ public class ValidationProcedures extends CommonProcedures {
     }
 
     SHACLValidator validator = new SHACLValidator(tx, log);
-    ValidatorConfig validatorConfig = validator.compileValidations(validator.parseConstraints(is, getFormat(format)));
+    ValidatorConfig validatorConfig = validator
+        .compileValidations(validator.parseConstraints(is, getFormat(format)));
 
     validatorConfig.writeToDB(tx);
 
@@ -89,7 +92,7 @@ public class ValidationProcedures extends CommonProcedures {
   }
 
 
-  @Procedure(name="n10s.validation.shacl.listShapes", mode = Mode.READ)
+  @Procedure(name = "n10s.validation.shacl.listShapes", mode = Mode.READ)
   @Description("n10s.validation.listShapes() - list SHACL shapes loaded in the Graph")
   public Stream<ConstraintComponent> listShapes() throws IOException, ClassNotFoundException {
 
@@ -97,29 +100,31 @@ public class ValidationProcedures extends CommonProcedures {
   }
 
 
-  @Procedure(name="n10s.validation.shacl.validate", mode = Mode.READ)
+  @Procedure(name = "n10s.validation.shacl.validate", mode = Mode.READ)
   @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")
   public Stream<ValidationResult> validateFromCompiled()
       throws IOException, ClassNotFoundException {
 
-      ValidatorConfig vc = new ValidatorConfig(tx);
-      return vc.generateRunnableQueries(tx, true,null).parallelStream().flatMap(x->tx.execute(x,vc.getAllParams()).stream()).map(ValidationResult::new);
+    ValidatorConfig vc = new ValidatorConfig(tx);
+    return vc.generateRunnableQueries(tx, true, null).parallelStream()
+        .flatMap(x -> tx.execute(x, vc.getAllParams()).stream()).map(ValidationResult::new);
 
   }
 
 
-  @Procedure(name="n10s.validation.shacl.validateSet", mode = Mode.READ)
+  @Procedure(name = "n10s.validation.shacl.validateSet", mode = Mode.READ)
   @Description("n10s.validation.shacl.validateSet([nodeList]) - runs SHACL validation on selected nodes")
-  public Stream<ValidationResult> validateSetFromCompiled(@Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
+  public Stream<ValidationResult> validateSetFromCompiled(
+      @Name(value = "nodeList", defaultValue = "[]") List<Node> nodeList)
       throws IOException, ClassNotFoundException {
 
+    ValidatorConfig vc = new ValidatorConfig(tx);
 
-      ValidatorConfig vc = new ValidatorConfig(tx);
+    //add touched nodes to params
+    vc.getAllParams().put("touchedNodes", nodeList);
 
-      //add touched nodes to params
-      vc.getAllParams().put("touchedNodes", nodeList);
-
-      return vc.generateRunnableQueries(tx,false,nodeList).parallelStream().flatMap(x->tx.execute(x,vc.getAllParams()).stream()).map(ValidationResult::new);
+    return vc.generateRunnableQueries(tx, false, nodeList).parallelStream()
+        .flatMap(x -> tx.execute(x, vc.getAllParams()).stream()).map(ValidationResult::new);
 
   }
 

@@ -893,13 +893,16 @@ public class RDFEndpointTest {
       Map<String, Object> importResult = tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML',{})").next();
-      Map<String,Object> nsFromImportResults = (Map<String,Object>) importResult.get("namespaces");
+      Map<String, Object> nsFromImportResults = (Map<String, Object>) importResult
+          .get("namespaces");
       assertTrue(nsFromImportResults.size() == 7);
 
-      Map<String,Object> nspd = (Map<String,Object>) tx.execute("match (n:_NsPrefDef) return properties(n) as p").next()
+      Map<String, Object> nspd = (Map<String, Object>) tx
+          .execute("match (n:_NsPrefDef) return properties(n) as p").next()
           .get("p");
       assertTrue(nspd.containsKey("fiboanno"));
-      assertTrue(nspd.get("fiboanno").equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
+      assertTrue(nspd.get("fiboanno")
+          .equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
       assertTrue(nspd.containsKey("dct"));
       assertTrue(nspd.get("dct").equals("http://purl.org/dc/terms/"));
       assertTrue(nspd.containsKey("owl"));

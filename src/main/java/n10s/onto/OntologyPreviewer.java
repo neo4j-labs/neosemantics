@@ -37,15 +37,16 @@ public class OntologyPreviewer extends OntologyImporter {
 
   @Override
   public void handleStatement(Statement st) {
-    if(mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
+    if (mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
       super.handleStatement(st);
-    } else{
+    } else {
       conclude();
-      throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples added to preview");
+      throw new TripleLimitReached(
+          parserConfig.getStreamTripleLimit() + " triples added to preview");
     }
   }
 
-  //TODO:Refactor with the one in preview RDF
+  //  TODO:Refactor with the one in preview RDF
   private void conclude() {
     for (String uri : resourceLabels.keySet()) {
       vNodes.put(uri, new VirtualNode(Util.labels(new ArrayList<>(resourceLabels.get(uri))),

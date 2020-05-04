@@ -8,7 +8,6 @@ import static org.junit.Assert.assertTrue;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
@@ -124,7 +123,8 @@ public class SHACLValidationProceduresTest {
           + "\tsh:ignoredProperties ( neo4j:tagline ) .";
 
       Result results = session
-          .run("CALL n10s.validation.shacl.import.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
+          .run(
+              "CALL n10s.validation.shacl.import.inline(\"" + SHACL_SNIPPET + "\",\"Turtle\", {})");
 
       assertTrue(results.hasNext());
 
@@ -168,17 +168,19 @@ public class SHACLValidationProceduresTest {
       assertTrue(result.hasNext());
       int minCountCount = 0;
       int datatypeConstCount = 0;
-      while(result.hasNext()){
+      while (result.hasNext()) {
         Record next = result.next();
-        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+        if (next.get("propertyShape").asString()
+            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
           minCountCount++;
         }
-        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+        if (next.get("propertyShape").asString()
+            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
           datatypeConstCount++;
         }
       }
-      assertEquals(3,minCountCount);
-      assertEquals(3,datatypeConstCount);
+      assertEquals(3, minCountCount);
+      assertEquals(3, datatypeConstCount);
     }
   }
 
@@ -208,7 +210,8 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          .getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
@@ -216,7 +219,7 @@ public class SHACLValidationProceduresTest {
 
       assertEquals(true, validationResults.hasNext());
 
-      while(validationResults.hasNext()) {
+      while (validationResults.hasNext()) {
         Record next = validationResults.next();
         if (next.get("nodeType").equals("Person")) {
           assertEquals("Rosie O'Donnell", next.get("offendingValue").asString());
@@ -249,11 +252,12 @@ public class SHACLValidationProceduresTest {
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
-      try{
+      try {
         result.hasNext();
         assertFalse(true); //should not get here
-      } catch (Exception e){
-        assertTrue(e.getMessage().contains("ShapesUsingNamespaceWithUndefinedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://voc#")); //expected
+      } catch (Exception e) {
+        assertTrue(e.getMessage().contains(
+            "ShapesUsingNamespaceWithUndefinedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://voc#")); //expected
       }
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");
@@ -392,8 +396,6 @@ public class SHACLValidationProceduresTest {
       }
       assertEquals(4, matches);
 
-
-
       session.run("MATCH (n) DETACH DELETE n");
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       //RDF KEEP GRAPH
@@ -427,7 +429,8 @@ public class SHACLValidationProceduresTest {
                 next.get("propertyOrRelationshipPath").isNull() &&
                 next.get("param").asString().equals("sh:ignoredProperties") &&
                 next.get("value").asList(x -> x.asString()).equals(
-                    List.of("neo4j://voc#born", "neo4j://voc#DIRECTED", "neo4j://voc#FOLLOWS", "neo4j://voc#REVIEWED",
+                    List.of("neo4j://voc#born", "neo4j://voc#DIRECTED", "neo4j://voc#FOLLOWS",
+                        "neo4j://voc#REVIEWED",
                         "neo4j://voc#PRODUCED", "neo4j://voc#WROTE")))) {
           matches++;
         }
@@ -447,7 +450,8 @@ public class SHACLValidationProceduresTest {
 
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          .getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
@@ -455,14 +459,16 @@ public class SHACLValidationProceduresTest {
 
       assertEquals(true, shapesResults.hasNext());
 
-      while(shapesResults.hasNext()) {
+      while (shapesResults.hasNext()) {
         Record next = shapesResults.next();
-        assertTrue(next.get("target").asString().equals("Movie") || next.get("target").asString().equals("Person"));
-        if (next.get("target").asString().equals("Movie") && next.get("propertyOrRelationshipPath").asString().equals("released")
+        assertTrue(next.get("target").asString().equals("Movie") || next.get("target").asString()
+            .equals("Person"));
+        if (next.get("target").asString().equals("Movie") && next.get("propertyOrRelationshipPath")
+            .asString().equals("released")
             && next.get("param").asString().equals("maxInclusive")) {
           assertEquals(2019, next.get("value").asInt());
         }
-      if (next.get("target").equals("Person") && next.get("propertyOrRelationshipPath").isNull()
+        if (next.get("target").equals("Person") && next.get("propertyOrRelationshipPath").isNull()
             && next.get("param").equals("ignoredProperties")) {
           List<Object> expected = new ArrayList<>();
           expected.add("WROTE");
@@ -490,12 +496,13 @@ public class SHACLValidationProceduresTest {
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
       String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
-                                + "@prefix neo4j: <neo4j://voc#> .\n"
-                                + "@prefix sh: <http://www.w3.org/ns/shacl#> .";
-      
+          + "@prefix neo4j: <neo4j://voc#> .\n"
+          + "@prefix sh: <http://www.w3.org/ns/shacl#> .";
+
       session.run("CALL n10s.nsprefixes.addFromText(' " + turtleNsDefinition + " ')");
-      
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          .getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
@@ -503,14 +510,18 @@ public class SHACLValidationProceduresTest {
 
       assertEquals(true, shapesResults.hasNext());
 
-      while(shapesResults.hasNext()) {
+      while (shapesResults.hasNext()) {
         Record next = shapesResults.next();
-        assertTrue(next.get("target").asString().equals("neo4j__Movie") || next.get("target").asString().equals("neo4j__Person"));
-        if (next.get("target").asString().equals("neo4j__Movie") && next.get("propertyOrRelationshipPath").asString().equals("neo4j__released")
+        assertTrue(
+            next.get("target").asString().equals("neo4j__Movie") || next.get("target").asString()
+                .equals("neo4j__Person"));
+        if (next.get("target").asString().equals("neo4j__Movie") && next
+            .get("propertyOrRelationshipPath").asString().equals("neo4j__released")
             && next.get("param").asString().equals("sh:maxInclusive")) {
           assertEquals(2019, next.get("value").asInt());
         }
-        if (next.get("target").equals("neo4j__Person") && next.get("propertyOrRelationshipPath").isNull()
+        if (next.get("target").equals("neo4j__Person") && next.get("propertyOrRelationshipPath")
+            .isNull()
             && next.get("param").equals("sh:ignoredProperties")) {
           List<Object> expected = new ArrayList<>();
           expected.add("neo4j__WROTE");
@@ -550,15 +561,15 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-
-      session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT " + UNIQUENESS_CONSTRAINT_ON_URI
+          + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
       assertTrue(session.run("call db.schemaStatements").hasNext());
 
       Result loadShapesResult = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
-
 
       Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
           + "call n10s.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}) "
@@ -582,7 +593,7 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testRunTestSuite1() throws Exception {
-    runIndividualTest("core/complex", "personexample",  null, "IGNORE");
+    runIndividualTest("core/complex", "personexample", null, "IGNORE");
     runIndividualTest("core/complex", "personexample", null, "SHORTEN");
     runIndividualTest("core/complex", "personexample", null, "KEEP");
   }
@@ -596,9 +607,9 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testRunTestSuite3() throws Exception {
-    runIndividualTest("core/property", "datatype-001",null,  "IGNORE");
-    runIndividualTest("core/property", "datatype-001",null,  "SHORTEN");
-    runIndividualTest("core/property", "datatype-001",null,  "KEEP");
+    runIndividualTest("core/property", "datatype-001", null, "IGNORE");
+    runIndividualTest("core/property", "datatype-001", null, "SHORTEN");
+    runIndividualTest("core/property", "datatype-001", null, "KEEP");
   }
 
   @Test
@@ -674,58 +685,66 @@ public class SHACLValidationProceduresTest {
   }
 
   public void runIndividualTest(String testGroupName, String testName,
-      String cypherScript, String handleVocabUris ) throws Exception {
+      String cypherScript, String handleVocabUris) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
-      Result getschemastatementsResults = session.run("call db.schemaStatements() yield name return name");
-      if(getschemastatementsResults.hasNext() &&
-          getschemastatementsResults.next().get("name").asString().equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
+      Result getschemastatementsResults = session
+          .run("call db.schemaStatements() yield name return name");
+      if (getschemastatementsResults.hasNext() &&
+          getschemastatementsResults.next().get("name").asString()
+              .equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
         //constraint exists. do nothing.
       } else {
-        session.run("CREATE CONSTRAINT " +  UNIQUENESS_CONSTRAINT_ON_URI + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+        session.run("CREATE CONSTRAINT " + UNIQUENESS_CONSTRAINT_ON_URI
+            + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
         assertTrue(session.run("call db.schemaStatements").hasNext());
       }
 
       //db is empty
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
-
       session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY'" +
-          ", handleVocabUris: '"  + handleVocabUris + "' })");
+          ", handleVocabUris: '" + handleVocabUris + "' })");
 
       //load data
-      session.run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
-          .toURI() + "\",\"Turtle\")");
+      session.run(
+          "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
+              .toURI() + "\",\"Turtle\")");
 
       //load shapes
       Result results = session
-          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
       //load shapes for test completeness
       session
-          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
       //load expected results
-      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class.getClassLoader()
+      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class
+          .getClassLoader()
           .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
           .toURI() + "','Turtle')");
 
       // query them in the graph and flatten the list
-      Result expectedValidationResults = session.run((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?VAL_RESULTS_QUERY_AS_RDF:VAL_RESULTS_QUERY);
-
+      Result expectedValidationResults = session.run(
+          (handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
+              ? VAL_RESULTS_QUERY_AS_RDF : VAL_RESULTS_QUERY);
 
       //print them out
       //System.out.println("expected: ");
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
       while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
-        Object focusNode = ((handleVocabUris.equals("SHORTEN")|| handleVocabUris.equals("KEEP"))?validationResult.get("focus").asString():validationResult.get("focus").asLong());
+        Object focusNode = ((handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
+            ? validationResult.get("focus").asString() : validationResult.get("focus").asLong());
         String nodeType = validationResult.get("targetClass").asString();
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
@@ -736,7 +755,8 @@ public class SHACLValidationProceduresTest {
 
         //TODO:  add the value to the results query and complete  below
         expectedResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
+                shapeId, message, offendingValue));
 
 //        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
 //            propertyName + ", severity: " + severity + ", constraint: " + constraint
@@ -761,7 +781,8 @@ public class SHACLValidationProceduresTest {
         String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
         actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
+                shapeId, message, offendingValue));
 
 //        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
 //            propertyName + ", severity: " + severity + ", constraint: " + constraint
@@ -803,7 +824,8 @@ public class SHACLValidationProceduresTest {
         String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
         actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint, shapeId, message, offendingValue));
+            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
+                shapeId, message, offendingValue));
 
 //        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
 //            propertyName + ", severity: " + severity + ", constraint: " + constraint

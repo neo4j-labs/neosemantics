@@ -15,8 +15,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
-import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.Statement;
@@ -312,7 +310,8 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples deleted. Total so far: " + totalTriplesMapped);
+      log.debug("partial commit: " + mappedTripleCounter + " triples deleted. Total so far: "
+          + totalTriplesMapped);
     }
     totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;

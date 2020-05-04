@@ -37,7 +37,8 @@ public class RDFParserConfig {
         .get("languageFilter") : null);
     verifyUriSyntax = props.containsKey("verifyUriSyntax") ? (Boolean) props
         .get("verifyUriSyntax") : true;
-    streamTripleLimit =  props.containsKey("limit")? (Long) props.get("limit"): DEFAULT_STREAM_TRIPLE_LIMIT;
+    streamTripleLimit =
+        props.containsKey("limit") ? (Long) props.get("limit") : DEFAULT_STREAM_TRIPLE_LIMIT;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -68,7 +69,9 @@ public class RDFParserConfig {
     return graphConf;
   }
 
-  public long getStreamTripleLimit() { return streamTripleLimit; }
+  public long getStreamTripleLimit() {
+    return streamTripleLimit;
+  }
 
   public void setStreamTripleLimit(long streamTripleLimit) {
     this.streamTripleLimit = streamTripleLimit;
@@ -97,7 +100,7 @@ public class RDFParserConfig {
       summary.put("verifyUriSyntax", verifyUriSyntax);
     }
 
-    if (streamTripleLimit!=DEFAULT_STREAM_TRIPLE_LIMIT) {
+    if (streamTripleLimit != DEFAULT_STREAM_TRIPLE_LIMIT) {
       summary.put("limit", streamTripleLimit);
     }
 

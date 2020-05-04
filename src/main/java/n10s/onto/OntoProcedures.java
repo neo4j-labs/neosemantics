@@ -98,7 +98,7 @@ public class OntoProcedures extends CommonProcedures {
     if (ontoViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, ontoViewer);
-      } catch (TripleLimitReached e){
+      } catch (TripleLimitReached e) {
         //preview interrupted by reaching the triple limit. All good.
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         throw new RDFImportException(e.getMessage());

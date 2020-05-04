@@ -13,7 +13,6 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import scala.Int;
 
 public class GraphConfigProceduresTest {
 
@@ -39,8 +38,9 @@ public class GraphConfigProceduresTest {
       assertEquals("Class", results.next().get("value").asString());
 
       String value = "CATEGORY";
-      results = session.run("CALL n10s.graphconfig.set({classLabel: '" + value + "'}) yield param, value "
-          + " with param, value where param = 'classLabel' return param, value ");
+      results = session
+          .run("CALL n10s.graphconfig.set({classLabel: '" + value + "'}) yield param, value "
+              + " with param, value where param = 'classLabel' return param, value ");
       assertEquals(true, results.hasNext());
       assertEquals(value, results.next().get("value").asString());
 
@@ -76,19 +76,18 @@ public class GraphConfigProceduresTest {
           + " with param, value where param = 'classLabel' return param, value ");
       assertTrue(results.hasNext());
       String rdfSnippet = "<http://indiv/a> <http://voc/pred> \"123\" .";
-      results = session.run("CALL n10s.rdf.import.inline('" + rdfSnippet +"','N-Triples')");
+      results = session.run("CALL n10s.rdf.import.inline('" + rdfSnippet + "','N-Triples')");
       assertTrue(results.hasNext());
-      assertEquals(1,results.next().get("triplesLoaded").asInt());
+      assertEquals(1, results.next().get("triplesLoaded").asInt());
 
       try {
         results = session.run("CALL n10s.graphconfig.drop()");
         assertFalse(results.hasNext());
         assertTrue(false);
-      } catch(Exception e){
+      } catch (Exception e) {
         assertTrue(e.getMessage().contains("n10s.graphconfig.GraphConfigProcedures$"
             + "GraphConfigException: The graph is non-empty. Config cannot be changed."));
       }
-
 
 
     }

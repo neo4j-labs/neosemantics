@@ -9,7 +9,6 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.eclipse.rdf4j.rio.RDFParseException;
 
 public class StatementStreamer extends ConfiguredStatementHandler {
 
@@ -39,7 +38,7 @@ public class StatementStreamer extends ConfiguredStatementHandler {
 
   @Override
   public void handleStatement(Statement st) throws RDFHandlerException {
-    if(statements.size()< parserConfig.getStreamTripleLimit()) {
+    if (statements.size() < parserConfig.getStreamTripleLimit()) {
       Value object = st.getObject();
       StreamedStatement statement = new StreamedStatement(st.getSubject().stringValue(),
           st.getPredicate().stringValue(), object.stringValue(),
@@ -47,7 +46,7 @@ public class StatementStreamer extends ConfiguredStatementHandler {
           ((object instanceof Literal) ? ((Literal) object).getDatatype().stringValue() : null),
           (object instanceof Literal ? ((Literal) object).getLanguage().orElse(null) : null));
       statements.add(statement);
-    }  else {
+    } else {
       throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples streamed");
     }
 

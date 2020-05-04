@@ -19,7 +19,7 @@ public class RDFPreviewProcedures extends RDFProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    props.put("commitSize",Long.MAX_VALUE);
+    props.put("commitSize", Long.MAX_VALUE);
 
     GraphResult graphResult = doPreview(url, null, format, props);
     return Stream.of(graphResult);
@@ -33,7 +33,7 @@ public class RDFPreviewProcedures extends RDFProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    props.put("commitSize",Long.MAX_VALUE);
+    props.put("commitSize", Long.MAX_VALUE);
 
     GraphResult graphResult = doPreview(null, rdfFragment, format, props);
     return Stream.of(graphResult);

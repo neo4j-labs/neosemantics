@@ -36,11 +36,12 @@ public class StatementPreviewer extends RDFToLPGStatementProcessor {
 
   @Override
   public void handleStatement(Statement st) {
-    if(mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
+    if (mappedTripleCounter < parserConfig.getStreamTripleLimit()) {
       super.handleStatement(st);
-    } else{
+    } else {
       conclude();
-      throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples added to preview");
+      throw new TripleLimitReached(
+          parserConfig.getStreamTripleLimit() + " triples added to preview");
     }
   }
 

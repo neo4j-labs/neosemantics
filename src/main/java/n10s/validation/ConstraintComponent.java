@@ -12,7 +12,8 @@ public class ConstraintComponent implements Serializable {
 
   public ConstraintComponent(Map<String, Object> record) {
     this.target = record.get("category").toString();
-    this.propertyOrRelationshipPath = (record.get("propertyOrRelationshipPath")==null?null:record.get("propertyOrRelationshipPath").toString());
+    this.propertyOrRelationshipPath = (record.get("propertyOrRelationshipPath") == null ? null
+        : record.get("propertyOrRelationshipPath").toString());
     this.param = record.get("param").toString();
     this.value = record.get("value");
   }

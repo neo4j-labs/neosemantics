@@ -179,16 +179,16 @@ public class GraphConfig {
 
 
   public int getGraphMode() {
-    if (handleVocabUris==GRAPHCONF_VOC_URI_SHORTEN ||
-        handleVocabUris==GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
-        handleVocabUris==GRAPHCONF_VOC_URI_MAP ||
-        handleVocabUris==GRAPHCONF_VOC_URI_KEEP ){
-      return  GRAPHCONF_MODE_RDF;
-    } else if (handleVocabUris==GRAPHCONF_VOC_URI_IGNORE){
-      return  GRAPHCONF_MODE_LPG;
+    if (handleVocabUris == GRAPHCONF_VOC_URI_SHORTEN ||
+        handleVocabUris == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
+        handleVocabUris == GRAPHCONF_VOC_URI_MAP ||
+        handleVocabUris == GRAPHCONF_VOC_URI_KEEP) {
+      return GRAPHCONF_MODE_RDF;
+    } else if (handleVocabUris == GRAPHCONF_VOC_URI_IGNORE) {
+      return GRAPHCONF_MODE_LPG;
     } else {
       //Default to LPG?
-      return  GRAPHCONF_MODE_LPG;
+      return GRAPHCONF_MODE_LPG;
     }
   }
 
@@ -352,7 +352,9 @@ public class GraphConfig {
     return customDataTypePropList;
   }
 
-  public String getClassLabelName() { return classLabelName; }
+  public String getClassLabelName() {
+    return classLabelName;
+  }
 
   public String getObjectPropertyLabelName() {
     return objectPropertyLabelName;

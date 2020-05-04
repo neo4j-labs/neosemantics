@@ -40,26 +40,25 @@ public class RDFExportProcedures extends RDFProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws InvalidNamespacePrefixDefinitionInDB {
 
-
     ExportProcessor proc;
 
     if (getGraphConfig(tx) == null) {
       proc = new LPGToRDFProcesssor(db, tx,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
-            props.get("mappedElemsOnly").equals(true));
+          props.get("mappedElemsOnly").equals(true));
     } else {
       proc = new LPGRDFToRDFProcesssor(db, tx);
     }
-      return proc.streamTriplesFromCypher(cypher,
-          (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :
-              new HashMap<>())).map(st -> new StreamedStatement(
-          st.getSubject().stringValue(), st.getPredicate().stringValue(),
-          st.getObject().stringValue(), st.getObject() instanceof Literal,
-          (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
-              : null),
-          (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getLanguage().orElse(null)
-              : null)
-      ));
+    return proc.streamTriplesFromCypher(cypher,
+        (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :
+            new HashMap<>())).map(st -> new StreamedStatement(
+        st.getSubject().stringValue(), st.getPredicate().stringValue(),
+        st.getObject().stringValue(), st.getObject() instanceof Literal,
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
+            : null),
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getLanguage().orElse(null)
+            : null)
+    ));
 
   }
 

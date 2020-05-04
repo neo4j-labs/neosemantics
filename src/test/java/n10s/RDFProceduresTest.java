@@ -294,38 +294,39 @@ public class RDFProceduresTest {
       + "  rdfs:domain <http://neo4j.com/voc/movies#Person> ;\n"
       + "  rdfs:range <http://neo4j.com/voc/movies#Movie> .";
 
-  private static final String SKOS_FRAGMENT_TURTLE = "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
-      + "@prefix thesaurus: <http://vocabularies.unesco.org/thesaurus/> .\n"
-      + "@prefix isothes: <http://purl.org/iso25964/skos-thes#> .\n"
-      + "@prefix dc: <http://purl.org/dc/terms/> .\n"
-      + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
-      + "\n"
-      + "<http://vocabularies.unesco.org/thesaurus>\n"
-      + "  a skos:ConceptScheme ;\n"
-      + "  skos:prefLabel \"UNESCO Thesaurus\"@en, \"Thésaurus de lUNESCO\"@fr, \"Тезаурус ЮНЕСКО\"@ru, \"Tesauro de la UNESCO\"@es .\n"
-      + "\n"
-      + "thesaurus:concept2094\n"
-      + "  a skos:Concept ;\n"
-      + "  skos:prefLabel \"Lengua altaica\"@es, \"Langue altaïque\"@fr, \"Алтайские языки\"@ru, \"Altaic languages\"@en ;\n"
-      + "  skos:narrower thesaurus:concept2096 .\n"
-      + "\n"
-      + "thesaurus:mt3.35\n"
-      + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#MicroThesaurus>, skos:Collection ;\n"
-      + "  skos:prefLabel \"Languages\"@en, \"Lenguas\"@es, \"Langues\"@fr, \"Языки\"@ru ;\n"
-      + "  skos:member thesaurus:concept2096 .\n"
-      + "\n"
-      + "thesaurus:concept2096\n"
-      + "  dc:modified \"2006-05-23T00:00:00\"^^xsd:dateTime ;\n"
-      + "  a skos:Concept ;\n"
-      + "  skos:inScheme <http://vocabularies.unesco.org/thesaurus> ;\n"
-      + "  skos:prefLabel \"Azerbaijani\"@en, \"Azéri\"@fr, \"Азербайджанский язык\"@ru, \"Azerbaiyano\"@es ;\n"
-      + "  skos:hiddenLabel \"Azeri\"@fr, \"Азербаиджанскии язык\"@ru ;\n"
-      + "  skos:broader thesaurus:concept2094 .\n"
-      + "\n"
-      + "thesaurus:domain3\n"
-      + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#Domain>, skos:Collection ;\n"
-      + "  skos:prefLabel \"Culture\"@en, \"Culture\"@fr, \"Культура\"@ru, \"Cultura\"@es ;\n"
-      + "  skos:member thesaurus:mt3.35 .";
+  private static final String SKOS_FRAGMENT_TURTLE =
+      "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+          + "@prefix thesaurus: <http://vocabularies.unesco.org/thesaurus/> .\n"
+          + "@prefix isothes: <http://purl.org/iso25964/skos-thes#> .\n"
+          + "@prefix dc: <http://purl.org/dc/terms/> .\n"
+          + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+          + "\n"
+          + "<http://vocabularies.unesco.org/thesaurus>\n"
+          + "  a skos:ConceptScheme ;\n"
+          + "  skos:prefLabel \"UNESCO Thesaurus\"@en, \"Thésaurus de lUNESCO\"@fr, \"Тезаурус ЮНЕСКО\"@ru, \"Tesauro de la UNESCO\"@es .\n"
+          + "\n"
+          + "thesaurus:concept2094\n"
+          + "  a skos:Concept ;\n"
+          + "  skos:prefLabel \"Lengua altaica\"@es, \"Langue altaïque\"@fr, \"Алтайские языки\"@ru, \"Altaic languages\"@en ;\n"
+          + "  skos:narrower thesaurus:concept2096 .\n"
+          + "\n"
+          + "thesaurus:mt3.35\n"
+          + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#MicroThesaurus>, skos:Collection ;\n"
+          + "  skos:prefLabel \"Languages\"@en, \"Lenguas\"@es, \"Langues\"@fr, \"Языки\"@ru ;\n"
+          + "  skos:member thesaurus:concept2096 .\n"
+          + "\n"
+          + "thesaurus:concept2096\n"
+          + "  dc:modified \"2006-05-23T00:00:00\"^^xsd:dateTime ;\n"
+          + "  a skos:Concept ;\n"
+          + "  skos:inScheme <http://vocabularies.unesco.org/thesaurus> ;\n"
+          + "  skos:prefLabel \"Azerbaijani\"@en, \"Azéri\"@fr, \"Азербайджанский язык\"@ru, \"Azerbaiyano\"@es ;\n"
+          + "  skos:hiddenLabel \"Azeri\"@fr, \"Азербаиджанскии язык\"@ru ;\n"
+          + "  skos:broader thesaurus:concept2094 .\n"
+          + "\n"
+          + "thesaurus:domain3\n"
+          + "  a isothes:ConceptGroup, <http://vocabularies.unesco.org/ontology#Domain>, skos:Collection ;\n"
+          + "  skos:prefLabel \"Culture\"@en, \"Culture\"@fr, \"Культура\"@ru, \"Cultura\"@es ;\n"
+          + "  skos:member thesaurus:mt3.35 .";
 
   private static URI file(String path) {
     try {
@@ -469,7 +470,8 @@ public class RDFProceduresTest {
       assertTrue(queryResults.hasNext());
       Record result = queryResults.next();
       assertEquals("Class", result.get("label").asString());
-      assertEquals(Arrays.asList("Azerbaijani", "Azéri", "Азербайджанский язык", "Azerbaiyano"), result.get("name").asList());
+      assertEquals(Arrays.asList("Azerbaijani", "Azéri", "Азербайджанский язык", "Azerbaiyano"),
+          result.get("name").asList());
       assertFalse(queryResults.hasNext());
     }
   }
@@ -1156,7 +1158,7 @@ public class RDFProceduresTest {
 
       Result importResults
           = session
-          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle')",  params);
+          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle')", params);
       Map<String, Object> next = importResults
           .next().asMap();
       List<Node> nodes = (List<Node>) next.get("nodes");
@@ -1167,7 +1169,7 @@ public class RDFProceduresTest {
       //now  limiting it to 5 triples
       importResults
           = session
-          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle',  { limit: 5 })",  params);
+          .run("CALL n10s.rdf.preview.inline($rdf,'Turtle',  { limit: 5 })", params);
       next = importResults
           .next().asMap();
       nodes = (List<Node>) next.get("nodes");
@@ -1190,9 +1192,9 @@ public class RDFProceduresTest {
 
       Result importResults
           = session
-          .run("CALL n10s.rdf.preview.fetch('"+ RDFProceduresTest.class.getClassLoader()
+          .run("CALL n10s.rdf.preview.fetch('" + RDFProceduresTest.class.getClassLoader()
               .getResource("moviesontology.owl")
-              .toURI() +"','RDF/XML')",  params);
+              .toURI() + "','RDF/XML')", params);
       Map<String, Object> next = importResults
           .next().asMap();
       List<Node> nodes = (List<Node>) next.get("nodes");
@@ -1205,7 +1207,7 @@ public class RDFProceduresTest {
           = session
           .run("CALL n10s.rdf.preview.fetch(' " + RDFProceduresTest.class.getClassLoader()
               .getResource("moviesontology.owl")
-              .toURI() + "','RDF/XML',  { limit: 5 })",  params);
+              .toURI() + "','RDF/XML',  { limit: 5 })", params);
       next = importResults
           .next().asMap();
       nodes = (List<Node>) next.get("nodes");
@@ -1251,7 +1253,7 @@ public class RDFProceduresTest {
 
       Result importResults
           = session
-          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')",  params);
+          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
       Map<String, Object> next = importResults
           .next().asMap();
       List<Node> nodes = (List<Node>) next.get("nodes");
@@ -1262,7 +1264,7 @@ public class RDFProceduresTest {
       //now  limiting it to 5 triples
       importResults
           = session
-          .run("CALL n10s.onto.preview.inline($rdf,'Turtle',  { limit: 14 })",  params);
+          .run("CALL n10s.onto.preview.inline($rdf,'Turtle',  { limit: 14 })", params);
       next = importResults
           .next().asMap();
       nodes = (List<Node>) next.get("nodes");
@@ -1282,9 +1284,9 @@ public class RDFProceduresTest {
 
       Result importResults
           = session
-          .run("CALL n10s.onto.preview.fetch('"+ RDFProceduresTest.class.getClassLoader()
+          .run("CALL n10s.onto.preview.fetch('" + RDFProceduresTest.class.getClassLoader()
               .getResource("moviesontology.owl")
-              .toURI() +"','RDF/XML')");
+              .toURI() + "','RDF/XML')");
       Map<String, Object> next = importResults
           .next().asMap();
       List<Node> nodes = (List<Node>) next.get("nodes");

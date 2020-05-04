@@ -7,15 +7,11 @@ import com.google.common.collect.Iterators;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
-import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.Statement;
@@ -77,7 +73,8 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
         final Node node;
         try {
           tempNode = nodeCache
-              .get(entry.getKey(), () -> inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey()));
+              .get(entry.getKey(),
+                  () -> inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey()));
         } catch (InvalidCacheLoadException icle) {
           icle.printStackTrace();
         }
@@ -190,8 +187,9 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
           continue;
         }
         // find relationship if it exists
-        if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-            Direction.OUTGOING) <
+        if (fromNode
+            .getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
+                Direction.OUTGOING) <
             toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
                 Direction.INCOMING)) {
           for (Relationship rel : fromNode

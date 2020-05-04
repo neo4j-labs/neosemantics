@@ -14,8 +14,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
-import n10s.Util;
-import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
@@ -61,7 +59,7 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
     int count = 0;
 
     for (Map.Entry<ContextResource, Set<String>> entry : resourceLabels.entrySet()) {
-      try{
+      try {
         final Node node = nodeCache.get(entry.getKey(), new Callable<Node>() {
           @Override
           public Node call() {
@@ -120,7 +118,6 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
         e.printStackTrace();
       }
     }
-
 
     for (Statement st : statements) {
       try {
@@ -246,7 +243,8 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+          + totalTriplesMapped);
     }
 
     totalTriplesMapped += mappedTripleCounter;

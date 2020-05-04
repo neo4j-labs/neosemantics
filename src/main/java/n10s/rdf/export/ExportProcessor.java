@@ -6,7 +6,8 @@ import org.eclipse.rdf4j.model.Statement;
 
 public abstract class ExportProcessor {
 
-  public abstract Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params);
+  public abstract Stream<Statement> streamTriplesFromCypher(String cypher,
+      Map<String, Object> params);
 
 
 }

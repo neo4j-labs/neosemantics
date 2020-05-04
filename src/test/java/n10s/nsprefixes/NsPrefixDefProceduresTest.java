@@ -1,37 +1,15 @@
 package n10s.nsprefixes;
 
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
-import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-import static org.neo4j.driver.Values.NULL;
-import static org.neo4j.driver.Values.ofNode;
 
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import n10s.experimental.ExperimentalImports;
 import n10s.graphconfig.GraphConfigProcedures;
-import n10s.mapping.MappingUtils;
-import n10s.onto.load.OntoLoadProcedures;
-import n10s.onto.preview.OntoPreviewProcedures;
-import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
-import n10s.quadrdf.load.QuadRDFLoadProcedures;
-import n10s.rdf.RDFProcedures;
-import n10s.rdf.delete.RDFDeleteProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
-import n10s.rdf.preview.RDFPreviewProcedures;
-import n10s.rdf.stream.RDFStreamProcedures;
-import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.Config;
@@ -40,11 +18,7 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.internal.value.IntegerValue;
-import org.neo4j.driver.internal.value.ListValue;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 /**
@@ -53,7 +27,8 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 public class NsPrefixDefProceduresTest {
 
   @Rule
-  public Neo4jRule neo4j = new Neo4jRule().withProcedure(NsPrefixDefProcedures.class).withProcedure(RDFLoadProcedures.class).withProcedure(GraphConfigProcedures.class);
+  public Neo4jRule neo4j = new Neo4jRule().withProcedure(NsPrefixDefProcedures.class)
+      .withProcedure(RDFLoadProcedures.class).withProcedure(GraphConfigProcedures.class);
 
 
   @Test
@@ -86,22 +61,22 @@ public class NsPrefixDefProceduresTest {
 
       Result res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
       assertTrue(res.hasNext());
-      try{
+      try {
         res = session.run("CALL n10s.nsprefixes.add('xyz','http://myvoc2#')");
         res.hasNext();
         assertTrue(false);
-      } catch (Exception  e){
+      } catch (Exception e) {
         assertTrue(e.getMessage().contains("n10s.utils.NamespacePrefixConflictException"));
       }
-      try{
+      try {
         res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc3#')");
         res.hasNext();
         assertTrue(false);
-      } catch (Exception  e){
+      } catch (Exception e) {
         assertTrue(e.getMessage().contains("n10s.utils.NamespacePrefixConflictException"));
       }
-        res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
-        assertTrue(res.hasNext());
+      res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
+      assertTrue(res.hasNext());
     }
   }
 
@@ -141,22 +116,22 @@ public class NsPrefixDefProceduresTest {
           NsPrefixDefProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD')");
       assertTrue(res1.hasNext());
-      try{
+      try {
         Result res = session.run("CALL n10s.nsprefixes.list() yield prefix WITH prefix LIMIT 1 "
             + " CALL n10s.nsprefixes.remove(prefix) yield prefix as prefix2 "
             + " RETURN prefix2 ");
         res.hasNext();
         assertTrue(false);
-      } catch (Exception  e){
+      } catch (Exception e) {
         assertTrue(e.getMessage().contains("n10s.nsprefixes.NsPrefixDefProcedures$"
             + "NsPrefixOperationNotAllowed: A namespace prefix definition cannot be removed "
             + "when the graph is non-empty."));
       }
-      try{
+      try {
         Result res = session.run("CALL n10s.nsprefixes.removeAll()");
         res.hasNext();
         assertTrue(false);
-      } catch (Exception  e){
+      } catch (Exception e) {
         assertTrue(e.getMessage().contains("n10s.nsprefixes.NsPrefixDefProcedures$"
             + "NsPrefixOperationNotAllowed: Namespace prefix definitions cannot be removed "
             + "when the graph is non-empty."));
@@ -267,7 +242,7 @@ public class NsPrefixDefProceduresTest {
       res = session.run("CALL n10s.nsprefixes.list()");
       assertFalse(res.hasNext());
 
-      res =  session.run("MATCH (nspd:_NsPrefDef) return nspd");
+      res = session.run("MATCH (nspd:_NsPrefDef) return nspd");
       assertFalse(res.hasNext());
 
     }

@@ -18,13 +18,13 @@ import java.util.stream.Stream;
 import n10s.CommonProcedures;
 import n10s.ConfiguredStatementHandler.TripleLimitReached;
 import n10s.RDFImportException;
+import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
+import n10s.graphconfig.RDFParserConfig;
 import n10s.rdf.delete.DirectStatementDeleter;
 import n10s.rdf.load.DirectStatementLoader;
 import n10s.rdf.preview.StatementPreviewer;
 import n10s.rdf.stream.StatementStreamer;
-import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.RDFParserConfig;
 import n10s.result.GraphResult;
 import n10s.result.StreamedStatement;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
@@ -60,7 +60,7 @@ public class RDFProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      conf = new RDFParserConfig(props, (overrideGC!=null?overrideGC:new GraphConfig(tx)));
+      conf = new RDFParserConfig(props, (overrideGC != null ? overrideGC : new GraphConfig(tx)));
       rdfFormat = getFormat(format);
       statementLoader = new DirectStatementLoader(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e) {
@@ -114,7 +114,7 @@ public class RDFProcedures extends CommonProcedures {
     if (statementViewer != null) {
       try {
         parseRDFPayloadOrFromUrl(rdfFormat, url, rdfFragment, props, statementViewer);
-      } catch (TripleLimitReached e){
+      } catch (TripleLimitReached e) {
         //preview interrupted by reaching the triple limit. All good.
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         throw new RDFImportException(e.getMessage());

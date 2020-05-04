@@ -26,7 +26,7 @@ public class ValidationResult {
   }
 
   public ValidationResult(Object focusNode, String nodeType, String resultPath, String severity,
-      String constraint, String  shapeId, String  message,  Object ov) {
+      String constraint, String shapeId, String message, Object ov) {
     this.focusNode = focusNode;
     this.nodeType = nodeType;
     this.resultPath = resultPath;

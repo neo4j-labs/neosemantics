@@ -54,7 +54,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       try {
-      final Node node;
+        final Node node;
         node = nodeCache.get(entry.getKey(), () -> {
           Node node1 = inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey());
           if (node1 == null) {
@@ -64,53 +64,55 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           return node1;
         });
 
-      entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
-      resourceProps.get(entry.getKey()).forEach((k, v) -> {
-        if (v instanceof List) {
-          Object currentValue = node.getProperty(k, null);
-          if (currentValue == null) {
-            node.setProperty(k, toPropertyValue(v));
-          } else {
-            if (currentValue.getClass().isArray()) {
-              Object[] properties = (Object[]) currentValue;
-              for (Object property : properties) {
-                ((List) v).add(property);
-                //here an exception can be raised if types are conflicting
-              }
+        entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
+        resourceProps.get(entry.getKey()).forEach((k, v) -> {
+          if (v instanceof List) {
+            Object currentValue = node.getProperty(k, null);
+            if (currentValue == null) {
+              node.setProperty(k, toPropertyValue(v));
             } else {
-              //TODO: this logic goes because it should not be possible to change
-              // from atomic to multival without emptying the DB
-              ((List) v).add(node.getProperty(k));
+              if (currentValue.getClass().isArray()) {
+                Object[] properties = (Object[]) currentValue;
+                for (Object property : properties) {
+                  ((List) v).add(property);
+                  //here an exception can be raised if types are conflicting
+                }
+              } else {
+                //TODO: this logic goes because it should not be possible to change
+                // from atomic to multival without emptying the DB
+                ((List) v).add(node.getProperty(k));
+              }
+              //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
+              node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
             }
-            //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-            node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+          } else {
+            node.setProperty(k, v);
           }
-        } else {
-          node.setProperty(k, v);
-        }
-      });
+        });
       } catch (ExecutionException e) {
         e.printStackTrace();
       }
     }
 
     for (Statement st : statements) {
-      try{
+      try {
 
         final Node fromNode = nodeCache
             .get(st.getSubject().stringValue(), () -> {  //throws AnyException
               return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
             });
 
-        final Node toNode = nodeCache.get(st.getObject().stringValue(), () -> {  //throws AnyException
-          return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
-        });
+        final Node toNode = nodeCache
+            .get(st.getObject().stringValue(), () -> {  //throws AnyException
+              return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
+            });
 
         // check if the rel is already present. If so, don't recreate.
         // explore the node with the lowest degree
         boolean found = false;
-        if (fromNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
-            Direction.OUTGOING) <
+        if (fromNode
+            .getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
+                Direction.OUTGOING) <
             toNode.getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
                 Direction.INCOMING)) {
           for (Relationship rel : fromNode
@@ -163,7 +165,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
         namespaces.partialRefresh(tempTransaction);
         tempTransaction.commit();
         log.debug("namespace prefixes synced: " + namespaces.toString());
-      } catch (Exception e){
+      } catch (Exception e) {
         e.printStackTrace();
       }
     }
@@ -171,8 +173,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
-    }catch (Exception e){
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+          + totalTriplesMapped);
+    } catch (Exception e) {
       e.printStackTrace();
     }
 

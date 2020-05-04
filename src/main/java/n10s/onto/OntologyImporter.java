@@ -49,7 +49,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
       tempTransaction.commit();
       totalTriplesMapped += mappedTripleCounter;
       mappedTripleCounter = 0;
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: " + totalTriplesMapped);
+      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+          + totalTriplesMapped);
     }
   }
 
@@ -145,24 +146,24 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
   public Integer runPartialTx(Transaction inThreadTransaction) {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
-      try{
+      try {
         if (!entry.getValue().isEmpty()) {
           // if the uri is for an element for which we have not parsed the
           // onto element type (class, property, rel) then it's an extra-statement
           // and should be processed when the element in question is parsed
 
           final Node node;
-            node = nodeCache.get(entry.getKey(), new Callable<Node>() {
-              @Override
-              public Node call() {
-                Node node = inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey());
-                if (node == null) {
-                  node = inThreadTransaction.createNode(RESOURCE);
-                  node.setProperty("uri", entry.getKey());
-                }
-                return node;
+          node = nodeCache.get(entry.getKey(), new Callable<Node>() {
+            @Override
+            public Node call() {
+              Node node = inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey());
+              if (node == null) {
+                node = inThreadTransaction.createNode(RESOURCE);
+                node.setProperty("uri", entry.getKey());
               }
-            });
+              return node;
+            }
+          });
 
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
 
@@ -183,7 +184,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
                   ((List) v).add(node.getProperty(k));
                 }
                 //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-                node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+                node.setProperty(k,
+                    toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
               }
             } else {
               node.setProperty(k, v);

@@ -20,7 +20,7 @@ public class OntoPreviewProcedures extends OntoProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    props.put("commitSize",Long.MAX_VALUE);
+    props.put("commitSize", Long.MAX_VALUE);
     GraphResult graphResult = doPreviewOnto(url, null, format, props);
     return Stream.of(graphResult);
   }
@@ -33,7 +33,7 @@ public class OntoPreviewProcedures extends OntoProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    props.put("commitSize",Long.MAX_VALUE);
+    props.put("commitSize", Long.MAX_VALUE);
     GraphResult graphResult = doPreviewOnto(null, rdfFragment, format, props);
     return Stream.of(graphResult);
   }
