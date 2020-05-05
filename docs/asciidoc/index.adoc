@@ -27,7 +27,7 @@ The guide covers the following areas:
 * <<Reference>> -- An overview of all procedures and functions in the library.
 * <<Examples>> -- A list of projects using n10s.
 
-image::Neosemantics-block-diagram.png[Neosemantics diagram, 200,float="right",align="center"]
+image::nsmntx-block-diagram.png[Neosemantics diagram, 200,float="right",align="center"]
 
 [[intro]]
 == Introduction
