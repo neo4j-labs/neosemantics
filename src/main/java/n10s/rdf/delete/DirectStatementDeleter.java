@@ -57,7 +57,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
   @Override
   public void endRDF() throws RDFHandlerException {
     periodicOperation();
-    log.info("Delete operation complete: Total number of triples deleted is "
+    log.debug("Delete operation complete: Total number of triples deleted is "
         + totalTriplesMapped + " (out of " + totalTriplesParsed + " parsed)");
   }
 
@@ -238,7 +238,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
       totalTriplesMapped += mappedTripleCounter;
-      log.info("Successful partial commit of " + mappedTripleCounter + " triples. " +
+      log.debug("Successful partial commit of " + mappedTripleCounter + " triples. " +
           (totalTriplesMapped - notDeletedStatementCount) + " triples deleted so far...");
     }
 

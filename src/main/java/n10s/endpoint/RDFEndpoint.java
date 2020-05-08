@@ -46,7 +46,8 @@ public class RDFEndpoint {
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static final String DEFAULT_DB_NAME = "neo4j";
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
-      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
+      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS, RDFFormat.TURTLESTAR,
+      RDFFormat.TRIGSTAR};
 
   @Context
   public Log log;
@@ -64,7 +65,8 @@ public class RDFEndpoint {
   @GET
   @Path("/{dbname}/describe/{nodeidentifier}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
-      "application/trig", "application/ld+json", "application/n-quads"})
+      "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
+      "application/x-trigstar"})
   public Response nodebyIdOrUri(@Context DatabaseManagementService gds,
       @PathParam("dbname") String dbNameParam,
       @PathParam("nodeidentifier") String nodeIdentifier,
@@ -112,7 +114,8 @@ public class RDFEndpoint {
   @GET
   @Path("/{dbname}/describe/find/{label}/{property}/{propertyValue}")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
-      "application/trig", "application/ld+json", "application/n-quads"})
+      "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
+      "application/x-trigstar"})
   public Response nodefind(@Context DatabaseManagementService gds,
       @PathParam("dbname") String dbNameParam,
       @PathParam("label") String label,
@@ -143,7 +146,8 @@ public class RDFEndpoint {
   @POST
   @Path("/{dbname}/cypher")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
-      "application/trig", "application/ld+json", "application/n-quads"})
+      "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
+      "application/x-trigstar"})
   public Response cypher(@Context DatabaseManagementService gds,
       @PathParam("dbname") String dbNameParam,
       @HeaderParam("accept") String acceptHeaderParam, String body) {
@@ -183,7 +187,8 @@ public class RDFEndpoint {
   @GET
   @Path("/{dbname}/onto")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
-      "application/trig", "application/ld+json", "application/n-quads"})
+      "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
+      "application/x-trigstar"})
   public Response exportOnto(@Context DatabaseManagementService gds,
       @PathParam("dbname") String dbNameParam,
       @QueryParam("format") String format,
@@ -214,6 +219,8 @@ public class RDFEndpoint {
     writer.set(JSONLDSettings.JSONLD_MODE, JSONLDMode.COMPACT);
     writer.set(JSONLDSettings.OPTIMIZE, true);
 
+    writer.startRDF();
+
     writer.handleNamespace("rdf", RDF.NAMESPACE);
     writer.handleNamespace("neovoc", BASE_VOCAB_NS);
     writer.handleNamespace("neoind", BASE_INDIV_NS);
@@ -221,7 +228,7 @@ public class RDFEndpoint {
       writer.handleNamespace("owl", OWL.NAMESPACE);
       writer.handleNamespace("rdfs", RDFS.NAMESPACE);
     }
-    writer.startRDF();
+
     return writer;
   }
 
@@ -243,26 +250,26 @@ public class RDFEndpoint {
   private RDFFormat getFormat(String mimetype, String formatParam) {
     // format request param overrides the one defined in the accept header param
     if (formatParam != null) {
-      log.info("serialization from param in request: " + formatParam);
+      log.debug("serialization from param in request: " + formatParam);
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().contains(formatParam)) {
-          log.info("parser to be used: " + parser.getDefaultMIMEType());
+          log.debug("parser to be used: " + parser.getDefaultMIMEType());
           return parser;
         }
       }
     } else {
       if (mimetype != null) {
-        log.info("serialization from media type in request: " + mimetype);
+        log.debug("serialization from media type in request: " + mimetype);
         for (RDFFormat parser : availableParsers) {
           if (parser.getMIMETypes().contains(mimetype)) {
-            log.info("parser to be used: " + parser.getDefaultMIMEType());
+            log.debug("parser to be used: " + parser.getDefaultMIMEType());
             return parser;
           }
         }
       }
     }
 
-    log.info("Unrecognized or undefined serialization. Defaulting to Turtle serialization");
+    log.debug("Unrecognized or undefined serialization. Defaulting to Turtle serialization");
 
     return RDFFormat.TURTLE;
 

@@ -139,10 +139,34 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
-        result.add(processRelOnLPG(rel, ontologyEntitiesUris));
+        Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
+        result.add(baseStatement);
+        rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(result, baseStatement,k,v));
       }
     }
     return result.stream();
+  }
+
+  private void processPropertyOnRel(Set<Statement> statementSet,
+      Statement baseStatement, String key, Object propertyValueObject) {
+
+
+      if (!exportOnlyMappedElems || exportMappings.containsKey(key)) {
+        IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
+            vf.createIRI(BASE_VOCAB_NS, key));
+        if (propertyValueObject instanceof Object[]) {
+          for (Object o : (Object[]) propertyValueObject) {
+            statementSet.add(vf.createStatement(vf.createTriple(
+                baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
+                predicate, createTypedLiteral(vf, o)));
+          }
+        } else {
+          statementSet.add(vf.createStatement(vf.createTriple(
+              baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
+              predicate, createTypedLiteral(vf, propertyValueObject)));
+        }
+      }
+
   }
 
   public Stream<Statement> streamNodesBySearch(String label, String property, String propVal,
@@ -157,7 +181,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
       if (includeContext) {
         Iterable<Relationship> relationships = node.getRelationships();
         for (Relationship rel : relationships) {
-          result.add(processRelOnLPG(rel, ontologyEntitiesUris));
+          Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
+          result.add(baseStatement);
+          rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(result, baseStatement,k,v));
         }
       }
     }
@@ -211,7 +237,10 @@ public class LPGToRDFProcesssor extends ExportProcessor {
       }
 
       for (Relationship rel : rels) {
-        rowResult.add(processRelOnLPG(rel, ontologyEntitiesUris));
+        Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
+        rowResult.add(baseStatement);
+        rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(rowResult, baseStatement,k,v));
+
       }
 
       for (Path p : paths) {
@@ -223,8 +252,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                   rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
                 }
               } else if (propertyContainer instanceof Relationship) {
-                rowResult.add(
-                    processRelOnLPG((Relationship) propertyContainer, ontologyEntitiesUris));
+                Statement baseStatement = processRelOnLPG((Relationship) propertyContainer, ontologyEntitiesUris);
+                rowResult.add(baseStatement);
+                propertyContainer.getAllProperties().forEach((k,v) ->  processPropertyOnRel(rowResult, baseStatement,k,v));
               }
             }
         );
@@ -239,6 +269,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
     Statement statement = null;
 
+    //TODO: FIX THIS USING THE GraphConfig
     if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
         rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
       //if it's  an ontlogy rel, it must apply to an ontology entity
@@ -265,6 +296,8 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                 :
                     vf.createIRI(BASE_VOCAB_NS, rel.getType().name()),
             vf.createIRI(BASE_INDIV_NS, String.valueOf(rel.getEndNode().getId())));
+
+
       }
     }
     return statement;

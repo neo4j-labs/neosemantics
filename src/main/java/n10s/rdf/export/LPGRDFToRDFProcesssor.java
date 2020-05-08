@@ -182,6 +182,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
 
   public Stream<Statement> streamNodeByUri(String uri, String graphId, boolean excludeContext) {
 
+    //TODO: Until import RDF* is implemnted, there is no way this can return reified statements
     String queryWithContext;
     String queryNoContext;
     Map<String, Object> params = new HashMap<>();

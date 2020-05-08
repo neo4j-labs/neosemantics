@@ -19,9 +19,9 @@ public class PlainJsonStatementLoader extends DirectStatementLoader {
     try {
       this.runPartialTx(tx);
       totalTriplesMapped += mappedTripleCounter;
-      log.info("JSON Import complete: " + totalTriplesMapped + "  statements imported");
+      log.debug("JSON Import complete: " + totalTriplesMapped + "  statements imported");
     } catch (Exception e) {
-      log.info("Error importing JSON: " + e.getMessage());
+      log.error("Error importing JSON: " + e.getMessage());
     }
   }
 

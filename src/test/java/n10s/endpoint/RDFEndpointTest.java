@@ -139,6 +139,58 @@ public class RDFEndpointTest {
   }
 
   @Test
+  public void testGetNodeByIdRDFStar() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+
+      String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+          "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
+          "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
+      tx.execute(dataInsertion);
+      tx.commit();
+
+    }
+    Long id;
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("MATCH (n:Critic)-[fo:FRIEND_OF]-() RETURN id(n) as id, "
+          + " fo.since AS since ");
+      Map<String, Object> next = result.next();
+      String since = (String) next.get("since");
+      assertEquals("the early days", since);
+      id = (Long) next.get("id");
+    }
+
+    // When
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+            + id.toString());
+
+    String expected = "@prefix neoind: <neo4j://individuals#> .\n"
+        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+        + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+        + "\n"
+        + "neoind:3 a neovoc:Critic;\n"
+        + "  neovoc:WORKS_WITH neoind:4;\n"
+        + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+        + "  neovoc:name \"Hugo Weaving\" .\n"
+        + "\n"
+        + "<<neoind:1 neovoc:FRIEND_OF neoind:3>> neovoc:since \"the early days\" .\n"
+        + "\n"
+        + "<<neoind:3 neovoc:WORKS_WITH neoind:4>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "\n"
+        + "neoind:1 neovoc:FRIEND_OF neoind:3 .";
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+        .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
+
+  }
+
+  @Test
   public void ImportGetNodeById() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();

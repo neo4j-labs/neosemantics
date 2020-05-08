@@ -79,7 +79,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       if (mappingsTemp.containsKey(RDF.TYPE.stringValue())) {
         //a mapping on RDF.TYPE is illegal
         mappingsTemp.remove(RDF.TYPE.stringValue());
-        log.info(
+        log.debug(
             "Mapping on rdf:type property is not applicable in RDF import and will be discarded");
       }
       this.vocMappings = mappingsTemp;

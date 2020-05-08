@@ -31,7 +31,7 @@
 
   <properties>
     <neo4j.version>4.0.0</neo4j.version>
-    <sesame.version>3.1.4</sesame.version>
+    <sesame.version>3.2.0</sesame.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
