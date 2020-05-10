@@ -6,6 +6,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
@@ -110,6 +111,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
         // check if the rel is already present. If so, don't recreate.
         // explore the node with the lowest degree
         boolean found = false;
+        Relationship theRel = null;
         if (fromNode
             .getDegree(RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)),
                 Direction.OUTGOING) <
@@ -120,6 +122,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
                   RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
             if (rel.getEndNode().equals(toNode)) {
               found = true;
+              theRel = rel;
               break;
             }
           }
@@ -129,16 +132,25 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
                   RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)))) {
             if (rel.getStartNode().equals(fromNode)) {
               found = true;
+              theRel = rel;
               break;
             }
           }
         }
 
         if (!found) {
-          fromNode.createRelationshipTo(
+          theRel = fromNode.createRelationshipTo(
               toNode,
               RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)));
         }
+
+        Map<String, Object> relProps = this.relProps.get(st);
+        if (relProps!=null){
+          for (Entry<String,Object> entry:relProps.entrySet()) {
+            theRel.setProperty(entry.getKey(),entry.getValue());
+          }
+        }
+
       } catch (ExecutionException e) {
         e.printStackTrace();
       }
@@ -147,6 +159,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    relProps.clear();
     nodeCache.invalidateAll();
     Integer result = 0;
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {

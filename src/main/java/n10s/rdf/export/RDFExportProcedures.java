@@ -42,12 +42,14 @@ public class RDFExportProcedures extends RDFProcedures {
 
     ExportProcessor proc;
 
+    boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
+
     if (getGraphConfig(tx) == null) {
       proc = new LPGToRDFProcesssor(db, tx,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
-          props.get("mappedElemsOnly").equals(true));
+          props.get("mappedElemsOnly").equals(true), rdfstar);
     } else {
-      proc = new LPGRDFToRDFProcesssor(db, tx);
+      proc = new LPGRDFToRDFProcesssor(db, tx, rdfstar);
     }
     return proc.streamTriplesFromCypher(cypher,
         (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :

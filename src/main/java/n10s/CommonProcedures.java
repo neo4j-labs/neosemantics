@@ -32,7 +32,8 @@ public class CommonProcedures {
 
   protected static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML,
       RDFFormat.JSONLD,
-      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS};
+      RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS,
+      RDFFormat.TURTLESTAR, RDFFormat.TRIGSTAR};
 
   @Context
   public GraphDatabaseService db;

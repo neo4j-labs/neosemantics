@@ -12,6 +12,8 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.io.Resources;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -25,6 +27,7 @@ import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.delete.RDFDeleteProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,6 +42,7 @@ import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.test.server.HTTP;
+import org.neo4j.test.server.HTTP.Response;
 
 /**
  * Created by jbarrasa on 14/09/2016.
@@ -55,7 +59,8 @@ public class RDFEndpointTest {
       .withProcedure(GraphConfigProcedures.class)
       .withProcedure(RDFDeleteProcedures.class)
       .withProcedure(OntoLoadProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class);
+      .withProcedure(NsPrefixDefProcedures.class)
+      .withProcedure(ValidationProcedures.class);
 
   @Rule
   public Neo4jRule temp = new Neo4jRule().withProcedure(RDFLoadProcedures.class)
@@ -135,6 +140,151 @@ public class RDFEndpointTest {
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+
+  }
+
+
+  @Test
+  public void testCypherReturnsList() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+
+      String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+          "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
+          "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
+      tx.execute(dataInsertion);
+
+      tx.execute("call n10s.mapping.addSchema(\"http://schema.org/voc\",\"scho\")");
+      tx.execute("call n10s.mapping.addMappingToSchema(\"http://schema.org/voc\",\"STH\",\"something\")");
+      tx.commit();
+
+    }
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("cypher", "MATCH (n)  RETURN collect(n) as col");
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+
+    String expected = "<neo4j://individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
+        + "<neo4j://individuals#4> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#4> <neo4j://vocabulary#name> \"Andy Wachowski\" .\n"
+        + "<neo4j://individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Critic> .\n"
+        + "<neo4j://individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
+        + "<neo4j://individuals#1> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#2> <neo4j://vocabulary#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#3> <neo4j://vocabulary#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#0> <neo4j://vocabulary#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#0> <neo4j://vocabulary#name> \"Keanu Reeves\" .\n"
+        + "<neo4j://individuals#2> <neo4j://vocabulary#name> \"Laurence Fishburne\" .\n"
+        + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
+        + "<neo4j://individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
+        + "<neo4j://individuals#3> <neo4j://vocabulary#name> \"Hugo Weaving\" .\n"
+        + "<neo4j://individuals#1> <neo4j://vocabulary#name> \"Carrie-Anne Moss\" .\n";
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+  }
+
+
+  @Test
+  public void testCypherOnMovieDBReturnsList() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+
+      tx.execute(Files.readString(Paths.get(
+          RDFEndpointTest.class.getClassLoader().getResource("movies.cypher").getPath())));
+
+      tx.commit();
+    }
+    //ADD mapppings and nsprefixes
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+
+      tx.execute("call n10s.mapping.addSchema(\"http://schema.org/voc\",\"scho\")");
+      tx.execute("call n10s.mapping.addMappingToSchema(\"http://schema.org/voc\",\"STH\",\"something\")");
+      tx.execute("call n10s.nsprefixes.add(\"tst\",\"http://tst.voc/\")");
+      tx.commit();
+    }
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result execute = tx.execute("call n10s.validation.shacl.import.fetch('" +
+          RDFEndpointTest.class.getClassLoader().getResource("shacl/person2-shacl.ttl")
+              .toURI() + "','Turtle')");
+      assertTrue(execute.hasNext());
+      Map<String, Object> next = execute.next();
+      tx.commit();
+    }
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("cypher", "MATCH (n:Movie { title: \"That Thing You Do\"})--(x) "
+        + "RETURN collect(distinct n) + collect(distinct x)");
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+
+    String expected = "<neo4j://individuals#85> <neo4j://vocabulary#title> \"That Thing You Do\" .\n"
+        + "<neo4j://individuals#12> <neo4j://vocabulary#name> \"Charlize Theron\" .\n"
+        + "<neo4j://individuals#86> <neo4j://vocabulary#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#71> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#85> <neo4j://vocabulary#released> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#71> <neo4j://vocabulary#name> \"Tom Hanks\" .\n"
+        + "<neo4j://individuals#86> <neo4j://vocabulary#name> \"Liv Tyler\" .\n"
+        + "<neo4j://individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#12> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#71> <neo4j://vocabulary#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#85> <neo4j://vocabulary#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+        + "<neo4j://individuals#85> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
+        + "<neo4j://individuals#12> <neo4j://vocabulary#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+  }
+
+  @Test
+  public void testCypherReturnsListOnRDFGraph() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.commit();
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init()");
+      tx.execute("call n10s.nsprefixes.add(\"tst\",\"http://tst.voc/\")");
+      tx.commit();
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result execute = tx.execute("CALL n10s.rdf.import.fetch('" +
+          RDFEndpointTest.class.getClassLoader().getResource("multival.ttl")
+              .toURI() + "','Turtle',{})");
+      Map<String, Object> next = execute.next();
+      assertEquals(9L, next.get("triplesLoaded"));
+
+      tx.commit();
+    }
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("cypher", "MATCH (n) RETURN collect(n) as col");
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+
+    String expectedNoNonResources = "<http://example.org/vocab/show/218> <http://example.org/vocab/show/producer> \"Joanna Smith\" .\n"
+        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/localName> \"Cette Série des Années Septante\" .\n"
+        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/showId> \"218\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/availableInLang> \"ES\" .";
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+        .compareModels(expectedNoNonResources, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
   }
 

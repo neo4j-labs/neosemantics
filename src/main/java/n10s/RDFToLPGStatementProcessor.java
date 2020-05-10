@@ -31,7 +31,10 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Triple;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
@@ -60,10 +63,12 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   protected NsPrefixMap namespaces;
   protected Set<Statement> statements = new HashSet<>();
   protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
+  protected Map<Statement, Map<String, Object>> relProps = new HashMap<>();
   protected Map<String, Set<String>> resourceLabels = new HashMap<>();
   public long totalTriplesParsed = 0;
   public long totalTriplesMapped = 0;
   public long mappedTripleCounter = 0;
+  private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
   public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
@@ -258,7 +263,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
 
   private void initialise(String subjectUri) {
-    initialiseProps(subjectUri);
+    initialiseResourceProps(resourceProps, subjectUri);
     initialiseLabels(subjectUri);
   }
 
@@ -269,51 +274,31 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     return labels;
   }
 
-  private HashMap<String, Object> initialiseProps(String subjectUri) {
+  private Map<String, Object> initialiseResourceProps(Map<String,Map<String, Object>> m, String subjectUri) {
+    Map<String, Object> props = new HashMap<>();
+    //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
+    m.put(subjectUri, props);
+    return props;
+  }
+
+  private Map<String, Object> initialiseRelProps(Map<Statement,Map<String, Object>> m, Statement stmt) {
     HashMap<String, Object> props = new HashMap<>();
     //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
-    resourceProps.put(subjectUri, props);
+    m.put(stmt, props);
     return props;
   }
 
   protected boolean setProp(String subjectUri, IRI propertyIRI, Literal propValueRaw) {
     Map<String, Object> props;
-
-    String propName = handleIRI(propertyIRI, PROPERTY);
-
     Object propValue = getObjectValue(propertyIRI, propValueRaw);
-
     if (propValue != null) {
       if (!resourceProps.containsKey(subjectUri)) {
-        props = initialiseProps(subjectUri);
+        props = initialiseResourceProps(resourceProps,subjectUri);
         initialiseLabels(subjectUri);
       } else {
         props = resourceProps.get(subjectUri);
       }
-      if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
-        // Ok for single valued props. If applied to multivalued ones
-        // only the last value read is kept.
-        props.put(propName, propValue);
-      } else if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY) {
-        if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf()
-            .getMultivalPropList()
-            .contains(propertyIRI.stringValue())) {
-          if (props.containsKey(propName)) {
-            List<Object> propVals = (List<Object>) props.get(propName);
-            propVals.add(propValue);
-
-            // If multiple datatypes are tried to be stored in the same List,
-            // a java.lang.ArrayStoreException arises
-          } else {
-            List<Object> propVals = new ArrayList<>();
-            propVals.add(propValue);
-            props.put(propName, propVals);
-          }
-        } else {
-          //if handleMultival set to ARRAY but prop not in list, then default to overwrite.
-          props.put(propName, propValue);
-        }
-      }
+      addPropertyValueToElementProps(propertyIRI, props, propValue);
       //  For future? An option to reify multivalued property vals (literal nodes?)
       //  else if (handleMultival == PROP_REIFY) {
       //      //do reify
@@ -322,11 +307,41 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     return propValue != null;
   }
 
+  private void addPropertyValueToElementProps(IRI propertyIRI, Map<String, Object> props, Object propValue) {
+
+    String propName = handleIRI(propertyIRI, PROPERTY);
+
+    if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_OVERWRITE) {
+      // Ok for single valued props. If applied to multivalued ones
+      // only the last value read is kept.
+      props.put(propName, propValue);
+    } else if (parserConfig.getGraphConf().getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY) {
+      if (parserConfig.getGraphConf().getMultivalPropList() == null || parserConfig.getGraphConf()
+          .getMultivalPropList()
+          .contains(propertyIRI.stringValue())) {
+        if (props.containsKey(propName)) {
+          List<Object> propVals = (List<Object>) props.get(propName);
+          propVals.add(propValue);
+
+          // If multiple datatypes are tried to be stored in the same List,
+          // a java.lang.ArrayStoreException arises
+        } else {
+          List<Object> propVals = new ArrayList<>();
+          propVals.add(propValue);
+          props.put(propName, propVals);
+        }
+      } else {
+        //if handleMultival set to ARRAY but prop not in list, then default to overwrite.
+        props.put(propName, propValue);
+      }
+    }
+  }
+
   protected void setLabel(String subjectUri, String label) {
     Set<String> labels;
 
     if (!resourceLabels.containsKey(subjectUri)) {
-      initialiseProps(subjectUri);
+      initialiseResourceProps(resourceProps,subjectUri);
       labels = initialiseLabels(subjectUri);
     } else {
       labels = resourceLabels.get(subjectUri);
@@ -353,7 +368,19 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
         .contains(predicate.stringValue()))
     // filter by predicate
     {
-      if (object instanceof Literal) {
+      if(subject instanceof Triple){
+        if (!(((Triple)subject).getObject() instanceof Literal ||
+            ((Triple)subject).getPredicate().equals(RDF.TYPE)) && object instanceof Literal){
+            //reified datatype property statements cannot be easily mapped to a PG. Ignore
+          addResource(((Triple)subject).getSubject().stringValue());
+          addResource(((Triple)subject).getObject().stringValue());
+          Statement stmt = vf.createStatement(((Triple) subject).getSubject(),
+              ((Triple) subject).getPredicate(), ((Triple) subject).getObject());
+          addStatement(stmt);
+          addRelProp(stmt, predicate, (Literal)object);
+          mappedTripleCounter++;
+        }
+      } else if (object instanceof Literal) {
         // DataType property
         if (setProp(subject.stringValue(), predicate, (Literal) object)) {
           // property may be filtered because of lang filter hence the conditional increment.
@@ -389,6 +416,26 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       periodicOperation();
     }
   }
+
+  protected boolean addRelProp(Statement stmt, IRI predicate, Literal propValueRaw){
+
+    Map<String, Object> props;
+    Object propValue = getObjectValue(predicate, propValueRaw);
+    if (propValue != null) {
+      if (!relProps.containsKey(stmt)) {
+        props = initialiseRelProps(relProps,stmt);
+      } else {
+        props = relProps.get(stmt);
+      }
+      addPropertyValueToElementProps(predicate, props, propValue);
+      //  For future? An option to reify multivalued property vals (literal nodes?)
+      //  else if (handleMultival == PROP_REIFY) {
+      //      //do reify
+      //  }
+    }
+    return propValue != null;
+  }
+
 
   @Override
   public RDFParserConfig getParserConfig() {

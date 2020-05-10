@@ -7,6 +7,7 @@ import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -35,6 +36,7 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
+import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
@@ -47,15 +49,12 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
           .quote(PREFIX_SEPARATOR) + "(.+)$");
 
   private final NsPrefixMap namespaces;
-  private Transaction tx;
-  private GraphDatabaseService graphdb;
-  private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
-  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx)
+  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx, boolean isRDFStarSerialisation)
       throws InvalidNamespacePrefixDefinitionInDB {
-    this.graphdb = graphdb;
-    this.tx = tx;
+    super(tx,graphdb);
+    this.exportPropertiesInRels = isRDFStarSerialisation;
     this.namespaces = new NsPrefixMap(tx, false);
 
   }
@@ -132,53 +131,86 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   }
 
 
-  public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
-    Set<Statement> statementResults = new HashSet<>();
-    final Result result = this.tx.execute(cypher, params);
-    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
-
-    Set<ContextResource> serializedNodes = new HashSet<>();
-
-    while (result.hasNext()) {
-      Map<String, Object> row = result.next();
-      Set<Entry<String, Object>> entries = row.entrySet();
-      for (Entry<String, Object> entry : entries) {
-        Object o = entry.getValue();
-        if (o instanceof org.neo4j.graphdb.Path) {
-          org.neo4j.graphdb.Path path = (org.neo4j.graphdb.Path) o;
-          path.nodes().forEach(n -> {
-            ContextResource currentContextResource = new ContextResource(
-                n.hasProperty("uri") ?
-                    n.getProperty("uri").toString() : null,
-                n.hasProperty("graphUri") ?
-                    n.getProperty("graphUri").toString() : null);
-            if (!serializedNodes.contains(currentContextResource)) {
-              statementResults.addAll(processNode(n));
-              serializedNodes.add(currentContextResource);
-            }
-          });
-          path.relationships().forEach(
-              r -> statementResults.addAll(processRelationship(r)));
-        } else if (o instanceof Node) {
-          Node node = (Node) o;
-          ContextResource currentContextResource = new ContextResource(
-              node.hasProperty("uri") ?
-                  node.getProperty("uri").toString() : null,
-              node.hasProperty("graphUri") ?
-                  node.getProperty("graphUri").toString() : null);
-          if (StreamSupport.stream(node.getLabels().spliterator(), false)
-              .anyMatch(name -> Label.label("Resource").equals(name)) &&
-              !serializedNodes.contains(currentContextResource)) {
-            statementResults.addAll(processNode(node));
-            serializedNodes.add(currentContextResource);
-          }
-        } else if (o instanceof Relationship) {
-          statementResults.addAll(processRelationship((Relationship) o));
-        }
-      }
-    }
-    return statementResults.stream();
-  }
+//  public Stream<Statement> streamTriplesFromCypherOld(String cypher, Map<String, Object> params) {
+//
+//    final Result result = this.tx.execute(cypher, params);
+//    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
+//
+//    Set<ContextResource> serializedNodes = new HashSet<>();
+//
+//    return result.stream().flatMap(  row ->  {
+//      Set<Statement> statementResults = new HashSet<>();
+//      Set<Entry<String, Object>> entries = row.entrySet();
+//
+//      List<Node> nodes = new ArrayList<>();
+//      List<Relationship> rels = new ArrayList<>();
+//      List<Path> paths = new ArrayList<>();
+//
+//      for (Entry<String, Object> entry : entries) {
+//        Object o = entry.getValue();
+//        if (o instanceof Node) {
+//          nodes.add((Node) o);
+//        } else if (o instanceof Relationship) {
+//          rels.add((Relationship) o);
+//        } else if (o instanceof Path) {
+//          paths.add((Path) o);
+//        } else if (o instanceof List){
+//          // This is ugly. Only processes list but not list of lists... or maps... etc...
+//          // but should be good enough.
+//          ((List) o).stream().forEach( x ->  { if (x instanceof Node) {
+//            nodes.add((Node) x);
+//          } else if (x instanceof Relationship) {
+//            rels.add((Relationship) x);
+//          } else if (x instanceof Path) {
+//            paths.add((Path) x);
+//          } } );
+//        }
+//
+//        for (Node node : nodes) {
+//          ContextResource currentContextResource = new ContextResource(
+//              node.hasProperty("uri") ?
+//                  node.getProperty("uri").toString() : null,
+//              node.hasProperty("graphUri") ?
+//                  node.getProperty("graphUri").toString() : null);
+//          if (node.hasLabel(Label.label("Resource")) &&
+//              !serializedNodes.contains(currentContextResource)) {
+//            statementResults.addAll(processNode(node));
+//            serializedNodes.add(currentContextResource);
+//          }
+//        }
+//
+//        for (Relationship rel : rels) {
+//          Statement baseStatement = processRelationship((Relationship) o);
+//          statementResults.add(baseStatement);
+//          rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(statementResults, baseStatement,k,v));
+//
+//        }
+//
+//
+//        for (Path path : paths) {
+//          path.nodes().forEach(n -> {
+//            ContextResource currentContextResource = new ContextResource(
+//                n.hasProperty("uri") ?
+//                    n.getProperty("uri").toString() : null,
+//                n.hasProperty("graphUri") ?
+//                    n.getProperty("graphUri").toString() : null);
+//            if (StreamSupport.stream(n.getLabels().spliterator(), false)
+//                .anyMatch(name -> Label.label("Resource").equals(name)) &&
+//                !serializedNodes.contains(currentContextResource)) {
+//              statementResults.addAll(processNode(n));
+//              serializedNodes.add(currentContextResource);
+//            }
+//          });
+//
+//          path.relationships().forEach(
+//              r -> statementResults.addAll(processRelationship(r)));
+//
+//        }
+//
+//  }
+//      });
+//    return statementResults.stream();
+//  }
 
   public Stream<Statement> streamNodeByUri(String uri, String graphId, boolean excludeContext) {
 
@@ -220,19 +252,39 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       Node node = (Node) row.get("x");
       if (!doneOnce) {
         //Output only once the props of the selected node as literal properties
-        statementResults.addAll(processNode(node));
+        statementResults.addAll(processNode(node, null));
         doneOnce = true;
       }
       Relationship rel = (Relationship) row.get("r");
       if (rel != null) {
-        statementResults.addAll(processRelationship(rel));
+        // no need to  check rels connect to other resources as we're sure they will since they come
+        //  in/out of a Resource
+        statementResults.add(processRelationship(rel, null));
       }
     }
     return statementResults.stream();
   }
 
-  private Set<Statement> processRelationship(Relationship rel) {
-    Set<Statement> result = new HashSet<>();
+  @Override
+  protected boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
+    //TODO: this type check is going to slow down the query. think how to improve it
+    return !rel.getStartNode().hasLabel(Label.label("Resource")) ||
+        !rel.getEndNode().hasLabel(Label.label("Resource"));
+  }
+
+  @Override
+  protected boolean filterNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+    return !node.hasLabel(Label.label("Resource"));
+  }
+
+  @Override
+  protected void processPropOnRel(Set<Statement> rowResult, Statement baseStatement, String key,
+      Object val) {
+    //TODO implement
+  }
+
+  @Override
+  protected Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
     Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString());
     IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, rel.getType().name()));
     Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString());
@@ -250,18 +302,16 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       throw new IllegalStateException(
           "Graph uri of a statement has to be the same for both start and end node of the relationship!");
     }
-    result.add(vf.createStatement(subject, predicate, object, context));
-
-    return result;
+    return vf.createStatement(subject, predicate, object, context);
   }
 
-  private Set<Statement> processNode(Node node) {
+  @Override
+  protected Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+    //TODO:  Ontology entities not used here. Rethink???
     Set<Statement> result = new HashSet<>();
     Iterable<Label> nodeLabels = node.getLabels();
     for (Label label : nodeLabels) {
-      //Exclude the URI, Resource and Bnode categories created by the importer to emulate RDF
-      if (!(label.name().equals("Resource") || label.name().equals("URI") ||
-          label.name().equals("BNode"))) {
+      if (!label.name().equals("Resource")) {
         result.add(vf.createStatement(
             buildSubjectOrContext(node.getProperty("uri").toString()),
             RDF.TYPE,

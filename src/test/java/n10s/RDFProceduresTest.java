@@ -43,11 +43,13 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
+import org.neo4j.driver.internal.InternalRelationship;
 import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 /**
@@ -328,6 +330,29 @@ public class RDFProceduresTest {
           + "  skos:prefLabel \"Culture\"@en, \"Culture\"@fr, \"Культура\"@ru, \"Cultura\"@es ;\n"
           + "  skos:member thesaurus:mt3.35 .";
 
+  String rdfStarFragment = "@prefix neoind: <neo4j://individuals#> .\n"
+      + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+      + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+      + "\n"
+      + "neoind:0 a neovoc:Movie;\n"
+      + "  neovoc:released \"1999\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+      + "  neovoc:tagline \"Welcome to the Real World\";\n"
+      + "  neovoc:title \"The Matrix\" .\n"
+      + "\n"
+      + "neoind:4 a neovoc:Person;\n"
+      + "  neovoc:ACTED_IN neoind:0;\n"
+      + "  neovoc:born \"1961\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+      + "  neovoc:name \"Laurence Fishburne\" .\n"
+      + "\n"
+      + "<<neoind:4 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Morpheus\" .\n"
+      + "\n"
+      + "neoind:16 a neovoc:Person;\n"
+      + "  neovoc:ACTED_IN neoind:0;\n"
+      + "  neovoc:born \"1978\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+      + "  neovoc:name \"Emil Eifrem\" .\n"
+      + "\n"
+      + "<<neoind:16 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Emil\" .";
+
   private static URI file(String path) {
     try {
       return RDFProceduresTest.class.getClassLoader().getResource(path).toURI();
@@ -472,6 +497,33 @@ public class RDFProceduresTest {
       assertEquals("Class", result.get("label").asString());
       assertEquals(Arrays.asList("Azerbaijani", "Azéri", "Азербайджанский язык", "Azerbaiyano"),
           result.get("name").asList());
+      assertFalse(queryResults.hasNext());
+    }
+  }
+
+  @Test
+  public void testImportRDFStar () throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{ handleVocabUris: 'IGNORE' }"); //, handleMultival: 'ARRAY'
+
+      Result importResults
+          = session.run("CALL n10s.rdf.import.fetch('" +
+          RDFProceduresTest.class.getClassLoader().getResource("movies.ttls").toURI()
+          + "','Turtle*')"); //,{   commitSize: 1000 }
+
+      assertEquals(1372L, importResults
+          .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+          "MATCH (ee:Person { name: 'Emil Eifrem'})-[ai:ACTED_IN]->(m) "
+              + " RETURN ee.born as born, ai.roles as roles, m.title as title limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      assertEquals(1978L, result.get("born").asLong());
+      assertEquals("Emil", result.get("roles").asString());
+      assertEquals("The Matrix", result.get("title").asString());
       assertFalse(queryResults.hasNext());
     }
   }
@@ -1214,6 +1266,29 @@ public class RDFProceduresTest {
       assertEquals(4, nodes.size());
       rels = (List<Relationship>) next.get("relationships");
       assertEquals(2, rels.size());
+    }
+  }
+
+  @Test
+  public void testPreviewRDFStarFromSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+          "{handleVocabUris: 'IGNORE'}");
+      Result importResults
+          = session
+          .run("CALL n10s.rdf.preview.inline('" + rdfStarFragment
+              + "','Turtle*')");
+      Map<String, Object> next = importResults
+          .next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(3, nodes.size());
+      final List<InternalRelationship> rels = (List<InternalRelationship>) next.get("relationships");
+      assertEquals(2, rels.size());
+      rels.forEach(r ->  assertTrue(((InternalRelationship)r).hasType("ACTED_IN") &&
+          (((InternalRelationship)r).asMap().get("roles").equals("Emil") ||
+              ((InternalRelationship)r).asMap().get("roles").equals("Morpheus"))));
     }
   }
 

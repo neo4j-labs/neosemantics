@@ -1,5 +1,7 @@
 package n10s.endpoint;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;
 import static n10s.mapping.MappingUtils.getExportMappingsFromDB;
@@ -81,15 +83,19 @@ public class RDFEndpoint {
       GraphDatabaseService neo4j = gds.database(dbNameParam);
       try (Transaction tx = neo4j.beginTx()) {
 
-        if (getGraphConfig(tx) == null) {
+        if (getGraphConfig(tx) == null
+            //|| getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            //|| getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
+            ) {
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
-              getExportMappingsFromDB(neo4j), onlyMappedInfo != null);
+              getExportMappingsFromDB(neo4j), onlyMappedInfo != null,
+              isRdfStarSerialisation(writer.getRDFFormat()));
 
           proc.streamNodeById(Long.parseLong(nodeIdentifier), excludeContextParam == null)
               .forEach(writer::handleStatement);
         } else {
           //it's rdf
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx, isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamNodeByUri(nodeIdentifier, namedGraphId, excludeContextParam != null).forEach(
               writer::handleStatement);
         }
@@ -132,7 +138,8 @@ public class RDFEndpoint {
       try (Transaction tx = neo4j.beginTx()) {
 
         LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
-            getExportMappingsFromDB(neo4j), onlyMappedInfo != null);
+            getExportMappingsFromDB(neo4j), onlyMappedInfo != null,
+            isRdfStarSerialisation(writer.getRDFFormat()));
         proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
             .forEach(
                 writer::handleStatement);
@@ -142,6 +149,7 @@ public class RDFEndpoint {
       }
     }).build();
   }
+
 
   @POST
   @Path("/{dbname}/cypher")
@@ -164,13 +172,15 @@ public class RDFEndpoint {
         if (getGraphConfig(tx) == null) {
 
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
-              getExportMappingsFromDB(neo4j), jsonMap.containsKey("mappedElemsOnly"));
+              getExportMappingsFromDB(neo4j), jsonMap.containsKey("mappedElemsOnly"),
+              isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
               (Map<String, Object>) jsonMap
                   .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
               writer::handleStatement);
         } else {
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx,
+              isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
               (Map<String, Object>) jsonMap
                   .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
@@ -183,6 +193,11 @@ public class RDFEndpoint {
       }
     }).build();
   }
+
+  private boolean isRdfStarSerialisation(RDFFormat rdfFormat) {
+    return rdfFormat.equals(RDFFormat.TURTLESTAR) ||  rdfFormat.equals(RDFFormat.TRIGSTAR);
+  }
+
 
   @GET
   @Path("/{dbname}/onto")
@@ -203,7 +218,8 @@ public class RDFEndpoint {
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx);
           proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         } else {
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx);
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx,
+              isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         }
         endRDFWriter(writer);
@@ -212,6 +228,7 @@ public class RDFEndpoint {
       }
     }).build();
   }
+
 
   private RDFWriter startRdfWriter(RDFFormat format, OutputStream os, boolean addVocNamespaces) {
     RDFWriter writer = Rio.createWriter(format, os);

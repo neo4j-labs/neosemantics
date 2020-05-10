@@ -3,6 +3,7 @@ package n10s.rdf.preview;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.Util;
 import n10s.graphconfig.RDFParserConfig;
@@ -57,10 +58,20 @@ public class StatementPreviewer extends RDFToLPGStatementProcessor {
 
     statements.forEach(st -> {
       try {
-        vRels.add(
-            new VirtualRelationship(vNodes.get(st.getSubject().stringValue().replace("'", "\'")),
-                vNodes.get(st.getObject().stringValue().replace("'", "\'")),
-                RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP))));
+        VirtualRelationship vrel = new VirtualRelationship(
+            vNodes.get(st.getSubject().stringValue().replace("'", "\'")),
+            vNodes.get(st.getObject().stringValue().replace("'", "\'")),
+            RelationshipType.withName(handleIRI(st.getPredicate(), RELATIONSHIP)));
+
+        Map<String, Object> relProps = this.relProps.get(st);
+
+        if (relProps!=null){
+          for (Entry<String,Object> entry:relProps.entrySet()) {
+            vrel.setProperty(entry.getKey(),entry.getValue());
+          }
+        }
+
+        vRels.add(vrel);
       } catch (NamespacePrefixConflictException e) {
         e.printStackTrace();
       }

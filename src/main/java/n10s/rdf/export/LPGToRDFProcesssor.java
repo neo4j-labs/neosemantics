@@ -11,7 +11,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,7 +21,6 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
@@ -30,7 +28,6 @@ import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
@@ -41,25 +38,21 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
-  private GraphDatabaseService graphdb;
-  private Transaction tx;
-  private final ValueFactory vf = SimpleValueFactory.getInstance();
 
 
   public LPGToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
 
-    this.graphdb = graphdb;
-    this.tx = tx;
+    super(tx, graphdb);
     this.exportMappings = new HashMap<>();
     this.exportOnlyMappedElems = false;
   }
 
   public LPGToRDFProcesssor(GraphDatabaseService gds, Transaction tx,
       Map<String, String> exportMappings,
-      boolean mappedElemsOnly) {
-    this.graphdb = gds;
-    this.tx = tx;
+      boolean mappedElemsOnly, boolean isRDFStarSerialisation) {
+    super(tx,gds);
     this.exportMappings = exportMappings;
+    this.exportPropertiesInRels = isRDFStarSerialisation;
     this.exportOnlyMappedElems = mappedElemsOnly;
 
   }
@@ -135,19 +128,33 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   public Stream<Statement> streamNodeById(Long nodeId, boolean streamContext) {
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
     Node node = this.tx.getNodeById(nodeId);
-    Set<Statement> result = processNodeInLPG(node, ontologyEntitiesUris);
+    Set<Statement> result = processNode(node, ontologyEntitiesUris);
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
-        Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
+        Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
         result.add(baseStatement);
-        rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(result, baseStatement,k,v));
+        if(this.exportPropertiesInRels) {
+          rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
+        }
       }
     }
     return result.stream();
   }
 
-  private void processPropertyOnRel(Set<Statement> statementSet,
+  @Override
+  protected boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
+    return filterNode(rel.getStartNode(), ontologyEntitiesUris) || filterNode(rel.getEndNode(), ontologyEntitiesUris);
+  }
+
+  @Override
+  protected boolean filterNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+    return node.hasLabel(Label.label("_MapDef")) || node.hasLabel(Label.label("_MapNs"))||
+        node.hasLabel(Label.label("_NsPrefDef")) || node.hasLabel(Label.label("_n10sValidatorConfig"));
+  }
+
+  @Override
+  protected void processPropOnRel(Set<Statement> statementSet,
       Statement baseStatement, String key, Object propertyValueObject) {
 
 
@@ -177,13 +184,15 @@ public class LPGToRDFProcesssor extends ExportProcessor {
         (valType == null ? propVal : castValue(valType, propVal)));
     while (nodes.hasNext()) {
       Node node = nodes.next();
-      result.addAll(processNodeInLPG(node, ontologyEntitiesUris));
+      result.addAll(processNode(node, ontologyEntitiesUris));
       if (includeContext) {
         Iterable<Relationship> relationships = node.getRelationships();
         for (Relationship rel : relationships) {
-          Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
+          Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
           result.add(baseStatement);
-          rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(result, baseStatement,k,v));
+          if(this.exportPropertiesInRels) {
+            rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
+          }
         }
       }
     }
@@ -203,69 +212,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     }
   }
 
-  public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
 
-    final Result result = this.tx.execute(cypher, params);
-    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
-
-    Set<Long> serializedNodeIds = new HashSet<>();
-    return result.stream().flatMap(row -> {
-      Set<Statement> rowResult = new HashSet<>();
-      Set<Entry<String, Object>> entries = row.entrySet();
-
-      List<Node> nodes = new ArrayList<>();
-      List<Relationship> rels = new ArrayList<>();
-      List<Path> paths = new ArrayList<>();
-
-      for (Entry<String, Object> entry : entries) {
-        Object o = entry.getValue();
-        if (o instanceof Node) {
-          nodes.add((Node) o);
-        } else if (o instanceof Relationship) {
-          rels.add((Relationship) o);
-        } else if (o instanceof Path) {
-          paths.add((Path) o);
-        }
-        //if it's not a node, a  rel or a path then it cannot be converted to triples so we ignore it
-      }
-
-      for (Node node : nodes) {
-        if (!serializedNodeIds.contains(node.getId())) {
-          serializedNodeIds.add(node.getId());
-          rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
-        }
-      }
-
-      for (Relationship rel : rels) {
-        Statement baseStatement = processRelOnLPG(rel, ontologyEntitiesUris);
-        rowResult.add(baseStatement);
-        rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(rowResult, baseStatement,k,v));
-
-      }
-
-      for (Path p : paths) {
-        p.iterator().forEachRemaining(propertyContainer -> {
-              if (propertyContainer instanceof Node) {
-                Node node = (Node) propertyContainer;
-                if (!serializedNodeIds.contains(node.getId())) {
-                  serializedNodeIds.add(node.getId());
-                  rowResult.addAll(processNodeInLPG(node, ontologyEntitiesUris));
-                }
-              } else if (propertyContainer instanceof Relationship) {
-                Statement baseStatement = processRelOnLPG((Relationship) propertyContainer, ontologyEntitiesUris);
-                rowResult.add(baseStatement);
-                propertyContainer.getAllProperties().forEach((k,v) ->  processPropertyOnRel(rowResult, baseStatement,k,v));
-              }
-            }
-        );
-      }
-
-      return rowResult.stream();
-
-    });
-  }
-
-  private Statement processRelOnLPG(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
+  @Override
+  protected Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
 
     Statement statement = null;
 
@@ -320,7 +269,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     }
   }
 
-  private Set<Statement> processNodeInLPG(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+
+  @Override
+  protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
     Set<Statement> statements = new HashSet<>();
     List<Label> nodeLabels = new ArrayList<>();
     node.getLabels().forEach(l -> nodeLabels.add(l));
