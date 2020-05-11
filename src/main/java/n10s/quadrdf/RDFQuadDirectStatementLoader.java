@@ -55,6 +55,7 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
         + totalTriplesParsed + " parsed");
   }
 
+
   public Integer runPartialTx(Transaction txInThread) {
     int count = 0;
 
@@ -224,10 +225,16 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    relProps.clear();
+    nodeCache.invalidateAll();
+    Integer result = 0;
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      result = namespaces.partialRefresh(txInThread);
+    }
 
-    //TODO what to return here? number of nodes and rels?
-    return 0;
+    return result;
   }
+
 
   @Override
   protected void periodicOperation() {
@@ -236,7 +243,9 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
       try (Transaction tempTransaction = graphdb.beginTx()) {
         namespaces.partialRefresh(tempTransaction);
         tempTransaction.commit();
-        log.debug("namespace prefixes synced: " + namespaces.partialRefresh(tempTransaction));
+        log.debug("namespace prefixes synced: " + namespaces.toString());
+      }catch (Exception e) {
+        e.printStackTrace();
       }
     }
 
@@ -245,6 +254,8 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
       tempTransaction.commit();
       log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
           + totalTriplesMapped);
+    }catch (Exception e) {
+      e.printStackTrace();
     }
 
     totalTriplesMapped += mappedTripleCounter;
