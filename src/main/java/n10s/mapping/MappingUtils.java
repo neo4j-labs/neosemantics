@@ -5,6 +5,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
 import n10s.result.NamespacePrefixesResult;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.NsPrefixMap;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
@@ -32,131 +37,52 @@ public class MappingUtils {
   @Context
   public Log log;
 
-  @Procedure(mode = Mode.WRITE)
-  public Stream<NamespacePrefixesResult> addSchema(@Name("schemaUri") String uri,
-      @Name("prefix") String prefix) throws MappingDefinitionException {
-    //what should the logic be??? no two prefixes for the same ns and no more than one prefix for a voc
-    Map<String, Object> params = new HashMap<>();
-    params.put("schema", uri);
-    params.put("prefix", prefix);
-    String checkIfSchemaOrPrefixExist = "MATCH (mns:_MapNs { _ns: $schema}) RETURN mns "
-        + "UNION MATCH (mns:_MapNs { _prefix : $prefix }) RETURN mns ";
-    if (tx.execute(checkIfSchemaOrPrefixExist, params).hasNext()) {
-      throw new MappingDefinitionException("The schema URI or the prefix are already in use. "
-          + "Drop existing ones before reusing.");
-    } else {
-      String createNewSchema = "CREATE (mns:_MapNs { _ns: $schema, _prefix : $prefix }) "
-          + "RETURN  mns._ns AS namespace, mns._prefix AS prefix ";
-      return tx.execute(createNewSchema, params).stream().map(
-          n -> new NamespacePrefixesResult((String) n.get("prefix"),
-              (String) n.get("namespace")));
-    }
-  }
+  private static final ValueFactory vf = SimpleValueFactory.getInstance();
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<NamespacePrefixesResult> addCommonSchemas() {
-    String cypher = "CALL n10s.mapping.listSchemas() YIELD prefix, namespace "
-        + "WITH collect(prefix) AS prefixes, collect(namespace) AS namespaces "
-        + "WITH prefixes, namespaces, [ { namespace: 'http://schema.org/', prefix: 'sch' },\n" +
-        "{ namespace: 'http://purl.org/dc/elements/1.1/', prefix: 'dc' },\n" +
-        "{ namespace: 'http://purl.org/dc/terms/', prefix: 'dct' },\n" +
-        "{ namespace: 'http://www.w3.org/2004/02/skos/core#', prefix: 'skos' },\n" +
-        "{ namespace: 'http://www.w3.org/2000/01/rdf-schema#', prefix: 'rdfs' },\n" +
-        "{ namespace: 'http://www.w3.org/2002/07/owl#', prefix: 'owl' },\n" +
-        "{ namespace: 'http://www.w3.org/1999/02/22-rdf-syntax-ns#', prefix: 'rdf' },\n" +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/', prefix: 'fibo-be-corp-corp' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/CorporateBodies/', prefix: 'fibo-be-le-cb' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/FormalBusinessOrganizations/', prefix: 'fibo-be-le-fbo' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/BE/LegalEntities/LegalPersons/', prefix: 'fibo-be-le-lp' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/AgentsAndPeople/Agents/', prefix: 'fibo-fnd-aap-agt' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Accounting/CurrencyAmount/', prefix: 'fibo-fnd-acc-cur' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/DatesAndTimes/FinancialDates/', prefix: 'fibo-fnd-dt-fd' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/', prefix: 'fibo-fnd-law-jur' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Organizations/FormalOrganizations/', prefix: 'fibo-fnd-org-fm' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/', prefix: 'fibo-fnd-rel-rel' },\n"
-        +
-        "{ namespace: 'https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/', prefix: 'fibo-fnd-utl-av' }\n"
-        +
-        "] AS new \n" +
-        " WITH [x IN new WHERE NOT (x.namespace IN namespaces OR x.prefix IN prefixes)] AS newfiltered "
-        + " UNWIND newfiltered AS schemaDef " +
-        " CALL n10s.mapping.addSchema(schemaDef.namespace, schemaDef.prefix) YIELD namespace, prefix "
-        +
-        " RETURN namespace, prefix";
+  public Stream<MappingDesc> add(@Name("elementUri") String rdfVocElement,
+      @Name("graphElementName") String graphElem)
+      throws MappingDefinitionException, InvalidNamespacePrefixDefinitionInDB {
 
-    return tx.execute(cypher).stream().map(
-        n -> new NamespacePrefixesResult((String) n.get("prefix"),
-            (String) n.get("namespace")));
-  }
-
-  @Procedure(mode = Mode.READ)
-  public Stream<NamespacePrefixesResult> listSchemas(
-      @Name(value = "searchString", defaultValue = "") String searchString) {
-
-    Map<String, Object> params = new HashMap<>();
-    params.put("searchString", searchString);
-
-    String cypher = (searchString.trim().equals("") ? "MATCH (mns:_MapNs) "
-        + "RETURN mns._ns AS uri, mns._prefix AS prefix  " :
-        "MATCH (mns:_MapNs) WHERE mns._ns CONTAINS $searchString OR mns._prefix CONTAINS $searchString "
-            + "RETURN mns._ns AS uri, mns._prefix AS prefix ");
-
-    return tx.execute(cypher, params).stream().map(
-        n -> new NamespacePrefixesResult((String) n.get("prefix"),
-            (String) n.get("uri")));
-  }
-
-  @Procedure(mode = Mode.WRITE)
-  public Stream<MappingDesc> addMappingToSchema(@Name("schemaUri") String schemaUri,
-      @Name("graphElementName") String gElem,
-      @Name("schemaElementName") String schElem) throws MappingDefinitionException {
-
-    Node schema = tx.findNode(Label.label("_MapNs"), "_ns", schemaUri);
-    if (schema == null) {
+    IRI rdfVocElementIri = vf.createIRI(rdfVocElement);
+    NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
+    if(!prefixDefs.hasNs(rdfVocElementIri.getNamespace())){
       throw new MappingDefinitionException(
-          "Schema URI not defined. Define it first with semantics.mapping.addSchema('" +
-              schemaUri + "','yourprefix') ");
+          "No namespace prefix defined for vocabulary " + rdfVocElementIri.getNamespace() + ".  "
+              + "Define it first with call n10s.nsprefixes.add('yourprefix','" +
+              rdfVocElementIri.getNamespace() + "')");
     }
-    Node mapDef;
-    Map<String, Object> props = new HashMap<>();
-    props.put("_key", gElem);
-    ResourceIterator<Node> matchingNodes = tx.findNodes(Label.label("_MapDef"), props);
-    // we need to find the schema it links to
-    if (matchingNodes.hasNext()) {
-      mapDef = matchingNodes.next();
-      //if there is a mapping defined already for this element...
-      Relationship rel = mapDef
-          .getRelationships(Direction.OUTGOING, RelationshipType.withName("_IN")).iterator().next();
-      if (rel.getEndNode().equals(schema)) {
-        //and it links to the right schema, then just replace the local
-        mapDef.setProperty("_local", schElem);
-      } else {
-        rel.delete();
-        mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
-      }
 
-    } else {
-      mapDef = tx.createNode(Label.label("_MapDef"));
-      mapDef.setProperty("_key", gElem);
-      mapDef.setProperty("_local", schElem);
-      mapDef.createRelationshipTo(schema, RelationshipType.withName("_IN"));
-    }
+    String prefix = prefixDefs.getPrefixForNs(rdfVocElementIri.getNamespace());
+    Map<String, Object> params = new HashMap<>();
+    params.put("namespace", rdfVocElementIri.getNamespace());
+    params.put("prefix", prefix);
+    params.put("local", rdfVocElementIri.getLocalName());
+    params.put("graphElement", graphElem);
+
+
+    String clearOldOccurences = "MATCH (oldmd:`_MapDef`)-[:`_IN`]->(oldns:`_MapNs`)  \n"
+        + "WHERE oldmd._key = $graphElement OR (oldns._ns = $namespace AND oldmd._local = $local)\n"
+        + "DETACH DELETE oldmd";
+
+    String cleanOrphansIfAny = "MATCH (oldns:`_MapNs`)\n"
+        + "WITH DISTINCT oldns WHERE size((oldns)<-[:_IN]-())=0\n"
+        + "DELETE oldns";
+
+    String createNewMapping = "MERGE (newmns:`_MapNs` { _ns: $namespace, _prefix: $prefix }) \n"
+        + "MERGE  (newmd:`_MapDef` { _key: $graphElement, _local: $local})\n"
+        + "MERGE (newmns)<-[:_IN]-(newmd)";
+
+    tx.execute(clearOldOccurences, params);
+    tx.execute(cleanOrphansIfAny);
+    tx.execute(createNewMapping, params);
 
     return Stream
-        .of(new MappingDesc(gElem, schElem, schemaUri, schema.getProperty("_prefix").toString()));
+        .of(new MappingDesc(graphElem, rdfVocElementIri.getLocalName(), rdfVocElementIri.getNamespace(), prefix));
   }
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<StringOutput> dropSchema(@Name("schemaUri") String schemaUri) {
+  public Stream<StringOutput> dropAll(@Name("namespace") String schemaUri) {
     Map<String, Object> props = new HashMap<>();
     props.put("_ns", schemaUri);
     ResourceIterator<Node> schemas = tx.findNodes(Label.label("_MapNs"), props);
@@ -177,7 +103,7 @@ public class MappingUtils {
 
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<StringOutput> dropMapping(@Name("graphElementName") String gElem) {
+  public Stream<StringOutput> drop(@Name("graphElementName") String gElem) {
     String cypher = "MATCH (elem:_MapDef { _key : $local }) DETACH DELETE elem RETURN count(elem) AS ct";
     Map<String, Object> params = new HashMap<>();
     params.put("local", gElem);
@@ -187,16 +113,15 @@ public class MappingUtils {
   }
 
   @Procedure(mode = Mode.READ)
-  public Stream<MappingDesc> listMappings(
+  public Stream<MappingDesc> list(
       @Name(value = "schemaElem", defaultValue = "") String schemaElem) {
 
     Map<String, Object> params = new HashMap<>();
     params.put("elemName", schemaElem);
 
-    String cypher = ("MATCH (mns:_MapNs)<-[:_IN]-(elem:_MapDef) WHERE elem._key CONTAINS $elemName "
-        + " OR elem._local CONTAINS $elemName"
-        +
-        " RETURN elem._key AS elemName, elem._local AS schemaElement, mns._prefix AS schemaPrefix, mns._ns AS schemaNs  ");
+    String cypher = ("MATCH (mns:_MapNs)<-[:_IN]-(elem:_MapDef) WHERE toLower(elem._key) CONTAINS toLower($elemName) "
+        + " OR toLower(elem._local) CONTAINS toLower($elemName) "
+        + " RETURN elem._key AS elemName, elem._local AS schemaElement, mns._prefix AS schemaPrefix, mns._ns AS schemaNs  ");
 
     return tx.execute(cypher, params).stream().map(MappingDesc::new);
   }

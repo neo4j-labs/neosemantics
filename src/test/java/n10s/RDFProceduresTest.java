@@ -1607,23 +1607,17 @@ public class RDFProceduresTest {
   public void testImportFromFileWithMapping() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
+      session.run("call n10s.nsprefixes.add('cats','http://neo4j.com/category/')");
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'MAP'}");
 
-      String addMapping1 =
-          " call n10s.mapping.addSchema(\"http://neo4j.com/voc/\",\"voc\") yield namespace as sch\n"
-              +
-              "call n10s.mapping.addMappingToSchema(sch,\"uniqueName\",\"name\") yield elemName as mapping1\n"
-              +
-              "return *";
-      session.run(addMapping1);
-      String addMapping2 =
-          " call n10s.mapping.addSchema(\"http://neo4j.com/category/\",\"cats\") yield namespace as sch\n"
-              +
-              "call n10s.mapping.addMappingToSchema(sch,\"Media\",\"Publication\") yield elemName as mapping1\n"
-              +
-              "return *";
-      session.run(addMapping2);
+      session.run(" call n10s.mapping.add('http://neo4j.com/voc/name','uniqueName') ");
+      session.run(" call n10s.mapping.add('http://neo4j.com/category/Publication','Media') ");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
@@ -1710,21 +1704,20 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportFromFileWithPredFilter() throws Exception {
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      session.run("call n10s.nsprefixes.add('sch','http://schema.org/')");
+      session.run("call n10s.nsprefixes.add('cats','http://neo4j.com/category/')");
+    }
+
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{ handleVocabUris: 'MAP'}");
+      initialiseGraphDB(neo4j.defaultDatabaseService(),"{ handleVocabUris: 'MAP'}");
 
-      String addMapping1 =
-          " call n10s.mapping.addSchema(\"http://schema.org/\",\"sch\") yield namespace as sch\n"
-              +
-              "call n10s.mapping.addMappingToSchema(sch,\"WHERE\",\"location\") yield elemName as mapping1\n"
-              +
-              "call n10s.mapping.addMappingToSchema(sch,\"desc\",\"description\") yield elemName as mapping2\n"
-              +
-              "return *";
-      session.run(addMapping1);
+      session.run(" call n10s.mapping.add(\"http://schema.org/location\",\"WHERE\") ");
+      session.run(" call n10s.mapping.add(\"http://schema.org/description\",\"desc\") ");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
