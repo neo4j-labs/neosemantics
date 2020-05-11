@@ -353,6 +353,35 @@ public class RDFProceduresTest {
       + "\n"
       + "<<neoind:16 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Emil\" .";
 
+  String rdfTriGSnippet  = "@prefix ex: <http://www.example.org/vocabulary#> .\n"
+      + "@prefix exDoc: <http://www.example.org/exampleDocument#> .\n"
+      + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
+      + "\n"
+      + "exDoc:G1 ex:created \"2019-06-06\"^^xsd:date .\n"
+      + "exDoc:G2 ex:created \"2019-06-07T10:15:30\"^^xsd:dateTime .\n"
+      + "\n"
+      + "exDoc:Monica a ex:Person ;\n"
+      + "             ex:friendOf exDoc:John .\n"
+      + "\n"
+      + "exDoc:G1 {\n"
+      + "    exDoc:Monica\n"
+      + "              ex:name \"Monica Murphy\" ;\n"
+      + "              ex:homepage <http://www.monicamurphy.org> ;\n"
+      + "              ex:email <mailto:monica@monicamurphy.org> ;\n"
+      + "              ex:hasSkill ex:Management ,\n"
+      + "                                  ex:Programming ;\n"
+      + "              ex:knows exDoc:John . }\n"
+      + "\n"
+      + "exDoc:G2 {\n"
+      + "    exDoc:Monica\n"
+      + "              ex:city \"New York\" ;\n"
+      + "              ex:country \"USA\" . }\n"
+      + "\n"
+      + "\n"
+      + "exDoc:G3 {\n"
+      + "    exDoc:John a ex:Person . }\n"
+      + "\n";
+
   private static URI file(String path) {
     try {
       return RDFProceduresTest.class.getClassLoader().getResource(path).toURI();
@@ -3591,6 +3620,82 @@ public class RDFProceduresTest {
           .run(
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#knows`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertFalse(result.next().get("result").asBoolean());
+    }
+  }
+
+  @Test
+  public void testImportInlineQuadRDFTriG() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      session.run("call n10s.nsprefixes.add('ns0','http://www.example.org/vocabulary#')");
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
+          "{ keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
+
+      Result importResults = session.run("CALL n10s.experimental.quadrdf.import.inline('" +
+          rdfTriGSnippet
+          + "','TriG')");
+
+      assertEquals(13L, importResults.next().get("triplesLoaded").asLong());
+      Result result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#John'})"
+              + "RETURN count(n) AS count");
+      assertEquals(3, result.next().get("count").asInt());
+      result = session
+          .run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#Monica'})"
+              + "RETURN n.graphUri AS graphUri ORDER BY graphUri");
+      List<Record> list = result.list();
+      assertEquals("http://www.example.org/exampleDocument#G1",
+          list.get(0).get("graphUri").asString());
+      assertEquals("http://www.example.org/exampleDocument#G2",
+          list.get(1).get("graphUri").asString());
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G1'})"
+          + "RETURN n.`ns0__created` AS created");
+      assertEquals(LocalDate.parse("2019-06-06"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n:Resource {uri: 'http://www.example.org/exampleDocument#G2'})"
+          + "RETURN n.`ns0__created` AS created");
+      assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
+          result.next().get("created").asList().get(0));
+      result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
+          + "WHERE NOT EXISTS(n.graphUri)"
+          + "RETURN labels(n) AS labels");
+      Record record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("ns0__Person",
+          record.get("labels").asList().get(1));
+      result = session.run(
+          "MATCH (n {uri: 'http://www.example.org/exampleDocument#John', "
+              + "graphUri: 'http://www.example.org/exampleDocument#G3'})"
+              + "RETURN labels(n) AS labels");
+      record = result.next();
+      assertEquals("Resource",
+          record.get("labels").asList().get(0));
+      assertEquals("ns0__Person",
+          record.get("labels").asList().get(1));
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`ns0__friendOf`]->"
+                  + "(m:Resource)"
+                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+      assertTrue(result.next().get("result").asBoolean());
+      result = session
+          .run(
+              "MATCH (n:Resource)"
+                  + "-[:`ns0__knows`]->"
                   + "(m:Resource)"
                   + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
       assertFalse(result.next().get("result").asBoolean());
