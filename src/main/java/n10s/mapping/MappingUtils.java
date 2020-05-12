@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-import n10s.result.NamespacePrefixesResult;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
 import org.eclipse.rdf4j.model.IRI;
