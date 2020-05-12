@@ -148,22 +148,28 @@ public class RDFEndpointTest {
   public void testCypherReturnsList() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
+      tx.commit();
+    }
+
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-      String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
-      tx.execute(dataInsertion);
+        String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
+            "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+            "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+            "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+            "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+            "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
+            "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
+        tx.execute(dataInsertion);
 
-      tx.execute("call n10s.mapping.addSchema(\"http://schema.org/voc\",\"scho\")");
-      tx.execute("call n10s.mapping.addMappingToSchema(\"http://schema.org/voc\",\"STH\",\"something\")");
-      tx.commit();
+        tx.execute("call n10s.mapping.add(\"http://schema.org/something\",\"STH\")");
+        tx.commit();
 
     }
+
 
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n)  RETURN collect(n) as col");
@@ -171,21 +177,21 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
-        + "<neo4j://individuals#4> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#4> <neo4j://vocabulary#name> \"Andy Wachowski\" .\n"
-        + "<neo4j://individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Critic> .\n"
-        + "<neo4j://individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
-        + "<neo4j://individuals#1> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#2> <neo4j://vocabulary#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#3> <neo4j://vocabulary#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#0> <neo4j://vocabulary#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#0> <neo4j://vocabulary#name> \"Keanu Reeves\" .\n"
-        + "<neo4j://individuals#2> <neo4j://vocabulary#name> \"Laurence Fishburne\" .\n"
-        + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
+    String expected = "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
+        + "<neo4j://individuals#5> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#5> <neo4j://vocabulary#name> \"Andy Wachowski\" .\n"
+        + "<neo4j://individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Critic> .\n"
+        + "<neo4j://individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
+        + "<neo4j://individuals#2> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#3> <neo4j://vocabulary#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#4> <neo4j://vocabulary#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#1> <neo4j://vocabulary#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#1> <neo4j://vocabulary#name> \"Keanu Reeves\" .\n"
+        + "<neo4j://individuals#3> <neo4j://vocabulary#name> \"Laurence Fishburne\" .\n"
         + "<neo4j://individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
-        + "<neo4j://individuals#3> <neo4j://vocabulary#name> \"Hugo Weaving\" .\n"
-        + "<neo4j://individuals#1> <neo4j://vocabulary#name> \"Carrie-Anne Moss\" .\n";
+        + "<neo4j://individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
+        + "<neo4j://individuals#4> <neo4j://vocabulary#name> \"Hugo Weaving\" .\n"
+        + "<neo4j://individuals#2> <neo4j://vocabulary#name> \"Carrie-Anne Moss\" .\n";
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
@@ -197,6 +203,12 @@ public class RDFEndpointTest {
   public void testCypherOnMovieDBReturnsList() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
+      tx.commit();
+    }
+
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       tx.execute(Files.readString(Paths.get(
@@ -207,9 +219,7 @@ public class RDFEndpointTest {
     //ADD mapppings and nsprefixes
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-      tx.execute("call n10s.mapping.addSchema(\"http://schema.org/voc\",\"scho\")");
-      tx.execute("call n10s.mapping.addMappingToSchema(\"http://schema.org/voc\",\"STH\",\"something\")");
-      tx.execute("call n10s.nsprefixes.add(\"tst\",\"http://tst.voc/\")");
+      tx.execute("call n10s.mapping.add(\"http://schema.org/when\",\"released\")");
       tx.commit();
     }
 
@@ -229,19 +239,19 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://individuals#85> <neo4j://vocabulary#title> \"That Thing You Do\" .\n"
-        + "<neo4j://individuals#12> <neo4j://vocabulary#name> \"Charlize Theron\" .\n"
-        + "<neo4j://individuals#86> <neo4j://vocabulary#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#71> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#85> <neo4j://vocabulary#released> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#71> <neo4j://vocabulary#name> \"Tom Hanks\" .\n"
-        + "<neo4j://individuals#86> <neo4j://vocabulary#name> \"Liv Tyler\" .\n"
-        + "<neo4j://individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#12> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#71> <neo4j://vocabulary#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#85> <neo4j://vocabulary#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
-        + "<neo4j://individuals#85> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
-        + "<neo4j://individuals#12> <neo4j://vocabulary#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
+    String expected = "<neo4j://individuals#86> <neo4j://vocabulary#title> \"That Thing You Do\" .\n"
+        + "<neo4j://individuals#13> <neo4j://vocabulary#name> \"Charlize Theron\" .\n"
+        + "<neo4j://individuals#87> <neo4j://vocabulary#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#72> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#86> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#72> <neo4j://vocabulary#name> \"Tom Hanks\" .\n"
+        + "<neo4j://individuals#87> <neo4j://vocabulary#name> \"Liv Tyler\" .\n"
+        + "<neo4j://individuals#87> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#13> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
+        + "<neo4j://individuals#72> <neo4j://vocabulary#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://individuals#86> <neo4j://vocabulary#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+        + "<neo4j://individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
+        + "<neo4j://individuals#13> <neo4j://vocabulary#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -781,6 +791,11 @@ public class RDFEndpointTest {
 
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
+      tx.commit();
+    }
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
           "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
@@ -790,14 +805,10 @@ public class RDFEndpointTest {
           + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
       tx.execute(dataInsertion);
 
-      String mappingCreation =
-          "CALL n10s.mapping.addSchema('http://schema.org/','sch') YIELD namespace  "
-              + "CALL n10s.mapping.addMappingToSchema('http://schema.org/','Actor','Person') YIELD elemName AS en1  "
-              + "CALL n10s.mapping.addMappingToSchema('http://schema.org/','born','dob') YIELD elemName AS en2 "
-              + "CALL n10s.mapping.addMappingToSchema('http://schema.org/','name','familyName') YIELD elemName AS en3 "
-              + "CALL n10s.mapping.addMappingToSchema('http://schema.org/','ACTED_IN','inMovie') YIELD elemName AS en4 "
-              + "RETURN 'OK'";
-      tx.execute(mappingCreation);
+      tx.execute("CALL n10s.mapping.add('http://schema.org/Person','Actor')");
+      tx.execute("CALL n10s.mapping.add('http://schema.org/familyName','name')");
+      tx.execute("CALL n10s.mapping.add('http://schema.org/inMovie','ACTED_IN')");
+      tx.execute("CALL n10s.mapping.add('http://schema.org/dob','born')");
       tx.commit();
     }
 
@@ -819,12 +830,12 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expected =
-        "<neo4j://individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
-            + "<neo4j://individuals#5> <neo4j://vocabulary#title> \"The Matrix\" .\n"
-            + "<neo4j://individuals#0> <http://schema.org/inMovie> <neo4j://individuals#5> .\n"
-            + "<neo4j://individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://individuals#0> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://individuals#0> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
+        "<neo4j://individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://individuals#6> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
+            + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+            + "<neo4j://individuals#6> <neo4j://vocabulary#title> \"The Matrix\" .\n"
+            + "<neo4j://individuals#1> <http://schema.org/inMovie> <neo4j://individuals#6> .\n"
+            + "<neo4j://individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -835,10 +846,10 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expectedOnlyMapped =
-        "<neo4j://individuals#0> <http://schema.org/inMovie> <neo4j://individuals#5> .\n"
-            + "<neo4j://individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://individuals#0> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://individuals#0> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
+        "<neo4j://individuals#1> <http://schema.org/inMovie> <neo4j://individuals#6> .\n"
+            + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+            + "<neo4j://individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
