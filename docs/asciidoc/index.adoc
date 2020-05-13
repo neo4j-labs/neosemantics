@@ -26,6 +26,7 @@ The guide covers the following areas:
 * <<Inference>> -- A detailed guide to inferencing and reasoning.
 * <<Reference>> -- An overview of all procedures and functions in the library.
 * <<Examples>> -- A list of projects using n10s.
+* <<Appendix_a>> -- A guide for neosemantics  3.x users
 
 image::nsmntx-block-diagram.png[Neosemantics diagram, 200,float="right",align="center"]
 
@@ -68,4 +69,5 @@ include::_validation.adoc[]
 include::_inference.adoc[]
 include::_reference.adoc[]
 include::_examples.adoc[]
+include::_migration3To4.adoc[]
 

@@ -28,6 +28,9 @@
     <d:tocentry linkend="Validation"><?dbhtml filename="validation/index.html"?>
     </d:tocentry>
 
+    <d:tocentry linkend="Appendix_a"><?dbhtml filename="appendix_migration/index.html"?>
+    </d:tocentry>
+
     <d:tocentry linkend="Reference"><?dbhtml filename="reference/index.html"?>
     </d:tocentry>
 
