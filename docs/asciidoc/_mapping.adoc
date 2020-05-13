@@ -1,82 +1,57 @@
 [[Mapping]]
 == Mapping graph models 
-Mappings can be used for applying transformations to the RDF as it's imported into Neo4j and they can also be used to transform the vocabulary used in a Neo4j graph as it's exported through the different RDF export methods described in <<Export>>.
-Mappings are based on terminology but they will not modify the structure of the graph.
-In other words, as we will see in this section, you will be able to use them to rename a property, a relationship or a label but not to change a property into a relationship.
+Mappings can be used for applying transformations to the RDF as it's imported into Neo4j or to transform the vocabulary used in a Neo4j graph as it's exported through the different RDF export methods described in <<Export>>.
+
+The following are two examples of situations where mappings can be useful:
+
+* We have a graph in Neo4j that we want to publish as JSON-LD through a REST api, but we want to map the elements in our graph (labels, property names, relationship names) to a public vocabulary so our API 'speaks' that public vocabulary and is therefore easily consumable by applications that 'speak' the same vocabulary.
+* We want to import a public taxonomy specified using https://www.w3.org/TR/skos-primer/#sechierarchy[the SKOS model] but we want to persist it in Neo4j using our own schema terms. An example of this is that we want `skos:narrower` relationships in the taxonomy to  be called `:CHILD_CATEGORY` in our Neo4j graph.
+
+Both types of transformations can be described using mappings and neosemantics will action on them both on import and on export as described.
+
+[WARNING]
+Mappings can be used to rename terms between two vocabularies (the neo4j graph schema and a public RDF schema). They are essentially pairs of equivalent terms, one from each vocabulary. More complex correspondences between elements of different types (for instance, mapping a property to a node+property) are currently not possible.
 
 === Public Vocabularies/Ontologies
 
 A public graph model is also called an Ontology (or a schema, or a vocabulary).
-We will not go into the details of the subtle differences between each flavour in this manual.
-All we need to know is that a graph model normally defines a set of terms (categories, properties, relationships...) and how they relate to each other.
-Some common examples are https://schema.org/[schema.org], https://edmcouncil.org/page/aboutfiboreview[FIBO] or the http://geneontology.org/[Gene Ontology].
-Public vocabularies like the ones mentioned, typically uniquely identify the terms in it by using namespaces, so roughly speaking, a namespace identifies a vocabulary (or at least a portion of it).
+We will not go into the details of the subtle differences between each of them in this manual.
+All we need to know is that a graph model typically defines a set of types (categories), their internal structure (properties), and how they relate to each other (relationships).
+Some popular examples are https://schema.org/[schema.org], https://edmcouncil.org/page/aboutfiboreview[FIBO] or the http://xmlns.com/foaf/spec/[FOAF vocabulary].
 
-To create a mapping with n10s we need to do two things: first, create a reference to a public schema, and then use that reference to create individual mappings from elements in the Neo4j schema to elements in the public schema.
-Here's how to do it:
+Public vocabularies like the ones mentioned, typically uniquely identify the terms with a name and a namespace.  So roughly speaking, a namespace identifies a vocabulary (or a part of it like in the case of FIBO where different modules are split in different namespaces).
+
+To create a mapping with n10s we need to do two things: first, create a namespace prefix definition as describe in section <<custom-prefixes-for-namespaces>>, and then define individual mappings from elements in the Neo4j schema to elements in the public schema.
+
+As mentioned in the intro, mappings are 1:1 and the same mapping definition mechanism is used both for importing and exporting RDF. Here's how to do it:
 
 === Defining mappings
-
-Let's say we want to map our movie database schema to the public schema.org vocabulary. 
-First we'll create a reference to the schema.org vocabulary passing the base URI and a prefix to be used in the RDF serialisation. You can use standard ones or a random accronym. Just make sure they're both unique in your mapping definition.
+First we'll create a namespace prefix definition for the vocabulary (_SKOS_ in this case). This is described in section <<custom-prefixes-for-namespaces>>.
 
 [source,Cypher]
 ----
-CALL n10s.mapping.addSchema("http://schema.org/","sch");
+CALL n10s.nsprefixes.add("skos","http://www.w3.org/2004/02/skos/core#");
 ----
 
-The call to create a reference to a public vocabulary will produce as output, the newly created reference, or alternatively an error message indicating what went wrong:
+We can create as many namespace prefix definitions as needed. Also, they can be deleted using the `n10s.nsprefixes.remove` method passing as single parameter the prefix of the namespace prefix definition we want deleted.
 
-.Results
-[options="header"]
-|===
-| prefix | namespace
-| "sch"  | "http://schema.org/"
-|===
+Once we have created a namespace prefix definition for a public vocabulary/schema, we can create actual mappings for individual elements in our graph to elements in the public schemas and vice-versa. We use the `n10s.mapping.add` procedure for this. This method takes two parameters:
 
-We can create as many references to public vocabularies as needed, and there is also useful method (`mapping.addCommonSchemas`) that can be used to include a set of the most common schemas in one go:
+ * The *full URI* of the public *vocabulary element* we want to map. A prefix for the element's namespace must have been defined as described above via `n10s.nsprefixes.add`
+ * The name of the element in the Neo4j graph (a property name, a label or a relationship type).
+
+The following example shows how to define a map from a relationship called `:CHILD_CATEGORY` in a Neo4j graph to the `skos:narrower` relationship in https://www.w3.org/TR/skos-primer/#sechierarchy[the SKOS model].
 
 [source,Cypher]
 ----
-CALL n10s.mapping.addCommonSchemas();
----- 
+CALL n10s.mapping.add("http://www.w3.org/2004/02/skos/core#narrower", "CHILD_CATEGORY");
+----
 
-References to schemas can be removed using the `mapping.dropSchema` method and passing as single parameter the exact URI of the vocabulary we want to have deleted. Notice that this will remove both the schema and all element mappings defined on it.
+We can list existing mappings using `n10s.mapping.listMappings` and filter the list with an optional search string parameter to return only mappings where either the graph element name or the schema element name match the search string.
 
 [source,Cypher]
 ----
-call n10s.mapping.dropSchema("http://purl.org/dc/elements/1.1/");
----- 
-
-And we can list the currently existing schemas by running `mapping.listSchemas`. This method takes an optional string parameter that can be used to filter the list to the ones that match a particular search string in the schema uri or in the prefix. If we run the following after running the `mapping.addCommonSchemas`:
-
-[source,Cypher]
-----
-call n10s.mapping.listSchemas("rdf");
-----
-
-.Results
-[options="header"]
-|===
-| prefix | namespace
-| "rdfs" | "http://www.w3.org/2000/01/rdf-schema#"
-| "rdf"  | "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
-|===
-
-Once we have defined a reference to a public vocabulary/schema, we can now create actual mappings for elements in our graph to elements in the public schemas. The `mapping.addMappingToSchema` procedure. This method takes three parameters, the URI of a public schema previously added via `mapping.addSchema` and a pair formed by the name of the element in our graph (a property name, a label or a relationship type) and the matching element in the public schema.
-
-The following example shows how to define a map from a `CHILD_CATEGORY` relationship type in a Neo4j graph to the `skos:narrower` relationship (or ObjectProperty in RDF terminology).
-
-[source,Cypher]
-----
-CALL n10s.mapping.addMappingToSchema("http://www.w3.org/2004/02/skos/core#", "CHILD_CATEGORY", "narrower");
-----
-
-Just like we did with schema references, we can list existing mappings using `mapping.listMappings` and filter the list with an optional search string parameter to return only mappings where either the graph element name or the schema element name match the search string. 
-
-[source,Cypher]
-----
-call n10s.mapping.listMappings();
+call n10s.mapping.list();
 ----
 
 .Results
@@ -87,16 +62,16 @@ call n10s.mapping.listMappings();
 |===
 
 
-It is also possible to remove individual ones with `mapping.dropMapping` passing as single parameter the name of the graph model element on which the mapping is defined.
+It is also possible to remove individual mappings with `n10s.mapping.drop` passing as single parameter the name of the graph model element on which the mapping is defined.
 
 [source,Cypher]
 ----
-call n10s.mapping.dropMapping("CHILD_CATEGORY")
+call n10s.mapping.drop("CHILD_CATEGORY");
 ----
 
 === Mappings for export
 
-Let's look at the case where we want to publish a graph in Neo4j but we want to map it to our organisation's canonical model, our Enterprise Ontology or any public vocabulary. For this example we're going to use the Northwind database in Neo4j `:play northwind-graph` and the public https://schema.org/[schema.org] vocabulary. 
+Let's look in detail at the case where we want to publish a graph in Neo4j but we want to map it to our organisation's canonical model, our Enterprise Ontology or any public vocabulary. For this example we're going to use the Northwind database in Neo4j `:play northwind-graph` and the public https://schema.org/[schema.org] vocabulary.
 
 Here's the script that defines the reference to the `schema.org` public vocabulary and a few individual mappings for elements in the Northwind database in Neo4j.
 
@@ -104,27 +79,27 @@ Here's the script that defines the reference to the `schema.org` public vocabula
 ----
 //set parameter uri ->   :param uri: "http://schema.org/"
 
-CALL n10s.mapping.addSchema($uri,"sch");
-CALL n10s.mapping.addMappingToSchema($uri,"Order","Order");
-CALL n10s.mapping.addMappingToSchema($uri,"orderID","orderNumber");
-CALL n10s.mapping.addMappingToSchema($uri,"orderDate","orderDate");
+CALL n10s.nsprefixes.add("sch",$uri);
+CALL n10s.mapping.add($uri + "Order","Order");
+CALL n10s.mapping.add($uri + "orderNumber","orderID");
+CALL n10s.mapping.add($uri + "orderDate","orderDate");
 
-CALL n10s.mapping.addMappingToSchema($uri,"ORDERS","orderedItem");
+CALL n10s.mapping.add($uri + "orderedItem","ORDERS");
 
-CALL n10s.mapping.addMappingToSchema($uri,"Product","Product");
-CALL n10s.mapping.addMappingToSchema($uri,"productID","productID");
-CALL n10s.mapping.addMappingToSchema($uri,"productName","name");
+CALL n10s.mapping.add($uri + "Product","Product");
+CALL n10s.mapping.add($uri + "productID","productID");
+CALL n10s.mapping.add($uri + "name","productName");
 
-CALL n10s.mapping.addMappingToSchema($uri,"PART_OF","category");
+CALL n10s.mapping.add($uri + "category","PART_OF");
 
-CALL n10s.mapping.addMappingToSchema($uri,"categoryName","name");
+CALL n10s.mapping.add($uri + "name","categoryName");
 ----
 
 After running the previous script, we can check that the mappings have been correctly defined with
 
 [source,Cypher]
 ----
-call n10s.mapping.listMappings();
+call n10s.mapping.list();
 ----
 
 That should return:
@@ -138,14 +113,13 @@ That should return:
 |"http://schema.org/"|"sch"         |"orderDate"    |"orderDate"   
 |"http://schema.org/"|"sch"         |"orderedItem"  |"ORDERS"      
 |"http://schema.org/"|"sch"         |"Product"      |"Product"     
-|"http://schema.org/"|"sch"         |"productID"    |"productID"   
-|"http://schema.org/"|"sch"         |"name"         |"productName" 
+|"http://schema.org/"|"sch"         |"productID"    |"productID"
 |"http://schema.org/"|"sch"         |"category"     |"PART_OF"     
 |"http://schema.org/"|"sch"         |"name"         |"categoryName"
 |===
 
 
-Now we can see these mappings in action by running any of the RDF generating methods described in <<Export>> (`/describe/id`, `/describe/find/` or `/cypher`).
+Now we can see these mappings in action by running any of the RDF generating methods described in <<Export>> (`/describe`, `/describe/find` or `/cypher`).
 Let's use the `/cypher` method to serialise as RDF an order given its `orderID`.
 
 
@@ -180,7 +154,7 @@ Here's the output generated by the previous request:
 <rdf:Description rdf:about="neo4j://com.neo4j/indiv#74">
 	<rdf:type rdf:resource="http://schema.org/Product"/>
 	<sch:productID>75</sch:productID>
-	<sch:name>Rhönbräu Klosterbier</sch:name>
+	<neovoc:productName>Rhönbräu Klosterbier</neovoc:productName>
 </rdf:Description>
 
 <rdf:Description rdf:about="neo4j://com.neo4j/indiv#80">
@@ -242,20 +216,20 @@ WITH
 { neoSchemaElem : "FRIEND_OF", publicSchemaElem: "friend-of" }] AS mappings,
 "http://www.w3.org/2006/vcard/ns#" AS vcardUri
 
-CALL n10s.mapping.addSchema(vcardUri,"vcard") YIELD namespace
+CALL n10s.nsprefixes.add("vcard",vcardUri) YIELD namespace
 UNWIND mappings as m
-CALL n10s.mapping.addMappingToSchema(vcardUri,m.neoSchemaElem,m.publicSchemaElem) YIELD schemaElement
+CALL n10s.mapping.add(vcardUri + m.publicSchemaElem,m.neoSchemaElem) YIELD schemaElement
 RETURN count(schemaElement) AS mappingsDefined;
 ----
 
-Just like we did in the previous section, we define a vocabulary with `mapping.addSchema` and then we add individual mappings for elements in the vocabulary with `mapping.addMappingToSchema`.
+Just like we did in the previous section, we define a namespace prefix for the vocabulary with `n10s.nsprefixes.add` and then we add individual mappings for elements in the vocabulary with `n10s.mapping.add`.
 If there were multiple vocabularies to map, we would just need repeat the process for each of them.
 
 Now we can check that the mappings are correctly defined by running:
 
 [source,Cypher]
 ----
-CALL n10s.mapping.listMappings();
+CALL n10s.mapping.list();
 ----
 
 .Results
@@ -268,15 +242,15 @@ CALL n10s.mapping.listMappings();
 |"http://www.w3.org/2006/vcard/ns#"|"vcard"       |"friend-of"      |"FRIEND_OF"     
 |===
 
-Important to note that when using the option `handleVocabUris: "MAP"`, all non-mapped vocabulary elements will get the default treatment they get when the `'IGNORE'` option is selected.
+Important to note that when using the option `handleVocabUris: "MAP"` in our Graph Config, all non-mapped vocabulary elements in any RDF that we import will get the default treatment they get when the `'IGNORE'` option is selected.
 
-Once the mappings are defined, we can run the import process as described in <<Import>> with the mentioned config param `handleVocabUris: 'MAP'` as follows:
+Once the mappings are defined and the Graph Config set to `handleVocabUris: 'MAP'`, we can run the import process as described in <<Import>> as follows:
 
 [source,Cypher]
 ----
-CALL n10s.rdf.stream.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/permid-person-fragment.ttl","Turtle", {
-  handleVocabUris: 'MAP'
-});
+CALL n10s.graphconfig.init({handleVocabUris: 'MAP'});
+
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/permid-person-fragment.ttl","Turtle");
 ----
 
 After data load, we will be able to query the imported graph with a much more friendly cypher:
@@ -299,4 +273,4 @@ LIMIT 10;
 
 
 [NOTE]
-The combination of a mapping definition plus the use of the `handleVocabUris: 'MAP'` configuration can be applied not only to the `semantics.importRDF` procedure but also to the preview ones `semantics.previewRDF` and `semantics.previewRDFSnippet`.
+The combination of a mapping definition plus the use of the `handleVocabUris: 'MAP'` configuration can be applied not only to the `n10s.rdf.import.\*` procedures but also to the preview ones `n10s.rdf.preview.*`.

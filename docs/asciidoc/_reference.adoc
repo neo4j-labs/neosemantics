@@ -172,24 +172,18 @@ passed as input (SPARQL, RDF/XML, Turtle) and adds each namespace-prefix pair so
 [options="header"]
 |===
 | Procedure Name        | params           | Description and example usage
-| n10s.mapping.addSchema
-a| * URL of the schema/vocabulary/ontology
-* prefix to be used in serialisations | Creates a reference to a vocabulary. Needed to define mappings.
-| n10s.mapping.dropSchema
-a|
-* URL of the schema/vocabulary/ontology| Deletes a vocabulary reference and all associated mappings.
-| n10s.mapping.listSchemas
-a| * optional filter string |  Returns all vocabulary references. When filter string is set, only schemas containing the search string in their uri or in the associated prefix are returned.
-| n10s.mapping.addCommonSchemas      | no prams | Creates references to a number of popular vocabularies including schema.org, Dublin Core, SKOS, OWL, etc
-| n10s.mapping.addMappingToSchema
-a| * URL of the schema/voc/ontology
-* The name of the element in the Neo4j graph (a property name, a label or a relationship type)
-* The matching element (Class, DataTypeProperty or ObjectProperty) in the public schema. Only the local name of the element |
+| n10s.mapping.add
+a| * Full URI of the schema/voc/ontology element (Class, DataTypeProperty or ObjectProperty) in the public schema. A prefix must have been defined for the element namespace beforehand using `n10s.nsprefixes.add`
+* The name of the equivalent element in the Neo4j graph (a property name, a label or a relationship type)
+|
 Creates a mapping for an element in the Neo4j DB schema to a vocabulary element
-| n10s.mapping.dropMapping      |
-* mapped DB element name to remove the mapping |
+| n10s.mapping.drop      |
+* mapped DB element name for which we want the mapping deleted |
 Returns an output text message indicating success/failure of the deletion
-| n10s.mapping.listMappings
+| n10s.mapping.dropAll      |
+* namespace of the vocabulary for which we want all mappings deleted |
+Returns an output text message indicating success/failure of the deletion
+| n10s.mapping.list
 a|
 * optional filter string
 | Returns a list with all the currently defined mappings. Whe filter string is passed, only mappings containing the string in the
