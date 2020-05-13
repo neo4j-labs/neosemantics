@@ -99,11 +99,17 @@ In 4.x it is possible -actually it is required- to create a Graph configuration 
 [options="header"]
 |===
 | neosemantics 3.x        | neosemantics 4.x (n10s)
-| `CALL semantics.importRDF("https://.. file1.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});
-CALL semantics.previewRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});
-CALL semantics.importRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});
-` | `call n10s.graphconfig.init({ handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});
-CALL n10s.rdf.import.fetch("https://.. file1.ttl","Turtle");
-CALL n10s.rdf.preview.fetch("https://.. file2.ttl","Turtle");
-CALL n10s.rdf.import.fetch("https://.. file2.ttl","Turtle"); `
+| `CALL semantics.importRDF("https://.. file1.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL semantics.previewRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL semantics.importRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+ | `call n10s.graphconfig.init({ handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL n10s.rdf.import.fetch("https://.. file1.ttl","Turtle");`
+
+`CALL n10s.rdf.preview.fetch("https://.. file2.ttl","Turtle");`
+
+`CALL n10s.rdf.import.fetch("https://.. file2.ttl","Turtle");`
 |===
