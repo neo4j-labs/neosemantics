@@ -305,14 +305,14 @@ a|
 [cols="15,5,45,35"]
 |===
 | method| type| params| Description
-| /rdf/describe/<nodeid or uri>
+| /rdf/<dbname>/describe/<nodeid or uri>
 |GET
 a|
 * the id of a node or the (urlencoded) uri
 * excludeContext: Optional named parameter. If present output will not include connected nodes, just selected one.
 * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | Produces an RDF serialization of the selected node. The format will be determined by the *accept* parameter in the header. Default is Turtle
-|/rdf/describe/find/<l>/<p>/<v>
+|/rdf/<dbname>/describe/find/<l>/<p>/<v>
 |GET
 a|
 * the method takes three parameters passed as path parameters in the URL: <l>/<p>/<v>. They represent respectively a label, a property name and a property value.
@@ -320,7 +320,7 @@ a|
 * valType: required when the property value is not to be treated as a string. Valid values: INTEGER, FLOAT and BOOLEAN
 * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | returns  nodes matching the filter on label and property value
-| /rdf/cypher
+| /rdf/<dbname>/cypher
 | POST
 a| POST request taking as parameter a JSON map with the following keys:
 
@@ -329,7 +329,7 @@ a| POST request taking as parameter a JSON map with the following keys:
 * showOnlyMapped: (optional, default is false) if present output will exclude unmapped elements (see how to define mappings for labels,attributes, relationships)
 * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | Produces an RDF serialization of the nodes and relationships returned by the Cypher query
-|/rdf/onto
+|/rdf/<dbname>/onto
 | GET
 a| * format: RDF serialisation format. When present, it overrides the header param *accept*.
 | returns an OWL ontology based on the graph schema
