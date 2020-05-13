@@ -109,9 +109,9 @@ In 4.x it is possible -actually it is required- to create a Graph configuration 
 
  | `call n10s.graphconfig.init({ handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
 
-`CALL n10s.rdf.import.fetch("https://.. file1.ttl","Turtle");`
+`CALL n10s.rdf.import.fetch("..file1.ttl","Turtle");`
 
-`CALL n10s.rdf.preview.fetch("https://.. file2.ttl","Turtle");`
+`CALL n10s.rdf.preview.fetch("..file2.ttl","Turtle");`
 
-`CALL n10s.rdf.import.fetch("https://.. file2.ttl","Turtle");`
+`CALL n10s.rdf.import.fetch("..file2.ttl","Turtle");`
 |===
