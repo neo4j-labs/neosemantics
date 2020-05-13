@@ -94,6 +94,8 @@ neo4ind:neo4j355 neo4voc:name "neo4j" ;
 You can save it to your local drive or access them directly https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl[here].
 All you'll need to provide to n10s is the location (`file://` or `http://`) and the serialisation used, `Turtle` in this case.
 
+[TIP]
+If you're working on a windows machine and want to access an RDF file stored on your drive, here's the syntax for paths: `CALL n10s.rdf.import.fetch("file:///D:\\Data\\some_rdf_file.rdf", "RDF/XML");`
 
 .The following imports the `nsmntx.ttl` file hosted on GitHub
 [source,cypher]
