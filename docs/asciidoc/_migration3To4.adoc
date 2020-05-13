@@ -29,7 +29,7 @@ The change in  the name scheme applies to all methods and procedures
 [options="header"]
 |===
 | neosemantics 3.x        | neosemantics 4.x (n10s)
-| semantics.* | n10s.*
+| `semantics.*` | `n10s.*`
 |===
 
 Experimental features (either incomplete or  not strongly tested) follow the  `n10s.experimental.\*` naming scheme. Examples of these are `n10s.experimental.quadrdf.*` and `n10s.experimental.importJSONAsTree`.
@@ -55,20 +55,20 @@ All RDF importing procedures have two modes of operation in n10s 4.0 These are i
 [options="header"]
 |===
 | neosemantics 3.x        | neosemantics 4.x (n10s)
-|semantics.importRDF()               |n10s.rdf.import.fetch()
-|semantics.importRDFSnippet()        |n10s.rdf.import.inline()
-|semantics.previewRDF()              |n10s.rdf.preview.fetch()
-|semantics.previewRDFSnippet()       |n10s.rdf.preview.inline()
-|semantics.deleteRDF()               |n10s.rdf.delete.fetch()
-|semantics.deleteRDFSnippet()        |n10s.rdf.delete.inline()
-|semantics.importOntology()          |n10s.onto.import.fetch()
-|semantics.importOntologySnippet()   |n10s.onto.import.inline()
-|semantics.previewOntology()         |n10s.onto.preview.fetch()
-|semantics.previewOntologySnippet()  |n10s.onto.preview.inline()
-|semantics.experimental.importQuadRDF()           |n10s.experimental.quadrdf.import.fetch()
-|semantics.experimental.importQuadRDFSnippet()    |n10s.experimental.quadrdf.import.inline()
-|semantics.experimental.deleteQuadRDF()           |n10s.experimental.quadrdf.delete.fetch()
-|semantics.experimental.deleteQuadRDFSnippet()    |n10s.experimental.quadrdf.delete.inline()
+|`semantics.importRDF()`             |`n10s.rdf.import.fetch()`
+|`semantics.importRDFSnippet()`        |`n10s.rdf.import.inline()`
+|`semantics.previewRDF()`       |`n10s.rdf.preview.fetch()`
+|`semantics.previewRDFSnippet()`      |`n10s.rdf.preview.inline()`
+|`semantics.deleteRDF()`     |`n10s.rdf.delete.fetch()`
+|`semantics.deleteRDFSnippet()`    |`n10s.rdf.delete.inline()`
+|`semantics.importOntology()`   |`n10s.onto.import.fetch()`
+|`semantics.importOntologySnippet()`  |`n10s.onto.import.inline()`
+|`semantics.previewOntology()` |`n10s.onto.preview.fetch()`
+|`semantics.previewOntologySnippet()`|`n10s.onto.preview.inline()`
+|`semantics.experimental.importQuadRDF()`           |`n10s.experimental.quadrdf.import.fetch()`
+|`semantics.experimental.importQuadRDFSnippet()`    |`n10s.experimental.quadrdf.import.inline()`
+|`semantics.experimental.deleteQuadRDF()`   |`n10s.experimental.quadrdf.delete.fetch()`
+|`semantics.experimental.deleteQuadRDFSnippet()`  |`n10s.experimental.quadrdf.delete.inline()`
 |===
 
 [[RDF_endpoint_changes]]
@@ -80,20 +80,20 @@ The second chage to the URL structure is that it gets simplified becuse thanks t
 [options="header"]
 |===
 | neosemantics 3.x        | neosemantics 4.x (n10s)
-|/rdf/describe/id/<nodeid> | /rdf/<dbname>/describe/<nodeid or uri>
-|/rdf/describe/uri/<nodeuri>| /rdf/<dbname>/describe/<nodeid or uri>
-|/rdf/describe/find/<l>/<p>/<v>| /rdf/<dbname>/describe/find/<l>/<p>/<v>
-|/rdf/cypher| /rdf/<dbname>/cypher
-|/rdf/cypheronrdf| /rdf/<dbname>/cypher
-|/rdf/onto|  /rdf/<dbname>/onto
-|/rdf/ontonrdf| /rdf/<dbname>/onto
+|`/rdf/describe/id/<nodeid>`| `/rdf/<dbname>/describe/<nodeid or uri>`
+|`/rdf/describe/uri/<nodeuri>`| `/rdf/<dbname>/describe/<nodeid or uri>`
+|`/rdf/describe/find/<l>/<p>/<v>`| `/rdf/<dbname>/describe/find/<l>/<p>/<v>`
+|`/rdf/cypher`| `/rdf/<dbname>/cypher`
+|`/rdf/cypheronrdf`| `/rdf/<dbname>/cypher`
+|`/rdf/onto`|  `/rdf/<dbname>/onto`
+|`/rdf/ontonrdf`| `/rdf/<dbname>/onto`
 |===
 
 [[stateful_graph_change]]
 === Persisted Graph Configuration
 
 In neosemantics 3.x all config params had to be passed on every request and kept consistent during the lifetime of a graph. For instance, if a first RDF import  was carried out followed by a second one,  both had to pass exactly the same set of parameters for the graph to be created  in a consistent way.
-In 4.x it is possible -actually it is required- to create a Graph configuration before any RDF import operation takes place. The config is used for all subsequent import/delete/export operations reducing the verbosity of the code and also making it less error proone.
+In 4.x it is possible -actually it is required- to create a Graph configuration before any RDF import operation takes place. The config is used for all subsequent import/delete/export operations reducing the verbosity of the code and also making it less error prone.
 
 
 [options="header"]
