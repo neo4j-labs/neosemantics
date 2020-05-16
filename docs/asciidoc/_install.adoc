@@ -19,7 +19,7 @@ The list of procedures should include the ones documented below.
 You can check that the extension is mounted by running 
 [source,cypher]
 ----
-:GET http://localhost:7474/rdf/n10s/ping
+:GET http://localhost:7474/rdf/ping
 ----
 The previous command assumes you're running neo4j on your local machine, replace `localhos` with the host name if that is not the case.
 
