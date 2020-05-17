@@ -1,0 +1,39 @@
+PREFIX : <http://stardog.com/tutorial/>
+
+:The_Beatles a :Band, :Artist;
+    :name "The Beatles" ;
+    :member :John_Lennon , :Paul_McCartney , :George_Harrison , :Ringo_Starr .
+
+:John_Lennon a :SoloArtist, :Artist ;
+    :name "John Lennon" .
+
+:Paul_McCartney a :SoloArtist, :Artist ;
+    :name "Paul McCartney" .
+
+:Ringo_Starr a :SoloArtist, :Artist ;
+    :name "Ringo Starr" .
+
+:George_Harrison a :SoloArtist, :Artist ;
+    :name "George Harrison" .
+
+:Please_Please_Me a :Album ;
+    :name "Please Please Me" ;
+    :date "1963-03-22"^^xsd:date , "1963-02-23"^^xsd:date ;
+    :artist :The_Beatles ;
+    :track :Love_Me_Do .
+
+:Love_Me_Do a :Song ;
+    :name "Love Me Do" ;
+    :length 125.0 ;
+    :writer :John_Lennon , :Paul_McCartney .
+
+:McCartney a :Album  ;
+    :name "McCartney" ;
+    :date  "1970-04-17"^^xsd:date ;
+    :artist :Paul_McCartney .
+
+:Imagine a :Album , :Song ;
+    :name "Imagine" ;
+    :date  "1971"^^xsd:gYear ;
+    :artist :John_Lennon  ;
+    :track :Imagine .

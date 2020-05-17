@@ -175,13 +175,75 @@ public class SHACLValidationProceduresTest {
           minCountCount++;
         }
         if (next.get("propertyShape").asString()
-            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
+            .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
           datatypeConstCount++;
         }
       }
       assertEquals(3, minCountCount);
       assertEquals(3, datatypeConstCount);
     }
+  }
+
+  @Test
+  public void tesMusicExample() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CALL n10s.graphconfig.init( { handleMultival: 'ARRAY', "
+          + "multivalPropList: [ 'http://stardog.com/tutorial/date'] })");
+      session.run("CALL n10s.nsprefixes.add('tut','http://stardog.com/tutorial/')");
+      session.close();
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+          Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result loadShapes = session.run(
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/musictest/music.shacl")
+              .toURI() + "\",\"Turtle\", {})");
+      assertTrue(loadShapes.hasNext());
+
+      Result loadData = session.run(
+          "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/musictest/data.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      assertTrue(loadData.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+//      "call n10s.validation.shacl.validate() yield nodeType,  propertyShape, offendingValue, resultPath, severity\n"
+//          + "return collect({  nt: nodeType,  ps: propertyShape, ov: offendingValue, rp: resultPath, s: severity}) as resultList"
+      assertTrue(result.hasNext());
+      int minCountCount = 0;
+      int maxCountCount = 0;
+      int datatypeConstCount = 0;
+      while (result.hasNext()) {
+        Record next = result.next();
+        assertEquals("http://stardog.com/tutorial/Album",next.get("nodeType").asString());
+        if (next.get("propertyShape").asString()
+            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
+          assertEquals("http://stardog.com/tutorial/track",next.get("resultPath").asString());
+          minCountCount++;
+        }
+        if (next.get("propertyShape").asString()
+            .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
+          assertEquals("http://stardog.com/tutorial/date",next.get("resultPath").asString());
+          datatypeConstCount++;
+        }
+        if (next.get("propertyShape").asString()
+            .equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
+          assertEquals("http://stardog.com/tutorial/date",next.get("resultPath").asString());
+          maxCountCount++;
+        }
+      }
+      assertEquals(1, minCountCount);
+      assertEquals(1, datatypeConstCount);
+      assertEquals(1, maxCountCount);
+      }
   }
 
   @Test

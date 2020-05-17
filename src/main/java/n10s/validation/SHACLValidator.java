@@ -7,6 +7,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 
+import com.github.jsonldjava.core.RDFDataset.BlankNode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,8 +21,10 @@ import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
+import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
@@ -45,16 +48,18 @@ public class SHACLValidator {
   private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_MATCH_REL_WHERE = "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
+  private static final String BNODE_PREFIX = "bnode://id/";
 
-  String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
-      + "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity "
-      + "?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen "
-      + "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) "
-      + "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) "
-      + "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) "
+  String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n"
+      + "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity \n"
+      + "?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen \n"
+      + "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n"
+      + "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) \n"
+      + "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) \n"
       + "(isLiteral(?inFirst) as ?isliteralIns)\n"
-      + "{ ?ns a sh:NodeShape ;\n"
-      + "     sh:property ?ps .\n"
+      + "{ ?ns a ?shapeOrNodeShape ;\n"
+      + "     sh:node?/sh:property ?ps .\n"
+      + "  filter ( ?shapeOrNodeShape = sh:Shape || ?shapeOrNodeShape = sh:NodeShape )\n"
       + "\n"
       + "  optional { ?ps sh:path/sh:inversePath ?invPath }\n"
       + "  optional { ?ps sh:path  ?path }\n"
@@ -138,11 +143,11 @@ public class SHACLValidator {
 
       Map<String, Object> propConstraint = constraints.next();
       if (propConstraint.get("appliesToCat") == null) {
-        log.info(
+        log.debug(
             "Only class-based targets (sh:targetClass) and implicit class targets are validated.");
       } else if (propConstraint.containsKey("item") && propConstraint.get("item")
           .equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-        log.info(
+        log.debug(
             "Constraints on rdf:type are ignored  (temporary solution until we figure out how can they be used).");
       } else {
         processConstraint(propConstraint, vc);
@@ -615,67 +620,82 @@ public class SHACLValidator {
       while (queryResult.hasNext()) {
         Map<String, Object> record = new HashMap<>();
         BindingSet next = queryResult.next();
-        record.put("item", next.hasBinding("invPath") ? next.getValue("invPath").stringValue()
-            : next.getValue("path").stringValue());
-        record.put("inverse", next.hasBinding("invPath"));
-        record.put("appliesToCat",
-            next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
-        record.put("rangeType",
-            next.hasBinding("rangeClass") ? next.getValue("rangeClass").stringValue() : null);
-        record.put("rangeKind",
-            next.hasBinding("rangeKind") ? next.getValue("rangeKind").stringValue() : null);
-        record.put("dataType",
-            next.hasBinding("datatype") ? next.getValue("datatype").stringValue() : null);
-        record.put("pattern",
-            next.hasBinding("pattern") ? next.getValue("pattern").stringValue() : null);
-        record.put("maxCount",
-            next.hasBinding("maxCount") ? ((Literal) next.getValue("maxCount")).intValue() : null);
-        record.put("minCount",
-            next.hasBinding("minCount") ? ((Literal) next.getValue("minCount")).intValue() : null);
-        record.put("minInc",
-            next.hasBinding("minInc") ? ((Literal) next.getValue("minInc")).intValue() : null);
-        record.put("minExc",
-            next.hasBinding("minExc") ? ((Literal) next.getValue("minExc")).intValue() : null);
-        record.put("maxInc",
-            next.hasBinding("maxInc") ? ((Literal) next.getValue("maxInc")).intValue() : null);
-        record.put("maxExc",
-            next.hasBinding("maxExc") ? ((Literal) next.getValue("maxExc")).intValue() : null);
 
-        if (next.hasBinding("hasValueLiterals") && !next.getValue("hasValueLiterals").stringValue()
-            .equals("")) {
-          List<String> hasValueLiterals = Arrays
-              .asList(next.getValue("hasValueLiterals").stringValue().split("---"));
-          record.put("hasValueLiteral", hasValueLiterals);
-        }
-        if (next.hasBinding("hasValueUris") && !next.getValue("hasValueUris").stringValue()
-            .equals("")) {
-          List<String> hasValueUris = Arrays
-              .asList(next.getValue("hasValueUris").stringValue().split("---"));
-          record.put("hasValueUri", hasValueUris);
-        }
+        Value path = next.hasBinding("invPath") ? next.getValue("invPath"): next.getValue("path");
+        if (path instanceof BNode){
+          log.debug("current version only processes single property paths");
+        } else {
+          record.put("item", path.stringValue());
+          record.put("inverse", next.hasBinding("invPath"));
+          record.put("appliesToCat",
+              next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+          record.put("rangeType",
+              next.hasBinding("rangeClass") ? next.getValue("rangeClass").stringValue() : null);
+          record.put("rangeKind",
+              next.hasBinding("rangeKind") ? next.getValue("rangeKind").stringValue() : null);
+          record.put("dataType",
+              next.hasBinding("datatype") ? next.getValue("datatype").stringValue() : null);
+          record.put("pattern",
+              next.hasBinding("pattern") ? next.getValue("pattern").stringValue() : null);
+          record.put("maxCount",
+              next.hasBinding("maxCount") ? ((Literal) next.getValue("maxCount")).intValue()
+                  : null);
+          record.put("minCount",
+              next.hasBinding("minCount") ? ((Literal) next.getValue("minCount")).intValue()
+                  : null);
+          record.put("minInc",
+              next.hasBinding("minInc") ? ((Literal) next.getValue("minInc")).intValue() : null);
+          record.put("minExc",
+              next.hasBinding("minExc") ? ((Literal) next.getValue("minExc")).intValue() : null);
+          record.put("maxInc",
+              next.hasBinding("maxInc") ? ((Literal) next.getValue("maxInc")).intValue() : null);
+          record.put("maxExc",
+              next.hasBinding("maxExc") ? ((Literal) next.getValue("maxExc")).intValue() : null);
 
-        if (next.hasBinding("isliteralIns")) {
-          List<String> inVals = Arrays.asList(next.getValue("ins").stringValue().split("---"));
-          Literal val = (Literal) next.getValue("isliteralIns");
-          if (val.booleanValue()) {
-            record.put("inLiterals", inVals);
-          } else {
-            record.put("inUris", inVals);
+          if (next.hasBinding("hasValueLiterals") && !next.getValue("hasValueLiterals")
+              .stringValue()
+              .equals("")) {
+            List<String> hasValueLiterals = Arrays
+                .asList(next.getValue("hasValueLiterals").stringValue().split("---"));
+            record.put("hasValueLiteral", hasValueLiterals);
           }
+          if (next.hasBinding("hasValueUris") && !next.getValue("hasValueUris").stringValue()
+              .equals("")) {
+            List<String> hasValueUris = Arrays
+                .asList(next.getValue("hasValueUris").stringValue().split("---"));
+            record.put("hasValueUri", hasValueUris);
+          }
+
+          if (next.hasBinding("isliteralIns")) {
+            List<String> inVals = Arrays.asList(next.getValue("ins").stringValue().split("---"));
+            Literal val = (Literal) next.getValue("isliteralIns");
+            if (val.booleanValue()) {
+              record.put("inLiterals", inVals);
+            } else {
+              record.put("inUris", inVals);
+            }
+          }
+
+          record.put("minStrLen",
+              next.hasBinding("minStrLen") ? ((Literal) next.getValue("minStrLen")).intValue()
+                  : null);
+          record.put("maxStrLen",
+              next.hasBinding("maxStrLen") ? ((Literal) next.getValue("maxStrLen")).intValue()
+                  : null);
+          Value value = next.getValue("ps"); //if  this is null throw exception (?)
+          if (value instanceof BNode) {
+            //create artificial uri for blank node
+            record.put("propShapeUid", BNODE_PREFIX + value.stringValue());
+          } else {
+            record.put("propShapeUid", value.stringValue());
+          }
+
+          record
+              .put("severity", next.hasBinding("severity") ? next.getValue("severity").stringValue()
+                  : "http://www.w3.org/ns/shacl#Violation");
+
+          constraints.add(record);
         }
-
-        record.put("minStrLen",
-            next.hasBinding("minStrLen") ? ((Literal) next.getValue("minStrLen")).intValue()
-                : null);
-        record.put("maxStrLen",
-            next.hasBinding("maxStrLen") ? ((Literal) next.getValue("maxStrLen")).intValue()
-                : null);
-        record
-            .put("propShapeUid", next.hasBinding("ps") ? next.getValue("ps").stringValue() : null);
-        record.put("severity", next.hasBinding("severity") ? next.getValue("severity").stringValue()
-            : "http://www.w3.org/ns/shacl#Violation");
-
-        constraints.add(record);
 
       }
 

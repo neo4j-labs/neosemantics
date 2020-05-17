@@ -1,0 +1,56 @@
+PREFIX : <http://stardog.com/tutorial/>
+PREFIX sh: <http://www.w3.org/ns/shacl#>
+
+:NameShape a sh:Shape ;
+   sh:property [
+     sh:path :name ;
+     sh:minCount 1 ;
+     sh:datatype xsd:string
+   ] .
+
+:ArtistShape a sh:Shape ;
+   sh:targetClass :Artist ;
+   sh:node :NameShape .
+
+:BandShape a sh:Shape ;
+   sh:targetClass :Band ;
+   sh:not [ sh:class :Person ] ;
+   sh:property :BandMemberShape .
+
+:BandMemberShape a sh:PropertyShape ;
+   sh:path :member ;
+   sh:minCount 1 ;
+   sh:class :SoloArtist .
+
+:AlbumShape a sh:Shape ;
+   sh:targetClass :Album ;
+   sh:node :NameShape ;
+   sh:not [ sh:class :Song ] ;
+   sh:property :AlbumDateShape ;
+   sh:property :AlbumArtistShape ;
+   sh:property :AlbumTrackShape .
+
+:AlbumDateShape a sh:PropertyShape ;
+   sh:path :date ;
+   sh:minCount 1 ;
+   sh:maxCount 1 ;
+   sh:datatype xsd:date .
+
+:AlbumArtistShape a sh:PropertyShape ;
+   sh:path :artist ;
+   sh:minCount 1 ;
+   sh:class :Artist .
+
+:AlbumTrackShape a sh:PropertyShape ;
+   sh:path :track ;
+   sh:minCount 1 ;
+   sh:class :Song .
+
+:SongShape a sh:Shape ;
+   sh:targetClass :Song ;
+   sh:node :NameShape ;
+   sh:property :SongLengthShape .
+
+:SongLengthShape a sh:PropertyShape ;
+   sh:path :length ;
+   sh:datatype xsd:integer .
