@@ -1,11 +1,20 @@
 # neosemantics (n10s)
-![n10s Logo](https://guides.neo4j.com/rdf/n10s.png) neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange.
-This effectively means that neosemantics makes it possible to
+![n10s Logo](https://guides.neo4j.com/rdf/n10s.png) neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange. Some key features of n10s are:
 
-## ⇨ Temporary manual for neosemantics 4.0.0-beta ⇦ 
+* **Store RDF data in Neo4j** in a
+lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
+* On-demand **export property graph data** from Neo4j *as RDF*.
+* Model **validation** based on the **W3C SHACL language**
+* Impoort of **Ontologies and Taxonomies** in **OWL/RDFS/SKOS/...**
 
-⇨ Use this if you want to try neosemantics 4.0.0-beta. We should be publishing a complete manual 
-shortly at the [user manual pages](https://neo4j.com/docs/labs/nsmntx/current/). ⇦
+Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
+
+
+## ⇨ User Manual and Blog ⇦ 
+
+⇨ Check out the complete **[user manual](https://neo4j.com/docs/labs/nsmntx/current/)** with examples of use. ⇦
+
+⇨ [Blog on neosemantics](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
 ## Installation
  
