@@ -117,6 +117,25 @@ public class SHACLValidator {
       + "   \n"
       + "} group by ?ns ?targetClass";
 
+  String NODE_ADDITIONAL_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
+      + "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
+      + "SELECT ?ns ?targetClass (GROUP_CONCAT (distinct ?class; separator=\"---\") AS ?class)\n"
+      + "(GROUP_CONCAT (distinct ?disjointclass; separator=\"---\") AS ?disjointclass)\n"
+      + "{ ?ns a sh:NodeShape .\n"
+      + "  \n"
+      + "   optional { \n"
+      + "     ?ns sh:targetClass  ?targetClass \n"
+      + "   }\n"
+      + "   \n"
+      + "   optional { \n"
+      + "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns)\n"
+      + "   }\n"
+      + "  \n"
+      + "  optional { ?ns sh:not [ sh:class ?disjointclass ].  filter(isIRI(?disjointclass)) }\n"
+      + "  optional { ?ns sh:class ?class .  filter(isIRI(?class)) }\n"
+      + "  filter(bound(?disjointclass) || bound(?class))\n"
+      + "} group by ?ns ?targetClass";
+
   private Transaction tx;
   private Log log;
   private GraphConfig gc;
@@ -424,6 +443,19 @@ public class SHACLValidator {
 
     }
 
+    if (theConstraint.get("disjointClass") != null) {
+
+      for (String uri : (List<String>) theConstraint.get("disjointClass")) {
+        //disjointClasses.add(translateUri(uri));
+        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri))),
+            getDisjointClassesViolationQuery(false), getDisjointClassesViolationQuery(true),
+            focusLabel, translateUri(uri),focusLabel,
+            (String) theConstraint.get("nodeShapeUid"), translateUri(uri),
+            "http://www.w3.org/ns/shacl#Violation", translateUri(uri));
+      }
+
+    }
+
   }
 
   void addPropertyConstraintsToList(Map<String, Object> propConstraint,
@@ -571,6 +603,16 @@ public class SHACLValidator {
           ignoredUrisTranslated));
     }
 
+    if (propConstraint.get("disjointClass") != null) {
+      List<String> disjointClassesRaw = (List<String>) propConstraint.get("disjointClass");
+      for (String x : disjointClassesRaw) {
+        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+            shallIUseUriInsteadOfId() ? "sh:" + SHACL.NOT.getLocalName()
+                : SHACL.NOT.getLocalName(),
+            translateUri(x)));
+      }
+    }
+
   }
 
   private String translateUri(String uri)
@@ -699,6 +741,7 @@ public class SHACLValidator {
 
       }
 
+      //allowed and not-allowed properties in closed node shapes
       tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, NODE_CONSTRAINT_QUERY);
       queryResult = tupleQuery.evaluate();
       while (queryResult.hasNext()) {
@@ -714,6 +757,27 @@ public class SHACLValidator {
         if (next.hasBinding("ignoredProps")) {
           record.put("ignoredProps",
               Arrays.asList(next.getValue("ignoredProps").stringValue().split("---")));
+        }
+        constraints.add(record);
+      }
+
+
+      //additional node constraints (req and disjoint classes)
+      tupleQuery = conn.prepareTupleQuery(QueryLanguage.SPARQL, NODE_ADDITIONAL_CONSTRAINT_QUERY);
+      queryResult = tupleQuery.evaluate();
+      while (queryResult.hasNext()) {
+        Map<String, Object> record = new HashMap<>();
+        BindingSet next = queryResult.next();
+        record.put("appliesToCat", next.getValue("targetClass").stringValue());
+        record
+            .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);
+        if (next.hasBinding("class")) {
+          record.put("reqClass",
+              Arrays.asList(next.getValue("class").stringValue().split("---")));
+        }
+        if (next.hasBinding("disjointclass")) {
+          record.put("disjointClass",
+              Arrays.asList(next.getValue("disjointclass").stringValue().split("---")));
         }
         constraints.add(record);
       }
@@ -835,6 +899,10 @@ public class SHACLValidator {
 
   private String getNodeStructureViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_NODE_STRUCTURE_V_SUFF());
+  }
+
+  private String getDisjointClassesViolationQuery(boolean tx) {
+    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_NODE_DISJOINT_WITH_V_SUFF());
   }
 
 
@@ -1107,6 +1175,16 @@ public class SHACLValidator {
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm(noProp)" : " noProp ") +
         " as propertyName, '%s' as severity, "
         + "'Closed type definition does not include this property/relationship' as message  ";
+  }
+
+  private String CYPHER_NODE_DISJOINT_WITH_V_SUFF() {
+    return " focus:`%s` RETURN " + (
+        shallIUseUriInsteadOfId() ? " focus.uri " : " id(focus) ") +
+        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+        " as nodeType, '%s' as shapeId, '" + SHACL.NOT_CONSTRAINT_COMPONENT
+        + "' as propertyShape, '%s' as offendingValue, "
+        + " '-' as propertyName, '%s' as severity, "
+        + " 'type not allowed: ' + '%s' as message  ";
   }
 
   protected class ShapesUsingNamespaceWithUndefinedPrefix extends Exception {

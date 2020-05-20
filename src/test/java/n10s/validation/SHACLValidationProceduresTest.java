@@ -258,8 +258,8 @@ public class SHACLValidationProceduresTest {
       session.run(
           "CREATE (SleeplessInSeattle:Movie {title:'Sleepless in Seattle', released:1993, tagline:'What if someone you never met, someone you never saw, someone you never knew was the only someone for you?'})\n"
               +
-              "CREATE (NoraE:Person {name:'Nora Ephron', born:1941})\n" +
-              "CREATE (RitaW:Person {name:'Rita Wilson', born:1956})\n" +
+              "CREATE (NoraE:Person:Animal {name:'Nora Ephron', born:1941})\n" +
+              "CREATE (RitaW:Person:Thing {name:'Rita Wilson', born:1956})\n" +
               "CREATE (BillPull:Person {name:'Bill Pullman', born:1953})\n" +
               "CREATE (VictorG:Person {name:'Victor Garber', born:1949})\n" +
               "CREATE (RosieO:Person {name:\"Rosie O'Donnell\", born:1962})\n" +
