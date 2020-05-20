@@ -143,10 +143,13 @@ public class MappingUtils {
     return mappings;
   }
 
-  public static Map<String, String> getExportNsPrefixesFromDB(GraphDatabaseService gds) {
+  public static Map<String, String> getExportNsPrefixesFromDB(GraphDatabaseService gds, boolean lpg) {
     Map<String, String> nsprefixes = new HashMap<>();
     gds.executeTransactionally(
-        "MATCH (mns:_MapNs) WHERE (:_MapDef)-[:_IN]->(mns) RETURN mns._prefix AS prefix, mns._ns AS ns ",
+        (lpg?"MATCH (mns:_MapNs) WHERE (:_MapDef)-[:_IN]->(mns) "
+            + "RETURN mns._prefix AS prefix, mns._ns AS ns " :
+            "MATCH (nspd:`_NsPrefDef`) UNWIND keys(nspd) as key\n"
+                + "RETURN key as prefix, nspd[key] as ns "),
         Collections.emptyMap(), new ResultTransformer<Object>() {
           @Override
           public Object apply(Result result) {
