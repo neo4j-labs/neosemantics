@@ -3,6 +3,7 @@ package n10s.onto.load;
 import java.util.Map;
 import java.util.stream.Stream;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
+import n10s.graphconfig.GraphConfig.InvalidParamException;
 import n10s.onto.OntoProcedures;
 import n10s.rdf.RDFProcedures.ImportResults;
 import org.neo4j.procedure.Description;
@@ -17,7 +18,7 @@ public class OntoLoadProcedures extends OntoProcedures {
   public Stream<ImportResults> fetch(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws GraphConfigNotFound {
+      throws GraphConfigNotFound, InvalidParamException {
 
     return Stream.of(doOntoImport(format, url, null, props));
 
@@ -28,7 +29,7 @@ public class OntoLoadProcedures extends OntoProcedures {
   public Stream<ImportResults> inline(@Name("rdf") String rdf,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws GraphConfigNotFound {
+      throws GraphConfigNotFound, InvalidParamException {
 
     return Stream.of(doOntoImport(format, null, rdf, props));
 

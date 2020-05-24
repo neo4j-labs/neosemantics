@@ -98,10 +98,8 @@ public class CommonProcedures {
     return true;
   }
 
-  protected void parseRDFPayloadOrFromUrl(@Name("format") RDFFormat format, @Name("url") String url,
-      @Name("rdf") String rdfFragment,
-      @Name(value = "params", defaultValue = "{}") Map<String, Object> props,
-      ConfiguredStatementHandler statementLoader) throws IOException {
+  protected void parseRDFPayloadOrFromUrl( RDFFormat format, String url, String rdfFragment,
+     Map<String, Object> props, ConfiguredStatementHandler statementLoader) throws IOException {
     if (rdfFragment != null) {
       instantiateAndKickOffParser(
           new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),

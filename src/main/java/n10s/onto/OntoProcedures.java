@@ -10,6 +10,7 @@ import n10s.ConfiguredStatementHandler.TripleLimitReached;
 import n10s.RDFImportException;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
+import n10s.graphconfig.GraphConfig.InvalidParamException;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.rdf.RDFProcedures.ImportResults;
 import n10s.result.GraphResult;
@@ -38,9 +39,8 @@ public class OntoProcedures extends CommonProcedures {
 
 
   protected ImportResults doOntoImport(String format, String url,
-      String rdfFragment, Map<String, Object> props) throws GraphConfigNotFound {
-
-    props.put("handleVocabUris", "IGNORE");
+      String rdfFragment, Map<String, Object> props)
+      throws GraphConfigNotFound, InvalidParamException {
 
     OntologyImporter ontoImporter = null;
     RDFParserConfig conf;
@@ -48,7 +48,11 @@ public class OntoProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      //this could  be improved
+      GraphConfig graphConfig = new GraphConfig(tx);
+      props.put("handleVocabUris", "IGNORE");
+      graphConfig.add(props);
+      conf = new RDFParserConfig(props, graphConfig);
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e) {
@@ -85,7 +89,11 @@ public class OntoProcedures extends CommonProcedures {
     List<Relationship> virtualRels = new ArrayList<>();
 
     try {
-      conf = new RDFParserConfig(props, new GraphConfig(tx));
+      //this could  be improved
+      GraphConfig graphConfig = new GraphConfig(tx);
+      props.put("handleVocabUris", "IGNORE");
+      graphConfig.add(props);
+      conf = new RDFParserConfig(props, graphConfig);
       rdfFormat = getFormat(format);
       ontoViewer = new OntologyPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
     } catch (RDFImportBadParams e) {
@@ -93,6 +101,8 @@ public class OntoProcedures extends CommonProcedures {
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
           "A Graph Config is required for the Ontology preview procedure to run");
+    } catch (InvalidParamException e) {
+      e.printStackTrace();
     }
 
     if (ontoViewer != null) {

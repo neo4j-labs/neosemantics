@@ -3304,7 +3304,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{ keepLangTag: true, handleMultival: 'ARRAY', handleVocabUris: 'IGNORE' } ");
+          "{ keepLangTag: true, handleMultival: 'ARRAY' } "); //, handleVocabUris: 'IGNORE'
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
