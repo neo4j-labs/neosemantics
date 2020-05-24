@@ -36,7 +36,7 @@ Checking that the logs show the following line on startup:
 YYYY-MM-DD HH:MM:SS.000+0000 INFO  Mounted unmanaged extension [n10s.endpoint] at [/rdf]
 ```
 
-You can also test the extension is mounted by running `:get http://localhost:7474/rdf/n10s/ping` on the neo4j browser and this should return the following message
+You can also test the extension is mounted by running `:get http://localhost:7474/rdf/ping` on the neo4j browser and this should return the following message
 ```
 {"ping":"here!"}
 ```
