@@ -1633,13 +1633,16 @@ public class RDFEndpointTest {
   public void testcypherErrorWhereModelIsNotRDF() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
-    String cypherCreate = " CREATE (:Resource { uri: 'neo4j://ind#123' , name: 'the name' }) ";
+    String cypherCreate = " CREATE (r:Resource { uri: 'neo4j://ind#123' , name: 'the name' }) "
+        + "return id(r) as id";
+    Long id;
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result res = tx.execute(cypherCreate);
+      id = (Long)res.next().get("id");
       tx.commit();
     }
     Map<String, String> params = new HashMap<>();
-    params.put("cypher", "MATCH (n) RETURN *");
+    params.put("cypher", "MATCH (n) RETURN * ");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
@@ -1647,22 +1650,31 @@ public class RDFEndpointTest {
 
     assertEquals(200, response.status());
 
-    String exportedAsLPG = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
-        + "@prefix neoind: <neo4j://individuals#> .\n"
-        + "\n"
-        + "\n"
-        + "neoind:0 a neovoc:Resource;\n"
-        + "  neovoc:name \"the name\";\n"
-        + "  neovoc:uri \"neo4j://ind#123\" .";
-
     assertTrue(ModelTestUtils
-        .compareModels(exportedAsLPG, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+        .compareModels(getExportedAsLPG(id.intValue()), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(" MATCH (n) DETACH DELETE n ");
       tx.execute(" CALL n10s.graphconfig.init({handleVocabUris: 'IGNORE'}) ");
-      tx.execute(cypherCreate);
+      Result res = tx.execute(cypherCreate);
+      id = (Long)res.next().get("id");
+      tx.commit();
+    }
+
+    response = HTTP.withHeaders("Accept", "text/turtle").POST(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        params);
+
+    assertTrue(ModelTestUtils
+        .compareModels(getExportedAsLPG(id.intValue()), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      String cypherRDFCreate = " CREATE (:Resource { uri: 'neo4j://ind#123' , voc__name: 'the name' }) ";
+      tx.execute(" MATCH (n) DETACH DELETE n ");
+      tx.execute(" CALL n10s.graphconfig.init() ");
+      tx.execute("call n10s.nsprefixes.add('voc','neo4j://vocabulary#')");
+      tx.execute(cypherRDFCreate);
       tx.commit();
     }
 
@@ -1680,6 +1692,17 @@ public class RDFEndpointTest {
     assertTrue(ModelTestUtils
         .compareModels(exportedAsRDF, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
+  }
+
+  private String getExportedAsLPG( int id ) {
+    return "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+        + "@prefix neoind: <neo4j://individuals#> .\n"
+        + "\n"
+        + "\n"
+        + "neoind:" + id + " a neovoc:Resource;\n"
+        + "  neovoc:name \"the name\";\n"
+        + "  neovoc:uri \"neo4j://ind#123\" .";
   }
 
 

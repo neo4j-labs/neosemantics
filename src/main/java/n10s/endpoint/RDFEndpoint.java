@@ -1,5 +1,7 @@
 package n10s.endpoint;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;
 import static n10s.mapping.MappingUtils.getExportMappingsFromDB;
@@ -85,8 +87,8 @@ public class RDFEndpoint {
         getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach( (pref,ns) -> writer.handleNamespace(pref,ns));
 
         if (getGraphConfig(tx) == null
-            //|| getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-            //|| getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
             ) {
 
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
@@ -172,7 +174,9 @@ public class RDFEndpoint {
             getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
         getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
-        if (getGraphConfig(tx) == null) {
+        if (getGraphConfig(tx) == null
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
               getExportMappingsFromDB(neo4j), jsonMap.containsKey("mappedElemsOnly"),
               isRdfStarSerialisation(writer.getRDFFormat()));
@@ -216,7 +220,9 @@ public class RDFEndpoint {
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
       try (Transaction tx = neo4j.beginTx()) {
 
-        if (getGraphConfig(tx) == null) {
+        if (getGraphConfig(tx) == null
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx);
           proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         } else {

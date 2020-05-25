@@ -65,7 +65,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
       // Resource and NamespacePrefix should be named _Resource... to avoid conflicts
-      if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")) {
+      if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")
+          && !catName.equals("_n10sValidatorConfig") && !catName.equals("_MapNs")
+          && !catName.equals("_MapDef") && !catName.equals("_GraphConfig")) {
         IRI subject = vf.createIRI(BASE_VOCAB_NS, catName);
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf
@@ -150,7 +152,8 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   @Override
   protected boolean filterNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
     return node.hasLabel(Label.label("_MapDef")) || node.hasLabel(Label.label("_MapNs"))||
-        node.hasLabel(Label.label("_NsPrefDef")) || node.hasLabel(Label.label("_n10sValidatorConfig"));
+        node.hasLabel(Label.label("_NsPrefDef")) || node.hasLabel(Label.label("_n10sValidatorConfig"))
+        || node.hasLabel(Label.label("_GraphConfig"));
   }
 
   @Override

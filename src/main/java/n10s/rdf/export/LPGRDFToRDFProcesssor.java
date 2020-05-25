@@ -69,7 +69,8 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     nodeList.forEach(node -> {
       String catName = node.getAllProperties().get("name").toString();
       if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")
-          && !catName.equals("_GraphConfig")) {
+          && !catName.equals("_GraphConfig") && !catName.equals("_n10sValidatorConfig")
+          && !catName.equals("_MapNs") && !catName.equals("_MapDef") && !catName.equals("_GraphConfig")) {
         IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
@@ -129,88 +130,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       super("RDF Serialization ERROR: ".concat(msg));
     }
   }
-
-
-//  public Stream<Statement> streamTriplesFromCypherOld(String cypher, Map<String, Object> params) {
-//
-//    final Result result = this.tx.execute(cypher, params);
-//    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
-//
-//    Set<ContextResource> serializedNodes = new HashSet<>();
-//
-//    return result.stream().flatMap(  row ->  {
-//      Set<Statement> statementResults = new HashSet<>();
-//      Set<Entry<String, Object>> entries = row.entrySet();
-//
-//      List<Node> nodes = new ArrayList<>();
-//      List<Relationship> rels = new ArrayList<>();
-//      List<Path> paths = new ArrayList<>();
-//
-//      for (Entry<String, Object> entry : entries) {
-//        Object o = entry.getValue();
-//        if (o instanceof Node) {
-//          nodes.add((Node) o);
-//        } else if (o instanceof Relationship) {
-//          rels.add((Relationship) o);
-//        } else if (o instanceof Path) {
-//          paths.add((Path) o);
-//        } else if (o instanceof List){
-//          // This is ugly. Only processes list but not list of lists... or maps... etc...
-//          // but should be good enough.
-//          ((List) o).stream().forEach( x ->  { if (x instanceof Node) {
-//            nodes.add((Node) x);
-//          } else if (x instanceof Relationship) {
-//            rels.add((Relationship) x);
-//          } else if (x instanceof Path) {
-//            paths.add((Path) x);
-//          } } );
-//        }
-//
-//        for (Node node : nodes) {
-//          ContextResource currentContextResource = new ContextResource(
-//              node.hasProperty("uri") ?
-//                  node.getProperty("uri").toString() : null,
-//              node.hasProperty("graphUri") ?
-//                  node.getProperty("graphUri").toString() : null);
-//          if (node.hasLabel(Label.label("Resource")) &&
-//              !serializedNodes.contains(currentContextResource)) {
-//            statementResults.addAll(processNode(node));
-//            serializedNodes.add(currentContextResource);
-//          }
-//        }
-//
-//        for (Relationship rel : rels) {
-//          Statement baseStatement = processRelationship((Relationship) o);
-//          statementResults.add(baseStatement);
-//          rel.getAllProperties().forEach((k,v) ->  processPropertyOnRel(statementResults, baseStatement,k,v));
-//
-//        }
-//
-//
-//        for (Path path : paths) {
-//          path.nodes().forEach(n -> {
-//            ContextResource currentContextResource = new ContextResource(
-//                n.hasProperty("uri") ?
-//                    n.getProperty("uri").toString() : null,
-//                n.hasProperty("graphUri") ?
-//                    n.getProperty("graphUri").toString() : null);
-//            if (StreamSupport.stream(n.getLabels().spliterator(), false)
-//                .anyMatch(name -> Label.label("Resource").equals(name)) &&
-//                !serializedNodes.contains(currentContextResource)) {
-//              statementResults.addAll(processNode(n));
-//              serializedNodes.add(currentContextResource);
-//            }
-//          });
-//
-//          path.relationships().forEach(
-//              r -> statementResults.addAll(processRelationship(r)));
-//
-//        }
-//
-//  }
-//      });
-//    return statementResults.stream();
-//  }
 
   public Stream<Statement> streamNodeByUri(String uri, String graphId, boolean excludeContext) {
 
