@@ -138,7 +138,7 @@ public class MappingUtilsTest {
       assertTrue(session.run("call n10s.mapping.add(\"http://schema.org/Person\",\"Person\")").hasNext());
       assertTrue(session.run("call n10s.mapping.add(\"http://schema.org/name\",\"name\")").hasNext());
 
-      assertEquals("successfully deleted mapping",
+      assertEquals("mapping successfully deleted",
           session.run("CALL n10s.mapping.drop('Movie')").next().get("output")
               .asString());
       assertEquals(2, session
@@ -181,7 +181,7 @@ public class MappingUtilsTest {
       assertEquals(3, session
           .run("CALL n10s.mapping.list() yield elemName RETURN count(elemName) as ct ")
           .next().get("ct").asInt());
-      assertEquals("successfully deleted mapping",
+      assertEquals("mapping successfully deleted",
           session.run("CALL n10s.mapping.drop('ABC')").next()
               .get("output").asString());
       assertEquals(2, session

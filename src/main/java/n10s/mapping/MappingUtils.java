@@ -102,13 +102,27 @@ public class MappingUtils {
 
 
   @Procedure(mode = Mode.WRITE)
-  public Stream<StringOutput> drop(@Name("graphElementName") String gElem) {
-    String cypher = "MATCH (elem:_MapDef { _key : $local }) DETACH DELETE elem RETURN count(elem) AS ct";
+  public Stream<StringOutput> drop(@Name("graphElementName") String gElem)
+      throws MappingDefinitionException {
+    String cypher = "MATCH (mapns)<-[:_IN]-(elem:_MapDef { _key : $local }) DETACH DELETE elem "
+        + "RETURN count(elem) AS deletecount, size((mapns)<-[:_IN]-()) AS remaining, mapns ";
     Map<String, Object> params = new HashMap<>();
     params.put("local", gElem);
-    return Stream.of(new StringOutput(
-        ((Long) tx.execute(cypher, params).next().get("ct")).equals(1L)
-            ? "successfully deleted mapping" : "mapping not found"));
+    Result queryResult = tx.execute(cypher, params);
+    if (!queryResult.hasNext()){
+      return Stream.of(new StringOutput("mapping not found"));
+    } else{
+      Map<String, Object> singleRecord = queryResult.next();
+      if(!((Long)singleRecord.get("deletecount")).equals(1L)){
+        throw new MappingDefinitionException("multiple mappings found for elem " + gElem);
+      }
+      Long mappingsRemaining = (Long)singleRecord.get("remaining");
+      if (mappingsRemaining == 0) {
+        Node nsNode = (Node) singleRecord.get("mapns");
+        nsNode.delete();
+      }
+      return Stream.of(new StringOutput("mapping successfully deleted"));
+    }
   }
 
   @Procedure(mode = Mode.READ)

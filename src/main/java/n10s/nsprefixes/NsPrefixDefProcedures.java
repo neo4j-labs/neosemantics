@@ -1,5 +1,7 @@
 package n10s.nsprefixes;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -51,6 +53,9 @@ public class NsPrefixDefProcedures {
     if (!graphIsEmpty()) {
       throw new NsPrefixOperationNotAllowed("A namespace prefix definition cannot be removed "
           + "when the graph is non-empty.");
+    } else if (mappingsDefinedOnNamespace(prefix)){
+      throw new NsPrefixOperationNotAllowed("This namespace prefix definition cannot be removed "
+          + "because mapping definitions based on it exist. Remove mappings first and try again.");
     }
     NsPrefixMap map = new NsPrefixMap(tx, true);
     map.removePrefix(prefix);
@@ -59,6 +64,13 @@ public class NsPrefixDefProcedures {
     return map.getPrefixToNs().entrySet().stream()
         .map(n -> new NamespacePrefixesResult(n.getKey(), n.getValue()));
 
+  }
+
+  private boolean mappingsDefinedOnNamespace(String prefix) {
+    Map<String,Object> params = new HashMap<>();
+    params.put("prefix", prefix);
+    return ((Long)tx
+        .execute("MATCH (n:`_MapNs` { _prefix: $prefix }) RETURN count(n) as ct", params).next().get("ct")) >  0;
   }
 
   @Procedure(mode = Mode.WRITE)
