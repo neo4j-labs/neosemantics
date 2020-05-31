@@ -9,6 +9,7 @@ import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 import javax.lang.model.SourceVersion;
+import n10s.quadrdf.ContextResource;
 import n10s.quadrdf.RDFQuadDirectStatementDeleter;
 import n10s.quadrdf.RDFQuadDirectStatementLoader;
 import org.neo4j.graphdb.GraphDatabaseService;

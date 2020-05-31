@@ -9,6 +9,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Stream;
+import n10s.graphconfig.GraphConfig;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.ValueFactory;
@@ -17,6 +19,7 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.ResourceIterator;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
@@ -26,10 +29,12 @@ public abstract class ExportProcessor {
   protected GraphDatabaseService graphdb;
   protected final ValueFactory vf = SimpleValueFactory.getInstance();
   protected boolean exportPropertiesInRels;
+  protected GraphConfig graphConfig;
 
-  public ExportProcessor(Transaction tx, GraphDatabaseService graphdb) {
+  public ExportProcessor(Transaction tx, GraphDatabaseService graphdb, GraphConfig gc) {
     this.tx = tx;
     this.graphdb = graphdb;
+    this.graphConfig = gc;
   }
 
   public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
@@ -73,7 +78,7 @@ public abstract class ExportProcessor {
         //Do we need to keep a list of serializednodeids?
         if (!serializedNodeIds.contains(node.getId()) && !filterNode(node, ontologyEntitiesUris)) {
           serializedNodeIds.add(node.getId());
-          rowResult.addAll(processNode(node, ontologyEntitiesUris));
+          rowResult.addAll(processNode(node, ontologyEntitiesUris, null));
         }
       }
 
@@ -94,7 +99,7 @@ public abstract class ExportProcessor {
                 Node node = (Node) propertyContainer;
                 if (!serializedNodeIds.contains(node.getId())&&!filterNode(node,  ontologyEntitiesUris)) {
                   serializedNodeIds.add(node.getId());
-                  rowResult.addAll(processNode(node, ontologyEntitiesUris));
+                  rowResult.addAll(processNode(node, ontologyEntitiesUris, null));
                 }
               } else if (propertyContainer instanceof Relationship &&
                   !filterRelationship((Relationship) propertyContainer, ontologyEntitiesUris)) {
@@ -122,6 +127,8 @@ public abstract class ExportProcessor {
 
   protected abstract Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);
 
-  protected abstract Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris);
+  protected abstract Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter);
 
+  public abstract Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
+      throws InvalidNamespacePrefixDefinitionInDB;
 }

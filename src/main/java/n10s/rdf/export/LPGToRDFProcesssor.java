@@ -15,6 +15,7 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.Params;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -39,21 +40,14 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
 
-
-  public LPGToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx) {
-
-    super(tx, graphdb);
-    this.exportMappings = new HashMap<>();
-    this.exportOnlyMappedElems = false;
-  }
-
   public LPGToRDFProcesssor(GraphDatabaseService gds, Transaction tx,
-      Map<String, String> exportMappings,
+      GraphConfig gc, Map<String, String> exportMappings,
       boolean mappedElemsOnly, boolean isRDFStarSerialisation) {
-    super(tx,gds);
+    super(tx,gds, gc);
     this.exportMappings = exportMappings;
     this.exportPropertiesInRels = isRDFStarSerialisation;
     this.exportOnlyMappedElems = mappedElemsOnly;
+
 
   }
 
@@ -130,7 +124,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   public Stream<Statement> streamNodeById(Long nodeId, boolean streamContext) {
     Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
     Node node = this.tx.getNodeById(nodeId);
-    Set<Statement> result = processNode(node, ontologyEntitiesUris);
+    Set<Statement> result = processNode(node, ontologyEntitiesUris, null);
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
@@ -187,7 +181,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
         (valType == null ? propVal : castValue(valType, propVal)));
     while (nodes.hasNext()) {
       Node node = nodes.next();
-      result.addAll(processNode(node, ontologyEntitiesUris));
+      result.addAll(processNode(node, ontologyEntitiesUris, null));
       if (includeContext) {
         Iterable<Relationship> relationships = node.getRelationships();
         for (Relationship rel : relationships) {
@@ -274,7 +268,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 
   @Override
-  protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+  protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     Set<Statement> statements = new HashSet<>();
     List<Label> nodeLabels = new ArrayList<>();
     node.getLabels().forEach(l -> nodeLabels.add(l));
@@ -337,6 +331,12 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
     }
     return statements;
+  }
+
+  @Override
+  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp) {
+    //TODO: DO
+    return null;
   }
 
 

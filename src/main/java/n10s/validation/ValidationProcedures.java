@@ -10,7 +10,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 import n10s.CommonProcedures;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import n10s.validation.SHACLValidator.ShapesUsingNamespaceWithUndefinedPrefix;
+import n10s.utils.UriUtils.UriNamespaceHasNoAssociatedPrefix;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.procedure.Description;
@@ -55,7 +55,7 @@ public class ValidationProcedures extends CommonProcedures {
   public Stream<ConstraintComponent> importInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     return doLoad(format, null, rdfFragment, props).stream();
   }
@@ -65,7 +65,7 @@ public class ValidationProcedures extends CommonProcedures {
   public Stream<ConstraintComponent> importSHACLFromURL(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     return doLoad(format, url, null, props).stream();
 
@@ -73,7 +73,7 @@ public class ValidationProcedures extends CommonProcedures {
 
   private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment,
       Map<String, Object> props)
-      throws IOException, RDFImportBadParams, ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     InputStream is;
     if (rdfFragment != null) {

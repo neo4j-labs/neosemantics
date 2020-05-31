@@ -34,7 +34,7 @@ public class RDFExportProcedures extends RDFProcedures {
 
   @Procedure(mode = Mode.READ)
   @Description(
-      "[Experimental] Executes a cypher query returning graph elements (nodes,rels) and serialises "
+      "Executes a cypher query returning graph elements (nodes,rels) and serialises "
           + "the output as triples.")
   public Stream<StreamedStatement> cypher(@Name("cypher") String cypher,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
@@ -43,17 +43,52 @@ public class RDFExportProcedures extends RDFProcedures {
     ExportProcessor proc;
 
     boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
-
-    if (getGraphConfig(tx) == null) {
-      proc = new LPGToRDFProcesssor(db, tx,
+    GraphConfig gc = getGraphConfig(tx);
+    if (gc == null) {
+      proc = new LPGToRDFProcesssor(db, tx, gc,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
           props.get("mappedElemsOnly").equals(true), rdfstar);
     } else {
-      proc = new LPGRDFToRDFProcesssor(db, tx, rdfstar);
+      proc = new LPGRDFToRDFProcesssor(db, tx, gc,  rdfstar);
     }
     return proc.streamTriplesFromCypher(cypher,
         (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :
             new HashMap<>())).map(st -> new StreamedStatement(
+        st.getSubject().stringValue(), st.getPredicate().stringValue(),
+        st.getObject().stringValue(), st.getObject() instanceof Literal,
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
+            : null),
+        (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getLanguage().orElse(null)
+            : null)
+    ));
+
+  }
+
+
+  @Procedure(mode = Mode.READ)
+  @Description(
+      "Returns the triples matching the spo pattern passed as parameter.")
+  public Stream<StreamedStatement> triplePattern(@Name("subject") String subject,
+      @Name("predicate") String predicate, @Name("object") String object,
+      @Name("isLiteral") Boolean isLiteral, @Name("literalType") String literalType,
+      @Name("literalLang") String literalLang, @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      throws InvalidNamespacePrefixDefinitionInDB {
+
+    ExportProcessor proc;
+
+    boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
+
+    //HERE
+    GraphConfig gc = getGraphConfig(tx);
+    if (gc == null) {
+      proc = new LPGToRDFProcesssor(db, tx, gc,
+          getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
+          props.get("mappedElemsOnly").equals(true), rdfstar);
+    } else {
+      proc = new LPGRDFToRDFProcesssor(db, tx, gc, rdfstar);
+    }
+    return proc.streamTriplesFromTriplePattern( new TriplePattern( subject, predicate, object,
+        isLiteral, literalType, literalLang)).map(st -> new StreamedStatement(
         st.getSubject().stringValue(), st.getPredicate().stringValue(),
         st.getObject().stringValue(), st.getObject() instanceof Literal,
         (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()

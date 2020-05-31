@@ -12,12 +12,12 @@ public class StreamedStatement {
   public StreamedStatement(String subj, String pred, String obj, boolean isLiteral,
       String literalType, String lang) {
 
-    subject = subj;
-    predicate = pred;
-    object = obj;
+    this.subject = subj;
+    this.predicate = pred;
+    this.object = obj;
     this.isLiteral = isLiteral;
     this.literalType = literalType;
-    literalLang = lang;
+    this.literalLang = lang;
   }
 
 }

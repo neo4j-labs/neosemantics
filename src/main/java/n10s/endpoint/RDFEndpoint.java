@@ -85,13 +85,12 @@ public class RDFEndpoint {
       try (Transaction tx = neo4j.beginTx()) {
 
         getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach( (pref,ns) -> writer.handleNamespace(pref,ns));
-
-        if (getGraphConfig(tx) == null
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
+        GraphConfig gc = getGraphConfig(tx);
+        if ( gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
             ) {
 
-          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
+          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx, gc,
               getExportMappingsFromDB(neo4j), onlyMappedInfo != null,
               isRdfStarSerialisation(writer.getRDFFormat()));
 
@@ -99,7 +98,7 @@ public class RDFEndpoint {
               .forEach(writer::handleStatement);
         } else {
           //it's rdf
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx, isRdfStarSerialisation(writer.getRDFFormat()));
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx, gc, isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamNodeByUri(nodeIdentifier, namedGraphId, excludeContextParam != null).forEach(
               writer::handleStatement);
         }
@@ -140,8 +139,9 @@ public class RDFEndpoint {
       GraphDatabaseService neo4j = gds.database(dbNameParam);
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, false);
       try (Transaction tx = neo4j.beginTx()) {
-        getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
-        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
+        GraphConfig gc = getGraphConfig(tx);
+        getExportNsPrefixesFromDB(neo4j, gc == null).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
+        LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx, gc,
             getExportMappingsFromDB(neo4j), onlyMappedInfo != null,
             isRdfStarSerialisation(writer.getRDFFormat()));
         proc.streamNodesBySearch(label, property, propVal, valType, excludeContextParam == null)
@@ -173,11 +173,13 @@ public class RDFEndpoint {
         RDFWriter writer = startRdfWriter(
             getFormat(acceptHeaderParam, (String) jsonMap.get("format")), outputStream, false);
 
-        getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
-        if (getGraphConfig(tx) == null
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
-          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx,
+        GraphConfig gc = getGraphConfig(tx);
+
+        getExportNsPrefixesFromDB(neo4j, gc == null).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
+
+        if (gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
+          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx, gc,
               getExportMappingsFromDB(neo4j), jsonMap.containsKey("mappedElemsOnly"),
               isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
@@ -185,7 +187,7 @@ public class RDFEndpoint {
                   .getOrDefault("cypherParams", new HashMap<String, Object>())).forEach(
               writer::handleStatement);
         } else {
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx,
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx, gc,
               isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamTriplesFromCypher((String) jsonMap.get("cypher"),
               (Map<String, Object>) jsonMap
@@ -219,14 +221,13 @@ public class RDFEndpoint {
       GraphDatabaseService neo4j = gds.database(dbNameParam);
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream, true);
       try (Transaction tx = neo4j.beginTx()) {
-
-        if (getGraphConfig(tx) == null
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-            || getGraphConfig(tx).getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
-          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx);
+        GraphConfig gc = getGraphConfig(tx);
+        if ( gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
+          LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx, gc, null, false, false);
           proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         } else {
-          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx,
+          LPGRDFToRDFProcesssor proc = new LPGRDFToRDFProcesssor(neo4j, tx, gc,
               isRdfStarSerialisation(writer.getRDFFormat()));
           proc.streamLocalImplicitOntology().forEach(writer::handleStatement);
         }

@@ -363,26 +363,36 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     Resource subject = st.getSubject();
     Value object = st.getObject();
 
+
+    String subjectUri = (subject instanceof BNode? "bnode://" + subject.stringValue(): subject.stringValue());
+
     if (parserConfig.getPredicateExclusionList() == null || !parserConfig
         .getPredicateExclusionList()
         .contains(predicate.stringValue()))
     // filter by predicate
     {
       if(subject instanceof Triple){
-        if (!(((Triple)subject).getObject() instanceof Literal ||
-            ((Triple)subject).getPredicate().equals(RDF.TYPE)) && object instanceof Literal){
+        //RDF* only parsed when triples used as subject (i.e. to store relationship properties)
+        Triple reifiedStatement = (Triple) subject;
+        if (!(reifiedStatement.getObject() instanceof Literal ||
+            reifiedStatement.getPredicate().equals(RDF.TYPE)) && object instanceof Literal){
             //reified datatype property statements cannot be easily mapped to a PG. Ignore
-          addResource(((Triple)subject).getSubject().stringValue());
-          addResource(((Triple)subject).getObject().stringValue());
-          Statement stmt = vf.createStatement(((Triple) subject).getSubject(),
-              ((Triple) subject).getPredicate(), ((Triple) subject).getObject());
+          String subjectUri1 = reifiedStatement.getSubject() instanceof BNode? "bnode://" +
+                  reifiedStatement.getSubject().stringValue(): reifiedStatement.getSubject().stringValue();
+          String objectUri1 = reifiedStatement.getObject() instanceof BNode? "bnode://" +
+                  reifiedStatement.getObject().stringValue(): reifiedStatement.getObject().stringValue();
+
+          addResource(subjectUri1);
+          addResource(objectUri1);
+          Statement stmt = vf.createStatement(vf.createIRI(subjectUri1),
+              reifiedStatement.getPredicate(), vf.createIRI(objectUri1));
           addStatement(stmt);
           addRelProp(stmt, predicate, (Literal)object);
           mappedTripleCounter++;
         }
       } else if (object instanceof Literal) {
         // DataType property
-        if (setProp(subject.stringValue(), predicate, (Literal) object)) {
+        if (setProp(subjectUri, predicate, (Literal) object)) {
           // property may be filtered because of lang filter hence the conditional increment.
           mappedTripleCounter++;
         }
@@ -391,21 +401,25 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
           && predicate.equals(RDF.TYPE)
           && !(object instanceof BNode)) {
 
-        setLabel(subject.stringValue(), handleIRI((IRI) object, LABEL));
+        setLabel(subjectUri, handleIRI((IRI) object, LABEL));
 
         if (parserConfig.getGraphConf().getHandleRDFTypes()
             == GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES) {
-          addResource(subject.stringValue());
+          addResource(subjectUri);
           addResource(object.stringValue());
-          addStatement(st);
+          //addStatement(st);
+          addStatement(vf.createStatement(vf.createIRI(subjectUri),
+                  predicate, object));
         }
 
         mappedTripleCounter++;
 
       } else {
-        addResource(subject.stringValue());
-        addResource(object.stringValue());
-        addStatement(st);
+        addResource(subjectUri);
+        String objectUri = object instanceof BNode? "bnode://" + object.stringValue(): object.stringValue();
+        addResource(objectUri);
+        addStatement(vf.createStatement(vf.createIRI(subjectUri),
+                predicate, vf.createIRI(objectUri)));
         mappedTripleCounter++;
       }
     }

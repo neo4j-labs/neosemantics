@@ -1,13 +1,11 @@
 package n10s.validation;
 
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_MODE_LPG;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_KEEP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static n10s.utils.UriUtils.translateUri;
 
-import com.github.jsonldjava.core.RDFDataset.BlankNode;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -20,12 +18,10 @@ import java.util.Map;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import n10s.utils.NsPrefixMap;
+import n10s.utils.UriUtils.UriNamespaceHasNoAssociatedPrefix;
 import org.eclipse.rdf4j.model.BNode;
-import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
@@ -154,7 +150,7 @@ public class SHACLValidator {
 
 
   protected ValidatorConfig compileValidations(Iterator<Map<String, Object>> constraints)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     ValidatorConfig vc = new ValidatorConfig();
 
@@ -178,11 +174,11 @@ public class SHACLValidator {
   }
 
   protected void processConstraint(Map<String, Object> theConstraint, ValidatorConfig vc)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
-    String focusLabel = translateUri((String) theConstraint.get("appliesToCat"));
+    String focusLabel = translateUri((String) theConstraint.get("appliesToCat"), tx, gc);
     String propOrRel =
-        theConstraint.containsKey("item") ? translateUri((String) theConstraint.get("item")) : null;
+        theConstraint.containsKey("item") ? translateUri((String) theConstraint.get("item"), tx, gc) : null;
     String severity = theConstraint.containsKey("severity") ? (String) theConstraint.get("severity")
         : SHACL.VIOLATION.stringValue();
 
@@ -256,14 +252,14 @@ public class SHACLValidator {
     if (theConstraint.get("rangeType") != null && !theConstraint.get("rangeType")
         .equals("")) {
       addCypherToValidationScripts(vc, new ArrayList<String>(
-              Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType")))),
+              Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType"), tx, gc))),
           getRangeType1ViolationQuery(false), getRangeType1ViolationQuery(true), focusLabel,
           propOrRel,
-          translateUri((String) theConstraint.get("rangeType")),
+          translateUri((String) theConstraint.get("rangeType"), tx, gc),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
-          translateUri((String) theConstraint.get("rangeType")));
+          translateUri((String) theConstraint.get("rangeType"), tx, gc));
       addCypherToValidationScripts(vc, new ArrayList<String>(
-              Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType")))),
+              Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType"), tx, gc))),
           getRangeType2ViolationQuery(false), getRangeType2ViolationQuery(true), focusLabel,
           propOrRel,
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
@@ -422,13 +418,13 @@ public class SHACLValidator {
       List<String> allowedPropsTranslated = new ArrayList<>();
       for (String uri : (List<String>) theConstraint.get("ignoredProps")) {
         if (!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-          allowedPropsTranslated.add(translateUri(uri));
+          allowedPropsTranslated.add(translateUri(uri, tx, gc));
         }
       }
       if (theConstraint.get("definedProps") != null) {
         for (String uri : (List<String>) theConstraint.get("definedProps")) {
           if (!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-            allowedPropsTranslated.add(translateUri(uri));
+            allowedPropsTranslated.add(translateUri(uri, tx, gc));
           }
         }
       }
@@ -447,11 +443,11 @@ public class SHACLValidator {
 
       for (String uri : (List<String>) theConstraint.get("disjointClass")) {
         //disjointClasses.add(translateUri(uri));
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri))),
+        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri, tx, gc))),
             getDisjointClassesViolationQuery(false), getDisjointClassesViolationQuery(true),
-            focusLabel, translateUri(uri),focusLabel,
-            (String) theConstraint.get("nodeShapeUid"), translateUri(uri),
-            "http://www.w3.org/ns/shacl#Violation", translateUri(uri));
+            focusLabel, translateUri(uri, tx, gc),focusLabel,
+            (String) theConstraint.get("nodeShapeUid"), translateUri(uri, tx, gc),
+            "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc));
       }
 
     }
@@ -460,11 +456,11 @@ public class SHACLValidator {
 
   void addPropertyConstraintsToList(Map<String, Object> propConstraint,
       ValidatorConfig vc)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
+      throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
-    String focusLabel = translateUri((String) propConstraint.get("appliesToCat"));
+    String focusLabel = translateUri((String) propConstraint.get("appliesToCat"), tx, gc);
     String propOrRel =
-        propConstraint.containsKey("item") ? translateUri((String) propConstraint.get("item"))
+        propConstraint.containsKey("item") ? translateUri((String) propConstraint.get("item"), tx, gc)
             : null;
     //TODO: add severity and inverse
     //String severity = (String) propConstraint.get("severity");
@@ -508,7 +504,7 @@ public class SHACLValidator {
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
           shallIUseUriInsteadOfId() ? "sh:" + SHACL.CLASS.getLocalName()
               : SHACL.CLASS.getLocalName(),
-          translateUri((String) propConstraint.get("rangeType"))));
+          translateUri((String) propConstraint.get("rangeType"), tx, gc)));
     }
 
     if (propConstraint.get("inLiterals") != null) {
@@ -594,7 +590,7 @@ public class SHACLValidator {
       List<String> ignoredUrisTranslated = new ArrayList<>();
       for (String x : ignoredUrisRaw) {
         if (!x.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
-          ignoredUrisTranslated.add(translateUri(x));
+          ignoredUrisTranslated.add(translateUri(x, tx, gc));
         }
       }
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -609,36 +605,10 @@ public class SHACLValidator {
         vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
             shallIUseUriInsteadOfId() ? "sh:" + SHACL.NOT.getLocalName()
                 : SHACL.NOT.getLocalName(),
-            translateUri(x)));
+            translateUri(x, tx, gc)));
       }
     }
 
-  }
-
-  private String translateUri(String uri)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
-    if (gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) {
-      return uri.substring(URIUtil.getLocalNameIndex(uri));
-    } else if (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
-        gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
-        gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
-      return getShortForm(uri);
-    } else {
-      //it's GRAPHCONF_VOC_URI_KEEP
-      return uri;
-    }
-  }
-
-  private String getShortForm(String str)
-      throws ShapesUsingNamespaceWithUndefinedPrefix, InvalidNamespacePrefixDefinitionInDB {
-    IRI iri = SimpleValueFactory.getInstance().createIRI(str);
-    NsPrefixMap prefixDefs = new NsPrefixMap(tx, false);
-    if (!prefixDefs.hasNs(iri.getNamespace())) {
-      throw new ShapesUsingNamespaceWithUndefinedPrefix(
-          "Prefix Undefined: No prefix defined for namespace <" + str
-              + ">. Use n10s.nsprefixes.add(...) procedure.");
-    }
-    return prefixDefs.getPrefixForNs(iri.getNamespace()) + PREFIX_SEPARATOR + iri.getLocalName();
   }
 
   private Map<String, Object> createNewSetOfParams(Map<String, Object> allParams, String id) {
@@ -1187,10 +1157,4 @@ public class SHACLValidator {
         + " 'type not allowed: ' + '%s' as message  ";
   }
 
-  protected class ShapesUsingNamespaceWithUndefinedPrefix extends Exception {
-
-    public ShapesUsingNamespaceWithUndefinedPrefix(String message) {
-      super(message);
-    }
-  }
 }

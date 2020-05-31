@@ -1,31 +1,33 @@
 package n10s.rdf.export;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static n10s.utils.UriUtils.translateUri;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
-import n10s.ContextResource;
+import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.Params;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
+import n10s.utils.UriUtils.UriNamespaceHasNoAssociatedPrefix;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
@@ -33,11 +35,12 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Label;
 import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
 import org.neo4j.graphdb.Relationship;
+import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 
@@ -51,9 +54,9 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   private final NsPrefixMap namespaces;
 
 
-  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx, boolean isRDFStarSerialisation)
+  public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx, GraphConfig gc, boolean isRDFStarSerialisation)
       throws InvalidNamespacePrefixDefinitionInDB {
-    super(tx,graphdb);
+    super(tx,graphdb, gc);
     this.exportPropertiesInRels = isRDFStarSerialisation;
     this.namespaces = new NsPrefixMap(tx, false);
 
@@ -171,7 +174,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       Node node = (Node) row.get("x");
       if (!doneOnce) {
         //Output only once the props of the selected node as literal properties
-        statementResults.addAll(processNode(node, null));
+        statementResults.addAll(processNode(node, null, null));
         doneOnce = true;
       }
       Relationship rel = (Relationship) row.get("r");
@@ -225,25 +228,28 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   }
 
   @Override
-  protected Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris) {
+  protected Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     //TODO:  Ontology entities not used here. Rethink???
     Set<Statement> result = new HashSet<>();
-    Iterable<Label> nodeLabels = node.getLabels();
-    for (Label label : nodeLabels) {
-      if (!label.name().equals("Resource")) {
-        result.add(vf.createStatement(
-            buildSubjectOrContext(node.getProperty("uri").toString()),
-            RDF.TYPE,
-            vf.createIRI(buildURI(BASE_VOCAB_NS, label.name())),
-            node.hasProperty("graphUri") ? vf
-                .createIRI(node.getProperty("graphUri").toString()) : null));
+    if(propNameFilter==null || propNameFilter.equals(RDF.TYPE.stringValue())) {
+      //labels  not to be exported if there's a filter on the property
+      Iterable<Label> nodeLabels = node.getLabels();
+      for (Label label : nodeLabels) {
+        if (!label.name().equals("Resource")) {
+          result.add(vf.createStatement(
+              buildSubjectOrContext(node.getProperty("uri").toString()),
+              RDF.TYPE,
+              vf.createIRI(buildURI(BASE_VOCAB_NS, label.name())),
+              node.hasProperty("graphUri") ? vf
+                  .createIRI(node.getProperty("graphUri").toString()) : null));
 
+        }
       }
     }
 
     Map<String, Object> allProperties = node.getAllProperties();
     for (String key : allProperties.keySet()) {
-      if (!key.equals("uri") && !key.equals("graphUri")) {
+      if (!key.equals("uri") && !key.equals("graphUri") && (propNameFilter==null || key.equals(propNameFilter))) {
         Resource subject = buildSubjectOrContext(node.getProperty("uri").toString());
         IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key));
         Object propertyValueObject = allProperties.get(key);
@@ -302,6 +308,186 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       }
     }
     return result;
+  }
+
+  @Override
+  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
+      throws InvalidNamespacePrefixDefinitionInDB {
+
+    if (tp.getSubject() != null){
+      Set<Statement> allStatements = new HashSet<>();
+      Node resource = tx.findNode(Label.label("Resource"), "uri", tp.getSubject());
+      String predicate = null;
+      try {
+        predicate = tp.getPredicate() != null?translateUri(tp.getPredicate(),tx, graphConfig):null;
+      }  catch (UriNamespaceHasNoAssociatedPrefix e) {
+        //graph is in shorten mode but the uri in the filter is not in use in the graph
+        predicate = tp.getPredicate();
+        //ugly way of making the filter not return anything.
+      }
+      if(tp.getObject()==null) {
+        //labels and properties
+        allStatements.addAll(processNode(resource, null, predicate));
+        //relationships
+        Iterable<Relationship> relationships =
+            tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
+                Direction.OUTGOING, RelationshipType.withName(predicate));
+        for(Relationship r:relationships){
+          allStatements.add(processRelationship(r, null));
+        }
+      } else {
+        //filter on value (object)
+        Value object = getValueFromTriplePatternObject(tp);
+        allStatements.addAll(processNode(resource, null, predicate).stream()
+            .filter(st -> st.getObject().equals(object)).collect(Collectors.toSet()));
+
+        //if filter on object  is of type literal then we  can skip the rels, it will be a prop
+        if(!tp.getLiteral()) {
+          Iterable<Relationship> relationships =
+              tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING)
+                  : resource.getRelationships(
+                      Direction.OUTGOING, RelationshipType.withName(predicate));
+          for (Relationship r : relationships) {
+            if (r.getOtherNode(resource).getProperty("uri").equals(object)) {
+              allStatements.add(processRelationship(r, null));
+            }
+          }
+        }
+      }
+      return allStatements.stream();
+    }
+    else {
+      String predicate = null;
+      try {
+        predicate = tp.getPredicate() != null?translateUri(tp.getPredicate(),tx, graphConfig):null;
+      }  catch (UriNamespaceHasNoAssociatedPrefix e) {
+        //graph is in shorten mode but the uri in the filter is not in use in the graph
+        predicate = tp.getPredicate();
+        //ugly way of making the filter not return anything.
+      }
+      if(tp.getObject()==null) {
+        //null,x,null
+        Result result;
+        if(predicate!=null) {
+          //null, pred, null
+          if(tp.getPredicate().equals(RDF.TYPE.stringValue()) &&
+              graphConfig.getHandleRDFTypes()== GRAPHCONF_RDFTYPES_AS_LABELS){
+            result = tx.execute("MATCH (r:Resource) WHERE size(labels(r))>1 RETURN r");
+          }  else {
+            result = tx.execute(String
+                .format("MATCH (r:Resource) WHERE exists(r.`%s`) RETURN r\n"
+                        + "UNION \n"
+                        + "MATCH (:Resource)-[r:`%s`]->() RETURN r",
+                    predicate, predicate));
+          }
+        } else {
+          //no subject, pred, no object: null, null, null -> return all triples
+          result = tx.execute("MATCH (r:Resource) RETURN r\n"
+                      + "UNION \n"
+                      + "MATCH (:Resource)-[r]->() RETURN r");
+        }
+        String finalPredicate = predicate;
+        return result.stream().flatMap(row -> {
+          Set<Statement> rowResult = new HashSet<>();
+          Object r = row.get("r");
+          if (r instanceof Node) {
+            rowResult.addAll(processNode((Node) r, null, finalPredicate));
+          } else if (r instanceof Relationship) {
+            rowResult.add(processRelationship((Relationship) r, null));
+          }
+          return rowResult.stream();
+        });
+      } else {
+        //filter on value (object)
+        Value object = getValueFromTriplePatternObject(tp);
+        Result result;
+        Map<String, Object> params = new HashMap<>();
+        if(predicate!=null) {
+          // null, pred, obj
+          if(tp.getPredicate().equals(RDF.TYPE.stringValue()) &&
+              graphConfig.getHandleRDFTypes()== GRAPHCONF_RDFTYPES_AS_LABELS){
+            String objectAsShortenedUri = null;
+            if (object instanceof IRI) {
+              try {
+                objectAsShortenedUri = translateUri(object.stringValue(), tx, graphConfig);
+              } catch (UriNamespaceHasNoAssociatedPrefix e) {
+                //TODO: is this ok
+                e.printStackTrace();
+              }
+            } else {
+              //TODO: maye this should just folllow the previous for the  case of the exception
+              // otherwise objectAsShortenedUri stays null. -->> UnitTest
+              objectAsShortenedUri = "____";
+            }
+            result = tx.execute(String.format("MATCH (r:`%s`) RETURN r",objectAsShortenedUri));
+
+          }  else {
+            if (object instanceof IRI) {
+              params.put("uri", object.stringValue());
+              //query for relationships
+              result = tx.execute(String
+                  .format("MATCH (:Resource)-[r:`%s`]->(o:Resource { uri:  $uri }) RETURN r",
+                      predicate), params);
+            } else {
+              //it's a Literal
+              params.put("propVal",
+                  object.stringValue());//translateLiteral((Literal)object, graphConfig));
+              result = tx.execute(String
+                  .format("MATCH (r:Resource) WHERE r.`%s` = $propVal RETURN r",
+                      predicate), params);
+            }
+          }
+        } else {
+          //null, null, obj
+          if (object instanceof IRI) {
+            //query for relationships
+            params.put("uri", object.stringValue());
+            result = tx.execute("MATCH ()-[r]->(o:Resource { uri:  $uri }) RETURN r", params);
+          } else {
+            //it's a Literal
+            params.put("propVal",
+                object.stringValue());//translateLiteral((Literal)object, graphConfig));
+            result = tx.execute("MATCH (r:Resource) UNWIND keys(r) as propName \n"
+                        + "WITH r, propName\n"
+                        + "WHERE r[propName] = $propVal\n"
+                        + "RETURN r, propName", params);
+          }
+
+        }
+        //refactor with previous section
+        String finalPredicate1 = predicate;
+        return result.stream().flatMap(row -> {
+          Set<Statement> rowResult = new HashSet<>();
+          Object r = row.get("r");
+          if(r instanceof Node){
+            rowResult.addAll(processNode((Node)r, null,
+                (finalPredicate1!=null?finalPredicate1:(String)row.get("propName"))));
+          } else if(r instanceof Relationship){
+            rowResult.add(processRelationship((Relationship)r,null));
+          }
+          return rowResult.stream();
+        }).filter(st -> st.getObject().equals(object));
+        //post filtering on the generated statements.
+      }
+    }
+
+  }
+
+
+
+
+  private Value getValueFromTriplePatternObject(TriplePattern tp) {
+    Value object;
+    if (tp.getLiteral()) {
+      if (tp.getLiteralLang() != null) {
+        object = vf.createLiteral(tp.getObject(), tp.getLiteralLang());
+      } else {
+        object = vf.createLiteral(tp.getObject(), vf.createIRI(tp.getLiteralType()));
+      }
+    } else {
+      object = vf.createIRI(tp.getObject());
+    }
+    return object;
   }
 
 
