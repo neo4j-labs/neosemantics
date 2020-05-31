@@ -232,7 +232,8 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   protected Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     //TODO:  Ontology entities not used here. Rethink???
     Set<Statement> result = new HashSet<>();
-    if(propNameFilter==null || propNameFilter.equals(RDF.TYPE.stringValue())) {
+    if(propNameFilter==null || propNameFilter.equals(RDF.TYPE.stringValue())
+            || propNameFilter.equals("rdf__type")) {
       //labels  not to be exported if there's a filter on the property
       Iterable<Label> nodeLabels = node.getLabels();
       for (Label label : nodeLabels) {
@@ -350,7 +351,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
                   : resource.getRelationships(
                       Direction.OUTGOING, RelationshipType.withName(predicate));
           for (Relationship r : relationships) {
-            if (r.getOtherNode(resource).getProperty("uri").equals(object)) {
+            if (r.getOtherNode(resource).getProperty("uri").equals(object.stringValue())) {
               allStatements.add(processRelationship(r, null));
             }
           }

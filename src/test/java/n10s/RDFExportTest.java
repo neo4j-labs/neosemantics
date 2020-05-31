@@ -90,6 +90,25 @@ public class RDFExportTest {
   }
 
   @Test
+  public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleRDFTypes: 'NODES'} ");
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD')");
+      assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+    allTriplePatterns(1);
+
+  }
+
+  @Test
   public void testExportFromTriplePatternOnRDFGraphKeepDefault() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build())) {
@@ -138,6 +157,12 @@ public class RDFExportTest {
   private void allTriplePatterns( int mode) throws IOException {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      //getting a bnode's assigned uri
+      String bnodeUri = session
+              .run(" CALL n10s.rdf.export.triplePattern(null,"
+                      + "'http://xmlns.com/foaf/0.1/name','Dave Longley',true,'http://www.w3.org/2001/XMLSchema#string',null) ").next().get("subject").asString();
+
 
       String expected = null;
 
@@ -257,16 +282,50 @@ public class RDFExportTest {
               .compareModels("{}", RDFFormat.JSONLD,
                       getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://undefinedvoc.org/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://xmlns.com/foaf/0.1/knows", "http://manu.sporny.org/about#manu", false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+              "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+              "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+              "  },\n" +
+              "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+              "  \"knows\": [\n" +
+              "    {\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\" },\n" +
+              "    {\n" +
+              "      \"@id\": \"" + bnodeUri +"\" }\n" +
+              "  ]\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://me.markus-lanthaler.com/","http://xmlns.com/foaf/0.1/knows", null, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+              "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+              "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+              "  },\n" +
+              "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+              "  \"knows\": [\n" +
+              "    {\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\" }" +
+              "  ]\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://me.markus-lanthaler.com/","http://xmlns.com/foaf/0.1/knows", "http://manu.sporny.org/about#manu", false, null, null), RDFFormat.NTRIPLES));
 
       assertTrue(ModelTestUtils
               .compareModels("{}", RDFFormat.JSONLD,
                       getNTriplesGraphFromSPOPattern(session,null,"http://undefinedvoc.org/name", null, false, null, null), RDFFormat.NTRIPLES));
 
-
-      //getting a bnode's assigned uri
-      String bnodeUri = session
-              .run(" CALL n10s.rdf.export.triplePattern(null,"
-                      + "'http://xmlns.com/foaf/0.1/name','Dave Longley',true,'http://www.w3.org/2001/XMLSchema#string',null) ").next().get("subject").asString();
 
       if( mode ==1){
         expected = "{ \"@context\": {\n" +
