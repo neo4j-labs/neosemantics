@@ -1,5 +1,6 @@
 package n10s.rdf.export;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
@@ -324,6 +325,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
         //graph is in shorten mode but the uri in the filter is not in use in the graph
         predicate = tp.getPredicate();
         //ugly way of making the filter not return anything.
+        //TODO: Check this has no unexpected result in rare corner cases
       }
       if(tp.getObject()==null) {
         //labels and properties
@@ -432,9 +434,17 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
               //it's a Literal
               params.put("propVal",
                   object.stringValue());//translateLiteral((Literal)object, graphConfig));
-              result = tx.execute(String
-                  .format("MATCH (r:Resource) WHERE r.`%s` = $propVal RETURN r",
-                      predicate), params);
+              if(graphConfig.getHandleMultival() == GRAPHCONF_MULTIVAL_PROP_ARRAY &&
+                      ( graphConfig.getMultivalPropList() == null ||
+                              graphConfig.getMultivalPropList().contains(tp.getPredicate()))){
+                result = tx.execute(String
+                        .format("MATCH (r:Resource) WHERE $propVal in r.`%s` RETURN r",
+                                predicate), params);
+              } else {
+                result = tx.execute(String
+                        .format("MATCH (r:Resource) WHERE r.`%s` = $propVal RETURN r",
+                                predicate), params);
+              }
             }
           }
         } else {
@@ -449,7 +459,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
                 object.stringValue());//translateLiteral((Literal)object, graphConfig));
             result = tx.execute("MATCH (r:Resource) UNWIND keys(r) as propName \n"
                         + "WITH r, propName\n"
-                        + "WHERE r[propName] = $propVal\n"
+                        + "WHERE $propVal in [] + r[propName] \n"
                         + "RETURN r, propName", params);
           }
 

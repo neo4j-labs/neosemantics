@@ -222,7 +222,7 @@ public class RDFExportTest {
               "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
               "  },\n" +
               "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-              "      \"name\": [\"Manu Sporny\"] \n" +
+              "      \"name\": \"Manu Sporny\" \n" +
               "}";
 
       assertTrue(ModelTestUtils
@@ -368,7 +368,33 @@ public class RDFExportTest {
                 "  ]\n" +
                 "}";
       } else if ( mode == 2){
-        expected = jsonLdFragment;
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+                "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+                "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+                "  },\n" +
+                "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+                "  \"name\": \"Markus Lanthaler\",\n" +
+                "  \"@type\": \"http://xmlns.com/foaf/0.1/Individual\",\n" +
+                "  \"knows\": [\n" +
+                "    {\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
+                "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
+                "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@id\": \"" + bnodeUri + "\",\n" +
+                "      \"name\": \"Dave Longley\",\n" +
+                "\t  \"modified\":\n" +
+                "\t    {\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
+                "\t    }\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";;
       }
 
       assertTrue(ModelTestUtils

@@ -11,6 +11,7 @@ import n10s.graphconfig.GraphConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.neo4j.graphdb.Transaction;
 
 public class UriUtils {
@@ -22,7 +23,11 @@ public class UriUtils {
     } else if (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
-      return getShortForm(uri, tx);
+      if(!uri.equals(RDF.TYPE.stringValue())) {
+        return getShortForm(uri, tx);
+      }  else {
+        return uri;
+      }
     } else {
       //it's GRAPHCONF_VOC_URI_KEEP
       return uri;
