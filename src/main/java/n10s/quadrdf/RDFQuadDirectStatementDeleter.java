@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;

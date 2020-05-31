@@ -1,8 +1,6 @@
-package n10s;
+package n10s.quadrdf;
 
 import java.util.Objects;
-import n10s.quadrdf.RDFQuadDirectStatementDeleter;
-import n10s.quadrdf.RDFQuadDirectStatementLoader;
 
 /**
  * ContextResource represents a Resource with an optional graph (context) uri. <p> It is used as Key

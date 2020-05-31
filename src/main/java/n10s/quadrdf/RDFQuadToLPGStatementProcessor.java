@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import n10s.ContextResource;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
