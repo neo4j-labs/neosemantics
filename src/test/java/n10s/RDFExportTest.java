@@ -17,6 +17,7 @@ import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
+import javax.print.DocFlavor;
 import java.io.IOException;
 
 public class RDFExportTest {
@@ -152,6 +153,57 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(1);
+  }
+
+
+  @Test
+  public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes2() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleRDFTypes: 'LABELS_AND_NODES'} ");
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              turtleFragment + "','Turtle')");
+      assertEquals(19L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      String expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
+              "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
+              "\n" +
+              "neo4ind:nsmntx3502 neo4voc:version \"3.5.0.2\" .\n" ;
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.TURTLE,
+                      getNTriplesGraphFromSPOPattern(session, null, null,
+                              "3.5.0.2", true, null, null), RDFFormat.NTRIPLES));
+
+      expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
+              "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
+              "\n" +
+              "neo4ind:nsmntx3502 a neo4voc:Neo4jPlugin .\n" ;
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.TURTLE,
+                      getNTriplesGraphFromSPOPattern(session, "http://neo4j.org/ind#nsmntx3502", "http://www.w3.org/1999/02/22-rdf-syntax-ns#type",
+                              null, null, null, null), RDFFormat.NTRIPLES));
+
+
+      Record next = session
+              .run(" CALL n10s.rdf.export.triplePattern(null,null,'http://neo4j.org/vocab/sw#Neo4jPlugin')").next();
+
+      System.out.println(next);
+
+    }
   }
 
   private void allTriplePatterns( int mode) throws IOException {
@@ -464,14 +516,12 @@ public class RDFExportTest {
     }
   }
 
-  private String getNTriplesGraphFromSPOPattern(Session session,  String s, String p, String o, boolean lit, String type, String lang) {
+  private String getNTriplesGraphFromSPOPattern(Session session,  String s, String p, String o, Boolean lit, String type, String lang) {
     Result res
         = session
         .run(" CALL n10s.rdf.export.triplePattern(" + (s!=null?"'"+s+"'":"null") + ","
                 + (p!=null?"'"+p+"'":"null") + "," + (o!=null?"'"+o+"'":"null") + ","
                 + lit +"," + (type!=null?"'"+type+"'":"null") + "," + (lang!=null?"'"+lang+"'":"null") +") ");
-    //assertTrue(res.hasNext());
-    //System.out.println("\n\nresults for ('http://manu.sporny.org/about#manu',null,null)");
     StringBuilder sb = new StringBuilder();
     while (res.hasNext()) {
       //System.out.println(res.next());
@@ -526,4 +576,30 @@ public class RDFExportTest {
       "    }\n" +
       "  ]\n" +
       "}";
+
+  private String turtleFragment = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
+          "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
+          "\n" +
+          "neo4ind:nsmntx3502 neo4voc:name \"NSMNTX\" ;\n" +
+          "\t\t\t   a neo4voc:Neo4jPlugin ;\n" +
+          "\t\t\t   neo4voc:version \"3.5.0.2\" ;\n" +
+          "\t\t\t   neo4voc:releaseDate \"03-06-2019\" ;\n" +
+          "\t\t\t   neo4voc:runsOn neo4ind:neo4j355 .\n" +
+          "\n" +
+          "neo4ind:apoc3502 neo4voc:name \"APOC\" ;\n" +
+          "\t\t\t   a neo4voc:Neo4jPlugin ;\n" +
+          "\t\t\t   neo4voc:version \"3.5.0.4\" ;\n" +
+          "\t\t\t   neo4voc:releaseDate \"05-31-2019\" ;\n" +
+          "\t\t\t   neo4voc:runsOn neo4ind:neo4j355 .\n" +
+          "\n" +
+          "neo4ind:graphql3502 neo4voc:name \"Neo4j-GraphQL\" ;\n" +
+          "\t\t\t   a neo4voc:Neo4jPlugin ;\n" +
+          "\t\t\t   neo4voc:version \"3.5.0.3\" ;\n" +
+          "\t\t\t   neo4voc:releaseDate \"05-05-2019\" ;\n" +
+          "\t\t\t   neo4voc:runsOn neo4ind:neo4j355 .\n" +
+          "\n" +
+          "neo4ind:neo4j355 neo4voc:name \"neo4j\" ;\n" +
+          "\t\t\t   a neo4voc:GraphPlatform , neo4voc:AwesomePlatform ;\n" +
+          "\t\t\t   neo4voc:version \"3.5.5\" .\n";
+
 }

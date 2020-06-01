@@ -70,8 +70,10 @@ public class RDFExportProcedures extends RDFProcedures {
       "Returns the triples matching the spo pattern passed as parameter.")
   public Stream<StreamedStatement> triplePattern(@Name("subject") String subject,
       @Name("predicate") String predicate, @Name("object") String object,
-      @Name("isLiteral") Boolean isLiteral, @Name("literalType") String literalType,
-      @Name("literalLang") String literalLang, @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
+      @Name(value = "isLiteral", defaultValue = "false") Boolean isLiteral, @Name(value = "literalType",
+          defaultValue = "http://www.w3.org/2001/XMLSchema#string") String literalType,
+      @Name(value = "literalLang", defaultValue = "null") String literalLang,
+      @Name(value = "params", defaultValue = "{}") Map<String,Object> props)
       throws InvalidNamespacePrefixDefinitionInDB {
 
     ExportProcessor proc;
@@ -88,7 +90,8 @@ public class RDFExportProcedures extends RDFProcedures {
       proc = new LPGRDFToRDFProcesssor(db, tx, gc, rdfstar);
     }
     return proc.streamTriplesFromTriplePattern( new TriplePattern( subject, predicate, object,
-        isLiteral, literalType, literalLang)).map(st -> new StreamedStatement(
+            (isLiteral==null?false:isLiteral), (literalType==null?"http://www.w3.org/2001/XMLSchema#string":literalType),
+            literalLang)).map(st -> new StreamedStatement(
         st.getSubject().stringValue(), st.getPredicate().stringValue(),
         st.getObject().stringValue(), st.getObject() instanceof Literal,
         (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
