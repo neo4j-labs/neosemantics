@@ -140,8 +140,35 @@ public class CommonProcedures {
       writer.write(props.get("payload").toString());
       writer.close();
     }
+    String newUrl = handleRedirect(urlConn, url);
+    if (newUrl != null && !url.equals(newUrl)) {
+      urlConn.getInputStream().close();
+      return getInputStream(newUrl, props);
+    }
     return urlConn.getInputStream();
   }
+
+  //Taken from APOC (apoc.util.Util)
+  private static String handleRedirect(URLConnection con, String url) throws IOException {
+    if (!(con instanceof HttpURLConnection)) return url;
+    if (!isRedirect(((HttpURLConnection)con))) return url;
+    return con.getHeaderField("Location");
+  }
+
+  public static boolean isRedirect(HttpURLConnection con) throws IOException {
+    int code = con.getResponseCode();
+    boolean isRedirectCode = code >= 300 && code < 400;
+    if (isRedirectCode) {
+      URL location = new URL(con.getHeaderField("Location"));
+      String oldProtocol = con.getURL().getProtocol();
+      String protocol = location.getProtocol();
+      if (!protocol.equals(oldProtocol) && !protocol.startsWith(oldProtocol)) { // we allow http -> https redirect and similar
+        throw new RuntimeException("The redirect URI has a different protocol: " + location.toString());
+      }
+    }
+    return isRedirectCode;
+  }
+  ////
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {
