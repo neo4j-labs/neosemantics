@@ -179,7 +179,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
         tempTransaction.commit();
         log.debug("namespace prefixes synced: " + namespaces.toString());
       } catch (Exception e) {
-        e.printStackTrace();
+        log.error("Problems syncing up namespace prefixes in one of the partial comits ", e);
       }
     }
 
@@ -189,7 +189,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
       log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
           + totalTriplesMapped);
     } catch (Exception e) {
-      e.printStackTrace();
+      log.error("Problems when running one of the partial comits ", e);
     }
 
     totalTriplesMapped += mappedTripleCounter;

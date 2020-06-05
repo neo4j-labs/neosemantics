@@ -506,6 +506,68 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportZipped() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.gz").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.tgz").toURI() + "!schema.rdf"
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.bz2").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI() + "!schema.rdf"
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+    }
+  }
+
+
+  @Test
   public void testImportSKOSInline() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -2478,6 +2540,29 @@ public class RDFProceduresTest {
     }
 
   }
+
+  @Test
+  public void dbpediaBug() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("dbpedia-fragment.ttl").toURI()
+              + "','Turtle')");
+      assertEquals(25000L, importResults
+              .next().get("triplesLoaded").asLong());
+
+      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      Record next = result.next();
+      assertEquals(2500, next.get("nodeCount"));
+
+    }
+
+  }
+
 
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {
