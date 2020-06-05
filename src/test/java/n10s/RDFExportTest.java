@@ -187,6 +187,11 @@ public class RDFExportTest {
                       getNTriplesGraphFromSPOPattern(session, null, null,
                               "3.5.0.2", true, null, null), RDFFormat.NTRIPLES));
 
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.TURTLE,
+                      getNTriplesGraphFromSPOPatternLiteralDefaults(session, null, "http://neo4j.org/vocab/sw#version",
+                              "3.5.0.2"), RDFFormat.NTRIPLES));
+
       expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
               "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
               "\n" +
@@ -217,6 +222,18 @@ public class RDFExportTest {
 
 
       String expected = null;
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource",null, null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource","http://xmlns.com/foaf/0.1/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource","http://xmlns.com/foaf/0.1/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
       if( mode == 1){
          expected = "{\n" +
@@ -522,6 +539,31 @@ public class RDFExportTest {
         .run(" CALL n10s.rdf.export.triplePattern(" + (s!=null?"'"+s+"'":"null") + ","
                 + (p!=null?"'"+p+"'":"null") + "," + (o!=null?"'"+o+"'":"null") + ","
                 + lit +"," + (type!=null?"'"+type+"'":"null") + "," + (lang!=null?"'"+lang+"'":"null") +") ");
+    StringBuilder sb = new StringBuilder();
+    while (res.hasNext()) {
+      //System.out.println(res.next());
+      Record record = res.next();
+      sb.append("<").append(record.get("subject").asString()).append("> ");
+      sb.append("<").append(record.get("predicate").asString()).append("> ");
+      if(record.get("isLiteral").asBoolean()){
+        if (!record.get("literalLang").isNull()) {
+          sb.append("\"").append(record.get("object").asString()).append("\"@").append(record.get("literalLang").asString()) ;
+        } else {
+          sb.append("\"").append(record.get("object").asString()).append("\"^^<").append(record.get("literalType").asString()).append(">");
+        }
+      } else{
+        sb.append("<").append(record.get("object").asString()).append("> ");
+      }
+      sb.append(".\n");
+    }
+    return sb.toString();
+  }
+
+  private String getNTriplesGraphFromSPOPatternLiteralDefaults(Session session,  String s, String p, String o) {
+    Result res
+            = session
+            .run(" CALL n10s.rdf.export.triplePattern(" + (s!=null?"'"+s+"'":"null") + ","
+                    + (p!=null?"'"+p+"'":"null") + "," + (o!=null?"'"+o+"'":"null") + ",true) ");
     StringBuilder sb = new StringBuilder();
     while (res.hasNext()) {
       //System.out.println(res.next());

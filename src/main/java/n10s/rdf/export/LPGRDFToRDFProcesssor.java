@@ -319,40 +319,42 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     if (tp.getSubject() != null){
       Set<Statement> allStatements = new HashSet<>();
       Node resource = tx.findNode(Label.label("Resource"), "uri", tp.getSubject());
-      String predicate = null;
-      try {
-        predicate = tp.getPredicate() != null?translateUri(tp.getPredicate(),tx, graphConfig):null;
-      }  catch (UriNamespaceHasNoAssociatedPrefix e) {
-        //graph is in shorten mode but the uri in the filter is not in use in the graph
-        predicate = tp.getPredicate();
-        //ugly way of making the filter not return anything.
-        //TODO: Check this has no unexpected result in rare corner cases
-      }
-      if(tp.getObject()==null) {
-        //labels and properties
-        allStatements.addAll(processNode(resource, null, predicate));
-        //relationships
-        Iterable<Relationship> relationships =
-            tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
-                Direction.OUTGOING, RelationshipType.withName(predicate));
-        for(Relationship r:relationships){
-          allStatements.add(processRelationship(r, null));
+      if (resource != null) {
+        String predicate = null;
+        try {
+          predicate = tp.getPredicate() != null ? translateUri(tp.getPredicate(), tx, graphConfig) : null;
+        } catch (UriNamespaceHasNoAssociatedPrefix e) {
+          //graph is in shorten mode but the uri in the filter is not in use in the graph
+          predicate = tp.getPredicate();
+          //ugly way of making the filter not return anything.
+          //TODO: Check this has no unexpected result in rare corner cases
         }
-      } else {
-        //filter on value (object)
-        Value object = getValueFromTriplePatternObject(tp);
-        allStatements.addAll(processNode(resource, null, predicate).stream()
-            .filter(st -> st.getObject().equals(object)).collect(Collectors.toSet()));
-
-        //if filter on object  is of type literal then we  can skip the rels, it will be a prop
-        if(!tp.getLiteral()) {
+        if (tp.getObject() == null) {
+          //labels and properties
+          allStatements.addAll(processNode(resource, null, predicate));
+          //relationships
           Iterable<Relationship> relationships =
-              tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING)
-                  : resource.getRelationships(
-                      Direction.OUTGOING, RelationshipType.withName(predicate));
+                  tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
+                          Direction.OUTGOING, RelationshipType.withName(predicate));
           for (Relationship r : relationships) {
-            if (r.getOtherNode(resource).getProperty("uri").equals(object.stringValue())) {
-              allStatements.add(processRelationship(r, null));
+            allStatements.add(processRelationship(r, null));
+          }
+        } else {
+          //filter on value (object)
+          Value object = getValueFromTriplePatternObject(tp);
+          allStatements.addAll(processNode(resource, null, predicate).stream()
+                  .filter(st -> st.getObject().equals(object)).collect(Collectors.toSet()));
+
+          //if filter on object  is of type literal then we  can skip the rels, it will be a prop
+          if (!tp.getLiteral()) {
+            Iterable<Relationship> relationships =
+                    tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING)
+                            : resource.getRelationships(
+                            Direction.OUTGOING, RelationshipType.withName(predicate));
+            for (Relationship r : relationships) {
+              if (r.getOtherNode(resource).getProperty("uri").equals(object.stringValue())) {
+                allStatements.add(processRelationship(r, null));
+              }
             }
           }
         }

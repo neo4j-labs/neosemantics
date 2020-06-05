@@ -91,7 +91,7 @@ public class RDFExportProcedures extends RDFProcedures {
     }
     return proc.streamTriplesFromTriplePattern( new TriplePattern( subject, predicate, object,
             (isLiteral==null?false:isLiteral), (literalType==null?"http://www.w3.org/2001/XMLSchema#string":literalType),
-            literalLang)).map(st -> new StreamedStatement(
+            (literalLang==null || literalLang.equals("null")?null:literalLang))).map(st -> new StreamedStatement(
         st.getSubject().stringValue(), st.getPredicate().stringValue(),
         st.getObject().stringValue(), st.getObject() instanceof Literal,
         (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
