@@ -11,6 +11,14 @@ import java.net.URLConnection;
 import java.nio.charset.Charset;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import org.apache.commons.compress.archivers.ArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
+import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
+import org.apache.commons.io.IOUtils;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
@@ -122,30 +130,56 @@ public class CommonProcedures {
 
   protected InputStream getInputStream(String url, Map<String, Object> props) throws IOException {
     URLConnection urlConn;
-    //This should be delegated to APOC to do handle different protocols, deal with redirection, etc.
-    urlConn = new URL(url).openConnection();
-    if (props.containsKey("headerParams")) {
-      Map<String, String> headerParams = (Map<String, String>) props.get("headerParams");
-      Object method = headerParams.get("method");
-      if (method != null && urlConn instanceof HttpURLConnection) {
-        HttpURLConnection http = (HttpURLConnection) urlConn;
-        http.setRequestMethod(method.toString());
+
+    if (url.contains("!") && (url.contains(".zip") || url.contains(".tgz")|| url.contains(".tar.gz"))) {
+
+      String[] tokens = url.split("!");
+      url = tokens[0];
+      String zipFileName;
+      if (tokens.length == 2) {
+        zipFileName = tokens[1];
+        urlConn = new URL(url).openConnection();
+        return getFileStreamIntoCompressedFile(url.contains(".zip"),urlConn.getInputStream(), zipFileName);
+      } else
+        throw new IllegalArgumentException("filename can't be null or empty");
+    }else if(url.endsWith(".zip") || url.endsWith(".gz") || url.endsWith(".tar.gz") || url.endsWith(".tgz") || url.endsWith(".bz2")){
+      urlConn = new URL(url).openConnection();
+      if(url.endsWith(".zip")){
+        return new ZipInputStream(urlConn.getInputStream());
+      } else if (url.endsWith(".gz")){
+        return new GZIPInputStream(urlConn.getInputStream());
+      } else if (url.endsWith(".tar.gz") || url.endsWith(".tgz")){
+        return new TarArchiveInputStream(new GZIPInputStream(urlConn.getInputStream()));
+      } else if (url.endsWith(".bz2")){
+        return new BZip2CompressorInputStream(urlConn.getInputStream());
       }
-      headerParams.forEach((k, v) -> urlConn.setRequestProperty(k, v));
+    }else {
+      urlConn = new URL(url).openConnection();
     }
-    if (props.containsKey("payload")) {
-      urlConn.setDoOutput(true);
-      BufferedWriter writer = new BufferedWriter(
-          new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
-      writer.write(props.get("payload").toString());
-      writer.close();
-    }
-    String newUrl = handleRedirect(urlConn, url);
-    if (newUrl != null && !url.equals(newUrl)) {
-      urlConn.getInputStream().close();
-      return getInputStream(newUrl, props);
-    }
-    return urlConn.getInputStream();
+
+
+      if (props.containsKey("headerParams")) {
+        Map<String, String> headerParams = (Map<String, String>) props.get("headerParams");
+        Object method = headerParams.get("method");
+        if (method != null && urlConn instanceof HttpURLConnection) {
+          HttpURLConnection http = (HttpURLConnection) urlConn;
+          http.setRequestMethod(method.toString());
+        }
+        headerParams.forEach((k, v) -> urlConn.setRequestProperty(k, v));
+      }
+      if (props.containsKey("payload")) {
+        urlConn.setDoOutput(true);
+        BufferedWriter writer = new BufferedWriter(
+            new OutputStreamWriter(urlConn.getOutputStream(), "UTF-8"));
+        writer.write(props.get("payload").toString());
+        writer.close();
+      }
+      String newUrl = handleRedirect(urlConn, url);
+      if (newUrl != null && !url.equals(newUrl)) {
+        urlConn.getInputStream().close();
+        return getInputStream(newUrl, props);
+      }
+      return urlConn.getInputStream();
   }
 
   //Taken from APOC (apoc.util.Util)
@@ -168,7 +202,36 @@ public class CommonProcedures {
     }
     return isRedirectCode;
   }
+
   ////
+
+  private static InputStream getFileStreamIntoCompressedFile(boolean isZip, InputStream is, String fileName) throws IOException {
+
+    if(isZip) {
+      try (ZipInputStream zip = new ZipInputStream(is)) {
+        ZipEntry zipEntry;
+
+        while ((zipEntry = zip.getNextEntry()) != null) {
+          if (!zipEntry.isDirectory() && zipEntry.getName().equals(fileName)) {
+            return new ByteArrayInputStream(IOUtils.toByteArray(zip));
+          }
+        }
+      }
+    } else {
+      //it's a tgz
+      try (TarArchiveInputStream tgz = new TarArchiveInputStream(new GZIPInputStream(is))) {
+
+        ArchiveEntry tgzEntry;
+
+        while ((tgzEntry = tgz.getNextEntry()) != null) {
+          if (!tgzEntry.isDirectory() && tgzEntry.getName().equals(fileName)) {
+            return new ByteArrayInputStream(IOUtils.toByteArray(tgz));
+          }
+        }
+      }
+    }
+    return null;
+  }
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {
