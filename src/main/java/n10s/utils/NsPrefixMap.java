@@ -24,6 +24,7 @@ public class NsPrefixMap {
     ns.put("http://www.w3.org/2002/07/owl#", "owl");
     ns.put("http://www.w3.org/1999/02/22-rdf-syntax-ns#", "rdf");
     ns.put("http://www.w3.org/ns/shacl#", "sh");
+    ns.put("http://www.w3.org/2001/XMLSchema#", "xsd");
     return ns;
   }
 
@@ -40,6 +41,7 @@ public class NsPrefixMap {
     ns.put("owl", "http://www.w3.org/2002/07/owl#");
     ns.put("rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#");
     ns.put("sh", "http://www.w3.org/ns/shacl#");
+    ns.put("xsd", "http://www.w3.org/2001/XMLSchema#");
     return ns;
   }
 
