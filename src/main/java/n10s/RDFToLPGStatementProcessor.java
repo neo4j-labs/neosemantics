@@ -414,6 +414,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
         mappedTripleCounter++;
 
+      } else if (object instanceof Triple) {
+        //ignore RDF* statements with triples as object
       } else {
         addResource(subjectUri);
         String objectUri = object instanceof BNode? "bnode://" + object.stringValue(): object.stringValue();

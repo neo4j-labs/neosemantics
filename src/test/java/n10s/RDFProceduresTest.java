@@ -353,6 +353,30 @@ public class RDFProceduresTest {
       + "\n"
       + "<<neoind:16 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Emil\" .";
 
+  String rdfStarFragmentWithTriplesAsObjects = "@prefix neoind: <neo4j://individuals#> .\n"
+          + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+          + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+          + "\n"
+          + "neoind:0 a neovoc:Movie;\n"
+          + "  neovoc:released \"1999\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+          + "  neovoc:tagline \"Welcome to the Real World\";\n"
+          + "  neovoc:title \"The Matrix\" .\n"
+          + "\n"
+          + "<<neoind:16 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Emil\" ."
+          + "\n"
+          + "neoind:4 a neovoc:Person;\n"
+          + "  neovoc:ACTED_IN neoind:0;\n"
+          + "  neovoc:born \"1961\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+          + "  neovoc:name \"Laurence Fishburne\" .\n"
+          + "\n"
+          + "neoind:4 neovoc:SAID <<neoind:16 neovoc:ACTED_IN neoind:0>> .\n"
+          + "\n"
+          + "neoind:16 a neovoc:Person;\n"
+          + "  neovoc:ACTED_IN neoind:0;\n"
+          + "  neovoc:born \"1978\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+          + "  neovoc:name \"Emil Eifrem\" . " ;
+
+
   String rdfTriGSnippet  = "@prefix ex: <http://www.example.org/vocabulary#> .\n"
       + "@prefix exDoc: <http://www.example.org/exampleDocument#> .\n"
       + "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n"
@@ -1382,6 +1406,28 @@ public class RDFProceduresTest {
               ((InternalRelationship)r).asMap().get("roles").equals("Morpheus"))));
     }
   }
+
+  @Test
+  public void testRDFStarWithTriplesAsOobjectFromSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleVocabUris: 'IGNORE'}");
+      Result importResults
+              = session
+              .run("CALL n10s.rdf.import.inline('" + rdfStarFragmentWithTriplesAsObjects
+                      + "','Turtle*')");
+      Map<String, Object> next = importResults
+              .next().asMap();
+      ;
+      assertEquals(13L, next.get("triplesLoaded"));
+      assertEquals(14L, next.get("triplesParsed"));
+      assertFalse(session.run("MATCH (a)-[:SAID]->(b) RETURN a, b").hasNext());
+
+    }
+  }
+
 
   @Test
   public void testOntoPreviewFromSnippet() throws Exception {
