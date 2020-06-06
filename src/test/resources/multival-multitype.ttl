@@ -1,0 +1,27 @@
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/rev> "Tiny Mix Tapes"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLength> "45.75"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/rev> <http://dbpedia.org/resource/Cokemachineglow> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/rev> <http://dbpedia.org/resource/Pitchfork_(website)> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> ""@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "How?"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "I Hold Nothing"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "I Know No One"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLength> "2271.0"^^<http://dbpedia.org/datatype/second> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "In the Bat's Mouth"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "No Flashlight"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "No Inside, No Out"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "Stop Singing"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Air in the Morning"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Intimacy of the World with the World"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Moan"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Universe is Shown"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "This Is The Same Ocean"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "Waterfalls"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "What?"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "Where"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/type> "Album"@en .
+<http://dbpedia.org/resource/%22No_Snow,_No_Show%22_for_the_Eskimo> <http://dbpedia.org/property/artist> <http://dbpedia.org/resource/The_Mission_(band)> .
+<http://dbpedia.org/resource/%22No_Snow,_No_Show%22_for_the_Eskimo> <http://dbpedia.org/property/cover> "MissionNoSnowNoShow.jpg"@en .
+<http://dbpedia.org/resource/%22No_Snow,_No_Show%22_for_the_Eskimo> <http://dbpedia.org/property/genre> <http://dbpedia.org/resource/Gothic_rock> .
+<http://dbpedia.org/resource/%22No_Snow,_No_Show%22_for_the_Eskimo> <http://dbpedia.org/property/label> "WINCD 035"@en .
+<http://dbpedia.org/resource/%22No_Snow,_No_Show%22_for_the_Eskimo> <http://dbpedia.org/property/label> "Windsong"@en .
