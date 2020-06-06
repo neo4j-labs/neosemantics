@@ -2551,13 +2551,73 @@ public class RDFProceduresTest {
       Result importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
               RDFProceduresTest.class.getClassLoader().getResource("dbpedia-fragment.ttl").toURI()
-              + "','Turtle')");
-      assertEquals(25000L, importResults
-              .next().get("triplesLoaded").asLong());
+              + "','Turtle', { commitSize: 200 })");
+
+      Record importResult = importResults.next();
+      assertEquals(15600L, importResult.get("triplesLoaded").asLong());
+      assertEquals(25000L, importResult.get("triplesParsed").asLong());
 
       Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
       Record next = result.next();
       assertEquals(2500, next.get("nodeCount"));
+
+    }
+
+  }
+
+  @Test
+  public void dbpediaBug2() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multitype.ttl").toURI()
+              + "','Turtle', { commitSize: 200 })");
+
+      Record importResult = importResults.next();
+      assertEquals(0L, importResult.get("triplesLoaded").asLong());
+      assertEquals(27L, importResult.get("triplesParsed").asLong());
+
+      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(0, result.next().get("nodeCount").asInt());
+
+      Result importResults2NdTry
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multitype.ttl").toURI()
+              + "','Turtle', { commitSize: 5 })");
+
+      importResult = importResults2NdTry.next();
+      assertEquals(22L, importResult.get("triplesLoaded").asLong());
+      assertEquals(27L, importResult.get("triplesParsed").asLong());
+
+      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(3, result.next().get("nodeCount").asInt());
+
+    }
+
+  }
+
+  @Test
+  public void dbpediaBug3() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx.ttl").toURI()
+              + "','Turtle', { commitSize: 4 })");
+
+      Record importResult = importResults.next();
+      assertEquals(8L, importResult.get("triplesLoaded").asLong());
+      assertEquals(8L, importResult.get("triplesParsed").asLong());
+
+      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
 
     }
 

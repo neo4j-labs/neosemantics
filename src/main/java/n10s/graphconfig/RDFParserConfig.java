@@ -20,6 +20,7 @@ public class RDFParserConfig {
   private final String languageFilter;
   private long commitSize;
   private long streamTripleLimit;
+  private boolean abortOnError;
   private GraphConfig graphConf;
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
@@ -39,6 +40,8 @@ public class RDFParserConfig {
         .get("verifyUriSyntax") : true;
     streamTripleLimit =
         props.containsKey("limit") ? (Long) props.get("limit") : DEFAULT_STREAM_TRIPLE_LIMIT;
+    abortOnError = props.containsKey("abortOnError") ? (Boolean) props
+            .get("abortOnError") : true;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -73,9 +76,7 @@ public class RDFParserConfig {
     return streamTripleLimit;
   }
 
-  public void setStreamTripleLimit(long streamTripleLimit) {
-    this.streamTripleLimit = streamTripleLimit;
-  }
+  public boolean isAbortOnError() { return abortOnError; }
 
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
@@ -100,10 +101,15 @@ public class RDFParserConfig {
       summary.put("verifyUriSyntax", verifyUriSyntax);
     }
 
+    if (!abortOnError) {
+      summary.put("abortOnError", abortOnError);
+    }
+
     if (streamTripleLimit != DEFAULT_STREAM_TRIPLE_LIMIT) {
       summary.put("limit", streamTripleLimit);
     }
 
     return summary;
   }
+
 }

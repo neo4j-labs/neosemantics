@@ -472,4 +472,18 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
   protected abstract void periodicOperation();
 
+  protected class NamespacePrefixConflict extends RDFHandlerException {
+    public NamespacePrefixConflict(String s, Exception  e) {
+      super(s,e);
+    }
+  }
+
+  protected class PartialCommitException extends RDFHandlerException {
+    public PartialCommitException(String s, Exception  e) {
+      super(s,e);
+    }
+  }
+
+
+
 }
