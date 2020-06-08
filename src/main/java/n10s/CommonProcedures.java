@@ -245,7 +245,7 @@ public class CommonProcedures {
   }
 
 
-  public class RDFImportPreRequisitesNotMet extends Throwable {
+  public class RDFImportPreRequisitesNotMet extends Exception {
 
     public RDFImportPreRequisitesNotMet(String message) {
       super(message);

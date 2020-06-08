@@ -4,6 +4,9 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -66,23 +69,29 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
           resourceProps.get(entry.getKey()).forEach((k, v) -> {
             if (v instanceof List) {
-              Object currentValue = node.getProperty(k, null);
-              if (currentValue == null) {
-                node.setProperty(k, toPropertyValue(v));
-              } else {
-                if (currentValue.getClass().isArray()) {
-                  Object[] properties = (Object[]) currentValue;
-                  for (Object property : properties) {
-                    ((List) v).add(property);
-                    //here an exception can be raised if types are conflicting
-                  }
+              try{
+                Object currentValue = node.getProperty(k, null);
+                if (currentValue == null) {
+                  node.setProperty(k, toPropertyValue(v));
                 } else {
-                  //TODO: this logic goes because it should not be possible to change
-                  // from atomic to multival without emptying the DB
-                  ((List) v).add(node.getProperty(k));
+                  List<Object> newList = new ArrayList<>((List)v);
+                  if (currentValue.getClass().isArray()) {
+                    int length = Array.getLength(currentValue);
+                    for (int i = 0; i < length; i ++) {
+                      Object atomicValue = Array.get(currentValue, i);
+                      newList.add(atomicValue);
+                    }
+                  } else {
+                    //TODO: this logic could go because now it's not possible to change
+                    // from atomic to multival without emptying the DB
+                    newList.add(node.getProperty(k));
+                  }
+                  //we can make it a set to remove duplicates. Multivalued props with the same value are the same in RDF.
+                  node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
                 }
-                //we make it a set to remove duplicates. Semantics of multivalued props in RDF.
-                node.setProperty(k, toPropertyValue(((List) v).stream().collect(Collectors.toSet())));
+              }catch(HeterogeneousDataTyping e){
+                this.mappedTripleCounter-= ((List) v).size();
+                log.warn("The following values for property " + k + " have been discarded because of datatype heterogeneity: " + v);
               }
             } else {
               node.setProperty(k, v);
@@ -203,10 +212,6 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
     mappedTripleCounter = 0;
 
-    //TODO: return error and decide in main transaction whether to continue or stop.
-    // Import process interrupted after x triples.
-
   }
-
 
 }

@@ -79,6 +79,7 @@ public class RDFProcedures extends CommonProcedures {
         importResults.setTriplesParsed(statementLoader.totalTriplesParsed);
         importResults.setNamespaces(statementLoader.getNamespaces());
         importResults.setConfigSummary(props);
+        importResults.setExtraInfo(statementLoader.getWarnings());
 
       } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException e) {
         importResults.setTerminationKO(e.getMessage());
@@ -374,6 +375,11 @@ public class RDFProcedures extends CommonProcedures {
       this.terminationStatus = "KO";
       this.extraInfo = message;
     }
+
+    public void setExtraInfo(String message) {
+      this.extraInfo = message;
+    }
+
 
   }
 

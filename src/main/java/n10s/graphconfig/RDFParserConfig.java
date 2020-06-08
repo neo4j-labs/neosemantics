@@ -22,6 +22,7 @@ public class RDFParserConfig {
   private long streamTripleLimit;
   private boolean abortOnError;
   private GraphConfig graphConf;
+  private boolean strictDataTypeCheck;
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
@@ -42,6 +43,8 @@ public class RDFParserConfig {
         props.containsKey("limit") ? (Long) props.get("limit") : DEFAULT_STREAM_TRIPLE_LIMIT;
     abortOnError = props.containsKey("abortOnError") ? (Boolean) props
             .get("abortOnError") : true;
+    strictDataTypeCheck = props.containsKey("strictDataTypeCheck") ? (Boolean) props
+            .get("strictDataTypeCheck") : true;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -78,6 +81,8 @@ public class RDFParserConfig {
 
   public boolean isAbortOnError() { return abortOnError; }
 
+  public boolean isStrictDataTypeCheck() { return strictDataTypeCheck;  }
+
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
 
@@ -111,5 +116,4 @@ public class RDFParserConfig {
 
     return summary;
   }
-
 }

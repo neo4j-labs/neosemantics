@@ -530,7 +530,7 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void testImportZipped() throws Exception {
+  public void testImportZippedSingleFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -580,6 +580,67 @@ public class RDFProceduresTest {
       importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
               RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+    }
+  }
+
+  @Test
+  public void testImportZippedMultiFile() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.gz").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multi.tgz").toURI() + "!schema.rdf"
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.bz2").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.zip").toURI() + "!schema.rdf"
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      assertEquals(10774L, importResults
+              .single().get("triplesLoaded").asLong());
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.zip").toURI()
               + "','RDF/XML',"
               +
               "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
@@ -2612,7 +2673,7 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void dbpediaBug2() throws Exception {
+  public void multivalMultitypeSamePartialTx() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -2624,11 +2685,37 @@ public class RDFProceduresTest {
               + "','Turtle', { commitSize: 200 })");
 
       Record importResult = importResults.next();
-      assertEquals(0L, importResult.get("triplesLoaded").asLong());
+      assertEquals(25L, importResult.get("triplesLoaded").asLong());
       assertEquals(27L, importResult.get("triplesParsed").asLong());
+      assertEquals("Some triples were discarded because of heterogeneous data typing of values for the same property. " +
+                      "Check logs  for details.", importResult.get("extraInfo").asString());
 
-      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
-      assertEquals(0, result.next().get("nodeCount").asInt());
+      assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
+
+      assertEquals(0L,session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong()>0);
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multitype.ttl").toURI()
+              + "','Turtle', { commitSize: 200 , strictDataTypeCheck: false })");
+
+      importResult = importResults.next();
+      assertEquals(27L, importResult.get("triplesLoaded").asLong());
+      assertEquals(27L, importResult.get("triplesParsed").asLong());
+      assertEquals("Some heterogeneous data typing of values for the same property was found. Values were imported as typed strings. " +
+              "Check logs  for details.", importResult.get("extraInfo").asString());
+
+      assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
+
+      Result result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLength as tl ");
+      Record next = result.next();
+      assertTrue(next.get("tl").asList().containsAll(Arrays.asList("45.75^^xsd__double", "2271.0"))); //"2271.0^^ns1__second" if custom datatypes were being kept
+
+      assertEquals(1L,session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong()>0);
 
       Result importResults2NdTry
               = session.run("CALL n10s.rdf.import.fetch('" +
@@ -2636,18 +2723,32 @@ public class RDFProceduresTest {
               + "','Turtle', { commitSize: 5 })");
 
       importResult = importResults2NdTry.next();
-      assertEquals(22L, importResult.get("triplesLoaded").asLong());
+      assertEquals(26L, importResult.get("triplesLoaded").asLong());
       assertEquals(27L, importResult.get("triplesParsed").asLong());
 
-      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
-      assertEquals(3, result.next().get("nodeCount").asInt());
+      assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong()>0);
+
+      importResults2NdTry
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multitype.ttl").toURI()
+              + "','Turtle', { commitSize: 5, strictDataTypeCheck: false })");
+
+      importResult = importResults2NdTry.next();
+      assertEquals(27L, importResult.get("triplesLoaded").asLong());
+      assertEquals(27L, importResult.get("triplesParsed").asLong());
+
+      assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
+
+      assertEquals(1L,session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
 
     }
 
   }
 
   @Test
-  public void dbpediaBug3() throws Exception {
+  public void multivalAcrossPartialCommits() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -2656,19 +2757,35 @@ public class RDFProceduresTest {
       Result importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
               RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx.ttl").toURI()
-              + "','Turtle', { commitSize: 4 })");
+              + "','Turtle', { commitSize: 6 })");
 
       Record importResult = importResults.next();
-      assertEquals(8L, importResult.get("triplesLoaded").asLong());
-      assertEquals(8L, importResult.get("triplesParsed").asLong());
+      assertEquals(23L, importResult.get("triplesLoaded").asLong());
+      assertEquals(23L, importResult.get("triplesParsed").asLong());
 
       Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
       assertEquals(1, result.next().get("nodeCount").asInt());
 
+      result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLengthDouble as dou, n.ns0__totalLengthInt as int," +
+              "n.ns0__dateValue as dat, n.ns0__dateTimeProp as dtim, n.ns0__titleBool as boo, n.ns0__title as str1, " +
+              "n.ns0__rev as str2 ");
+      Record singleResult = result.next();
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList(45.75D, 50.75D, 510D)));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList(4L, 43L, 4187L)));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList(
+              LocalDate.of(2002, 9, 24), LocalDate.of(1973, 8, 28),
+              LocalDate.of(2002, 9, 25))));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList(
+              LocalDateTime.of(2002, 8, 28, 9, 8, 0),
+              LocalDateTime.of(2002, 5, 30, 9, 0, 0),
+              LocalDateTime.of(2012, 5, 30, 9, 9, 0))));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList(true, false)));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList("I Know No One",
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
     }
 
   }
-
 
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {

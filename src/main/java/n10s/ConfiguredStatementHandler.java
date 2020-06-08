@@ -6,9 +6,9 @@ import org.eclipse.rdf4j.rio.RDFParseException;
 
 public abstract class ConfiguredStatementHandler implements RDFHandler {
 
-  public abstract RDFParserConfig getParserConfig();
+    public abstract RDFParserConfig getParserConfig();
 
-  public class TripleLimitReached extends RDFParseException {
+    public class TripleLimitReached extends RDFParseException {
 
     public TripleLimitReached(String s) {
       super(s);

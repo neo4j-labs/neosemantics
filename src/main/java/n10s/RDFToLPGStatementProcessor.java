@@ -1,39 +1,10 @@
 package n10s;
 
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_OVERWRITE;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS_AND_NODES;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
-import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
-import static n10s.mapping.MappingUtils.getImportMappingsFromDB;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
-import org.eclipse.rdf4j.model.BNode;
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Literal;
-import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.Triple;
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
@@ -42,6 +13,16 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.*;
+
+import static n10s.graphconfig.GraphConfig.*;
+import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
+import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static n10s.mapping.MappingUtils.getImportMappingsFromDB;
 
 
 /**
@@ -69,6 +50,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   public long totalTriplesMapped = 0;
   public long mappedTripleCounter = 0;
   private final ValueFactory vf = SimpleValueFactory.getInstance();
+  protected StringBuilder loadWarnings = new StringBuilder();
+  protected boolean datatypeConflictFound = false;
 
 
   public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
@@ -93,7 +76,9 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     }
   }
 
-
+  protected void appendWarning(String warningMessage){
+    loadWarnings.append(warningMessage);
+  }
   private void loadNamespaces() throws InvalidNamespacePrefixDefinitionInDB {
     namespaces = new NsPrefixMap(tx, false);
   }
@@ -145,24 +130,29 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       if (parserConfig.getGraphConf().isKeepCustomDataTypes() && !(
           parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
               || parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP)) {
-        //keep custom type
-        String value = object.stringValue();
+        //keep custom type as long as property is not absent from customDT list
         if (parserConfig.getGraphConf().getCustomDataTypePropList() == null || parserConfig
             .getGraphConf().getCustomDataTypePropList()
             .contains(propertyIRI.stringValue())) {
-          String datatypeString;
-          if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
-            datatypeString = handleIRI(datatype, DATATYPE);
-          } else {
-            datatypeString = datatype.stringValue();
-          }
-          value = value.concat(CUSTOM_DATA_TYPE_SEPERATOR + datatypeString);
+          return getValueWithDatatype(datatype, object.stringValue());
+        } else {
+          return object.stringValue();
         }
-        return value;
       }
     }
     // default
     return object.stringValue();
+  }
+
+  private String getValueWithDatatype(IRI datatype, String value) {
+    StringBuilder result = new StringBuilder(value);
+    result.append(CUSTOM_DATA_TYPE_SEPERATOR);
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      result.append(handleIRI(datatype, DATATYPE));
+    } else {
+      result.append(datatype.stringValue());
+    }
+    return result.toString();
   }
 
   private boolean typeMapsToDouble(IRI datatype) {
@@ -462,17 +452,69 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     return (namespaces == null ? null : namespaces.getPrefixToNs());
   }
 
-  // Stolen from APOC :)
+  // Stolen from APOC ;) (and extended to check multi-datatypes)
   protected Object toPropertyValue(Object value) {
     Iterable it = (Iterable) value;
     Object first = Iterables.firstOrNull(it);
+    boolean homogeneousList = true;
+    for(Object x:it) {
+      homogeneousList&= x.getClass().equals(first.getClass());
+      if (!homogeneousList){
+        this.datatypeConflictFound = true;
+        if (getParserConfig().isStrictDataTypeCheck()){
+          throw new HeterogeneousDataTyping();
+        } else {
+          return defaultToString(it.iterator());
+        }
+      }
+    }
     if (first == null) {
       return EMPTY_ARRAY;
     }
     return Iterables.asArray(first.getClass(), it);
   }
 
+  private String[] defaultToString(Iterator it) {
+      List<String> list = new ArrayList<>();
+      while(it.hasNext()) {
+        Object next = it.next();
+        list.add(next instanceof String? next.toString(): getValueWithDatatype(getBestGuessDatatype(next.getClass()),next.toString()));
+      }
+    return list.toArray(new String[list.size()]);
+
+  }
+
+  private IRI getBestGuessDatatype(Class<?> c) {
+    if (c.equals(Double.class)){
+      return XMLSchema.DOUBLE;
+    } else if (c.equals(Long.class)) {
+      return XMLSchema.LONG;
+    } else if (c.equals(Boolean.class)) {
+      return XMLSchema.BOOLEAN;
+    } else if (c.equals(LocalDate.class)) {
+      return XMLSchema.DATE;
+    } else if (c.equals(LocalDateTime.class)) {
+      return XMLSchema.DATETIME;
+    } else {
+      return XMLSchema.STRING;
+    }
+  }
+
   protected abstract void periodicOperation();
+
+  public String getWarnings() {
+    return loadWarnings.toString() + (datatypeConflictFound?datatypeConflictMessage():"");
+  }
+
+  private String datatypeConflictMessage() {
+    if(this.getParserConfig().isStrictDataTypeCheck()){
+      return "Some triples were discarded because of heterogeneous data typing of values for the same property. " +
+              "Check logs  for details.";
+    } else {
+      return "Some heterogeneous data typing of values for the same property was found. Values were imported as typed strings. " +
+              "Check logs  for details.";
+    }
+  }
 
   protected class NamespacePrefixConflict extends RDFHandlerException {
     public NamespacePrefixConflict(String s, Exception  e) {
@@ -487,5 +529,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   }
 
 
-
+  protected class HeterogeneousDataTyping extends RDFHandlerException {
+    public HeterogeneousDataTyping(){ super("Heterogeneous Datatyping");}
+  }
 }

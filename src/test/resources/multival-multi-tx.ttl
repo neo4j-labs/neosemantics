@@ -1,12 +1,23 @@
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/rev> "Tiny Mix Tapes"@en .
-<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLength> "45.75"^^<http://www.w3.org/2001/XMLSchema#double> .
-<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "I Hold Nothing"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthDouble> "45.75"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthInt> "4"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateValue> "2002-09-24"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateTimeProp> "2002-05-30T09:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/titleBool> true .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "I Know No One"@en .
-<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLength> "50.75"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthDouble> "50.75"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthInt> "43"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateValue> "2002-09-25"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateTimeProp> "2012-05-30T09:09:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/titleBool> true .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "Stop Singing"@en .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthDouble> "510"^^<http://www.w3.org/2001/XMLSchema#double> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLengthInt> "4187"^^<http://www.w3.org/2001/XMLSchema#integer> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateValue> "1973-08-28"^^<http://www.w3.org/2001/XMLSchema#date> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/dateTimeProp> "2002-08-28T09:08:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/titleBool> false .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "In the Bat's Mouth"@en .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "No Flashlight"@en .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "No Inside, No Out"@en .
-<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "Stop Singing"@en .
-<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/totalLength> "510"^^<http://www.w3.org/2001/XMLSchema#double> .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Air in the Morning"@en .
 <http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> <http://dbpedia.org/property/title> "The Intimacy of the World with the World"@en .
