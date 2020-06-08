@@ -2649,7 +2649,7 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void dbpediaBug() throws Exception {
+  public void dbpediaFragmentTest() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -2661,12 +2661,27 @@ public class RDFProceduresTest {
               + "','Turtle', { commitSize: 200 })");
 
       Record importResult = importResults.next();
-      assertEquals(15600L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24869L, importResult.get("triplesLoaded").asLong());
       assertEquals(25000L, importResult.get("triplesParsed").asLong());
 
       Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
       Record next = result.next();
-      assertEquals(2500, next.get("nodeCount"));
+      assertEquals(4497L, next.get("nodeCount").asLong());
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong()>0);
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("dbpedia-fragment.ttl").toURI()
+              + "','Turtle', { commitSize: 200 , strictDataTypeCheck: false})");
+
+      importResult = importResults.next();
+      assertEquals(25000L, importResult.get("triplesLoaded").asLong());
+      assertEquals(25000L, importResult.get("triplesParsed").asLong());
+
+      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      next = result.next();
+      assertEquals(4497L, next.get("nodeCount").asLong());
 
     }
 
@@ -2916,7 +2931,44 @@ public class RDFProceduresTest {
     }
   }
 
-  //ADD test with resource with rdf:type but no properties
+
+  @Test
+  public void heterogeneousMultivalAcrossPartialCommitsWithKeepURIs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleMultival:'ARRAY', handleVocabUris: 'KEEP', keepCustomDataTypes: true}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx-heterogeneous-types.ttl").toURI()
+              + "','Turtle', { commitSize: 12, strictDataTypeCheck: false})");
+
+      Record importResult = importResults.next();
+      assertEquals(24L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24L, importResult.get("triplesParsed").asLong());
+
+      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
+
+      result = session.run("MATCH (n:Resource) RETURN n.`http://dbpedia.org/property/totalLengthDouble` as dou, n.`http://dbpedia.org/property/totalLengthInt` as int," +
+              "n.`http://dbpedia.org/property/dateValue` as dat, n.`http://dbpedia.org/property/dateTimeProp` as dtim, n.`http://dbpedia.org/property/titleBool` as boo, n.`http://dbpedia.org/property/title` as str1, " +
+              "n.`http://dbpedia.org/property/rev` as str2 ");
+      Record singleResult = result.next();
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList("45.75^^http://www.w3.org/2001/XMLSchema#double", "50.75^^http://neo4j.com/customTypes/Double", "510.0^^http://www.w3.org/2001/XMLSchema#double")));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList("4^^http://www.w3.org/2001/XMLSchema#long", "43^^http://neo4j.com/customTypes/Integer", "4187^^http://www.w3.org/2001/XMLSchema#long")));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList("2002-09-24^^http://www.w3.org/2001/XMLSchema#date","2002-09-25^^http://neo4j.com/customTypes/Date","1973-08-28^^http://www.w3.org/2001/XMLSchema#date")));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList("2002-05-30T09:00^^http://www.w3.org/2001/XMLSchema#dateTime","2012-05-30T09:09:00^^http://neo4j.com/customTypes/DateTime","2002-08-28T09:08^^http://www.w3.org/2001/XMLSchema#dateTime")));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList("true^^http://www.w3.org/2001/XMLSchema#boolean", "false^^http://www.w3.org/2001/XMLSchema#boolean","true^^http://neo4j.com/customTypes/Bool")));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList("I Know No One^^http://neo4j.com/customTypes/String",
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
+    }
+  }
+  //ADD
+  // test with mode: KEEP
+  // test with resource with rdf:type but no properties
 
 
   @Test

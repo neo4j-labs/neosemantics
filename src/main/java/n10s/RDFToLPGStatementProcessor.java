@@ -452,7 +452,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     return (namespaces == null ? null : namespaces.getPrefixToNs());
   }
 
-  // Stolen from APOC ;) (and extended to check multi-datatypes)
+  // Stolen from APOC ;)
   protected Object toPropertyValue(Object value) {
     Iterable it = (Iterable) value;
     Object first = Iterables.firstOrNull(it);
@@ -468,7 +468,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
         Object next = it.next();
         list.add(next instanceof String? next.toString(): getValueWithDatatype(getBestGuessDatatype(next.getClass()),next.toString()));
       }
-    return list; //list.toArray(new String[list.size()])
+    return list;
 
   }
 
