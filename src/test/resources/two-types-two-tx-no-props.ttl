@@ -1,0 +1,2 @@
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> a <http://dbpedia.org/property/Type1> .
+<http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night> a <http://dbpedia.org/property/Type2> .

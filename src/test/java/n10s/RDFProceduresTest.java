@@ -2966,9 +2966,33 @@ public class RDFProceduresTest {
               "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
     }
   }
-  //ADD
-  // test with mode: KEEP
-  // test with resource with rdf:type but no properties
+
+
+  @Test
+  public void testTypesOnlySeparateTx() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleMultival:'ARRAY', keepCustomDataTypes: true}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("two-types-two-tx-no-props.ttl").toURI()
+              + "','Turtle', { commitSize: 1, strictDataTypeCheck: false})");
+
+      Record importResult = importResults.next();
+      assertEquals(2L, importResult.get("triplesLoaded").asLong());
+      assertEquals(2L, importResult.get("triplesParsed").asLong());
+
+      assertEquals(1, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
+      assertEquals(3, session.run("MATCH (n:Resource) RETURN size(labels(n)) as labelCount ").next().get("labelCount").asInt());
+
+
+
+    }
+  }
+
 
 
   @Test
