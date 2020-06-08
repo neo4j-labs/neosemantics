@@ -144,7 +144,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     return object.stringValue();
   }
 
-  private String getValueWithDatatype(IRI datatype, String value) {
+  protected String getValueWithDatatype(IRI datatype, String value) {
     StringBuilder result = new StringBuilder(value);
     result.append(CUSTOM_DATA_TYPE_SEPERATOR);
     if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
@@ -456,31 +456,19 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   protected Object toPropertyValue(Object value) {
     Iterable it = (Iterable) value;
     Object first = Iterables.firstOrNull(it);
-    boolean homogeneousList = true;
-    for(Object x:it) {
-      homogeneousList&= x.getClass().equals(first.getClass());
-      if (!homogeneousList){
-        this.datatypeConflictFound = true;
-        if (getParserConfig().isStrictDataTypeCheck()){
-          throw new HeterogeneousDataTyping();
-        } else {
-          return defaultToString(it.iterator());
-        }
-      }
-    }
     if (first == null) {
       return EMPTY_ARRAY;
     }
     return Iterables.asArray(first.getClass(), it);
   }
 
-  private String[] defaultToString(Iterator it) {
+  protected List<String> defaultToString(Iterator it) {
       List<String> list = new ArrayList<>();
       while(it.hasNext()) {
         Object next = it.next();
         list.add(next instanceof String? next.toString(): getValueWithDatatype(getBestGuessDatatype(next.getClass()),next.toString()));
       }
-    return list.toArray(new String[list.size()]);
+    return list; //list.toArray(new String[list.size()])
 
   }
 

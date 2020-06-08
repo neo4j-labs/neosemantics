@@ -69,12 +69,10 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
           resourceProps.get(entry.getKey()).forEach((k, v) -> {
             if (v instanceof List) {
-              try{
                 Object currentValue = node.getProperty(k, null);
-                if (currentValue == null) {
-                  node.setProperty(k, toPropertyValue(v));
-                } else {
-                  List<Object> newList = new ArrayList<>((List)v);
+                List<Object> newList = new ArrayList<>();
+                if (currentValue != null) {
+                  //initialise with existing values
                   if (currentValue.getClass().isArray()) {
                     int length = Array.getLength(currentValue);
                     for (int i = 0; i < length; i ++) {
@@ -86,13 +84,36 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
                     // from atomic to multival without emptying the DB
                     newList.add(node.getProperty(k));
                   }
-                  //we can make it a set to remove duplicates. Multivalued props with the same value are the same in RDF.
+                }
+
+                Class<?> currentDatatype = newList.isEmpty()?((List) v).get(0).getClass():newList.get(0).getClass();
+
+                List<Object> discardedItems = new ArrayList<>();
+
+                for(Object x:(List)v) {
+                  if (x.getClass().equals(currentDatatype)){
+                    newList.add(x);
+                  }  else {
+                    discardedItems.add(x);
+                  }
+                }
+
+                if(!discardedItems.isEmpty()){
+                  this.datatypeConflictFound |= true;
+                  if (getParserConfig().isStrictDataTypeCheck()){
+                    this.mappedTripleCounter-= discardedItems.size();
+                    log.warn("The following values for property '" + k + "' have been discarded because of datatype heterogeneity (previously stored values are of type " + currentDatatype + ") : " + discardedItems );
+                    node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
+                  } else {
+                    //default all to string if they're not already return defaultToString(it.iterator());
+                    newList.addAll(discardedItems);
+                    node.setProperty(k, toPropertyValue(defaultToString(newList.iterator()).stream().collect(Collectors.toSet())));
+                  }
+                } else {
+                  //no discarded elements. all good, newlist contains all the values. nothing to do
                   node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
                 }
-              }catch(HeterogeneousDataTyping e){
-                this.mappedTripleCounter-= ((List) v).size();
-                log.warn("The following values for property " + k + " have been discarded because of datatype heterogeneity: " + v);
-              }
+
             } else {
               node.setProperty(k, v);
             }
@@ -179,6 +200,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
       nodeCache.invalidateAll();
     }
   }
+
 
 
   @Override

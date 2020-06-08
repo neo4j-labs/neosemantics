@@ -2685,7 +2685,7 @@ public class RDFProceduresTest {
               + "','Turtle', { commitSize: 200 })");
 
       Record importResult = importResults.next();
-      assertEquals(25L, importResult.get("triplesLoaded").asLong());
+      assertEquals(26L, importResult.get("triplesLoaded").asLong());
       assertEquals(27L, importResult.get("triplesParsed").asLong());
       assertEquals("Some triples were discarded because of heterogeneous data typing of values for the same property. " +
                       "Check logs  for details.", importResult.get("extraInfo").asString());
@@ -2693,6 +2693,7 @@ public class RDFProceduresTest {
       assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
 
       assertEquals(0L,session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
+      assertEquals(1L,session.run("MATCH (n:Resource) WHERE 45.75 in n.ns0__totalLength  RETURN count(n) as ct ").next().get("ct").asLong());
 
       assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong()>0);
 
@@ -2748,7 +2749,7 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void multivalAcrossPartialCommits() throws Exception {
+  public void homogeneousMultivalAcrossPartialCommits() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -2786,6 +2787,137 @@ public class RDFProceduresTest {
     }
 
   }
+
+
+  @Test
+  public void heterogeneousMultivalAcrossPartialCommits() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleMultival:'ARRAY', handleRDFTypes: 'NODES', keepCustomDataTypes: true}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx-heterogeneous-types.ttl").toURI()
+              + "','Turtle', { commitSize: 6 })");
+
+      Record importResult = importResults.next();
+      assertEquals(19L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24L, importResult.get("triplesParsed").asLong());
+
+      Result result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
+
+      result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLengthDouble as dou, n.ns0__totalLengthInt as int," +
+              "n.ns0__dateValue as dat, n.ns0__dateTimeProp as dtim, n.ns0__titleBool as boo, n.ns0__title as str1, " +
+              "n.ns0__rev as str2 ");
+      Record singleResult = result.next();
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList(45.75D, 510D)));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList(4L, 4187L)));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList(
+              LocalDate.of(2002, 9, 24), LocalDate.of(1973, 8, 28))));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList(
+              LocalDateTime.of(2002, 8, 28, 9, 8, 0),
+              LocalDateTime.of(2002, 5, 30, 9, 0, 0))));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList(true, false)));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList(
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong() > 0);
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx-heterogeneous-types.ttl").toURI()
+              + "','Turtle', { commitSize: 12 })");
+
+      importResult = importResults.next();
+      assertEquals(19L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24L, importResult.get("triplesParsed").asLong());
+
+      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
+
+      result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLengthDouble as dou, n.ns0__totalLengthInt as int," +
+              "n.ns0__dateValue as dat, n.ns0__dateTimeProp as dtim, n.ns0__titleBool as boo, n.ns0__title as str1, " +
+              "n.ns0__rev as str2 ");
+      singleResult = result.next();
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList(45.75D, 510D)));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList(4L, 4187L)));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList(
+              LocalDate.of(2002, 9, 24), LocalDate.of(1973, 8, 28))));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList(
+              LocalDateTime.of(2002, 8, 28, 9, 8, 0),
+              LocalDateTime.of(2002, 5, 30, 9, 0, 0))));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList(true, false)));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList(
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong() > 0);
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx-heterogeneous-types.ttl").toURI()
+              + "','Turtle', { commitSize: 100 })");
+
+      importResult = importResults.next();
+      assertEquals(19L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24L, importResult.get("triplesParsed").asLong());
+
+      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
+
+      result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLengthDouble as dou, n.ns0__totalLengthInt as int," +
+              "n.ns0__dateValue as dat, n.ns0__dateTimeProp as dtim, n.ns0__titleBool as boo, n.ns0__title as str1, " +
+              "n.ns0__rev as str2 ");
+
+      singleResult = result.next();
+
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList(45.75D, 510D)));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList(4L, 4187L)));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList(
+              LocalDate.of(2002, 9, 24), LocalDate.of(1973, 8, 28))));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList(
+              LocalDateTime.of(2002, 8, 28, 9, 8, 0),
+              LocalDateTime.of(2002, 5, 30, 9, 0, 0))));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList(true, false)));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList(
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
+
+      assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong() > 0);
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("multival-multi-tx-heterogeneous-types.ttl").toURI()
+              + "','Turtle', { commitSize: 12, strictDataTypeCheck: false})");
+
+      importResult = importResults.next();
+      assertEquals(24L, importResult.get("triplesLoaded").asLong());
+      assertEquals(24L, importResult.get("triplesParsed").asLong());
+
+      result = session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ");
+      assertEquals(1, result.next().get("nodeCount").asInt());
+
+      result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLengthDouble as dou, n.ns0__totalLengthInt as int," +
+              "n.ns0__dateValue as dat, n.ns0__dateTimeProp as dtim, n.ns0__titleBool as boo, n.ns0__title as str1, " +
+              "n.ns0__rev as str2 ");
+      singleResult = result.next();
+      assertTrue(singleResult.get("dou").asList().containsAll(Arrays.asList("45.75^^xsd__double", "50.75^^ns1__Double", "510.0^^xsd__double")));
+      assertTrue(singleResult.get("int").asList().containsAll(Arrays.asList("4^^xsd__long", "43^^ns1__Integer", "4187^^xsd__long")));
+      assertTrue(singleResult.get("dat").asList().containsAll(Arrays.asList("2002-09-24^^xsd__date","2002-09-25^^ns1__Date","1973-08-28^^xsd__date")));
+      assertTrue(singleResult.get("dtim").asList().containsAll(Arrays.asList("2002-05-30T09:00^^xsd__dateTime","2012-05-30T09:09:00^^ns1__DateTime","2002-08-28T09:08^^xsd__dateTime")));
+      assertTrue(singleResult.get("boo").asList().containsAll(Arrays.asList("true^^xsd__boolean", "false^^xsd__boolean","true^^ns1__Bool")));
+      assertTrue(singleResult.get("str1").asList().containsAll(Arrays.asList("I Know No One^^ns1__String",
+              "The Intimacy of the World with the World", "No Flashlight", "The Air in the Morning",
+              "No Inside, No Out", "Stop Singing", "In the Bat's Mouth")));
+    }
+  }
+
+  //ADD test with resource with rdf:type but no properties
+
 
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {
