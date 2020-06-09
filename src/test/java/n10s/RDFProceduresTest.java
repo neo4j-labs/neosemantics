@@ -549,13 +549,14 @@ public class RDFProceduresTest {
 
       importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("schema.tgz").toURI() + "!schema.rdf"
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.tgz").toURI() + "!schema.rdf"
               + "','RDF/XML',"
               +
               "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
 
       assertEquals(10774L, importResults
               .single().get("triplesLoaded").asLong());
+
 
       importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
@@ -577,15 +578,15 @@ public class RDFProceduresTest {
       assertEquals(10774L, importResults
               .single().get("triplesLoaded").asLong());
 
-      importResults
-              = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
-              + "','RDF/XML',"
-              +
-              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-
-      assertEquals(10774L, importResults
-              .single().get("triplesLoaded").asLong());
+//      importResults
+//              = session.run("CALL n10s.rdf.import.fetch('" +
+//              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
+//              + "','RDF/XML',"
+//              +
+//              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+//
+//      assertEquals(10774L, importResults
+//              .single().get("triplesLoaded").asLong());
 
     }
   }

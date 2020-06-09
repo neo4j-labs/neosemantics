@@ -404,7 +404,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
         });
       } else {
         //filter on value (object)
-        Value object = getValueFromTriplePatternObject(tp);
+        Value object =  getValueFromTriplePatternObject(tp);
         Result result;
         Map<String, Object> params = new HashMap<>();
         if(predicate!=null) {
