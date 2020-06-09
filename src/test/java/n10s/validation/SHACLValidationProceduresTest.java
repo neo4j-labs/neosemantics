@@ -319,7 +319,7 @@ public class SHACLValidationProceduresTest {
         assertFalse(true); //should not get here
       } catch (Exception e) {
         assertTrue(e.getMessage().contains(
-            "ShapesUsingNamespaceWithUndefinedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://voc#")); //expected
+            "Prefix Undefined: No prefix defined for namespace <neo4j://voc#Movie>. Use n10s.nsprefixes.add(...) procedure.")); //expected
       }
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");

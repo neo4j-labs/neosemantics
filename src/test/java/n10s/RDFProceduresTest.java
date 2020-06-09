@@ -1202,12 +1202,12 @@ public class RDFProceduresTest {
       localNames.add("That Seventies Show");
       localNames.add("Cette Série des Années Soixante-dix");
       localNames.add("Cette Série des Années Septante");
-      assertEquals(localNames, next.get("all").asList());
+      assertTrue(next.get("all").asList().containsAll(localNames));
       List<String> availableInLang = new ArrayList<>();
       availableInLang.add("EN");
       availableInLang.add("FR");
       availableInLang.add("ES");
-      assertEquals(availableInLang, next.get("ail").asList());
+      assertTrue(next.get("ail").asList().containsAll(availableInLang));
       assertEquals(218, next.get("sid").asLong());
       assertEquals("Joanna Smith", next.get("prod").asString());
     }
@@ -2310,13 +2310,10 @@ public class RDFProceduresTest {
       Record car = cars.next();
       List price = car.get("price").asList();
       assertEquals(2, price.size());
-      assertEquals("10000^^http://example.com/EUR", price.get(0));
-      assertEquals("11000^^http://example.com/USD", price.get(1));
-      assertEquals("300^^http://example.com/HP", car.get("power").get(0).asString());
-      assertEquals("223,71^^http://example.com/kW", car.get("power").get(1).asString());
+      assertTrue(price.containsAll(Arrays.asList("10000^^http://example.com/EUR","11000^^http://example.com/USD")));
+      assertTrue(car.get("power").asList().containsAll(Arrays.asList("300^^http://example.com/HP","223,71^^http://example.com/kW")));
       assertEquals("red^^http://example.com/Color", car.get("color").asString());
-      assertEquals("A-Klasse@de", car.get("class").asList().get(0));
-      assertEquals("A-Class@en", car.get("class").asList().get(1));
+      assertTrue(car.get("class").asList().containsAll(Arrays.asList("A-Klasse@de","A-Class@en")));
       assertEquals(2019, car.get("released").asLong());
       assertEquals("Cabrio", car.get("type").asString());
     }
@@ -2352,13 +2349,13 @@ public class RDFProceduresTest {
       Record car = cars.next();
       List price = car.get("price").asList();
       assertEquals(2, price.size());
-      assertEquals("10000^^ns0__EUR", price.get(0));
-      assertEquals("11000^^ns0__USD", price.get(1));
-      assertEquals("300^^ns0__HP", car.get("power").get(0).asString());
-      assertEquals("223,71^^ns0__kW", car.get("power").get(1).asString());
+      assertTrue(price.contains("10000^^ns0__EUR"));
+      assertTrue(price.contains("11000^^ns0__USD"));
+      assertTrue(car.get("power").asList().contains("300^^ns0__HP"));
+      assertTrue(car.get("power").asList().contains("223,71^^ns0__kW"));
       assertEquals("red^^ns0__Color", car.get("color").asString());
-      assertEquals("A-Klasse@de", car.get("class").asList().get(0));
-      assertEquals("A-Class@en", car.get("class").asList().get(1));
+      assertTrue(car.get("class").asList().contains("A-Klasse@de"));
+      assertTrue(car.get("class").asList().contains("A-Class@en"));
       assertEquals(2019, car.get("released").asLong());
       assertEquals("Cabrio", car.get("type").asString());
     }
@@ -3370,8 +3367,7 @@ public class RDFProceduresTest {
           + "m.`http://example.org/Predicate4` AS mP4");
 
       Record record = result.next();
-      assertArrayEquals(new String[]{"val1", "val2", "val3", "val4"},
-          record.get("nP4").asList().toArray());
+      assertTrue(record.get("nP4").asList().containsAll(Arrays.asList("val1", "val2", "val3", "val4")));
       assertTrue(record.get("mP3").asList().contains(100L));
       assertTrue(record.get("mP3").asList().contains(200L));
       assertTrue(record.get("mP4").asList().contains(300.0));

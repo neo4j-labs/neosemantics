@@ -14,6 +14,7 @@ import java.util.concurrent.ExecutionException;
 import n10s.RDFToLPGStatementProcessor;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.BNode;
+import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.Direction;
@@ -65,7 +66,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
 
     for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
       try {
-        if (entry.getKey().startsWith("genid")) {
+        if (entry.getKey().startsWith("bnode://")) {
           statementsWithBNodeCount += entry.getValue().size() + 1;
           continue;
         }
@@ -160,10 +161,13 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
 
     for (Statement st : statements) {
       try {
-        if (st.getSubject() instanceof BNode != st.getObject() instanceof BNode) {
+        if ((st.getSubject() instanceof IRI && st.getSubject().stringValue().startsWith("bnode://")) !=
+                (st.getObject() instanceof IRI && st.getObject().stringValue().startsWith("bnode://"))) {
           statementsWithBNodeCount++;
         }
-        if (st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+        if ((st.getSubject() instanceof IRI && st.getSubject().stringValue().startsWith("bnode://")) ||
+                (st.getObject() instanceof IRI && st.getObject().stringValue().startsWith("bnode://"))) { //(st.getSubject() instanceof BNode || st.getObject() instanceof BNode) {
+          //statementsWithBNodeCount++;
           continue;
         }
         Node fromNode = null;

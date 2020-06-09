@@ -1884,10 +1884,17 @@ public class RDFEndpointTest {
           map.get("extraInfo"));
       tx.commit();
     }
+    String aliceUri = null;
+    String addrUri = null;
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Map<String, Object> next = tx.execute("MATCH (c:Resource { `http://example.org/fullName`: ['Alice Carol']} )-[:`http://example.org/hasAddress`]->(x) return c.uri as aliceUri, x.uri as addrUri").next();
+      aliceUri = (String)next.get("aliceUri");
+      addrUri = (String)next.get("addrUri");
+    }
+
     Map<String, String> params = new HashMap<>();
-    params.put("cypher", "MATCH (a:Resource) "
-        + "OPTIONAL MATCH (a)-[r]->()"
-        + "RETURN DISTINCT *");
+    params.put("cypher", "MATCH p = ()<-[:`http://example.org/homePage`]-(:Resource)-[:`http://example.org/hasAddress`]->() return p");
 
     HTTP.Response response = HTTP.
         withHeaders("Accept", "text/turtle")
@@ -1895,9 +1902,18 @@ public class RDFEndpointTest {
             HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
             params);
 
-    String expected = Resources
-        .toString(Resources.getResource("deleteRDF/bNodesPostDeletion.ttl"),
-            StandardCharsets.UTF_8);
+    String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+            "\n" +
+            "<" + addrUri + "> a <http://example.org/Address>;\n" +
+            "  <http://example.org/addressLocality> \"London\";\n" +
+            "  <http://example.org/postalCode> \"A1A1A1\";\n" +
+            "  <http://example.org/streetAddress> \"123 Main St.\" .\n" +
+            "\n" +
+            "<" + aliceUri + "> <http://example.org/fullName>\n" +
+            "    \"Alice Carol\";\n" +
+            "  <http://example.org/hasAddress> <" + addrUri + ">;\n" +
+            "  <http://example.org/homePage> <http://example.net/alice-carol> .";
+
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
