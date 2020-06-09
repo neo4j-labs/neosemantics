@@ -299,7 +299,7 @@ public class SHACLValidationProceduresTest {
 
 
   @Test
-  public void testValidationBeforeNsDefined() throws Exception {
+    public void testValidationBeforeNsDefined() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
@@ -318,8 +318,7 @@ public class SHACLValidationProceduresTest {
         result.hasNext();
         assertFalse(true); //should not get here
       } catch (Exception e) {
-        assertTrue(e.getMessage().contains(
-            "Prefix Undefined: No prefix defined for namespace <neo4j://voc#Movie>. Use n10s.nsprefixes.add(...) procedure.")); //expected
+        assertEquals("Failed to invoke procedure `n10s.validation.shacl.import.fetch`: Caused by: n10s.utils.UriUtils$UriNamespaceHasNoAssociatedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://voc#Movie>. Use n10s.nsprefixes.add(...) procedure.",e.getMessage());
       }
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");
