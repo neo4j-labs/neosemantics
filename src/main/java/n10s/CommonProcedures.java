@@ -131,25 +131,47 @@ public class CommonProcedures {
   protected InputStream getInputStream(String url, Map<String, Object> props) throws IOException {
     URLConnection urlConn;
 
-    if (url.contains("!") && (url.contains(".zip") || url.contains(".tgz")|| url.contains(".tar.gz"))) {
-
-      String[] tokens = url.split("!");
-      url = tokens[0];
-      String zipFileName;
-      if (tokens.length == 2) {
+    if ((url.contains(".zip") || url.contains(".tgz")|| url.contains(".gz")|| url.contains(".bz2"))) {
+      String zipFileName = null;
+      if (url.contains("!")) {
+        String[] tokens = url.split("!");
+        url = tokens[0];
         zipFileName = tokens[1];
-        urlConn = new URL(url).openConnection();
-        return getFileStreamIntoCompressedFile(url.contains(".zip"),urlConn.getInputStream(), zipFileName);
-      } else
-        throw new IllegalArgumentException("filename can't be null or empty");
-    }else if(url.endsWith(".zip") || url.endsWith(".gz") || url.endsWith(".tar.gz") || url.endsWith(".tgz") || url.endsWith(".bz2")){
+        if (zipFileName.equals("")){
+          throw new IllegalArgumentException("filename can't be empty");
+        }
+        if (!(url.endsWith(".tar.gz") || url.endsWith(".tgz")||url.endsWith(".zip"))){
+          throw new IllegalArgumentException("'!' notation for filenames can only be used with zip or tgz files");
+        }
+      }
       urlConn = new URL(url).openConnection();
-      if(url.endsWith(".zip")){
-        return new ZipInputStream(urlConn.getInputStream());
+
+      if (url.endsWith(".zip")) {
+        ZipInputStream zip = new ZipInputStream(urlConn.getInputStream());
+        if (zipFileName!=null){
+          ZipEntry zipEntry;
+          while ((zipEntry = zip.getNextEntry()) != null) {
+            if (!zipEntry.isDirectory() && zipEntry.getName().equals(zipFileName)) {
+              return new ByteArrayInputStream(IOUtils.toByteArray(zip));
+            }
+          }
+        }else {
+          throw new IllegalArgumentException("Filename is required for zip files (use '!' notation)");
+        }
+      } else if (url.endsWith(".tar.gz") || url.endsWith(".tgz")) {
+        TarArchiveInputStream tgz = new TarArchiveInputStream(new GZIPInputStream(urlConn.getInputStream()));
+        if (zipFileName!=null){
+          ArchiveEntry zipEntry;
+          while ((zipEntry = tgz.getNextEntry()) != null) {
+            if (!zipEntry.isDirectory() && zipEntry.getName().equals(zipFileName)) {
+              return new ByteArrayInputStream(IOUtils.toByteArray(tgz));
+            }
+          }
+        } else {
+          return tgz;
+        }
       } else if (url.endsWith(".gz")){
         return new GZIPInputStream(urlConn.getInputStream());
-      } else if (url.endsWith(".tar.gz") || url.endsWith(".tgz")){
-        return new TarArchiveInputStream(new GZIPInputStream(urlConn.getInputStream()));
       } else if (url.endsWith(".bz2")){
         return new BZip2CompressorInputStream(urlConn.getInputStream());
       }
@@ -202,36 +224,7 @@ public class CommonProcedures {
     }
     return isRedirectCode;
   }
-
-  ////
-
-  private static InputStream getFileStreamIntoCompressedFile(boolean isZip, InputStream is, String fileName) throws IOException {
-
-    if(isZip) {
-      try (ZipInputStream zip = new ZipInputStream(is)) {
-        ZipEntry zipEntry;
-
-        while ((zipEntry = zip.getNextEntry()) != null) {
-          if (!zipEntry.isDirectory() && zipEntry.getName().equals(fileName)) {
-            return new ByteArrayInputStream(IOUtils.toByteArray(zip));
-          }
-        }
-      }
-    } else {
-      //it's a tgz
-      try (TarArchiveInputStream tgz = new TarArchiveInputStream(new GZIPInputStream(is))) {
-
-        ArchiveEntry tgzEntry;
-
-        while ((tgzEntry = tgz.getNextEntry()) != null) {
-          if (!tgzEntry.isDirectory() && tgzEntry.getName().equals(fileName)) {
-            return new ByteArrayInputStream(IOUtils.toByteArray(tgz));
-          }
-        }
-      }
-    }
-    return null;
-  }
+  
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {

@@ -578,16 +578,35 @@ public class RDFProceduresTest {
       assertEquals(10774L, importResults
               .single().get("triplesLoaded").asLong());
 
-//      importResults
-//              = session.run("CALL n10s.rdf.import.fetch('" +
-//              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
-//              + "','RDF/XML',"
-//              +
-//              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-//
-//      assertEquals(10774L, importResults
-//              .single().get("triplesLoaded").asLong());
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.zip").toURI()
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
 
+      try{
+        importResults.single();
+        //should not get here
+        assertTrue(false);
+      } catch (Exception e){
+        assertEquals("Failed to invoke procedure `n10s.rdf.import.fetch`: Caused by: java.lang.IllegalArgumentException: Filename is required for zip files (use '!' notation)", e.getMessage());
+      }
+
+      importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("schema.rdf.bz2").toURI() + "!schema.rdf"
+              + "','RDF/XML',"
+              +
+              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
+
+      try{
+        importResults.single();
+        //should not get here
+        assertTrue(false);
+      } catch (Exception e){
+        assertEquals("Failed to invoke procedure `n10s.rdf.import.fetch`: Caused by: java.lang.IllegalArgumentException: '!' notation for filenames can only be used with zip or tgz files", e.getMessage());
+      }
     }
   }
 
@@ -601,53 +620,25 @@ public class RDFProceduresTest {
 
       Result importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.gz").toURI()
+              RDFProceduresTest.class.getClassLoader().getResource("rdf.tar.gz").toURI() + "!rdf/moviesontology.owl"
               + "','RDF/XML',"
               +
               "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
 
-      assertEquals(10774L, importResults
+      assertEquals(60L, importResults
               .single().get("triplesLoaded").asLong());
+
 
       importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("multi.tgz").toURI() + "!schema.rdf"
+              RDFProceduresTest.class.getClassLoader().getResource("rdf.zip").toURI() + "!rdf/moviesontology.owl"
               + "','RDF/XML',"
               +
               "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
 
-      assertEquals(10774L, importResults
+      assertEquals(60L, importResults
               .single().get("triplesLoaded").asLong());
 
-      importResults
-              = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.bz2").toURI()
-              + "','RDF/XML',"
-              +
-              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-
-      assertEquals(10774L, importResults
-              .single().get("triplesLoaded").asLong());
-
-      importResults
-              = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.zip").toURI() + "!schema.rdf"
-              + "','RDF/XML',"
-              +
-              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-
-      assertEquals(10774L, importResults
-              .single().get("triplesLoaded").asLong());
-
-      importResults
-              = session.run("CALL n10s.rdf.import.fetch('" +
-              RDFProceduresTest.class.getClassLoader().getResource("multi.rdf.zip").toURI()
-              + "','RDF/XML',"
-              +
-              "{ commitSize: 500, headerParams : { authorization: 'Basic bla bla bla', accept: 'rdf/xml' } })");
-
-      assertEquals(10774L, importResults
-              .single().get("triplesLoaded").asLong());
 
     }
   }
