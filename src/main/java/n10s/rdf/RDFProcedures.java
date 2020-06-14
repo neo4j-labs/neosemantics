@@ -106,7 +106,7 @@ public class RDFProcedures extends CommonProcedures {
       rdfFormat = getFormat(format);
       statementViewer = new StatementPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
     } catch (RDFImportBadParams e) {
-      throw new RDFImportException(e);
+      throw new RDFImportException(e.getMessage());
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
           "A Graph Config is required for the RDF preview method to run");
@@ -137,7 +137,7 @@ public class RDFProcedures extends CommonProcedures {
       conf = new RDFParserConfig(props, new GraphConfig(new HashMap<>()));
       statementStreamer = new StatementStreamer(conf);
     } catch (RDFImportBadParams e) {
-      throw new RDFImportException(e);
+      throw new RDFImportException(e.getMessage());
     } catch (InvalidParamException e) {
       //no params being passed to the config
     }

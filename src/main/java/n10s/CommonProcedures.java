@@ -224,7 +224,7 @@ public class CommonProcedures {
     }
     return isRedirectCode;
   }
-  
+
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
     if (format != null) {

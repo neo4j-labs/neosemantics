@@ -529,6 +529,65 @@ public class RDFProceduresTest {
     }
   }
 
+
+  @Test
+  public void testInvalidSerialisationFormat() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      try {
+        Result importResults
+              = session.run("CALL n10s.rdf.stream.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
+              + "','Invalid-Format')");
+
+
+        importResults.single();
+        assertTrue(false);
+      } catch (Exception e){
+        //expected
+        assertEquals("Failed to invoke procedure `n10s.rdf.stream.fetch`: Caused by: n10s.RDFImportException: Unrecognized serialization format: Invalid-Format",
+                e.getMessage());
+      }
+
+      try {
+        Result importResults
+                = session.run("CALL n10s.rdf.preview.fetch('" +
+                RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
+                + "','Invalid-Format')");
+
+
+        importResults.single();
+        assertTrue(false);
+      } catch (Exception e){
+        //expected
+        assertEquals("Failed to invoke procedure `n10s.rdf.preview.fetch`: Caused by: n10s.RDFImportException: Unrecognized serialization format: Invalid-Format",
+                e.getMessage());
+      }
+
+
+      try {
+        Result importResults
+                = session.run("CALL n10s.rdf.import.fetch('" +
+                RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
+                + "','Invalid-Format')");
+
+
+        Record single = importResults.single();
+        assertEquals("KO",single.get("terminationStatus").asString());
+        assertEquals(0L,single.get("triplesLoaded").asLong());
+        assertEquals("Unrecognized serialization format: Invalid-Format",single.get("extraInfo").asString());
+      } catch (Exception e){
+        //no exceptions raised with import
+        assertTrue(false);
+      }
+
+    }
+  }
+
   @Test
   public void testImportZippedSingleFile() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
