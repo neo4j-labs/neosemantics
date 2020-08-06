@@ -1,2 +1,116 @@
-=
+= Appendix A. Migrating from neosemantics 3 to 4
 :page-pagination:
+
+[appendix]
+[[Appendix_a]]
+
+[abstract]
+If you have previously used neosemantics v3.x, you can find the information you will need to migrate to using neosemantics v4.
+
+== Who should read this guide
+
+This documentation is intended for users who are familiar with neosemantics. Based on this assumption, we are intentionally brief in the examples and comparisons.
+
+=== Changes in neosemantics 4.x
+
+Changes are grouped in two categories:
+
+* Syntax changes: These include
+ ** <<namingscheme_change>>
+ ** <<index_requirement_change>>
+ ** <<fetch_inline_changes>>
+ ** <<RDF_endpoint_changes>>
+
+* Changes to the mode of operation. The main one is the move to a <<stateful_graph_change>>
+
+[[namingscheme_change]]
+=== Naming scheme changes
+The change in  the name scheme applies to all methods and procedures
+
+[options="header"]
+|===
+| neosemantics 3.x        | neosemantics 4.x (n10s)
+| `semantics.*` | `n10s.*`
+|===
+
+Experimental features (either incomplete or  not strongly tested) follow the  `n10s.experimental.\*` naming scheme. Examples of these are `n10s.experimental.quadrdf.*` and `n10s.experimental.importJSONAsTree`.
+
+[[index_requirement_change]]
+=== Pre-req changes: Single Property Index -> Unique Node Property Constraint
+In 3.x all resources (in the RDF sense) were indexed by creating an Neo4j https://neo4j.com/docs/cypher-manual/current/administration/indexes-for-search-performance/#administration-indexes-create-a-single-property-index[single property index] on label `Resource`, property `uri`. In 4.x the requirement of an index has been replaced by a https://neo4j.com/docs/cypher-manual/current/administration/constraints/#administration-constraints-unique-nodes[unique node property constraint]. Behind the scenes, an index is kept, but the constraint brings an additional level of safety especially for the case when multiple RDF importing procedures run in parallel.  (link to  documentation: xref:config.adoc#create-resource-uniqueness-constraint[Pre-requisite: Create uniqueness constraint])
+
+[options="header"]
+|===
+| neosemantics 3.x        | neosemantics 4.x (n10s)
+| `CREATE INDEX ON :Resource(uri)` | `CREATE CONSTRAINT n10s_unique_uri ON (r:Resource)
+                                      ASSERT r.uri IS UNIQUE;`
+|===
+
+[[fetch_inline_changes]]
+==== Fetch and inline modes on all RDF importing procedures
+All RDF importing procedures have two modes of operation in n10s 4.0 These are inline and fetch.
+
+* *inline* (`n10s.*.inline`) takes an RDF fragment passed as parameter to the procedure in question
+* *fetch* (`n10s.*.fetch`) retrieves the RDF from a url (file:// or http://)
+
+[options="header"]
+|===
+| neosemantics 3.x        | neosemantics 4.x (n10s)
+|`semantics.importRDF()`             |`n10s.rdf.import.fetch()`
+|`semantics.importRDFSnippet()`        |`n10s.rdf.import.inline()`
+|`semantics.previewRDF()`       |`n10s.rdf.preview.fetch()`
+|`semantics.previewRDFSnippet()`      |`n10s.rdf.preview.inline()`
+|`semantics.deleteRDF()`     |`n10s.rdf.delete.fetch()`
+|`semantics.deleteRDFSnippet()`    |`n10s.rdf.delete.inline()`
+|`semantics.importOntology()`   |`n10s.onto.import.fetch()`
+|`semantics.importOntologySnippet()`  |`n10s.onto.import.inline()`
+|`semantics.previewOntology()` |`n10s.onto.preview.fetch()`
+|`semantics.previewOntologySnippet()`|`n10s.onto.preview.inline()`
+|`semantics.experimental.importQuadRDF()`           |`n10s.experimental.quadrdf.import.fetch()`
+|`semantics.experimental.importQuadRDFSnippet()`    |`n10s.experimental.quadrdf.import.inline()`
+|`semantics.experimental.deleteQuadRDF()`   |`n10s.experimental.quadrdf.delete.fetch()`
+|`semantics.experimental.deleteQuadRDFSnippet()`  |`n10s.experimental.quadrdf.delete.inline()`
+|===
+
+[[RDF_endpoint_changes]]
+==== Changes to the url structure of the RDF endpoint
+Neo4j 4.0 introduced the notion of https://neo4j.com/docs/operations-manual/current/manage-databases/introduction/[multi-database]. Now it's possible to have multiple independent graphs on the same Neo4j server. This has an obvious impact on the RDF http endpoint as we need to be explicit about the database we want to access.
+
+The second chage to the URL structure is that it gets simplified becuse thanks to the persisted Graph Config.  Essentially the endpoint knows what kind of graph is stored in Neo4j (a PG, an imported RDF graph with namespace prefixes, etc...) so there is some implicit info that does not need to be passed in the request anymore. Here's how the primitives in the RDF endpoint have changed:
+
+[options="header"]
+|===
+| neosemantics 3.x        | neosemantics 4.x (n10s)
+|`/rdf/describe/id/<nodeid>`| `/rdf/<dbname>/describe/<nodeid or uri>`
+|`/rdf/describe/uri/<nodeuri>`| `/rdf/<dbname>/describe/<nodeid or uri>`
+|`/rdf/describe/find/<l>/<p>/<v>`| `/rdf/<dbname>/describe/find/<l>/<p>/<v>`
+|`/rdf/cypher`| `/rdf/<dbname>/cypher`
+|`/rdf/cypheronrdf`| `/rdf/<dbname>/cypher`
+|`/rdf/onto`|  `/rdf/<dbname>/onto`
+|`/rdf/ontonrdf`| `/rdf/<dbname>/onto`
+|===
+
+[[stateful_graph_change]]
+==== Persisted Graph Configuration
+
+In neosemantics 3.x all config params had to be passed on every request and kept consistent during the lifetime of a graph. For instance, if a first RDF import  was carried out followed by a second one,  both had to pass exactly the same set of parameters for the graph to be created  in a consistent way.
+In 4.x it is possible -actually it is required- to create a Graph configuration before any RDF import operation takes place. The config is used for all subsequent import/delete/export operations reducing the verbosity of the code and also making it less error prone.
+
+
+[options="header"]
+|===
+| neosemantics 3.x        | neosemantics 4.x (n10s)
+| `CALL semantics.importRDF("https://.. file1.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL semantics.previewRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL semantics.importRDF("https://.. file2.ttl","Turtle", { handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+ | `call n10s.graphconfig.init({ handleVocabUris: "IGNORE", handleMultival: 'ARRAY', multivalPropList : ['http://nyt.com/voc/keyword']});`
+
+`CALL n10s.rdf.import.fetch("..file1.ttl","Turtle");`
+
+`CALL n10s.rdf.preview.fetch("..file2.ttl","Turtle");`
+
+`CALL n10s.rdf.import.fetch("..file2.ttl","Turtle");`
+|===
