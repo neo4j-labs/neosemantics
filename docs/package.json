@@ -1,0 +1,29 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "npm run dev",
+    "dev": "npm start & npm-watch preview",
+    "preview": "antora preview.yml",
+    "publish": "git push origin HEAD:publish"
+  },
+  "watch": {
+    "preview": {
+      "patterns": [
+        "modules"
+      ],
+      "extensions": "adoc"
+    }
+  },
+  "dependencies": {
+    "@antora/cli": "^2.3.3",
+    "@antora/site-generator-default": "^2.3.3",
+    "@neo4j-documentation/macros": "^1.0.0",
+    "@neo4j-documentation/remote-include": "^1.0.0",
+    "express": "^4.17.1",
+    "npm-watch": "^0.6.0"
+  }
+}

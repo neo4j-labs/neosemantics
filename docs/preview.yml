@@ -1,0 +1,25 @@
+site:
+  title: Neosemantics 4.0
+
+content:
+  sources:
+  - url: ../
+    start_path: docs
+    branches: master
+    exclude:
+    - '!**/_includes/*'
+    - '!**/readme.adoc'
+    - '!**/README.adoc'
+ui:
+  bundle:
+    url: https://github.com/neo4j-documentation/docs-refresh/raw/master/ui/build/ui-bundle.zip
+    # url: /Users/adam/projects/docs/ui/build/ui-bundle.zip
+    snapshot: true
+urls:
+  html_extension_style: indexify
+asciidoc:
+  extensions:
+  - "@neo4j-documentation/remote-include"
+  - "@neo4j-documentation/macros"
+  attributes:
+    page-theme: labs
