@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.mapping.dropSchema¦n10s.mapping.dropSchema(schemaUri :: STRING?) :: (output :: STRING?)¦

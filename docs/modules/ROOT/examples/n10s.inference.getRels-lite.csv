@@ -1,0 +1,2 @@
+¦signature
+¦n10s.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)

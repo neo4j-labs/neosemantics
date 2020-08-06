@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.import.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)

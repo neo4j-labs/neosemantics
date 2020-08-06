@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.rdf.export.cypher¦n10s.rdf.export.cypher(cypher :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?)¦Executes a cypher query returning graph elements (nodes,rels) and serialises the output as triples.

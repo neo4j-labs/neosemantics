@@ -1,0 +1,3 @@
+¦signature
+¦n10s.skos.import.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)
+¦n10s.skos.import.inline(skosFragment :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)

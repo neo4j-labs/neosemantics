@@ -1,0 +1,2 @@
+¦signature
+¦n10s.graphconfig.set(params = {} :: MAP?) :: (param :: STRING?, value :: ANY?)

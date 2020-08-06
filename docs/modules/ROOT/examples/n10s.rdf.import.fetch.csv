@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.rdf.import.fetch¦n10s.rdf.import.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)¦Imports RDF from an url (file or http) and stores it in Neo4j as a property graph. Requires a unique constraint on :Resource(uri)

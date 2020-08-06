@@ -1,0 +1,6 @@
+¦signature
+¦n10s.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)
+¦n10s.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)
+¦n10s.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)

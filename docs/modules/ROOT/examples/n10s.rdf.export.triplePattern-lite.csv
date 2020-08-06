@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.export.triplePattern(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral = false :: BOOLEAN?, literalType = http://www.w3.org/2001/XMLSchema#string :: STRING?, literalLang = null :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?)

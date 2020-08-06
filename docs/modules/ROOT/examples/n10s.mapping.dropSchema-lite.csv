@@ -1,0 +1,2 @@
+¦signature
+¦n10s.mapping.dropSchema(schemaUri :: STRING?) :: (output :: STRING?)

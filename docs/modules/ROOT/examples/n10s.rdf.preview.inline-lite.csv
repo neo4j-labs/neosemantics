@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.preview.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (nodes :: LIST? OF NODE?, relationships :: LIST? OF RELATIONSHIP?)

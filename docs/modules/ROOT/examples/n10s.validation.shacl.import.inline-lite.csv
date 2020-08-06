@@ -1,0 +1,2 @@
+¦signature
+¦n10s.validation.shacl.import.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)

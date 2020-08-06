@@ -6,7 +6,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run dev",
-    "dev": "npm start & npm-watch preview",
+    "dev": "node server.js & npm-watch preview",
     "preview": "antora preview.yml",
     "publish": "git push origin HEAD:publish"
   },

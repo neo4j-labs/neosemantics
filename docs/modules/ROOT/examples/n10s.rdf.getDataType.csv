@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.getDataType¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)¦Returns the XMLSchema or custom datatype of a property when present

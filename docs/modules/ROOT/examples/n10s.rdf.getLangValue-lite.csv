@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.getLangValue(lang :: STRING?, values :: ANY?) :: (STRING?)

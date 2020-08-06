@@ -1,0 +1,2 @@
+¦signature
+¦n10s.validation.shacl.validate() :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)

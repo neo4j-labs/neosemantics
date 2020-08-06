@@ -1,30 +1,24 @@
 = Neosemantics(n10s) User Guide
-:imagesdir: docs/img
-:toc: left
-:experimental:
-:sectid:
-:sectlinks:
-:toclevels: 2
+:page-pagination:
+
 [abstract]
---
 This is the user guide for Neosemantics {docs-version}, authored by the Neo4j Labs Team.
---
 
 The guide covers the following areas:
 
-* <<intro>> -- An Introduction to the Neosemantics RDF toolkit for Neo4j.
-* <<Install>> -- Instructions for installing Neosemantics.
-* <<Config>> -- Setting up your Neo4j graph to work with RDF data.
-* <<Import>> -- A detailed guide to importing RDF data.
-* <<DeleteRDF>> -- A detailed guide to deleting RDF data.
-* <<OntoImport>> -- A detailed guide to importing ontologies.
-* <<Preview>> -- A detailed guide to previewing RDF data before we import it into Neo4j.
-* <<Export>> -- A detailed guide to generating RDF from a Neo4j graph.
-* <<Mapping>> -- A detailed guide to applying transformations to RDF as it's imported into Neo4j.
-* <<Validation>> -- Validating a Neo4j graph using SHACL.
-* <<Inference>> -- A detailed guide to inferencing and reasoning.
-* <<Reference>> -- An overview of all procedures and functions in the library.
-* <<Examples>> -- A list of projects using n10s.
-* <<Appendix_a>> -- A guide for neosemantics  3.x users
+* xref:introduction.adoc[Chapter 1, Introduction] — An Introduction to the Neosemantics RDF toolkit for Neo4j.
+* xref:install.adoc[Chapter 2, Installation] — Instructions for installing Neosemantics.
+* xref:config.adoc[Chapter 3, Configuring Neo4j to use RDF data] — Setting up your Neo4j graph to work with RDF data.
+* xref:import.adoc[Chapter 4, Importing RDF data] — A detailed guide to importing RDF data.
+* xref:deleting-rdf.adoc[Chapter 5, Deleting RDF] — A detailed guide to deleting RDF data.
+* xref:importing-ontologies.adoc[Chapter 6, Importing Ontologies] — A detailed guide to importing ontologies.
+* xref:previewing-rdf.adoc[Chapter 7, Previewing RDF data] — A detailed guide to previewing RDF data before we import it into Neo4j.
+* xref:export.adoc[Chapter 8, Exporting RDF data] — A detailed guide to generating RDF from a Neo4j graph.
+* xref:mapping.adoc[Chapter 9, Mapping graph models] — A detailed guide to applying transformations to RDF as it’s imported into Neo4j.
+* xref:validation.adoc[Chapter 10, Validating Neo4j graphs against SHACL] — Validating a Neo4j graph using SHACL.
+* xref:inference.adoc[Chapter 11, Inferencing/Reasoning] — A detailed guide to inferencing and reasoning.
+* xref:reference.adoc[Chapter 12, Neosemantics Reference] — An overview of all procedures and functions in the library.
+* xref:examples.adoc[Chapter 13, Projects using Neosemantics] — A list of projects using n10s.
+* xref:appendix_migration.adoc[Appendix A, Migrating from neosemantics 3 to 4] — A guide for neosemantics 3.x users
 
-image::nsmntx-block-diagram.png[Neosemantics diagram, 200,float="right",align="center"]
+image::nsmntx-block-diagram.png[Neosemantics diagram, 200,align="center"]

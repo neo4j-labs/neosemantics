@@ -1,0 +1,2 @@
+¦signature
+¦n10s.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)

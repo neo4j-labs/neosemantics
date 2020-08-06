@@ -103,7 +103,7 @@ public class DocsTest {
     rows.addAll(functionRows);
 
     try (Writer writer = new OutputStreamWriter(
-        new FileOutputStream(new File("build/generated-documentation/documentation.csv")),
+        new FileOutputStream(new File("docs/modules/ROOT/examples/documentation.csv")),
         StandardCharsets.UTF_8)) {
       writer.write("¦type¦qualified name¦signature¦description\n");
       for (Row row : rows) {
@@ -123,7 +123,7 @@ public class DocsTest {
 
     for (Map.Entry<String, List<Row>> record : collect.entrySet()) {
       try (Writer writer = new OutputStreamWriter(new FileOutputStream(
-          new File(String.format("build/generated-documentation/%s.csv", record.getKey()))),
+          new File(String.format("docs/modules/ROOT/examples/%s.csv", record.getKey()))),
           StandardCharsets.UTF_8)) {
         writer.write("¦type¦qualified name¦signature¦description\n");
         for (Row row : record.getValue()) {
@@ -138,7 +138,7 @@ public class DocsTest {
 
     for (Row row : rows) {
       try (Writer writer = new OutputStreamWriter(new FileOutputStream(
-          new File(String.format("build/generated-documentation/%s.csv", row.name))),
+          new File(String.format("docs/modules/ROOT/examples/%s.csv", row.name))),
           StandardCharsets.UTF_8)) {
         writer.write("¦type¦qualified name¦signature¦description\n");
 
@@ -151,7 +151,7 @@ public class DocsTest {
 
     for (Map.Entry<String, List<Row>> record : collect.entrySet()) {
       try (Writer writer = new OutputStreamWriter(new FileOutputStream(
-          new File(String.format("build/generated-documentation/%s-lite.csv", record.getKey()))),
+          new File(String.format("docs/modules/ROOT/examples/%s-lite.csv", record.getKey()))),
           StandardCharsets.UTF_8)) {
         writer.write("¦signature\n");
         for (Row row : record.getValue()) {
@@ -165,7 +165,7 @@ public class DocsTest {
 
     for (Row row : rows) {
       try (Writer writer = new OutputStreamWriter(new FileOutputStream(
-          new File(String.format("build/generated-documentation/%s-lite.csv", row.name))),
+          new File(String.format("docs/modules/ROOT/examples/%s-lite.csv", row.name))),
           StandardCharsets.UTF_8)) {
         writer.write("¦signature\n");
 

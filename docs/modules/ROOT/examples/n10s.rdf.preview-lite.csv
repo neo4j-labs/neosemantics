@@ -1,0 +1,3 @@
+¦signature
+¦n10s.rdf.preview.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (nodes :: LIST? OF NODE?, relationships :: LIST? OF RELATIONSHIP?)
+¦n10s.rdf.preview.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (nodes :: LIST? OF NODE?, relationships :: LIST? OF RELATIONSHIP?)
