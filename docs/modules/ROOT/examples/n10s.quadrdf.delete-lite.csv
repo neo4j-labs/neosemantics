@@ -1,0 +1,3 @@
+¦signature
+¦n10s.quadrdf.delete.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)
+¦n10s.quadrdf.delete.inline(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)

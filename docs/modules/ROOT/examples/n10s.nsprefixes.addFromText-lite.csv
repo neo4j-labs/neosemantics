@@ -1,0 +1,2 @@
+¦signature
+¦n10s.nsprefixes.addFromText(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)

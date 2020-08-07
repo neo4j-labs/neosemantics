@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.nsprefixes.addFromText¦n10s.nsprefixes.addFromText(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦Adds namespaces from a prefix declaration header fragment

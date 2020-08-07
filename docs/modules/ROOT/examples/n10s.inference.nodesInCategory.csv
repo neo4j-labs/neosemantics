@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.inference.nodesInCategory¦n10s.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node :: NODE?)¦semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories.

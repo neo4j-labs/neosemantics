@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.getIRINamespace¦n10s.rdf.getIRINamespace(url :: STRING?) :: (STRING?)¦Returns the namespace part of an IRI

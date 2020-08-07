@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.getLangTag¦n10s.rdf.getLangTag(value :: ANY?) :: (STRING?)¦Returns the language tag of a value. Returns null if the value is not a string orif the string has no language tag

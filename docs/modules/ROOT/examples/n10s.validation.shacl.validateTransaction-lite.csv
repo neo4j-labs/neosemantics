@@ -1,0 +1,2 @@
+¦signature
+¦n10s.validation.shacl.validateTransaction(createdNodes :: ANY?, createdRelationships :: ANY?, assignedLabels :: ANY?, removedLabels :: ANY?, assignedNodeProperties :: ANY?, removedNodeProperties :: ANY?) :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)

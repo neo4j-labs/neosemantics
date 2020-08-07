@@ -1,0 +1,2 @@
+¦signature
+¦n10s.mapping.addSchema(schemaUri :: STRING?, prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)

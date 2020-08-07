@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.getIRILocalName¦n10s.rdf.getIRILocalName(url :: STRING?) :: (STRING?)¦Returns the local part of an IRI

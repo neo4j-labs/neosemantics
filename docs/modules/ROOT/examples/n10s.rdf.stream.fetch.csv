@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.rdf.stream.fetch¦n10s.rdf.stream.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?)¦Parses RDF and streams each triple as a record with <S,P,O> along with datatype and language tag for Literal values. No writing to the DB.

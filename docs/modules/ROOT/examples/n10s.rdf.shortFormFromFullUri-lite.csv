@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.shortFormFromFullUri(uri :: STRING?) :: (STRING?)

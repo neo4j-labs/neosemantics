@@ -1,0 +1,3 @@
+¦signature
+¦n10s.rdf.delete.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)
+¦n10s.rdf.delete.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)

@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.validation.shacl.import.fetch¦n10s.validation.shacl.import.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)¦Imports SHACL shapes from a URL and compiles a validator into neo4j

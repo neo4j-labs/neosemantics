@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.rdf.delete.inline¦n10s.rdf.delete.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)¦Deletes triples (passed as string) from Neo4j. Works on a graph resulted of importing RDF via n10s.rdf.import 

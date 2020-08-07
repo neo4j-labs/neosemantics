@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.getLangValue¦n10s.rdf.getLangValue(lang :: STRING?, values :: ANY?) :: (STRING?)¦Returns the first value with the language tag passed as first argument or null if there's not a value for the provided tag
