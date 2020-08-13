@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.mapping.add¦n10s.mapping.add(elementUri :: STRING?, graphElementName :: STRING?) :: (schemaNs :: STRING?, schemaPrefix :: STRING?, schemaElement :: STRING?, elemName :: STRING?)¦

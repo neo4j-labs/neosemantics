@@ -1,0 +1,226 @@
+= Validating Neo4j graphs against SHACL
+:page-pagination:
+
+
+This module makes it possible for a Neo4j graph to be validated against a formal definition of some graph constraints. By graph constraints, we mean things like "the value for the `age` property needs to be an integer", or "a `Task` node needs to be connected to at least one  `TaskOwner` node through the `OWNED_BY` relationship", or many others.
+
+Neosemantics uses the W3C standard https://www.w3.org/TR/shacl/[Shapes Constraint Language (SHACL)] as the formalism to describe such graph constraints. In v.4 we cover a significant portion of the SHACL language but not all. The elements not implemented yet will be added gradually and changes will be reflected in this manual.
+
+The  validation is a two step process:
+
+1. Load the constraint definitions, described in section <<LoadConstraints>>
+2. Run the validation against the Neo4j graph to produce a detailed report of all violations. This is described in section <<RunningValidation>>. The validations can  be executed in three modes:
+* Batch validation of the whole graph
+* Validation on a selected portion of the graph (a node set)
+* Transactional validation: in-transaction validation of changes to the graph (and rollback if changes introduce violations of the constraints)
+
+
+[[LoadConstraints]]
+== Loading the model constraints
+
+SHACL constraints are described as RDF. Here is an example serialised as RDF/Turtle, where we define some conditions on nodes of type `Person`.
+
+[source, Turtle]
+----
+@prefix neo4j: <http://neo4j.com/myvoc#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+neo4j:PersonShape a sh:NodeShape ;
+  sh:targetClass neo4j:Person ;
+  sh:property [
+    sh:path neo4j:name ;
+    sh:pattern "^\w[\s\w\.]*$" ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+  ];
+  sh:property [
+    sh:path neo4j:ACTED_IN ;
+    sh:class neo4j:Movie ;
+    sh:nodeKind sh:IRI ;
+  ] ;
+.
+----
+
+In particular, we are stating that the property `name` is single valued (`sh:maxCount 1`), that the value is of type string (`sh:datatype xsd:string`) and that it has to match a particular regular expression (`sh:pattern "^\w[\s\w\.]*$"`). Similarly, for `ACTED-IN`, we specify that it's a relationship (`sh:nodeKind sh:IRI`) as opposed to a node property, and that the nodes it connects to will have to be of type Movie (`sh:class neo4j:Movie`). You can find a full reference https://www.w3.org/TR/shacl/[here] for more details on what can be expressed with SHACL.
+
+Neosemantics has the `n10s.validation.shacl.import` procedures to help you loading SHACL constraints into Neo4j. It comes in the usual two flavours (fetch and inline) just like all other import procedures. So effectively you can load a set of SHACL constraints into Neo4j by fetching the RDF document that contains them or by passing a SHACL snippet as parameter. Here is how  we would do it for the previous example  using the `inline` option (notice how you'll need to escape the backslashes in the regex if you run this in the Neo4j browser):
+
+
+[source, cypher]
+----
+call n10s.validation.shacl.import.inline('
+
+@prefix neo4j: <http://neo4j.com/myvoc#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+neo4j:PersonShape a sh:NodeShape ;
+  sh:targetClass neo4j:Person ;
+  sh:property [
+    sh:path neo4j:name ;
+    sh:pattern "^\\w[\\s\\w\\.]*$" ;
+    sh:maxCount 1 ;
+    sh:datatype xsd:string ;
+  ];
+  sh:property [
+    sh:path neo4j:ACTED_IN ;
+    sh:class neo4j:Movie ;
+    sh:nodeKind sh:IRI ;
+  ] ;
+.
+
+','Turtle')
+----
+
+Running the procedure will save into Neo4j a runnable version of the constraints and it will also output the list of constraints that have been loaded. Something like this:
+
+[source, cypher]
+----
+╒════════╤════════════════════════════╤══════════╤═══════════════╕
+│"target"│"propertyOrRelationshipPath"│"param"   │"value"        │
+╞════════╪════════════════════════════╪══════════╪═══════════════╡
+│"Person"│"name"                      │"datatype"│"string"       │
+├────────┼────────────────────────────┼──────────┼───────────────┤
+│"Person"│"name"                      │"pattern" │"^\w[\s\w\.]*$"│
+├────────┼────────────────────────────┼──────────┼───────────────┤
+│"Person"│"name"                      │"maxCount"│1              │
+├────────┼────────────────────────────┼──────────┼───────────────┤
+│"Person"│"ACTED_IN"                  │"NodeKind"│"IRI"          │
+├────────┼────────────────────────────┼──────────┼───────────────┤
+│"Person"│"ACTED_IN"                  │"class"   │"Movie"        │
+└────────┴────────────────────────────┴──────────┴───────────────┘
+----
+
+The list shows for every category (target) the properties and relationships (propertyOrRelationshipPath) along with the types of constraints (param) that are defined and the specific values defined (value).
+
+You  could  have achieved  the same by loading it  direcly from a (local or remote) file using the `fetch` option:
+
+[source, cypher]
+----
+call n10s.validation.shacl.import.fetch("https://raw.githubusercontent.com/neo4j-labs/neosemantics/4.0/src/test/resources/shacl/person0-shacl.ttl","Turtle")
+----
+
+You have some more SHACL examples in the unit test section https://github.com/neo4j-labs/neosemantics/tree/4.0/src/test/resources/shacl[here].
+
+[IMPORTANT]
+SHACL uses URIs to refer to the schema elements (categories, properties or relationships) it defines constraints on. These  will make sense only when your SHACL validations apply to a graph storing RDF data imported via Neosemantics. If your data is a pure LPG you've imported your RDF with the option handleVocabUris: "IGNORE" then only the local name part of the URI will be taken into consideration and the namespace part ignored.
+
+
+=== Listing the currently active constraints/shapes
+It is possible to get the list of currently loaded constraints by calling the `listShapes` procedure. The output is identical to the one produced when  the constraints are loaded.
+
+[source, cypher]
+----
+call n10s.validation.shacl.listShapes()
+----
+
+[NOTE]
+SHACL uses the term 'node shape' and  'property shape' respectively to describe a set of constraints for a given category or for a given property. Hence the choice  of name for this procedure. Also the term shapes will be used in the manual with the same meaning.
+
+[[RunningValidation]]
+== Running the validation on a Neo4j graph
+
+Once the shapes are loaded as described above, the validations can be run on your graph by invoking the different variants of the `validate` procedure. The three basic modes are:
+
+* Batch validation of the whole graph
+* Validation on a selected portion of the graph (a node set)
+* Transactional validation
+
+
+=== Validating the whole graph
+In this mode, the currently loaded constraints are are run against the whole graph producing a report including all violations detected.
+
+[source, cypher]
+----
+call n10s.validation.shacl.validate() yield focusNode, nodeType,propertyShape,offendingValue,resultPath,severity
+----
+
+If we run the procedure on the movie database (`:play movies` in the Neo4j browser) and assuming the previously defined shapes are  currently loaded, the output would look as follows:
+
+[source, cypher]
+----
+╒═══════════╤══════════╤════════════════════════════╤══════════════════╤════════════╤═══════════╕
+│"focusNode"│"nodeType"│"propertyShape"             │"offendingValue"  │"resultPath"│"severity" │
+╞═══════════╪══════════╪════════════════════════════╪══════════════════╪════════════╪═══════════╡
+│3          │"Person"  │"PatternConstraintComponent"│"Carrie-Anne Moss"│"name"      │"Violation"│
+├───────────┼──────────┼────────────────────────────┼──────────────────┼────────────┼───────────┤
+│41         │"Person"  │"PatternConstraintComponent"│"Jerry O'Connell" │"name"      │"Violation"│
+├───────────┼──────────┼────────────────────────────┼──────────────────┼────────────┼───────────┤
+│78         │"Person"  │"PatternConstraintComponent"│"Rosie O'Donnell" │"name"      │"Violation"│
+├───────────┼──────────┼────────────────────────────┼──────────────────┼────────────┼───────────┤
+│104        │"Person"  │"PatternConstraintComponent"│"Ice-T"           │"name"      │"Violation"│
+└───────────┴──────────┴────────────────────────────┴──────────────────┴────────────┴───────────┘
+----
+
+The `focusNode` column identifies the node failing the validation (node id in the case of an LPG  or URI if the graph is imported from RDF via Neosemantics).
+The `nodeType` column contains the label (type) of the failing node. Or in other words the category to  which the constraint applies.
+The `propertyShape` column contains the specific SHACL validation type that is failing
+The `offendingValue` column contains the actual value of the property for the failing node
+The `resultPath` column contains the name of the property failing the validation.
+The `severity` column contains the severity assigned to the shape in the SHACL document.
+
+
+=== Validating a set of nodes
+In this mode, a set of nodes is passed as parameter to  the procedure and the currently loaded constraints are are run against the set producing a report with all violations detected, identical to the one described in the previous section.
+
+Let's say we want to run the validation only on the actors and actresses that worked in The Matrix.
+
+[source, cypher]
+----
+MATCH (:Movie { title: "The Matrix"})-[:ACTED_IN]-(p:Person)
+WITH collect(p) as theMatrixActorsAndActresses
+call n10s.validation.shacl.validateSet(theMatrixActorsAndActresses)
+yield focusNode, nodeType,propertyShape,offendingValue,resultPath,severity
+return focusNode, nodeType,propertyShape,offendingValue,resultPath,severity
+----
+
+The result would be a reduced version of what we got when run on the whole graph:
+
+[source, cypher]
+----
+╒═══════════╤══════════╤════════════════════════════╤══════════════════╤════════════╤═══════════╕
+│"focusNode"│"nodeType"│"propertyShape"             │"offendingValue"  │"resultPath"│"severity" │
+╞═══════════╪══════════╪════════════════════════════╪══════════════════╪════════════╪═══════════╡
+│3          │"Person"  │"PatternConstraintComponent"│"Carrie-Anne Moss"│"name"      │"Violation"│
+└───────────┴──────────┴────────────────────────────┴──────────────────┴────────────┴───────────┘
+----
+
+
+=== Validating transactions
+The validations can also be run in the context of a transaction (in the form a trigger) in a way that if the validation returns a non empty result, the transaction is rolled back.
+This can be useful if we want to prevent getting the graph in a state that violates our model constraints. For this mode of operation we'll use the `validateTransaction` variant.
+
+
+You can easily define a trigger using the `apoc.trigger.add` procedure in https://neo4j.com/developer/neo4j-apoc/[APOC] that invokes the SHACL validation as follows:
+
+[source, cypher]
+----
+CALL apoc.trigger.add('shacl-validate','call n10s.validation.shacl.validateTransaction($createdNodes,$createdRelationships, $assignedLabels, $removedLabels, $assignedNodeProperties, $removedNodeProperties)', {phase:'before'})
+----
+
+If everything goes well, you  should get the following confirmation indicating that the trigger  has been successfully installed:
+
+[source, cypher]
+----
+╒════════════════╤══════════════════════════════════════════════════════════════════════╤══════════════════╤════════╤═══════════╤════════╕
+│"name"          │"query"                                                               │"selector"        │"params"│"installed"│"paused"│
+╞════════════════╪══════════════════════════════════════════════════════════════════════╪══════════════════╪════════╪═══════════╪════════╡
+│"shacl-validate"│"call n10s.validation.shacl.validateTransaction($createdNodes,$created│{"phase":"before"}│{}      │true       │false   │
+│                │Relationships, $assignedLabels, $removedLabels, $assignedNodePropertie│                  │        │           │        │
+│                │s, $removedNodeProperties)"                                           │                  │        │           │        │
+└────────────────┴──────────────────────────────────────────────────────────────────────┴──────────────────┴────────┴───────────┴────────┘
+----
+
+And now  you can test it by trying for example to create a node of type `Person` connected through the `ACTED_IN` relationship to a `Play` instead  of a `Movie` as expected in the SHACL definition.
+
+[source, cypher]
+----
+MATCH (emil:Person { name: "Emil Eifrem"})
+CREATE (emil)-[:ACTED_IN]->(:Play { title: "Macbeth", released: "2020"})
+----
+
+The transaction will not succeed and if run in the browser you'll get a rather cryptic  `Neo.ClientError.Transaction.TransactionHookFailed`. But if you go to the logs you'll find the details of the problem:
+
+[source]
+----
+Caused by: n10s.validation.SHACLValidationException: {validationResult={severity=http://www.w3.org/ns/shacl#Violation, propertyShape=http://www.w3.org/ns/shacl#ClassConstraintComponent, shapeId=node1e78vkaeox2, focusNode=8, resultPath=ACTED_IN, offendingValue=175, nodeType=Person, resultMessage=value should be of type Movie}}
+----

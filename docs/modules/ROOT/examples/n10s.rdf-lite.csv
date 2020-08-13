@@ -1,0 +1,10 @@
+¦signature
+¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)
+¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)
+¦n10s.rdf.getIRILocalName(url :: STRING?) :: (STRING?)
+¦n10s.rdf.getIRINamespace(url :: STRING?) :: (STRING?)
+¦n10s.rdf.getLangTag(value :: ANY?) :: (STRING?)
+¦n10s.rdf.getLangValue(lang :: STRING?, values :: ANY?) :: (STRING?)
+¦n10s.rdf.getValue(literal :: STRING?) :: (STRING?)
+¦n10s.rdf.hasLangTag(lang :: STRING?, value :: ANY?) :: (BOOLEAN?)
+¦n10s.rdf.shortFormFromFullUri(uri :: STRING?) :: (STRING?)

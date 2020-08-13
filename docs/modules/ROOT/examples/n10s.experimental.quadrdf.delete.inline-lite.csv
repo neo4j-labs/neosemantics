@@ -1,0 +1,2 @@
+¦signature
+¦n10s.experimental.quadrdf.delete.inline(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)

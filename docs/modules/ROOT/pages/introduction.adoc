@@ -1,0 +1,11 @@
+= Introduction
+:page-pagination:
+
+Neosemantics is a plugin that enables the *use of RDF in Neo4j*. https://www.w3.org/RDF/[RDF is a W3C standard model] for data interchange.
+This effectively means that Neosemantics makes it possible to
+
+* *Store RDF data in Neo4j* in a
+lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
+* On-demand *export property graph data* from Neo4j *as RDF*.
+
+Other features in Neosemantics include *model mapping* and *inferencing* on Neo4j graphs.

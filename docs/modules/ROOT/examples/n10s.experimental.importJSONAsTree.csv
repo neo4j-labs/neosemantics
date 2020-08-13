@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.experimental.importJSONAsTree¦n10s.experimental.importJSONAsTree(containerNode :: NODE?, jsonpayload :: STRING?, connectingRel = _jsonTree :: STRING?) :: (node :: NODE?)¦Imports a json payload and maps it to nodes and relationships (JSON-LD style). Requires a uniqueness constraint on :Resource(uri)

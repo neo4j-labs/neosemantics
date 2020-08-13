@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.inference.getRels¦n10s.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)¦semantics.inference.getRels(node,'rel', { relDir: '>'} ) - returns all relationships of type 'rel' or its subtypes along with the target nodes.

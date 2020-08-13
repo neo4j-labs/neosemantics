@@ -1,0 +1,5 @@
+¦signature
+¦n10s.mapping.add(elementUri :: STRING?, graphElementName :: STRING?) :: (schemaNs :: STRING?, schemaPrefix :: STRING?, schemaElement :: STRING?, elemName :: STRING?)
+¦n10s.mapping.drop(graphElementName :: STRING?) :: (output :: STRING?)
+¦n10s.mapping.dropAll(namespace :: STRING?) :: (output :: STRING?)
+¦n10s.mapping.list(schemaElem =  :: STRING?) :: (schemaNs :: STRING?, schemaPrefix :: STRING?, schemaElement :: STRING?, elemName :: STRING?)

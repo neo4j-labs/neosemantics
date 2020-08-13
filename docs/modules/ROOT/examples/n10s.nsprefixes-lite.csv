@@ -1,0 +1,6 @@
+¦signature
+¦n10s.nsprefixes.add(prefix :: STRING?, ns :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)
+¦n10s.nsprefixes.addFromText(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)
+¦n10s.nsprefixes.list() :: (prefix :: STRING?, namespace :: STRING?)
+¦n10s.nsprefixes.remove(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)
+¦n10s.nsprefixes.removeAll() :: (prefix :: STRING?, namespace :: STRING?)

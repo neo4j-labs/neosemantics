@@ -1,0 +1,2 @@
+¦signature
+¦n10s.mapping.listSchemas(searchString =  :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)
