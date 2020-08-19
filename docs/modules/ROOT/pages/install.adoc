@@ -22,7 +22,7 @@ You can check that the extension is mounted by running
 ----
 :GET http://localhost:7474/rdf/ping
 ----
-The previous command assumes you're running neo4j on your local machine, replace `localhos` with the host name if that is not the case.
+The previous command assumes you're running neo4j on your local machine, replace `localhost` with the host name if that is not the case.
 
 **Note on build**
 
