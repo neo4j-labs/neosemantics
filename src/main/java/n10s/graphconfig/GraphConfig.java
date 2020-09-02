@@ -313,7 +313,7 @@ public class GraphConfig {
     configAsMap.put("_subClassOfRel", this.subClassOfRelName);
     configAsMap.put("_dataTypePropertyLabel", this.dataTypePropertyLabelName);
     configAsMap.put("_objectPropertyLabel", this.objectPropertyLabelName);
-    configAsMap.put("_subPropertyOfRell", this.subPropertyOfRelName);
+    configAsMap.put("_subPropertyOfRel", this.subPropertyOfRelName);
     configAsMap.put("_domainRel", this.domainRelName);
     configAsMap.put("_rangeRel", this.rangeRelName);
 
