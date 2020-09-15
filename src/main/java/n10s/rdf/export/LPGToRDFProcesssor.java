@@ -1,7 +1,10 @@
 package n10s.rdf.export;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
 import static n10s.graphconfig.Params.BASE_VOCAB_NS;
+import static n10s.utils.UriUtils.translateUri;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -14,9 +17,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.Params;
+import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.UriUtils;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
@@ -26,13 +32,7 @@ import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 
 
 public class LPGToRDFProcesssor extends ExportProcessor {
@@ -333,11 +333,16 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     return statements;
   }
 
+
+
   @Override
-  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp) {
-    //TODO: DO
+  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
+          throws InvalidNamespacePrefixDefinitionInDB {
+    //unimplemented
     return null;
   }
+
+
 
 
   private Value createTypedLiteral(ValueFactory valueFactory, Object value) {

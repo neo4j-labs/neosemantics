@@ -13,6 +13,7 @@ import n10s.graphconfig.GraphConfig;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -117,6 +118,20 @@ public abstract class ExportProcessor {
       return rowResult.stream();
 
     });
+  }
+
+  protected Value getValueFromTriplePatternObject(TriplePattern tp) {
+    Value object;
+    if (tp.getLiteral()) {
+      if (tp.getLiteralLang() != null) {
+        object = vf.createLiteral(tp.getObject(), tp.getLiteralLang());
+      } else {
+        object = vf.createLiteral(tp.getObject(), vf.createIRI(tp.getLiteralType()));
+      }
+    } else {
+      object = vf.createIRI(tp.getObject());
+    }
+    return object;
   }
 
   protected abstract boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);

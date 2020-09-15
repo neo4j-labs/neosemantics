@@ -68,7 +68,7 @@ public class RDFExportProcedures extends RDFProcedures {
   @Procedure(mode = Mode.READ)
   @Description(
       "Returns the triples matching the spo pattern passed as parameter.")
-  public Stream<StreamedStatement> triplePattern(@Name("subject") String subject,
+  public Stream<StreamedStatement> spo(@Name("subject") String subject,
       @Name("predicate") String predicate, @Name("object") String object,
       @Name(value = "isLiteral", defaultValue = "false") Boolean isLiteral, @Name(value = "literalType",
           defaultValue = "http://www.w3.org/2001/XMLSchema#string") String literalType,
@@ -80,12 +80,12 @@ public class RDFExportProcedures extends RDFProcedures {
 
     boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
 
-    //HERE
     GraphConfig gc = getGraphConfig(tx);
     if (gc == null) {
-      proc = new LPGToRDFProcesssor(db, tx, gc,
-          getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
-          props.get("mappedElemsOnly").equals(true), rdfstar);
+      throw new UnsupportedOperationException("method not currently implemented for non-RDF graphs");
+//      proc = new LPGToRDFProcesssor(db, tx, gc,
+//          getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
+//          props.get("mappedElemsOnly").equals(true), rdfstar);
     } else {
       proc = new LPGRDFToRDFProcesssor(db, tx, gc, rdfstar);
     }

@@ -10,6 +10,13 @@ import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
@@ -19,6 +26,9 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import javax.print.DocFlavor;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class RDFExportTest {
 
@@ -44,12 +54,70 @@ public class RDFExportTest {
           = session
           .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
       assertTrue(res.hasNext());
-      while (res.hasNext()) {
-        //TODO: make this a proper test
-        System.out.println(res.next());
-      }
 
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+      Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI("neo4j://individuals#0"), RDF.TYPE, vf.createIRI("neo4j://vocabulary#Node")),
+              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#CONNECTED_TO"), vf.createIRI("neo4j://individuals#1")),
+              vf.createStatement(vf.createIRI("neo4j://individuals#1"), RDF.TYPE, vf.createIRI("neo4j://vocabulary#Node")),
+              vf.createStatement(vf.createIRI("neo4j://individuals#1"), vf.createIRI("neo4j://vocabulary#b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI("neo4j://individuals#1"), vf.createIRI("neo4j://vocabulary#a"), vf.createLiteral(2L))));
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount,expectedStatememts.size());
     }
+  }
+
+  private Statement recordAsStatement(ValueFactory vf,  Record r) {
+    IRI s = vf.createIRI(r.get("subject").asString());
+    IRI p = vf.createIRI(r.get("predicate").asString());
+    if(r.get("isLiteral").asBoolean()){
+      IRI datatype = vf.createIRI(r.get("literalType").asString());
+      Literal o;
+      if (datatype.equals(RDF.LANGSTRING)){
+        o = (r.get("literalLang").isNull()? vf.createLiteral(r.get("object").asString()):
+                vf.createLiteral(r.get("object").asString(),r.get("literalLang").asString() ));
+      } else if (datatype.equals(XSD.LONG)){
+        o = vf.createLiteral(Long.parseLong(r.get("object").asString()));
+      } else if (datatype.equals(XSD.BOOLEAN)){
+        o = vf.createLiteral(Boolean.valueOf(r.get("object").asString()));
+      } else {
+        //string default
+        o = vf.createLiteral(r.get("object").asString());
+      }
+      return vf.createStatement(s, p, o);
+    } else {
+      return vf.createStatement(s, p, vf.createIRI(r.get("object").asString()));
+    }
+  }
+
+
+  @Test
+  public void testExportFromTriplePatternNoGraphConfig() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      session.run("CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+
+      String export_as_nt = getNTriplesGraphFromSPOPattern(session, null, "CONNECTED_TO", null, false, null, null);
+      //should not get here
+      assertTrue(false);
+
+    } catch(Exception e){
+      assertEquals("Failed to invoke procedure `n10s.rdf.export.spo`: Caused by: " +
+              "java.lang.UnsupportedOperationException: method not currently implemented for non-RDF graphs", e.getMessage());
+    }
+
+
   }
 
   @Test
@@ -203,10 +271,18 @@ public class RDFExportTest {
                               null, null, null, null), RDFFormat.NTRIPLES));
 
 
-      Record next = session
-              .run(" CALL n10s.rdf.export.triplePattern(null,null,'http://neo4j.org/vocab/sw#Neo4jPlugin')").next();
+      expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
+              "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
+              "\n" +
+              "neo4ind:nsmntx3502 a neo4voc:Neo4jPlugin . " +
+              "neo4ind:graphql3502 a neo4voc:Neo4jPlugin . " +
+              "neo4ind:apoc3502 a neo4voc:Neo4jPlugin ." ;
 
-      System.out.println(next);
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.TURTLE,
+                      getNTriplesGraphFromSPOPattern(session, null, null,
+                              "http://neo4j.org/vocab/sw#Neo4jPlugin", null, null, null), RDFFormat.NTRIPLES));
+
 
     }
   }
@@ -217,7 +293,7 @@ public class RDFExportTest {
 
       //getting a bnode's assigned uri
       String bnodeUri = session
-              .run(" CALL n10s.rdf.export.triplePattern(null,"
+              .run(" CALL n10s.rdf.export.spo(null,"
                       + "'http://xmlns.com/foaf/0.1/name','Dave Longley',true,'http://www.w3.org/2001/XMLSchema#string',null) ").next().get("subject").asString();
 
 
@@ -536,7 +612,7 @@ public class RDFExportTest {
   private String getNTriplesGraphFromSPOPattern(Session session,  String s, String p, String o, Boolean lit, String type, String lang) {
     Result res
         = session
-        .run(" CALL n10s.rdf.export.triplePattern(" + (s!=null?"'"+s+"'":"null") + ","
+        .run(" CALL n10s.rdf.export.spo(" + (s!=null?"'"+s+"'":"null") + ","
                 + (p!=null?"'"+p+"'":"null") + "," + (o!=null?"'"+o+"'":"null") + ","
                 + lit +"," + (type!=null?"'"+type+"'":"null") + "," + (lang!=null?"'"+lang+"'":"null") +") ");
     StringBuilder sb = new StringBuilder();
@@ -562,7 +638,7 @@ public class RDFExportTest {
   private String getNTriplesGraphFromSPOPatternLiteralDefaults(Session session,  String s, String p, String o) {
     Result res
             = session
-            .run(" CALL n10s.rdf.export.triplePattern(" + (s!=null?"'"+s+"'":"null") + ","
+            .run(" CALL n10s.rdf.export.spo(" + (s!=null?"'"+s+"'":"null") + ","
                     + (p!=null?"'"+p+"'":"null") + "," + (o!=null?"'"+o+"'":"null") + ",true) ");
     StringBuilder sb = new StringBuilder();
     while (res.hasNext()) {

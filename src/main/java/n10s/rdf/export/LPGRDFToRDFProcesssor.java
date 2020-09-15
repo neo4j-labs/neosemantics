@@ -488,22 +488,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
 
 
 
-
-  private Value getValueFromTriplePatternObject(TriplePattern tp) {
-    Value object;
-    if (tp.getLiteral()) {
-      if (tp.getLiteralLang() != null) {
-        object = vf.createLiteral(tp.getObject(), tp.getLiteralLang());
-      } else {
-        object = vf.createLiteral(tp.getObject(), vf.createIRI(tp.getLiteralType()));
-      }
-    } else {
-      object = vf.createIRI(tp.getObject());
-    }
-    return object;
-  }
-
-
   private String buildCustomDTFromShortURI(String literal) {
     Matcher matcher = customDataTypedLiteralShortenedURIPattern.matcher(literal);
     if (matcher.matches()) {
