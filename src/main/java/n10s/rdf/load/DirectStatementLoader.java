@@ -17,13 +17,7 @@ import n10s.RDFToLPGStatementProcessor;
 import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 import org.neo4j.logging.Log;
 
 /**
@@ -67,57 +61,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           });
 
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
-          resourceProps.get(entry.getKey()).forEach((k, v) -> {
-            if (v instanceof List) {
-                Object currentValue = node.getProperty(k, null);
-                List<Object> newList = new ArrayList<>();
-                if (currentValue != null) {
-                  //initialise with existing values
-                  if (currentValue.getClass().isArray()) {
-                    int length = Array.getLength(currentValue);
-                    for (int i = 0; i < length; i ++) {
-                      Object atomicValue = Array.get(currentValue, i);
-                      newList.add(atomicValue);
-                    }
-                  } else {
-                    //TODO: this logic could go because now it's not possible to change
-                    // from atomic to multival without emptying the DB
-                    newList.add(node.getProperty(k));
-                  }
-                }
-
-                Class<?> currentDatatype = newList.isEmpty()?((List) v).get(0).getClass():newList.get(0).getClass();
-
-                List<Object> discardedItems = new ArrayList<>();
-
-                for(Object x:(List)v) {
-                  if (x.getClass().equals(currentDatatype)){
-                    newList.add(x);
-                  }  else {
-                    discardedItems.add(x);
-                  }
-                }
-
-                if(!discardedItems.isEmpty()){
-                  this.datatypeConflictFound |= true;
-                  if (getParserConfig().isStrictDataTypeCheck()){
-                    this.mappedTripleCounter-= discardedItems.size();
-                    log.warn("The following values for property '" + k + "' have been discarded because of datatype heterogeneity (previously stored values are of type " + currentDatatype + ") : " + discardedItems );
-                    node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
-                  } else {
-                    //default all to string if they're not already return defaultToString(it.iterator());
-                    newList.addAll(discardedItems);
-                    node.setProperty(k, toPropertyValue(defaultToString(newList.iterator()).stream().collect(Collectors.toSet())));
-                  }
-                } else {
-                  //no discarded elements. all good, newlist contains all the values. nothing to do
-                  node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
-                }
-
-            } else {
-              node.setProperty(k, v);
-            }
-          });
+          resourceProps.get(entry.getKey()).forEach((k, v) -> setProperty(node,k,v));
         } catch (ExecutionException e) {
           e.printStackTrace();
         }
@@ -175,7 +119,8 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           Map<String, Object> relProps = this.relProps.get(st);
           if (relProps != null) {
             for (Entry<String, Object> entry : relProps.entrySet()) {
-              theRel.setProperty(entry.getKey(), entry.getValue());
+
+              setProperty(theRel, entry.getKey(), entry.getValue());
             }
           }
 
@@ -201,6 +146,57 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
     }
   }
 
+  private void setProperty(Entity node, String k, Object v) {
+    if (v instanceof List) {
+      Object currentValue = node.getProperty(k, null);
+      List<Object> newList = new ArrayList<>();
+      if (currentValue != null) {
+        //initialise with existing values
+        if (currentValue.getClass().isArray()) {
+          int length = Array.getLength(currentValue);
+          for (int i = 0; i < length; i ++) {
+            Object atomicValue = Array.get(currentValue, i);
+            newList.add(atomicValue);
+          }
+        } else {
+          //TODO: this logic could go because now it's not possible to change
+          // from atomic to multival without emptying the DB
+          newList.add(node.getProperty(k));
+        }
+      }
+
+      Class<?> currentDatatype = newList.isEmpty()?((List) v).get(0).getClass():newList.get(0).getClass();
+
+      List<Object> discardedItems = new ArrayList<>();
+
+      for(Object x:(List)v) {
+        if (x.getClass().equals(currentDatatype)){
+          newList.add(x);
+        }  else {
+          discardedItems.add(x);
+        }
+      }
+
+      if(!discardedItems.isEmpty()){
+        this.datatypeConflictFound |= true;
+        if (getParserConfig().isStrictDataTypeCheck()){
+          this.mappedTripleCounter-= discardedItems.size();
+          log.warn("The following values for property '" + k + "' have been discarded because of datatype heterogeneity (previously stored values are of type " + currentDatatype + ") : " + discardedItems );
+          node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
+        } else {
+          //default all to string if they're not already return defaultToString(it.iterator());
+          newList.addAll(discardedItems);
+          node.setProperty(k, toPropertyValue(defaultToString(newList.iterator()).stream().collect(Collectors.toSet())));
+        }
+      } else {
+        //no discarded elements. all good, newlist contains all the values. nothing to do
+        node.setProperty(k, toPropertyValue(newList.stream().collect(Collectors.toSet())));
+      }
+
+    } else {
+      node.setProperty(k, v);
+    }
+  }
 
 
   @Override

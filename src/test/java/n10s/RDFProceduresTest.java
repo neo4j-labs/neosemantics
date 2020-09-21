@@ -734,7 +734,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{ handleVocabUris: 'IGNORE' }"); //, handleMultival: 'ARRAY'
+          "{ handleVocabUris: 'IGNORE' }");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
@@ -751,6 +751,37 @@ public class RDFProceduresTest {
       assertEquals(1978L, result.get("born").asLong());
       assertEquals("Emil", result.get("roles").asString());
       assertEquals("The Matrix", result.get("title").asString());
+      assertFalse(queryResults.hasNext());
+    }
+  }
+
+  @Test
+  public void testImportRDFStarWithArrayMultiVal () throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE' , " +
+                      "handleMultival: 'ARRAY', multivalPropList: ['neo4j://vocabulary#roles']}");
+
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("movies.ttls").toURI()
+              + "','Turtle*')");
+
+      assertEquals(1372L, importResults
+              .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+              "MATCH (ee:Person { name: 'Bill Paxton'})-[ai:ACTED_IN]->(m) " +
+                      " WHERE m.tagline = 'Houston, we have a problem.'"
+                      + " RETURN ee.born as born, ai.roles as roles, m.title as title limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      assertEquals(1955L, result.get("born").asLong());
+      List<Object> theRoles = result.get("roles").asList();
+      assertEquals(1,theRoles.size());
+      assertEquals("Fred Haise", theRoles.get(0));
+      assertEquals("Apollo 13", result.get("title").asString());
       assertFalse(queryResults.hasNext());
     }
   }
