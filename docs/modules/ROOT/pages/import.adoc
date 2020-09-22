@@ -12,13 +12,11 @@ More on how to parameterise the access to web services in section <<advancedfetc
 This section includes:
 
 * xref:import.adoc[Section 4.1, “Procedure and Function Overview”]
-* xref:config.adoc#create-resource-uniqueness-constraint[Section 3.2, “Pre-requisite: Create uniqueness constraint”]
-* xref:import.adoc#graph-configuration[Section 3.1, “Setting the configuration of the graph”]
 * xref:import.adoc#actual-rdf-import[Section 4.2, “The RDF import procedures”]
 * xref:import.adoc#filtering-triples-by-predicate[Section 4.3, “Filtering triples by predicate”]
 * xref:import.adoc#handling-multivalued-properties[Section 4.4, “Handling multivalued properties”]
 * xref:import.adoc#handling-language-tags[Section 4.5, “Handling language tags”]
-* xref:import.adoc##filtering-triples-by-language-tag[Section 4.6, “Filtering triples by language tag”]
+* xref:import.adoc#filtering-triples-by-language-tag[Section 4.6, “Filtering triples by language tag”]
 * xref:import.adoc#handling-custom-data-types[Section 4.7, “Handling custom data types”]
 * xref:import.adoc#classes-as-nodes[Section 4.8, “Classes as Nodes (instead of Labels)”]
 * xref:import.adoc#advancedfetching[Section 4.9, “Advanced settings for fetching RDF”]
@@ -33,8 +31,16 @@ The table below describes the available procedures and functions:
 [separator=¦,opts=header,cols="1,2m,2m,5"]
 |===
 include::example$n10s.rdf.import.fetch.csv[]
-include::example$n10s.rdf.hasLangTag.csv[]
-include::example$n10s.rdf.getLangTag.csv[]
+include::example$n10s.rdf.import.inline.csv[lines=2:]
+include::example$n10s.rdf.fullUriFromShortForm.csv[lines=2:]
+include::example$n10s.rdf.getDataType.csv[lines=2:]
+include::example$n10s.rdf.getIRILocalName.csv[lines=2:]
+include::example$n10s.rdf.getIRINamespace.csv[lines=2:]
+include::example$n10s.rdf.getLangTag.csv[lines=2:]
+include::example$n10s.rdf.getLangValue.csv[lines=2:]
+include::example$n10s.rdf.getValue.csv[lines=2:]
+include::example$n10s.rdf.hasLangTag.csv[lines=2:]
+include::example$n10s.rdf.shortFormFromFullUri.csv[lines=2:]
 |===
 
 [[common_params]]
