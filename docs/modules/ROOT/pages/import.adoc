@@ -671,27 +671,46 @@ The user functions mentioned above can be combined with other user functions lik
 [[classes-as-nodes]]
 == Classes as Nodes (instead of Labels)
 
-The rdf:type statements in RDF (triples) are transformed into labels by default when we import them into Neo4j. While this is a reasonable approach it may not be your preferred option, especially if you want to load an ontology too and link it to your instance data. In that case you'll probably want to represent the types as nodes and have 'the magic' of uris have them linked. Be careful if you try this approach when loading large datasets as it can create very dense nodes.
-If you want `rdf:type` statements (triples) to be imported in this way, all you have to do is set the `typesToLabels` parameter to `false`.
+The rdf:type statements in RDF (triples) are transformed into labels by default when we
+import them into Neo4j. While this is a reasonable approach it may not be your preferred
+option, especially if you want to load an ontology too and link it to your instance data.
+In that case you'll probably want to represent the types as nodes and have 'the magic' of
+uris have them linked.
 
-Here's an example: Let's say we want to load an ontology (notice that it's actually a small fragment of several ontologies, but it will work for our example). For what it's worth, it's an RDF file, so we load it the usual way, with all default settings
+[IMPORTANT]
+----
+Note that this approach can create very dense nodes when loading large datasets.
+----
+
+By setting the `handleRDFTypes` parameter in the graph config to `"LABELS_AND_NODES"` we can achieve exactly that behavior.
+Actually, as the name suggests we get a double effect and  `rdf:type` statements (triples)
+are persisted both as labels and as `rdf_type` relationships connecting the individual to a node
+representing the class.
+
+Here's an example: Let's say we want to load an ontology (notice that it's actually a small fragment of several ontologies, but it will work for our example).
+For what it's worth, it's an RDF file, so we load it the usual way, with all default settings
 
 [source,cypher]
 ----
-call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/minionto.ttl","Turtle");
+CALL n10s.graphconfig.init({handleRDFTypes:"LABELS_AND_NODES"});
+
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/minionto.ttl","Turtle");
 ----
 
-We can inspect the result of the import to see that the ontology contains just five class definitions linked in a hierarchy like this.
+We can inspect the result of the import to see that the ontology contains the five class definitions
+linked in a hierarchy as in the following image.
+(there are additional `rdf_type` relationships not shown in this image, linking each class node to an rdfs:Class node).
 
 image::minionto.png[Ontology imported in Neo4j,scaledwidth="100%"]
 
-Now we want to load the instance data and we want it to link to the ontology graph rather than build a disconnected graph by transforming `rdf:type` statements into Property Graph labels. We can achieve this by setting the `typesToLabels` to `false`.
+Next we want to import the instance data, and we want it to link to the ontology graph rather than build a
+disconnected graph (this is what would happen if `rdf:type` statements were imported only as labels).
+With the current `"LABELS_AND_NODES"` setting, we get the types as label but *also* as relationships connecting
+the instances to the previously loaded ontology.
 
 [source,cypher]
 ----
-call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle", {
-  typesToLabels: false
-});
+call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle");
 ----
 
 The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.
