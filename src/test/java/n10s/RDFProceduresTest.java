@@ -3567,7 +3567,7 @@ public class RDFProceduresTest {
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
-          + "','RDF/XML', {  commitSize: 5 })");
+          + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 

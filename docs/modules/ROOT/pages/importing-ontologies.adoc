@@ -26,7 +26,7 @@ We can see in the ingested graph that by default, classes are persisted as nodes
 Similarly, relationships will be persisted as nodes with name and uri and labels `Relationship` or `Property` for `owl:ObjectProperty` and `owl:DatatypeProperty` respectively.
 Statements with `rdf:subPropertyOf` as predicate are stored as relationships of type `SPO` between `Relationship` or `Property` nodes.
 
-These graph model elements can be overridden by using the following configuration params:
+These graph model elements can be overridden by using the following configuration params in the Graph Config:
 
 * *classLabel*: Label to be used for Ontology Classes (categories). Default is `Class`.
 * *subClassOfRel*: Relationship to be used for `rdfs:subClassOf` hierarchies. Default is `SCO`.
@@ -40,37 +40,29 @@ Here's an example of how to load an ontology using some of these parameters:
 
 [source,cypher]
 ----
-CALL n10s.onto.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/vw.owl","Turtle", {
+CALL n10s.graphconfig.init({
   classLabel : 'Category',
   objectPropertyLabel: 'Rel',
   dataTypePropertyLabel: 'Prop'
 });
+
+CALL n10s.onto.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/vw.owl","Turtle");
 ----
 
-Imported nodes (both Classes and Properties/Relationships) can be labeled as `Resource` for compatibility/consistency with the `n10s.rdf.import.fetch` procedure.
-This is done by setting the `addResourceLabels` parameter to `true`.
 
-
-Finally, it is possible to pass the ontology as text instead of by reference (url), the `importOntologySnippet` procedure works in this  mode. Here's an example:
+Just like we saw when importing RDF, it is possible to pass the ontology as text instead of by reference (url),
+the `n10s.onto.import.inline` procedure works in this  mode. Here's an example:
 
 We first import a public vocabulary...
 [source,cypher]
 ----
-CALL n10s.onto.import.fetch("http://www.nsmntx.org/2019/10/clothingMaterials","Turtle", {
-  classLabel : 'Category',
-  objectPropertyLabel: 'Rel',
-  dataTypePropertyLabel: 'Prop'
-});
+CALL n10s.onto.import.fetch("http://www.nsmntx.org/2019/10/clothingMaterials","Turtle");
 ----
 
-and then we extend it with some additiona statements (triples) passed as text to the `importOntologySnippet` procedure
+and then we extend it with some additiona statements (triples) passed as text to the `n10s.onto.import.inline` procedure
 [source,cypher]
 ----
-CALL n10s.onto.preview.inline("<http://www.nsmntx.org/2019/10/clothingMaterials#Leather> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://www.nsmntx.org/customCats#AnimalBasedMaterial2> .","N-Triples", {
-  classLabel : 'Category',
-  objectPropertyLabel: 'Rel',
-  dataTypePropertyLabel: 'Prop'
-});
+CALL n10s.onto.import.inline("<http://www.nsmntx.org/2019/10/clothingMaterials#Leather> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <http://www.nsmntx.org/customCats#AnimalBasedMaterial2> .","N-Triples");
 ----
 
 Check xref:reference.adoc[Reference] for a complete list of available parameters.

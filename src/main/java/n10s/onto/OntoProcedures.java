@@ -89,10 +89,8 @@ public class OntoProcedures extends CommonProcedures {
     List<Relationship> virtualRels = new ArrayList<>();
 
     try {
-      //this could  be improved
       GraphConfig graphConfig = new GraphConfig(tx);
       props.put("handleVocabUris", "IGNORE");
-      graphConfig.add(props);
       conf = new RDFParserConfig(props, graphConfig);
       rdfFormat = getFormat(format);
       ontoViewer = new OntologyPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
@@ -101,8 +99,6 @@ public class OntoProcedures extends CommonProcedures {
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
           "A Graph Config is required for the Ontology preview procedure to run");
-    } catch (InvalidParamException e) {
-      e.printStackTrace();
     }
 
     if (ontoViewer != null) {
