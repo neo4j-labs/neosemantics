@@ -86,10 +86,9 @@ public class RDFEndpoint {
 
         getExportNsPrefixesFromDB(neo4j, getGraphConfig(tx) == null).forEach( (pref,ns) -> writer.handleNamespace(pref,ns));
         GraphConfig gc = getGraphConfig(tx);
-        if ( gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
-            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
-            ) {
-
+        if ( gc == null ) {
+        //|| gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+        //                  || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP
           LPGToRDFProcesssor proc = new LPGToRDFProcesssor(neo4j, tx, gc,
               getExportMappingsFromDB(neo4j), onlyMappedInfo != null,
               isRdfStarSerialisation(writer.getRDFFormat()));

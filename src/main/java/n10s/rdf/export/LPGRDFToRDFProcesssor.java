@@ -182,7 +182,13 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       if (rel != null) {
         // no need to  check rels connect to other resources as we're sure they will since they come
         //  in/out of a Resource
-        statementResults.add(processRelationship(rel, null));
+        Statement baseStatement = processRelationship(rel, null); //TODO: ontologyEntitiesUris needed
+        statementResults.add(baseStatement);
+
+        if(this.exportPropertiesInRels) {
+          rel.getAllProperties().forEach((k, v) -> processPropOnRel(statementResults, baseStatement, k, v));
+        }
+
       }
     }
     return statementResults.stream();
@@ -201,9 +207,23 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   }
 
   @Override
-  protected void processPropOnRel(Set<Statement> rowResult, Statement baseStatement, String key,
-      Object val) {
-    //TODO implement
+  protected void processPropOnRel(Set<Statement> statementSet, Statement baseStatement, String key,
+      Object propertyValueObject) {
+
+    IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key));
+    if (propertyValueObject instanceof Object[]) {
+      for (Object o : (Object[]) propertyValueObject) {
+        statementSet.add(vf.createStatement(vf.createTriple(
+                baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
+                predicate, createTypedLiteral(o)));
+      }
+    } else {
+      statementSet.add(vf.createStatement(vf.createTriple(
+              baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
+              predicate, createTypedLiteral(propertyValueObject)));
+    }
+
+
   }
 
   @Override

@@ -344,7 +344,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 
 
-
+ //TODO: refactor this method with the one in LPGRDF to RDF
   private Value createTypedLiteral(ValueFactory valueFactory, Object value) {
     Literal result;
     if (value instanceof String) {

@@ -145,6 +145,76 @@ public class RDFEndpointTest {
 
 
   @Test
+  public void testGetNodeByIdFromRDFizedLPG() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+
+      String configCreation = "CALL n10s.graphconfig.init({handleVocabUris:'IGNORE'}) ";
+
+      tx.execute(configCreation);
+
+      String dataInsertion = "CREATE (Keanu:Actor:Resource { uri: 'http://neo4j.com/movies/Keanu', name:'Keanu Reeves', born:1964})\n" +
+              "CREATE (Carrie:Director:Resource {uri: 'http://neo4j.com/movies/Carrie', name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director:Resource {uri: 'http://neo4j.com/movies/Laurence', name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic:Resource {uri: 'http://neo4j.com/movies/Hugo', name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor:Resource {uri: 'http://neo4j.com/movies/Andy', name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH { from: 1999 } ]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+      tx.execute(dataInsertion);
+      tx.commit();
+
+    }
+
+    // When
+    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/http%3A%2F%2Fneo4j.com%2Fmovies%2FKeanu");
+
+    String expected = "{\n" +
+            "  \"@id\" : \"http://neo4j.com/movies/Keanu\",\n" +
+            "  \"@type\" : \"neovoc:Actor\",\n" +
+            "  \"neovoc:born\" : {\n" +
+            "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+            "    \"@value\" : \"1964\"\n" +
+            "  },\n" +
+            "  \"neovoc:name\" : \"Keanu Reeves\",\n" +
+            "  \"@context\" : {\n" +
+            "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n" +
+            "    \"neovoc\" : \"neo4j://vocabulary#\",\n" +
+            "    \"neoind\" : \"neo4j://individuals#\"\n" +
+            "  }\n" +
+            "}";
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+
+    // When
+    response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+                    "http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo");
+
+    expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+            "@prefix neovoc: <neo4j://vocabulary#> .\n" +
+            "@prefix neoind: <neo4j://individuals#> .\n" +
+            "\n" +
+            "<http://neo4j.com/movies/Hugo> a neovoc:Critic;\n" +
+            "  neovoc:WORKS_WITH <http://neo4j.com/movies/Andy>;\n" +
+            "  neovoc:name \"Hugo Weaving\";\n" +
+            "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+            "\n" +
+            "<<<http://neo4j.com/movies/Hugo> neovoc:WORKS_WITH <http://neo4j.com/movies/Andy>>>\n" +
+            "  neovoc:from \"1999\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+            "\n" +
+            "<http://neo4j.com/movies/Carrie> neovoc:FRIEND_OF <http://neo4j.com/movies/Hugo> .\n";
+
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
+
+  }
+
+  @Test
   public void testCypherReturnsList() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();

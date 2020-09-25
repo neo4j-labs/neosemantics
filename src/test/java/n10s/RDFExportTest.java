@@ -3,11 +3,10 @@ package n10s;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
-import com.github.jsonldjava.core.JsonLdUtils;
+
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
-import n10s.rdf.RDFProcedures;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import org.eclipse.rdf4j.model.IRI;
@@ -23,8 +22,8 @@ import org.junit.Test;
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
+import org.neo4j.driver.Record;
 
-import javax.print.DocFlavor;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashSet;
