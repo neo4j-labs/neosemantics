@@ -1,5 +1,8 @@
 package n10s.rdf.export;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -8,14 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import n10s.graphconfig.GraphConfig;
+import n10s.graphconfig.Params;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Path;
@@ -118,6 +122,52 @@ public abstract class ExportProcessor {
       return rowResult.stream();
 
     });
+  }
+
+  protected Literal createTypedLiteral(Object value) {
+    Literal result;
+    if (value instanceof String) {
+      result = getLiteralWithTagOrDTIfPresent((String) value);
+    } else if (value instanceof Integer) {
+      result = vf.createLiteral((Integer) value);
+    } else if (value instanceof Long) {
+      result = vf.createLiteral((Long) value);
+    } else if (value instanceof Float) {
+      result = vf.createLiteral((Float) value);
+    } else if (value instanceof Double) {
+      result = vf.createLiteral((Double) value);
+    } else if (value instanceof Boolean) {
+      result = vf.createLiteral((Boolean) value);
+    } else if (value instanceof LocalDateTime) {
+      result = vf
+              .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                      XMLSchema.DATETIME);
+    } else if (value instanceof LocalDate) {
+      result = vf
+              .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
+                      XMLSchema.DATE);
+    } else {
+      // default to string
+      result = getLiteralWithTagOrDTIfPresent((String) value);
+    }
+
+    return result;
+  }
+
+  private Literal getLiteralWithTagOrDTIfPresent(String value) {
+    Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
+    final Pattern customDataTypePattern = Pattern
+            .compile("^(.*)" + Pattern.quote(Params.CUSTOM_DATA_TYPE_SEPERATOR) + "(.*)$");
+
+    Matcher langTag = langTagPattern.matcher(value);
+    Matcher customDT = customDataTypePattern.matcher(value);
+    if (langTag.matches()) {
+      return vf.createLiteral(langTag.group(1), langTag.group(2));
+    } else if (customDT.matches()) {
+      return vf.createLiteral(customDT.group(1), vf.createIRI(customDT.group(2)));
+    } else {
+      return vf.createLiteral(value);
+    }
   }
 
   protected Value getValueFromTriplePatternObject(TriplePattern tp) {

@@ -162,12 +162,12 @@ public class LPGToRDFProcesssor extends ExportProcessor {
           for (Object o : (Object[]) propertyValueObject) {
             statementSet.add(vf.createStatement(vf.createTriple(
                 baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
-                predicate, createTypedLiteral(vf, o)));
+                predicate, createTypedLiteral(o)));
           }
         } else {
           statementSet.add(vf.createStatement(vf.createTriple(
               baseStatement.getSubject(), baseStatement.getPredicate(), baseStatement.getObject()),
-              predicate, createTypedLiteral(vf, propertyValueObject)));
+              predicate, createTypedLiteral(propertyValueObject)));
         }
       }
 
@@ -321,11 +321,11 @@ public class LPGToRDFProcesssor extends ExportProcessor {
         if (propertyValueObject instanceof Object[]) {
           for (Object o : (Object[]) propertyValueObject) {
             statements.add(vf.createStatement(subject, predicate,
-                createTypedLiteral(vf, o)));
+                createTypedLiteral(o)));
           }
         } else {
           statements.add(vf.createStatement(subject, predicate,
-              createTypedLiteral(vf, propertyValueObject)));
+              createTypedLiteral(propertyValueObject)));
         }
       }
 
@@ -340,55 +340,6 @@ public class LPGToRDFProcesssor extends ExportProcessor {
           throws InvalidNamespacePrefixDefinitionInDB {
     //unimplemented
     return null;
-  }
-
-
-
- //TODO: refactor this method with the one in LPGRDF to RDF
-  private Value createTypedLiteral(ValueFactory valueFactory, Object value) {
-    Literal result;
-    if (value instanceof String) {
-      result = getLiteralWithTagOrDTIfPresent((String) value, valueFactory);
-    } else if (value instanceof Integer) {
-      result = valueFactory.createLiteral((Integer) value);
-    } else if (value instanceof Long) {
-      result = valueFactory.createLiteral((Long) value);
-    } else if (value instanceof Float) {
-      result = valueFactory.createLiteral((Float) value);
-    } else if (value instanceof Double) {
-      result = valueFactory.createLiteral((Double) value);
-    } else if (value instanceof Boolean) {
-      result = valueFactory.createLiteral((Boolean) value);
-    } else if (value instanceof LocalDateTime) {
-      result = valueFactory
-          .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-              XMLSchema.DATETIME);
-    } else if (value instanceof LocalDate) {
-      result = valueFactory
-          .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
-              XMLSchema.DATE);
-    } else {
-      // default to string
-      result = getLiteralWithTagOrDTIfPresent((String) value, valueFactory);
-    }
-
-    return result;
-  }
-
-  private Literal getLiteralWithTagOrDTIfPresent(String value, ValueFactory vf) {
-    Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
-    final Pattern customDataTypePattern = Pattern
-        .compile("^(.*)" + Pattern.quote(Params.CUSTOM_DATA_TYPE_SEPERATOR) + "(.*)$");
-
-    Matcher langTag = langTagPattern.matcher(value);
-    Matcher customDT = customDataTypePattern.matcher(value);
-    if (langTag.matches()) {
-      return vf.createLiteral(langTag.group(1), langTag.group(2));
-    } else if (customDT.matches()) {
-      return vf.createLiteral(customDT.group(1), vf.createIRI(customDT.group(2)));
-    } else {
-      return vf.createLiteral(value);
-    }
   }
 
 }

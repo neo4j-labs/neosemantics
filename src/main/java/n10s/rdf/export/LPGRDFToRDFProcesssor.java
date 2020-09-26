@@ -9,7 +9,6 @@ import static n10s.utils.UriUtils.translateUri;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -137,7 +136,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
 
   public Stream<Statement> streamNodeByUri(String uri, String graphId, boolean excludeContext) {
 
-    //TODO: Until import RDF* is implemnted, there is no way this can return reified statements
     String queryWithContext;
     String queryNoContext;
     Map<String, Object> params = new HashMap<>();
@@ -540,52 +538,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     final ValueFactory vf = SimpleValueFactory.getInstance();
 
     return null;
-  }
-
-  private Literal createTypedLiteral(Object value) {
-    Literal result;
-    if (value instanceof String) {
-      result = getLiteralWithTagOrDTIfPresent((String) value, vf);
-    } else if (value instanceof Integer) {
-      result = vf.createLiteral((Integer) value);
-    } else if (value instanceof Long) {
-      result = vf.createLiteral((Long) value);
-    } else if (value instanceof Float) {
-      result = vf.createLiteral((Float) value);
-    } else if (value instanceof Double) {
-      result = vf.createLiteral((Double) value);
-    } else if (value instanceof Boolean) {
-      result = vf.createLiteral((Boolean) value);
-    } else if (value instanceof LocalDateTime) {
-      result = vf
-          .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
-              XMLSchema.DATETIME);
-    } else if (value instanceof LocalDate) {
-      result = vf
-          .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
-              XMLSchema.DATE);
-    } else {
-      // default to string
-      result = getLiteralWithTagOrDTIfPresent((String) value, vf);
-    }
-
-    return result;
-  }
-
-  private Literal getLiteralWithTagOrDTIfPresent(String value, ValueFactory vf) {
-    Pattern langTagPattern = Pattern.compile("^(.*)@([a-z,\\-]+)$");
-    final Pattern customDataTypePattern = Pattern
-        .compile("^(.*)" + Pattern.quote(Params.CUSTOM_DATA_TYPE_SEPERATOR) + "(.*)$");
-
-    Matcher langTag = langTagPattern.matcher(value);
-    Matcher customDT = customDataTypePattern.matcher(value);
-    if (langTag.matches()) {
-      return vf.createLiteral(langTag.group(1), langTag.group(2));
-    } else if (customDT.matches()) {
-      return vf.createLiteral(customDT.group(1), vf.createIRI(customDT.group(2)));
-    } else {
-      return vf.createLiteral(value);
-    }
   }
 
 }
