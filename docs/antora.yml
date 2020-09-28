@@ -1,5 +1,5 @@
 name: neosemantics
-version: '4.0'
+version: '4.1'
 title: Neosemantics
 nav:
 - modules/ROOT/nav.adoc
