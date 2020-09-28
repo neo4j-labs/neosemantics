@@ -729,6 +729,34 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportSKOSFetchWithParams() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{}");
+
+      Result importResults
+              = session.run("CALL n10s.skos.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("unesco-thesaurus.ttl").toURI()
+              + "','Turtle',{   commitSize: 100, languageFilter: 'fr' })"); //
+
+      assertEquals(57185L, importResults
+              .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+              "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
+                      + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, properties(n) as props limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      assertEquals("Class", result.get("label").asString());
+      Map<String, Object> props = result.get("props").asMap();
+      assertEquals("concept10928", props.get("name"));
+      assertEquals("Industrie alimentaire", props.get("skos__prefLabel"));
+      assertFalse(queryResults.hasNext());
+    }
+  }
+
+  @Test
   public void testImportRDFStar () throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -787,27 +815,34 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void testImportSKOSFetch() throws Exception {
+  public void testImportSKOSFetchMultivalArray() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{}");
+          "{ handleMultival: 'ARRAY', keepLangTag: true }");
 
       Result importResults
           = session.run("CALL n10s.skos.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("unesco-thesaurus.ttl").toURI()
           + "','Turtle')"); //,{   commitSize: 1000 }
 
-      assertEquals(17118L, importResults
+      assertEquals(57185, importResults
           .single().get("triplesLoaded").asLong());
       Result queryResults = session.run(
           "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
-              + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name limit 1");
+              + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name, " +
+                  "n.skos__prefLabel  as labels limit 1");
       assertTrue(queryResults.hasNext());
       Record result = queryResults.next();
       assertEquals("Class", result.get("label").asString());
       assertEquals("concept10928", result.get("name").asString());
+      List<Object> labels = result.get("labels").asList();
+      String values [] = new String[] {
+              "Food industry@en", "Industrie alimentaire@fr", "Industria alimentaria@es", "Пищевая промышленность@ru" };
+      for (String x:values) {
+        assertTrue(labels.contains(x));
+      }
       assertFalse(queryResults.hasNext());
     }
   }

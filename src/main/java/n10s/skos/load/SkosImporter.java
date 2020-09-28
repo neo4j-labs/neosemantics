@@ -294,6 +294,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
     statements.clear();
     resourceLabels.clear();
     resourceProps.clear();
+    nodeCache.invalidateAll();
 
     return 0;
   }
