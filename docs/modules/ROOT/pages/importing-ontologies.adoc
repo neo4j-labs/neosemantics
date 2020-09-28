@@ -1,3 +1,4 @@
+[[ontoimport]]
 = Importing Ontologies
 :page-pagination:
 

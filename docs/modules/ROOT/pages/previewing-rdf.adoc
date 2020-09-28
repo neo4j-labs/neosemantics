@@ -1,10 +1,81 @@
 = Previewing RDF data
 :page-pagination:
 
-Sometimes before we go ahead and import RDF data into Neo4j we want to see what it looks like or we may even want to take full control with Cypher over the data ingestion process and customise what to do with each parsed triple. For these purpose NSMNTX provides the following procedures.
+Sometimes before we go ahead and import RDF data into Neo4j we want to visualise it and confirm that
+the configuration parameters are producing the desired graph. That's what the `.preview` procedures
+help us with. Also in some situations, we may even want to take control of the data ingestion
+process and completely customise it at a triple level. That is the purpose of the
+`.stream` methods. Here is a description for each of them.
+
+== Previewing RDF data
+The preview procedures `rdf.preview` and `onto.preview` generate a visual preview of the graph in
+the Neo4j browser. They are identical in structure to their import counterparts and also
+come in the usual `.fetch` and `.inline` modes. They take the same parameters as the import
+procedures:
+[options="header"]
+|===
+| Parameter        | Type |  Description
+| url or payload | String | URL to retrieve the dataset (fetch mode) or RDF snippet (inline mode)
+| format | String | serialization format. Valid formats are: Turtle, N-Triples, JSON-LD, RDF/XML, *TriG and N-Quads* (For named graphs)
+| params | Map  | Optional set of parameters (see description in table below)
+|===
+
+Here is an  example of use in `.inline` mode with a fragment of RDF/XML:
+
+[source,cypher]
+----
+call n10s.rdf.preview.inline('
+
+<rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+xmlns:music="http://neo4j.com/voc/music#">
+
+  <rdf:Description rdf:about="http://neo4j.com/indiv#The_Beatles">
+    <rdf:type rdf:resource="http://neo4j.com/voc/music#Band"/>
+    <music:name>The Beatles</music:name>
+    <music:member rdf:resource="http://neo4j.com/indiv#John_Lennon"/>
+  </rdf:Description>
+
+  <music:Artist rdf:about="http://neo4j.com/indiv#John_Lennon">
+    <music:name>John Lennon</music:name>
+  </music:Artist>
+
+  <music:Song rdf:about="http://neo4j.com/indiv#Helter_Skelter">
+    <music:name>Helter Skelter</music:name>
+    <music:length rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">269</music:length>
+    <music:writer rdf:resource="http://neo4j.com/indiv#John_Lennon"/>
+  </music:Song>
+</rdf:RDF>
+
+','RDF/XML')
+----
+
+which produces the following output in the Neo4j browser:
+
+image::preview_inline.png[RDF parsed and previewed in the Neo4j browser, scaledwidth="100%"]
+
+Preview works as well in `.fetch` mode:
+
+[source,cypher]
+----
+call n10s.rdf.preview.fetch("https://raw.githubusercontent.com/jbarrasa/datasets/master/rdf/music.ttl","Turtle")
+----
+which produces the following output in the Neo4j browser:
+
+image::preview_fetch.png[RDF parsed and previewed in the Neo4j browser, scaledwidth="100%"]
+
+There are also `n10s.onto.preview` methods available that implement the same
+import logic described in xref:import.adoc#ontoimport[the ontology import section] but producing a preview instead of
+persisting the results in the DB.
+
+[WARNING]
+Note that by default, preview (and stream) methods parse only the first 1000
+triples. If you want to go beyond that limit you can override the `limit` param.
+For example `{ limit: 9999 }`
+
 
 == Streaming triples
-The streaming procedure take the following parameters:
+The streaming procedures only parse the input RDF and streams it as result.
+No write to the DB takes place. These methods take the following parameters:
 
 [options="header"]
 |===
@@ -71,7 +142,9 @@ WHERE predicate = 'http://voc#property1' AND literalLang = "es"
 CREATE (:Thing { uri: subject, prop: object });
 ----
 
-== Previewing RDF data
+
+
+
 
 The `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import.
 Like all methods in the xref:previewing-rdf.adoc[Preview] section, both `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` are read only so will not persist anything in the graph.
