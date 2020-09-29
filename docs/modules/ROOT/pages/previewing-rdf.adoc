@@ -144,8 +144,6 @@ CREATE (:Thing { uri: subject, prop: object });
 
 
 
-
-
 The `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` methods provide a convenient way to visualise in the Neo4j browser some RDF data before we go ahead with the actual import.
 Like all methods in the xref:previewing-rdf.adoc[Preview] section, both `n10s.rdf.stream.fetch` and `n10s.rdf.stream.inline` are read only so will not persist anything in the graph.
 The difference between them is that `previewRDF` takes a url (and optionally additional configuration settings as described in  xref:import.adoc#advancedfetching[Advanced Fetching]) whereas `n10s.rdf.stream.inline` takes an RDF fragment as text instead.

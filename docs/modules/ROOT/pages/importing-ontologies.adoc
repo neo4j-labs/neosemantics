@@ -2,7 +2,6 @@
 = Importing Ontologies
 :page-pagination:
 
-
 Ontologies are serialised as RDF, so they can be imported using plain `n10s.rdf.import.fetch` but the `n10s.onto.import.fetch` method will give us a higher level of control over how an RDFS or OWL ontology is imported into Neo4j.
 It's important to note that this procedure exclusively imports the following:
 
@@ -67,3 +66,84 @@ CALL n10s.onto.import.inline("<http://www.nsmntx.org/2019/10/clothingMaterials#L
 ----
 
 Check xref:reference.adoc[Reference] for a complete list of available parameters.
+
+
+== Importing SKOS concept schemes
+
+https://www.w3.org/TR/skos-reference/[SKOS] (Simple Knowledge Organization System) provides a model for expressing the basic structure and
+content of concept schemes such as thesauri, classification schemes, subject heading lists,
+taxonomies, folksonomies, and other similar types of controlled vocabulary. Neosemantics also provides
+methods (`skos.import`) to import SKOS concept schemes.
+
+These methods follow the same structure and implement the same behavior as the ones for importing ontologies
+here is an example of inline importing a skos fragment of a taxonomy:
+
+[source,cypher]
+----
+call n10s.skos.import.inline('
+
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix ex: <http://www.example.com/> .
+
+ex:cat rdf:type skos:Concept;
+skos:prefLabel "cat"@en;
+skos:prefLabel "Katze"@de;
+skos:altLabel "kitten"@en;
+skos:narrower ex:wildcat;
+skos:broader ex:animal .
+
+ex:wildcat rdf:type skos:Concept;
+skos:prefLabel "wildcat"@en;
+skos:broader ex:cat.
+
+ex:animal rdf:type skos:Concept;
+skos:prefLabel "animal"@en .
+
+','Turtle')
+
+----
+
+producing the following summary of execution:
+
+[source,cypher]
+----
+╒═══════════════════╤═══════════════╤═══════════════╤════════════╤═══════════╤════════════════════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"│"extraInfo"│"callParams"                │
+╞═══════════════════╪═══════════════╪═══════════════╪════════════╪═══════════╪════════════════════════════╡
+│"OK"               │11             │11             │null        │""         │{"handleVocabUris":"IGNORE"}│
+└───────────────────┴───────────────┴───────────────┴────────────┴───────────┴────────────────────────────┘
+----
+
+and on running this cypher query: `MATCH p=(:Class)-[r:SCO]->() RETURN p` produces the following result:
+
+image::skos_inline.png[Small concept hierarchy imported in SKOS, scaledwidth="100%"]
+
+Similarly, the `.fetch` version of the method can be use to retrieve a larger dataset like in the
+following example:
+
+[source,cypher]
+----
+call n10s.skos.import.fetch("http://vocabularies.unesco.org/browser/rest/v1/thesaurus/data?format=text/turtle",
+   "Turtle", { languageFilter: "es" })
+----
+
+[source]
+----
+╒═══════════════════╤═══════════════╤═══════════════╤════════════╤═══════════╤════════════════════════════╕
+│"terminationStatus"│"triplesLoaded"│"triplesParsed"│"namespaces"│"extraInfo"│"callParams"                │
+╞═══════════════════╪═══════════════╪═══════════════╪════════════╪═══════════╪════════════════════════════╡
+│"OK"               │68519          │87191          │null        │""         │{"handleVocabUris":"IGNORE"}│
+└───────────────────┴───────────────┴───────────────┴────────────┴───────────┴────────────────────────────┘
+----
+
+The resulting graph can be queried using cypher now. The following query shows
+how to find the concepts related to
+"Social Problems" (concept uri: `http://vocabularies.unesco.org/thesaurus/concept409`).
+
+[source,cypher]
+----
+MATCH p = (:Resource { uri: "http://vocabularies.unesco.org/thesaurus/concept409"})-[*..5]->() RETURN p limit 80
+----
+
+image::skos_fetch.png[UNESCO Thesaurus in Spanish imported as SKOS, scaledwidth="100%"]
