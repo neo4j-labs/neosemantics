@@ -48,11 +48,7 @@ public class OntoProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
-      //this could  be improved
-      GraphConfig graphConfig = new GraphConfig(tx);
-      props.put("handleVocabUris", "IGNORE");
-      graphConfig.add(props);
-      conf = new RDFParserConfig(props, graphConfig);
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);
     } catch (RDFImportPreRequisitesNotMet e) {
@@ -89,9 +85,7 @@ public class OntoProcedures extends CommonProcedures {
     List<Relationship> virtualRels = new ArrayList<>();
 
     try {
-      GraphConfig graphConfig = new GraphConfig(tx);
-      props.put("handleVocabUris", "IGNORE");
-      conf = new RDFParserConfig(props, graphConfig);
+      conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoViewer = new OntologyPreviewer(db, tx, conf, virtualNodes, virtualRels, log);
     } catch (RDFImportBadParams e) {

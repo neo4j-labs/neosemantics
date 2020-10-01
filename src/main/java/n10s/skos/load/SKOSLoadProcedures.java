@@ -44,8 +44,6 @@ public class SKOSLoadProcedures extends RDFProcedures {
   private ImportResults doSkosImport(String format, String url,
       String rdfFragment, Map<String, Object> props) throws RDFImportException {
 
-    props.put("handleVocabUris", "IGNORE");
-
     SkosImporter skosImporter = null;
     RDFParserConfig conf = null;
     RDFFormat rdfFormat = null;

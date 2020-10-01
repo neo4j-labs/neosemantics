@@ -501,7 +501,7 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
-  public void testListShapesInRDFIgnoreGraph() throws Exception {
+  public void testListAndDropShapesInRDFIgnoreGraph() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
@@ -541,6 +541,21 @@ public class SHACLValidationProceduresTest {
           assertEquals(expected, next.get("value").asList());
         }
       }
+
+      shapesResults = session.run("CALL n10s.validation.shacl.dropShapes() ");
+      assertFalse(shapesResults.hasNext());
+
+      try{
+        shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
+        shapesResults.hasNext();
+        //execution should break here
+        assertFalse(true);
+
+      } catch (Exception e){
+        //Expected
+        assertTrue(e.getMessage().contains("n10s.validation.SHACLValidationException: No shapes compiled"));
+      }
+
 
     }
   }
@@ -594,6 +609,21 @@ public class SHACLValidationProceduresTest {
           assertEquals(expected, next.get("value").asList());
         }
       }
+
+      shapesResults = session.run("CALL n10s.validation.shacl.dropShapes() ");
+      assertFalse(shapesResults.hasNext());
+      
+      try{
+        shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
+        shapesResults.hasNext();
+        //execution should break here
+        assertFalse(true);
+
+      } catch (Exception e){
+        //Expected
+        assertTrue(e.getMessage().contains("n10s.validation.SHACLValidationException: No shapes compiled"));
+      }
+
 
     }
   }

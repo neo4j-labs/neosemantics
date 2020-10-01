@@ -58,7 +58,7 @@ public class OntologyPreviewer extends OntologyImporter {
         vRels.add(
             new VirtualRelationship(vNodes.get(st.getSubject().stringValue().replace("'", "\'")),
                 vNodes.get(st.getObject().stringValue().replace("'", "\'")),
-                RelationshipType.withName(translateRelName(st.getPredicate()))));
+                RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()),RELATIONSHIP))));
       } catch (NamespacePrefixConflictException e) {
         e.printStackTrace();
       }

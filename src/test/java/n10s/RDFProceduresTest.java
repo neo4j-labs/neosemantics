@@ -744,13 +744,16 @@ public class RDFProceduresTest {
       assertEquals(57185L, importResults
               .single().get("triplesLoaded").asLong());
       Result queryResults = session.run(
-              "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
-                      + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, properties(n) as props limit 1");
+              "MATCH (n:n4sch__Class  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
+                      + "RETURN labels(n) AS labels, properties(n) as props limit 1");
       assertTrue(queryResults.hasNext());
       Record result = queryResults.next();
-      assertEquals("Class", result.get("label").asString());
+      List<Object> labels = result.get("labels").asList();
+      assertTrue(labels.contains("Resource"));
+      assertTrue(labels.contains("n4sch__Class"));
+      assertEquals(2, labels.size());
       Map<String, Object> props = result.get("props").asMap();
-      assertEquals("concept10928", props.get("name"));
+      assertEquals("concept10928", props.get("n4sch__name"));
       assertEquals("Industrie alimentaire", props.get("skos__prefLabel"));
       assertFalse(queryResults.hasNext());
     }
@@ -831,11 +834,11 @@ public class RDFProceduresTest {
           .single().get("triplesLoaded").asLong());
       Result queryResults = session.run(
           "MATCH (n:Resource  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
-              + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.name  as name, " +
+              + "RETURN [ x in labels(n) where x <> 'Resource' | x][0] AS label, n.n4sch__name  as name, " +
                   "n.skos__prefLabel  as labels limit 1");
       assertTrue(queryResults.hasNext());
       Record result = queryResults.next();
-      assertEquals("Class", result.get("label").asString());
+      assertEquals("n4sch__Class", result.get("label").asString());
       assertEquals("concept10928", result.get("name").asString());
       List<Object> labels = result.get("labels").asList();
       String values [] = new String[] {
@@ -3607,14 +3610,14 @@ public class RDFProceduresTest {
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(2L,
-          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Class) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(5L,
-          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+          session.run("MATCH (n:n4sch__Property)-[:n4sch__DOMAIN]->(:n4sch__Class)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
       assertEquals(6L,
-          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+          session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
     }
 
@@ -3638,14 +3641,14 @@ public class RDFProceduresTest {
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(2L,
-          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Class) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(5L,
-          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+          session.run("MATCH (n:n4sch__Property)-[:n4sch__DOMAIN]->(:n4sch__Class)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
       assertEquals(6L,
-          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+          session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
     }
 
@@ -3657,7 +3660,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop', handleVocabUris: 'IGNORE'}");
+          " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'}");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
@@ -3667,36 +3670,84 @@ public class RDFProceduresTest {
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
 
       assertEquals(0L,
-          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Class) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(2L,
-          session.run("MATCH (n:Category) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Category) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(0L,
-          session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Property) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(5L,
-          session.run("MATCH (n:Prop)-[:DOMAIN]->(:Category)  RETURN count(n) AS count").next()
+          session.run("MATCH (n:n4sch__Prop)-[:n4sch__DOMAIN]->(:n4sch__Category)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
       assertEquals(0L,
-          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+          session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
 
       assertEquals(6L,
-          session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Rel) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(13L,
-          session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+          session.run("MATCH (n:Resource) RETURN count(distinct n.n4sch__label) AS count")
               .next().get("count").asLong());
 
       assertEquals(13L,
-          session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+          session.run("MATCH (n:Resource) RETURN count(distinct n.n4sch__comment) AS count")
               .next().get("count").asLong());
 
     }
 
   }
+
+  @Test
+  public void ontoImportWithCustomNamesIgnoreMode() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop', handleVocabUris: 'IGNORE'}");
+      Session session = driver.session();
+
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+              + "','RDF/XML')");
+
+      assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(0L,
+              session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+              session.run("MATCH (n:Category) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(0L,
+              session.run("MATCH (n:Property) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+              session.run("MATCH (n:Prop)-[:DOMAIN]->(:Category)  RETURN count(n) AS count").next()
+                      .get("count").asLong());
+
+      assertEquals(0L,
+              session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+                      .asLong());
+
+      assertEquals(6L,
+              session.run("MATCH (n:Rel) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(13L,
+              session.run("MATCH (n:Resource) RETURN count(distinct n.label) AS count")
+                      .next().get("count").asLong());
+
+      assertEquals(13L,
+              session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
+                      .next().get("count").asLong());
+
+    }
+
+  }
+
 
   @Test
   public void ontoSnippetImportWithCustomNames() throws Exception {
@@ -3753,7 +3804,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ classLabel : 'Category', "
-          + "objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' }");
+          + "objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' , handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
@@ -3804,7 +3855,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ classLabel : 'Category', "
-          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' }");
+          + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' , handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
 
       Map<String, Object> params = new HashMap<>();
@@ -3864,22 +3915,22 @@ public class RDFProceduresTest {
           "','RDF/XML')");
 
       assertEquals(592L,
-          session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+          session.run("MATCH (n:n4sch__Class) RETURN count(n) AS count").next().get("count").asLong());
 
       assertEquals(343L,
-          session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+          session.run("MATCH (n:n4sch__Property)-[:n4sch__DOMAIN]->(:n4sch__Class)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
       assertEquals(292L,
-          session.run("MATCH (n:Relationship)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+          session.run("MATCH (n:n4sch__Relationship)-[:n4sch__DOMAIN]->(:n4sch__Class)  RETURN count(n) AS count").next()
               .get("count").asLong());
 
       assertEquals(0L,
-          session.run("MATCH (n:Property)-[:DOMAIN]->(:Relationship) RETURN count(n) AS count")
+          session.run("MATCH (n:n4sch__Property)-[:n4sch__DOMAIN]->(:n4sch__Relationship) RETURN count(n) AS count")
               .next().get("count").asLong());
 
       assertEquals(416L,
-          session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+          session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
       session.close();
     }
@@ -3902,7 +3953,7 @@ public class RDFProceduresTest {
       assertEquals(5L, importSummary.get("triplesLoaded").asLong());
 
       assertEquals(1L,
-          session.run("MATCH p=(:Class{name:'Code'})-[:SCO]->(:Class{name:'Intangible'})" +
+          session.run("MATCH p=(:n4sch__Class{ n4sch__name:'Code'})-[:n4sch__SCO]->(:n4sch__Class{ n4sch__name:'Intangible'})" +
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
     }
@@ -3921,7 +3972,7 @@ public class RDFProceduresTest {
           "','RDF/XML')");
 
       assertEquals(1L,
-          session.run("MATCH p=(:Property{name:'prop1'})-[:SPO]->(:Property{name:'superprop'})" +
+          session.run("MATCH p=(:n4sch__Property { n4sch__name:'prop1'})-[:n4sch__SPO]->(:n4sch__Property{ n4sch__name:'superprop'})" +
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
     }
@@ -3933,7 +3984,7 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{ keepLangTag: true, handleMultival: 'ARRAY' } "); //, handleVocabUris: 'IGNORE'
+          "{ keepLangTag: true, handleMultival: 'ARRAY' , handleVocabUris: 'MAP' } "); //, handleVocabUris: 'IGNORE'
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +

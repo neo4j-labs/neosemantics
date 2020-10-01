@@ -15,7 +15,6 @@ import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SKOS;
 import org.eclipse.rdf4j.model.vocabulary.SKOSXL;
@@ -28,6 +27,9 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
+
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
+import static n10s.graphconfig.Params.BASE_SCH_NS;
 
 public class SkosImporter extends RDFToLPGStatementProcessor {
 
@@ -48,16 +50,35 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   @Override
   protected void periodicOperation() {
+
+    if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+      try (Transaction tempTransaction = graphdb.beginTx()) {
+        namespaces.partialRefresh(tempTransaction);
+        tempTransaction.commit();
+        log.debug("namespace prefixes synced: " + namespaces.toString());
+      } catch (Exception e) {
+        log.error("Problems syncing up namespace prefixes in partial commit. ", e);
+        if (getParserConfig().isAbortOnError()){
+          throw new NamespacePrefixConflict("Problems syncing up namespace prefixes in partial commit. ", e);
+        }
+      }
+    }
+
     try (Transaction tempTransaction = graphdb.beginTx()) {
       this.runPartialTx(tempTransaction);
       tempTransaction.commit();
-      totalTriplesMapped += mappedTripleCounter;
-      mappedTripleCounter = 0;
       log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
-          + totalTriplesMapped);
+              + totalTriplesMapped);
+      totalTriplesMapped += mappedTripleCounter;
     } catch (Exception e) {
-      System.out.println(e.getMessage());
+      log.error("Problems when running partial commit. Partial transaction rolled back. "  + mappedTripleCounter + " triples lost.", e);
+      if (getParserConfig().isAbortOnError()){
+        throw new PartialCommitException("Problems when running partial commit. Partial transaction rolled back. " , e);
+      }
     }
+
+    mappedTripleCounter = 0;
+
   }
 
   @Override
@@ -92,7 +113,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         .contains(st.getPredicate().stringValue())) {
       if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(SKOS.CONCEPT)) && st
           .getSubject() instanceof IRI) {
-        instantiate(parserConfig.getGraphConf().getClassLabelName(),
+        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
       } else if ((st.getPredicate().equals(SKOS.BROADER) || st.getPredicate().equals(SKOS.RELATED))
           && st.getObject() instanceof IRI && st
@@ -103,13 +124,13 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         //we invert the order to make it a 'broader'
-        addStatement(SimpleValueFactory.getInstance()
+        addStatement(vf
             .createStatement((IRI) st.getObject(), SKOS.BROADER, st.getSubject()));
       } else if (
           (st.getPredicate().equals(SKOS.PREF_LABEL) || st.getPredicate().equals(SKOS.ALT_LABEL) ||
               st.getPredicate().equals(SKOS.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //we also instantiate when we get a label property
-        instantiate(parserConfig.getGraphConf().getClassLabelName(),
+        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
         setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
       } else if (
@@ -117,7 +138,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
               ||
               st.getPredicate().equals(SKOSXL.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //instantiate when we get a label property
-        instantiate(parserConfig.getGraphConf().getClassLabelName(),
+        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
         //set the indirect reference
         setIndirectPropFirstLeg(st.getSubject().stringValue(), st.getPredicate(),
@@ -140,17 +161,22 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   }
 
-  private void instantiate(String label, IRI iri) {
-    setLabel(iri.stringValue(), label);
-    resourceProps.get(iri.stringValue()).put("name", iri.getLocalName());
+  private void instantiate(IRI label, IRI iri) {
+    setLabel(iri.stringValue(), handleIRI(label, LABEL));
+
+    resourceProps.get(iri.stringValue()).put(handleIRI(
+            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri.getLocalName());
+
     mappedTripleCounter++;
   }
 
   private void instantiatePair(String label1, IRI iri1, String label2, IRI iri2) {
     setLabel(iri1.stringValue(), label1);
-    resourceProps.get(iri1.stringValue()).put("name", iri1.getLocalName());
+    resourceProps.get(iri1.stringValue()).put(handleIRI(
+            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri1.getLocalName());
     setLabel(iri2.stringValue(), label2);
-    resourceProps.get(iri2.stringValue()).put("name", iri2.getLocalName());
+    resourceProps.get(iri2.stringValue()).put(handleIRI(
+            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri2.getLocalName());
     mappedTripleCounter++;
   }
 
@@ -258,13 +284,13 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         // check if the rel is already present. If so, don't recreate.
         // explore the node with the lowest degree
         boolean found = false;
-        if (fromNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+        if (fromNode.getDegree(RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()), RELATIONSHIP)),
             Direction.OUTGOING) <
-            toNode.getDegree(RelationshipType.withName(translateRelName(st.getPredicate())),
+            toNode.getDegree(RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()), RELATIONSHIP)),
                 Direction.INCOMING)) {
           for (Relationship rel : fromNode
               .getRelationships(Direction.OUTGOING,
-                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                  RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()), RELATIONSHIP)))) {
             if (rel.getEndNode().equals(toNode)) {
               found = true;
               break;
@@ -273,7 +299,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         } else {
           for (Relationship rel : toNode
               .getRelationships(Direction.INCOMING,
-                  RelationshipType.withName(translateRelName(st.getPredicate())))) {
+                  RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()), RELATIONSHIP)))) {
             if (rel.getStartNode().equals(fromNode)) {
               found = true;
               break;
@@ -284,7 +310,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         if (!found) {
           fromNode.createRelationshipTo(
               toNode,
-              RelationshipType.withName(translateRelName(st.getPredicate())));
+              RelationshipType.withName(handleIRI(translateRelName(st.getPredicate()), RELATIONSHIP)));
         }
       } catch (ExecutionException e) {
         e.printStackTrace();
@@ -299,14 +325,14 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
     return 0;
   }
 
-  private String translateRelName(IRI iri) {
+  private IRI translateRelName(IRI iri) {
     if (iri.equals(SKOS.BROADER)) {
-      return parserConfig.getGraphConf().getSubClassOfRelName();
+      return vf.createIRI(BASE_SCH_NS,parserConfig.getGraphConf().getSubClassOfRelName());
     } else if (iri.equals(SKOS.RELATED)) {
-      return parserConfig.getGraphConf().getRelatedConceptRelName();
+      return vf.createIRI(BASE_SCH_NS,parserConfig.getGraphConf().getRelatedConceptRelName());
     } else {
       //Not valid. Should not happen.
-      return "REL";
+      return vf.createIRI(BASE_SCH_NS,"REL");
     }
   }
 

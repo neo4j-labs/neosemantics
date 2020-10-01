@@ -99,6 +99,15 @@ public class ValidationProcedures extends CommonProcedures {
     return new ValidatorConfig(tx).getConstraintList().stream();
   }
 
+  @Procedure(name = "n10s.validation.shacl.dropShapes", mode = Mode.WRITE)
+  @Description("n10s.validation.dropShapes() - list SHACL shapes loaded in the Graph")
+  public Stream<ConstraintComponent> dropShapes() throws IOException, ClassNotFoundException {
+
+    tx.execute("MATCH (vc:_n10sValidatorConfig { _id: 1}) DELETE vc ");
+
+    return Stream.empty();
+  }
+
 
   @Procedure(name = "n10s.validation.shacl.validate", mode = Mode.READ)
   @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")

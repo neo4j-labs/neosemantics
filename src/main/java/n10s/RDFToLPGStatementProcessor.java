@@ -49,7 +49,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   public long totalTriplesParsed = 0;
   public long totalTriplesMapped = 0;
   public long mappedTripleCounter = 0;
-  private final ValueFactory vf = SimpleValueFactory.getInstance();
+  protected final ValueFactory vf = SimpleValueFactory.getInstance();
   protected StringBuilder loadWarnings = new StringBuilder();
   protected boolean datatypeConflictFound = false;
 
@@ -76,9 +76,6 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     }
   }
 
-  protected void appendWarning(String warningMessage){
-    loadWarnings.append(warningMessage);
-  }
   private void loadNamespaces() throws InvalidNamespacePrefixDefinitionInDB {
     namespaces = new NsPrefixMap(tx, false);
   }

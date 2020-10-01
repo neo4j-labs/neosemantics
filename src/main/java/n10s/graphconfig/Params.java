@@ -6,6 +6,8 @@ public class Params {
 
   public static final String BASE_INDIV_NS = "neo4j://individuals#";
   public static final String BASE_VOCAB_NS = "neo4j://vocabulary#";
+  public static final String BASE_SCH_NS = "neo4j://graph.schema#";
+
   public static final String PREFIX_SEPARATOR = "__";
   public static final String CUSTOM_DATA_TYPE_SEPERATOR = "^^";
   public static final Pattern DATATYPE_SHORTENED_PATTERN = Pattern.compile(
