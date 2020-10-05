@@ -4,8 +4,7 @@ import java.util.regex.Pattern;
 
 public class Params {
 
-  public static final String BASE_INDIV_NS = "neo4j://individuals#";
-  public static final String BASE_VOCAB_NS = "neo4j://vocabulary#";
+  public static final String BASE_INDIV_NS = "neo4j://graph.individuals#";
   public static final String BASE_SCH_NS = "neo4j://graph.schema#";
 
   public static final String PREFIX_SEPARATOR = "__";

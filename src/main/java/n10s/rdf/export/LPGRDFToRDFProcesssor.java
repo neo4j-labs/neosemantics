@@ -2,7 +2,7 @@ package n10s.rdf.export;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
-import static n10s.graphconfig.Params.BASE_VOCAB_NS;
+import static n10s.graphconfig.Params.BASE_SCH_NS;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static n10s.utils.UriUtils.translateUri;
@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import n10s.graphconfig.GraphConfig;
-import n10s.graphconfig.Params;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
 import n10s.utils.UriUtils.UriNamespaceHasNoAssociatedPrefix;
@@ -33,16 +32,8 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
-import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 
 
 public class LPGRDFToRDFProcesssor extends ExportProcessor {
@@ -62,7 +53,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
 
   }
 
-
   public Stream<Statement> streamLocalImplicitOntology() {
     Set<Statement> statements = new HashSet<>();
     Result res = tx.execute("CALL db.schema.visualization() ");
@@ -74,7 +64,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")
           && !catName.equals("_GraphConfig") && !catName.equals("_n10sValidatorConfig")
           && !catName.equals("_MapNs") && !catName.equals("_MapDef") && !catName.equals("_GraphConfig")) {
-        IRI subject = vf.createIRI(buildURI(BASE_VOCAB_NS, catName));
+        IRI subject = vf.createIRI(buildURI(BASE_SCH_NS, catName));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
             vf.createLiteral(subject.getLocalName())));
@@ -84,20 +74,20 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     List<Relationship> relationshipList = (List<Relationship>) next.get("relationships");
     for (Relationship r : relationshipList) {
       IRI relUri = vf
-          .createIRI(buildURI(BASE_VOCAB_NS, r.getType().name()));
+          .createIRI(buildURI(BASE_SCH_NS, r.getType().name()));
       statements.add(vf.createStatement(relUri, RDF.TYPE, OWL.OBJECTPROPERTY));
       statements.add(vf.createStatement(relUri, RDFS.LABEL,
           vf.createLiteral(relUri.getLocalName())));
       String domainClassStr = r.getStartNode().getLabels().iterator().next().name();
       if (!domainClassStr.equals("Resource")) {
         IRI domainUri = vf
-            .createIRI(buildURI(BASE_VOCAB_NS, domainClassStr));
+            .createIRI(buildURI(BASE_SCH_NS, domainClassStr));
         statements.add(vf.createStatement(relUri, RDFS.DOMAIN, domainUri));
       }
       String rangeClassStr = r.getEndNode().getLabels().iterator().next().name();
       if (!rangeClassStr.equals("Resource")) {
         IRI rangeUri = vf
-            .createIRI(buildURI(BASE_VOCAB_NS, rangeClassStr));
+            .createIRI(buildURI(BASE_SCH_NS, rangeClassStr));
         statements.add(vf.createStatement(relUri, RDFS.RANGE, rangeUri));
       }
     }
@@ -192,6 +182,24 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     return statementResults.stream();
   }
 
+  //try to replace the method above with a non-cypher version like this:
+  public Stream<Statement> streamNodeByUri(String uri, boolean streamContext) {
+    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
+    Node node = this.tx.findNode(Label.label("Resource"),"uri", uri);
+    Set<Statement> result = processNode(node, ontologyEntitiesUris, null);
+    if (streamContext) {
+      Iterable<Relationship> relationships = node.getRelationships();
+      for (Relationship rel : relationships) {
+        Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
+        result.add(baseStatement);
+        if(this.exportPropertiesInRels) {
+          rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
+        }
+      }
+    }
+    return result.stream();
+  }
+
   @Override
   protected boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
     //TODO: this type check is going to slow down the query. think how to improve it
@@ -208,7 +216,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   protected void processPropOnRel(Set<Statement> statementSet, Statement baseStatement, String key,
       Object propertyValueObject) {
 
-    IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key));
+    IRI predicate = vf.createIRI(buildURI(BASE_SCH_NS, key));
     if (propertyValueObject instanceof Object[]) {
       for (Object o : (Object[]) propertyValueObject) {
         statementSet.add(vf.createStatement(vf.createTriple(
@@ -227,7 +235,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   @Override
   protected Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
     Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString());
-    IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, rel.getType().name()));
+    IRI predicate = vf.createIRI(buildURI(BASE_SCH_NS, rel.getType().name()));
     Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString());
     Resource context = null;
     if (rel.getStartNode().hasProperty("graphUri") && rel.getEndNode().hasProperty("graphUri")) {
@@ -259,7 +267,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
           result.add(vf.createStatement(
               buildSubjectOrContext(node.getProperty("uri").toString()),
               RDF.TYPE,
-              vf.createIRI(buildURI(BASE_VOCAB_NS, label.name())),
+              vf.createIRI(buildURI(BASE_SCH_NS, label.name())),
               node.hasProperty("graphUri") ? vf
                   .createIRI(node.getProperty("graphUri").toString()) : null));
 
@@ -271,7 +279,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     for (String key : allProperties.keySet()) {
       if (!key.equals("uri") && !key.equals("graphUri") && (propNameFilter==null || key.equals(propNameFilter))) {
         Resource subject = buildSubjectOrContext(node.getProperty("uri").toString());
-        IRI predicate = vf.createIRI(buildURI(BASE_VOCAB_NS, key));
+        IRI predicate = vf.createIRI(buildURI(BASE_SCH_NS, key));
         Object propertyValueObject = allProperties.get(key);
         Resource context = null;
         if (node.hasProperty("graphUri")) {

@@ -73,8 +73,8 @@ public class RDFEndpointTest {
   private String emptyJsonLd = "{\n"
       + "  \"@context\" : {\n"
       + "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n"
-      + "    \"neovoc\" : \"neo4j://vocabulary#\",\n"
-      + "    \"neoind\" : \"neo4j://individuals#\"\n"
+      + "    \"neovoc\" : \"neo4j://graph.schema#\",\n"
+      + "    \"neoind\" : \"neo4j://graph.individuals#\"\n"
       + "  }\n"
       + "}";
 
@@ -119,21 +119,21 @@ public class RDFEndpointTest {
             + id.toString());
 
     String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://individuals#5\",\n"
-        + "  \"neo4j://vocabulary#FRIEND_OF\" : [ {\n"
-        + "    \"@id\" : \"neo4j://individuals#7\"\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#5\",\n"
+        + "  \"neo4j://graph.schema#FRIEND_OF\" : [ {\n"
+        + "    \"@id\" : \"neo4j://graph.individuals#7\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://individuals#7\",\n"
-        + "  \"@type\" : [ \"neo4j://vocabulary#Critic\" ],\n"
-        + "  \"neo4j://vocabulary#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://individuals#8\"\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"@type\" : [ \"neo4j://graph.schema#Critic\" ],\n"
+        + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
+        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#born\" : [ {\n"
+        + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
         + "    \"@value\" : \"1960\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#name\" : [ {\n"
+        + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Hugo Weaving\"\n"
         + "  } ]\n"
         + "} ]";
@@ -180,8 +180,8 @@ public class RDFEndpointTest {
             "  \"neovoc:name\" : \"Keanu Reeves\",\n" +
             "  \"@context\" : {\n" +
             "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n" +
-            "    \"neovoc\" : \"neo4j://vocabulary#\",\n" +
-            "    \"neoind\" : \"neo4j://individuals#\"\n" +
+            "    \"neovoc\" : \"neo4j://graph.schema#\",\n" +
+            "    \"neoind\" : \"neo4j://graph.individuals#\"\n" +
             "  }\n" +
             "}";
     assertEquals(200, response.status());
@@ -194,8 +194,8 @@ public class RDFEndpointTest {
                     "http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo");
 
     expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-            "@prefix neovoc: <neo4j://vocabulary#> .\n" +
-            "@prefix neoind: <neo4j://individuals#> .\n" +
+            "@prefix neovoc: <neo4j://graph.schema#> .\n" +
+            "@prefix neoind: <neo4j://graph.individuals#> .\n" +
             "\n" +
             "<http://neo4j.com/movies/Hugo> a neovoc:Critic;\n" +
             "  neovoc:WORKS_WITH <http://neo4j.com/movies/Andy>;\n" +
@@ -247,21 +247,21 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
-        + "<neo4j://individuals#5> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#5> <neo4j://vocabulary#name> \"Andy Wachowski\" .\n"
-        + "<neo4j://individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Critic> .\n"
-        + "<neo4j://individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Actor> .\n"
-        + "<neo4j://individuals#2> <neo4j://vocabulary#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#3> <neo4j://vocabulary#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#4> <neo4j://vocabulary#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#1> <neo4j://vocabulary#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#1> <neo4j://vocabulary#name> \"Keanu Reeves\" .\n"
-        + "<neo4j://individuals#3> <neo4j://vocabulary#name> \"Laurence Fishburne\" .\n"
-        + "<neo4j://individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
-        + "<neo4j://individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Director> .\n"
-        + "<neo4j://individuals#4> <neo4j://vocabulary#name> \"Hugo Weaving\" .\n"
-        + "<neo4j://individuals#2> <neo4j://vocabulary#name> \"Carrie-Anne Moss\" .\n";
+    String expected = "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
+        + "<neo4j://graph.individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
+        + "<neo4j://graph.individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
+        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
+        + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
+        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
@@ -309,19 +309,19 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://individuals#86> <neo4j://vocabulary#title> \"That Thing You Do\" .\n"
-        + "<neo4j://individuals#13> <neo4j://vocabulary#name> \"Charlize Theron\" .\n"
-        + "<neo4j://individuals#87> <neo4j://vocabulary#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#72> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#86> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#72> <neo4j://vocabulary#name> \"Tom Hanks\" .\n"
-        + "<neo4j://individuals#87> <neo4j://vocabulary#name> \"Liv Tyler\" .\n"
-        + "<neo4j://individuals#87> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#13> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Person> .\n"
-        + "<neo4j://individuals#72> <neo4j://vocabulary#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://individuals#86> <neo4j://vocabulary#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
-        + "<neo4j://individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
-        + "<neo4j://individuals#13> <neo4j://vocabulary#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
+    String expected = "<neo4j://graph.individuals#86> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
+        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
+        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#72> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals#86> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
+        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
+        + "<neo4j://graph.individuals#87> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals#13> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals#86> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+        + "<neo4j://graph.individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -400,8 +400,8 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
             + id.toString());
 
-    String expected = "@prefix neoind: <neo4j://individuals#> .\n"
-        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+    String expected = "@prefix neoind: <neo4j://graph.individuals#> .\n"
+        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
         + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
         + "\n"
         + "neoind:3 a neovoc:Critic;\n"
@@ -481,7 +481,7 @@ public class RDFEndpointTest {
         assertEquals(criticPreImport.get("name"), criticPostImport.get("name").asString());
         assertEquals(criticPreImport.get("born"), criticPostImport.get("born").asLong());
         assertNull(criticPreImport.get("uri"));
-        assertEquals("neo4j://individuals#" + criticPreImport.get("id"),
+        assertEquals("neo4j://graph.individuals#" + criticPreImport.get("id"),
             criticPostImport.get("uri").asString());
       }
     }
@@ -500,7 +500,7 @@ public class RDFEndpointTest {
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CALL n10s.graphconfig.init({})");
+      tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: \"IGNORE\" })");
       tx.execute("CALL n10s.onto.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
               .toURI() + "','RDF/XML',{})");
@@ -508,7 +508,6 @@ public class RDFEndpointTest {
       tx.commit();
     }
     //  check data is  correctly loaded
-    Long id;
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute("match (n:Class " +
           "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})"
@@ -520,6 +519,61 @@ public class RDFEndpointTest {
       assertEquals("SCO", next.get("reltype"));
       assertEquals("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key",
           next.get("otheruri"));
+    }
+
+    // then export elements and check the output is right
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+                "http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength");
+
+    String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+        "@prefix n4jsch: <neo4j://graph.schema#> .\n" +
+        "@prefix neoind: <neo4j://graph.individuals#> .\n" +
+        "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n"
+        +
+        "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
+        "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
+        "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+
+  }
+
+  @Test
+  public void ImportGetNodeByUriOnImportedOnto() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    //first import onto
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
+              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.commit();
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: \"IGNORE\" })");
+      tx.execute("CALL n10s.onto.import.fetch('" +
+              RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
+                      .toURI() + "','RDF/XML',{})");
+
+      tx.commit();
+    }
+    //  check data is  correctly loaded
+    Long id;
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("match (n:n4sch__Class " +
+              "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})"
+              +
+              "-[r]-(o) " +
+              "return n.n4sch__name as name, id(n) as id, type(r) as reltype, o.uri as otheruri");
+      Map<String, Object> next = result.next();
+      assertEquals("RF_signal_strength", next.get("name"));
+      assertEquals("n4sch__SCO", next.get("reltype"));
+      assertEquals("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key",
+              next.get("otheruri"));
 
       id = (Long) next.get("id");
     }
@@ -530,21 +584,21 @@ public class RDFEndpointTest {
     }
     // then export elements and check the output is right
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + id);
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/" + id);
 
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-        "@prefix neovoc: <neo4j://vocabulary#> .\n" +
-        "@prefix neoind: <neo4j://individuals#> .\n" +
-        "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n"
-        +
-        "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
-        "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
-        "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
+            "@prefix neovoc: <neo4j://graph.schema#> .\n" +
+            "@prefix neoind: <neo4j://graph.individuals#> .\n" +
+            "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n"
+            +
+            "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
+            "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
+            "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
 
   }
@@ -609,7 +663,7 @@ public class RDFEndpointTest {
       Node criticPostImport = next.get("n").asNode();
       assertEquals(preImport.get("name"), criticPostImport.get("name").asString());
       assertEquals(preImport.get("born"), criticPostImport.get("born").asLong());
-      assertEquals("neo4j://individuals#" + preImport.get("id"),
+      assertEquals("neo4j://graph.individuals#" + preImport.get("id"),
           criticPostImport.get("uri").asString());
     }
 
@@ -651,13 +705,13 @@ public class RDFEndpointTest {
             + "neo4j/describe/find/Director/born/1961?valType=INTEGER");
 
     String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://individuals#6\",\n"
-        + "  \"@type\" : [ \"neo4j://vocabulary#Director\" ],\n"
-        + "  \"neo4j://vocabulary#born\" : [ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+        + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
+        + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
         + "    \"@value\" : \"1961\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#name\" : [ {\n"
+        + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
         + "} ]";
@@ -672,13 +726,13 @@ public class RDFEndpointTest {
             + "neo4j/describe/find/Director/name/Laurence%20Fishburne");
 
     expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://individuals#6\",\n"
-        + "  \"@type\" : [ \"neo4j://vocabulary#Director\" ],\n"
-        + "  \"neo4j://vocabulary#born\" : [ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+        + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
+        + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
         + "    \"@value\" : \"1961\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#name\" : [ {\n"
+        + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
         + "} ]";
@@ -692,28 +746,28 @@ public class RDFEndpointTest {
             + "neo4j/describe/find/Actor/born/1964?valType=INTEGER");
 
     expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://individuals#4\",\n"
-        + "  \"@type\" : [ \"neo4j://vocabulary#Actor\" ],\n"
-        + "  \"neo4j://vocabulary#born\" : [ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#4\",\n"
+        + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
+        + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
         + "    \"@value\" : \"1964\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#name\" : [ {\n"
+        + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Keanu Reeves\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://individuals#7\",\n"
-        + "  \"neo4j://vocabulary#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://individuals#8\"\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
+        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://individuals#8\",\n"
-        + "  \"@type\" : [ \"neo4j://vocabulary#Actor\" ],\n"
-        + "  \"neo4j://vocabulary#born\" : [ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#8\",\n"
+        + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
+        + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
         + "    \"@value\" : \"1964\"\n"
         + "  } ],\n"
-        + "  \"neo4j://vocabulary#name\" : [ {\n"
+        + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Andy Wachowski\"\n"
         + "  } ]\n"
         + "} ]";
@@ -824,14 +878,14 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expected =
-        "<neo4j://individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n"
-            + "<neo4j://individuals#3> <neo4j://vocabulary#catName> \"Critic\" .\n"
-            + "<neo4j://individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n"
-            + "<neo4j://individuals#0> <neo4j://vocabulary#catName> \"Person\" .\n"
-            + "<neo4j://individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n"
-            + "<neo4j://individuals#2> <neo4j://vocabulary#catName> \"Director\" .\n"
-            + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Category> .\n"
-            + "<neo4j://individuals#1> <neo4j://vocabulary#catName> \"Actor\" .\n";
+        "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals#3> <neo4j://graph.schema#catName> \"Critic\" .\n"
+            + "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals#0> <neo4j://graph.schema#catName> \"Person\" .\n"
+            + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals#2> <neo4j://graph.schema#catName> \"Director\" .\n"
+            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals#1> <neo4j://graph.schema#catName> \"Actor\" .\n";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -900,12 +954,12 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expected =
-        "<neo4j://individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://individuals#6> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://vocabulary#Movie> .\n"
-            + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://individuals#6> <neo4j://vocabulary#title> \"The Matrix\" .\n"
-            + "<neo4j://individuals#1> <http://schema.org/inMovie> <neo4j://individuals#6> .\n"
-            + "<neo4j://individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .";
+        "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://graph.individuals#6> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+            + "<neo4j://graph.individuals#6> <neo4j://graph.schema#title> \"The Matrix\" .\n"
+            + "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
+            + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -916,10 +970,10 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expectedOnlyMapped =
-        "<neo4j://individuals#1> <http://schema.org/inMovie> <neo4j://individuals#6> .\n"
-            + "<neo4j://individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
+        "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
+            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+            + "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -954,26 +1008,26 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
 
     String expected =
-        "<neo4j://vocabulary#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://vocabulary#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n"
-            + "<neo4j://vocabulary#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://vocabulary#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n"
-            + "<neo4j://vocabulary#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://vocabulary#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n"
-            + "<neo4j://vocabulary#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://vocabulary#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n"
-            + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n"
-            + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Actor> .\n"
-            + "<neo4j://vocabulary#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n"
-            + "<neo4j://vocabulary#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n"
-            + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Critic> .\n"
-            + "<neo4j://vocabulary#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n"
-            + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n"
-            + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://vocabulary#Director> .\n"
-            + "<neo4j://vocabulary#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://vocabulary#Movie> .\n";
+        "<neo4j://graph.schema#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
+            + "<neo4j://graph.schema#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n"
+            + "<neo4j://graph.schema#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
+            + "<neo4j://graph.schema#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n"
+            + "<neo4j://graph.schema#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
+            + "<neo4j://graph.schema#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n"
+            + "<neo4j://graph.schema#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
+            + "<neo4j://graph.schema#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n"
+            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n"
+            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n"
+            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n"
+            + "<neo4j://graph.schema#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n"
+            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n"
+            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n"
+            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
+            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n"
+            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n"
+            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n";
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
@@ -1089,7 +1143,7 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/" + URLEncoder
             .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString()));
-    String expected = "@prefix neovoc: <neo4j://vocabulary#> .\n" +
+    String expected = "@prefix neovoc: <neo4j://graph.schema#> .\n" +
         "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor>;\n"
         + " <http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
         + " <http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\";\n"
@@ -1127,7 +1181,7 @@ public class RDFEndpointTest {
             + "?excludeContext=true");
 
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-        "<rdf:RDF\txmlns:neovoc=\"neo4j://vocabulary#\"" +
+        "<rdf:RDF\txmlns:neovoc=\"neo4j://graph.schema#\"" +
         "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">" +
         "<rdf:Description rdf:about=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement\">"
         +
@@ -1396,7 +1450,7 @@ public class RDFEndpointTest {
 
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
         "<rdf:RDF\n" +
-        "\txmlns:neovoc=\"neo4j://vocabulary#\"\n" +
+        "\txmlns:neovoc=\"neo4j://graph.schema#\"\n" +
         "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
         "\n" +
         "<rdf:Description rdf:about=\"https://permid.org/1-21523433751\">\n" +
@@ -1743,7 +1797,7 @@ public class RDFEndpointTest {
       String cypherRDFCreate = " CREATE (:Resource { uri: 'neo4j://ind#123' , voc__name: 'the name' }) ";
       tx.execute(" MATCH (n) DETACH DELETE n ");
       tx.execute(" CALL n10s.graphconfig.init() ");
-      tx.execute("call n10s.nsprefixes.add('voc','neo4j://vocabulary#')");
+      tx.execute("call n10s.nsprefixes.add('voc','neo4j://graph.schema#')");
       tx.execute(cypherRDFCreate);
       tx.commit();
     }
@@ -1753,8 +1807,8 @@ public class RDFEndpointTest {
         params);
 
     String exportedAsRDF = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
-        + "@prefix neoind: <neo4j://individuals#> .\n"
+        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
+        + "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "\n"
         + "\n"
         + "<neo4j://ind#123> neovoc:name \"the name\" .";
@@ -1766,8 +1820,8 @@ public class RDFEndpointTest {
 
   private String getExportedAsLPG( int id ) {
     return "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://vocabulary#> .\n"
-        + "@prefix neoind: <neo4j://individuals#> .\n"
+        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
+        + "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "\n"
         + "\n"
         + "neoind:" + id + " a neovoc:Resource;\n"

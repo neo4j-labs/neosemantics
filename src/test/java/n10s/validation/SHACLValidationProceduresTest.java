@@ -612,7 +612,7 @@ public class SHACLValidationProceduresTest {
 
       shapesResults = session.run("CALL n10s.validation.shacl.dropShapes() ");
       assertFalse(shapesResults.hasNext());
-      
+
       try{
         shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
         shapesResults.hasNext();

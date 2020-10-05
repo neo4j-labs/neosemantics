@@ -157,24 +157,30 @@ public class MappingUtils {
     return mappings;
   }
 
-  public static Map<String, String> getExportNsPrefixesFromDB(GraphDatabaseService gds, boolean lpg) {
+  static Map<String, String> getPrefixes(GraphDatabaseService gds, String nsPrefixQuery) {
     Map<String, String> nsprefixes = new HashMap<>();
-    gds.executeTransactionally(
-        (lpg?"MATCH (mns:_MapNs) WHERE (:_MapDef)-[:_IN]->(mns) "
-            + "RETURN mns._prefix AS prefix, mns._ns AS ns " :
-            "MATCH (nspd:`_NsPrefDef`) UNWIND keys(nspd) as key\n"
-                + "RETURN key as prefix, nspd[key] as ns "),
-        Collections.emptyMap(), new ResultTransformer<Object>() {
-          @Override
-          public Object apply(Result result) {
-            while (result.hasNext()) {
-              Map<String, Object> row = result.next();
-              nsprefixes.put((String) row.get("prefix"), (String) row.get("ns"));
-            }
-            return null;
-          }
-        });
+    gds.executeTransactionally(nsPrefixQuery,
+            Collections.emptyMap(), new ResultTransformer<Object>() {
+              @Override
+              public Object apply(Result result) {
+                while (result.hasNext()) {
+                  Map<String, Object> row = result.next();
+                  nsprefixes.put((String) row.get("prefix"), (String) row.get("ns"));
+                }
+                return null;
+              }
+            });
     return nsprefixes;
+  }
+
+  public static Map<String, String> getPrefixesInUse(GraphDatabaseService gds) {
+    return getPrefixes(gds, "MATCH (nspd:`_NsPrefDef`) UNWIND keys(nspd) as key\n"
+            + "RETURN key as prefix, nspd[key] as ns ");
+  }
+
+  public static Map<String, String> getPrefixesFromMappingDefinitions(GraphDatabaseService gds) {
+    return getPrefixes(gds,"MATCH (mns:_MapNs) WHERE (:_MapDef)-[:_IN]->(mns) "
+            + "RETURN mns._prefix AS prefix, mns._ns AS ns ");
   }
 
   public static Map<String, String> getImportMappingsFromDB(GraphDatabaseService gds) {
@@ -192,7 +198,6 @@ public class MappingUtils {
             return null;
           }
         });
-
     return mappings;
   }
 

@@ -4,7 +4,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -20,13 +19,7 @@ import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Path;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.ResourceIterator;
-import org.neo4j.graphdb.Result;
-import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.*;
 
 public abstract class ExportProcessor {
 
@@ -124,6 +117,29 @@ public abstract class ExportProcessor {
     });
   }
 
+  public Stream<Statement> streamNodesBySearch(String label, String property, String propVal,
+                                               String valType, boolean includeContext) {
+    Set<Statement> result = new HashSet<>();
+    Map<Long, IRI> ontologyEntitiesUris = new HashMap<>();
+    ResourceIterator<Node> nodes = tx.findNodes(Label.label(label), property,
+            (valType == null ? propVal : castValue(valType, propVal)));
+    while (nodes.hasNext()) {
+      Node node = nodes.next();
+      result.addAll(processNode(node, ontologyEntitiesUris, null));
+      if (includeContext) {
+        Iterable<Relationship> relationships = node.getRelationships();
+        for (Relationship rel : relationships) {
+          Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
+          result.add(baseStatement);
+          if(this.exportPropertiesInRels) {
+            rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
+          }
+        }
+      }
+    }
+    return result.stream();
+  }
+
   protected Literal createTypedLiteral(Object value) {
     Literal result;
     if (value instanceof String) {
@@ -184,6 +200,19 @@ public abstract class ExportProcessor {
     return object;
   }
 
+  Object castValue(String valType, String propVal) {
+    switch (valType) {
+      case "INTEGER":
+        return Integer.valueOf(propVal);
+      case "FLOAT":
+        return Float.valueOf(propVal);
+      case "BOOLEAN":
+        return Boolean.valueOf(propVal);
+      default:
+        return propVal;
+    }
+  }
+
   protected abstract boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);
 
   protected abstract boolean filterNode(Node node, Map<Long, IRI> ontologyEntitiesUris);
@@ -196,4 +225,7 @@ public abstract class ExportProcessor {
 
   public abstract Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
       throws InvalidNamespacePrefixDefinitionInDB;
+
+  public abstract Stream<Statement> streamLocalImplicitOntology();
+
 }
