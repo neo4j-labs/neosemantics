@@ -526,9 +526,9 @@ public class RDFEndpointTest {
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "\n" +
-            "n4sch:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>;\n" +
-            "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> n4sch:Vehicle_Key;\n" +
-            "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\" .";
+            "<http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength> a n4sch:Class;\n" +
+            "  n4sch:SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key>;\n" +
+            "  n4sch:name \"RF_signal_strength\" .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -839,27 +839,6 @@ public class RDFEndpointTest {
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
   }
 
-
-  @Test
-  public void testGetNodeByIdNotFoundOrInvalid() throws Exception {
-    // Given
-
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/9999999");
-
-    assertEquals("[ ]", response.rawContent());
-    assertEquals(200, response.status());
-
-    //TODO: Non Long param for ID (would be a good idea to be consistent with previous case?...)
-    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/adb");
-
-    assertEquals("[ ]", response.rawContent());
-    assertEquals(200, response.status());
-  }
-
   @Test
   public void testFindNodeByLabelAndPropertyNotFoundOrInvalid() throws Exception {
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
@@ -880,7 +859,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void testGetNodeByUriNotFoundOrInvalid() throws Exception {
+  public void testGetNodeByUriOrIdNotFoundOrInvalid() throws Exception {
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/n3").GET(
             HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
@@ -900,6 +879,13 @@ public class RDFEndpointTest {
             "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
             "\n" +
             "</rdf:RDF>", response.rawContent());
+
+    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/adb");
+
+    assertEquals("[ ]", response.rawContent());
+    assertEquals(200, response.status());
 
     try (Transaction tx = neo4j.defaultDatabaseService().beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");

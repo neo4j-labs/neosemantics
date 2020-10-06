@@ -247,7 +247,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 //    //TODO: Not doing this mapping. Imported ontos through the onto.import method are non reversible.
     for (Label label : nodeLabels) {
-//      if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
+      if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
 //        if (label.equals(Label.label("Class"))) {
 //          statements.add(vf.createStatement(subject, RDF.TYPE, RDFS.CLASS));
 //        } else if (label.equals(Label.label("Property"))) {
@@ -260,7 +260,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                   .createIRI(exportMappings.get(label.name()))
                   : vf.createIRI(BASE_SCH_NS, label.name())));
 //        }
-//      }
+      }
     }
 
     Map<String, Object> allProperties = node.getAllProperties();
