@@ -72,9 +72,8 @@ public class RDFEndpointTest {
       .defaultInstance().constructCollectionType(Set.class, Map.class);
   private String emptyJsonLd = "{\n"
       + "  \"@context\" : {\n"
-      + "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n"
-      + "    \"neovoc\" : \"neo4j://graph.schema#\",\n"
-      + "    \"neoind\" : \"neo4j://graph.individuals#\"\n"
+      + "    \"n4sch\" : \"neo4j://graph.schema#\",\n"
+      + "    \"n4ind\" : \"neo4j://graph.individuals#\"\n"
       + "  }\n"
       + "}";
 
@@ -180,8 +179,7 @@ public class RDFEndpointTest {
             "  \"neovoc:name\" : \"Keanu Reeves\",\n" +
             "  \"@context\" : {\n" +
             "    \"rdf\" : \"http://www.w3.org/1999/02/22-rdf-syntax-ns#\",\n" +
-            "    \"neovoc\" : \"neo4j://graph.schema#\",\n" +
-            "    \"neoind\" : \"neo4j://graph.individuals#\"\n" +
+            "    \"neovoc\" : \"neo4j://graph.schema#\" " +
             "  }\n" +
             "}";
     assertEquals(200, response.status());
@@ -526,14 +524,11 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
                 "http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength");
 
-    String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-        "@prefix n4jsch: <neo4j://graph.schema#> .\n" +
-        "@prefix neoind: <neo4j://graph.individuals#> .\n" +
-        "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n"
-        +
-        "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
-        "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
-        "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
+    String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
+            "\n" +
+            "n4sch:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>;\n" +
+            "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> n4sch:Vehicle_Key;\n" +
+            "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\" .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -543,7 +538,7 @@ public class RDFEndpointTest {
   }
 
   @Test
-  public void ImportGetNodeByUriOnImportedOnto() throws Exception {
+  public void ImportGetNodeByUriOnImportedOntoShorten() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
@@ -554,7 +549,7 @@ public class RDFEndpointTest {
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: \"IGNORE\" })");
+      tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("CALL n10s.onto.import.fetch('" +
               RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
                       .toURI() + "','RDF/XML',{})");
@@ -587,19 +582,87 @@ public class RDFEndpointTest {
             HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
                     + "neo4j/describe/" + id);
 
-    String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-            "@prefix neovoc: <neo4j://graph.schema#> .\n" +
-            "@prefix neoind: <neo4j://graph.individuals#> .\n" +
-            "neovoc:RF_signal_strength a <http://www.w3.org/2000/01/rdf-schema#Class>, neovoc:Resource;\n"
-            +
-            "  <http://www.w3.org/2000/01/rdf-schema#subClassOf> neovoc:Vehicle_Key;\n" +
-            "  <neo4j://neo4j.org/rdfs/1#name> \"RF_signal_strength\";\n" +
-            "  neovoc:uri \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\" .\n";
+    String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
+            "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
+            "\n" +
+            "<http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength> a n4sch:n4sch__Class;\n" +
+            "  n4sch:n4sch__SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key>;\n" +
+            "  n4sch:n4sch__name \"RF_signal_strength\" .";
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
             .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
+
+    response = HTTP.withHeaders("Accept", "text/turtle").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
+                            "UTF-8"));
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+  }
+
+  @Test
+  public void ImportGetNodeByUriOnImportedOntoIgnore() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    //first import onto
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
+              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.commit();
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: \"IGNORE\" })");
+      tx.execute("CALL n10s.onto.import.fetch('" +
+              RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
+                      .toURI() + "','RDF/XML',{})");
+
+      tx.commit();
+    }
+    //  check data is  correctly loaded
+    Long id;
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("match (n:Class " +
+              "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})"
+              +
+              "-[r]-(o) " +
+              "return n.name as name, id(n) as id, type(r) as reltype");
+      Map<String, Object> next = result.next();
+      assertEquals("RF_signal_strength", next.get("name"));
+      assertEquals("SCO", next.get("reltype"));
+
+      id = (Long) next.get("id");
+    }
+
+    // then export elements and check the output is right
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/" + id);
+
+    String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+            "@prefix neovoc: <neo4j://graph.schema#> .\n" +
+            "@prefix neoind: <neo4j://graph.individuals#> .\n" +
+            "<http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength> a neovoc:Class;\n"
+            +
+            "  neovoc:SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key> ;\n" +
+            "  neovoc:name \"RF_signal_strength\" .\n";
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+
+    response = HTTP.withHeaders("Accept", "text/turtle").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
+                            "UTF-8"));
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
   }
 
@@ -813,20 +876,51 @@ public class RDFEndpointTest {
     assertEquals("", response.rawContent());
     assertEquals(404, response.status());
 
+
   }
 
   @Test
   public void testGetNodeByUriNotFoundOrInvalid() throws Exception {
 
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/n3").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/9999999");
+    assertEquals(200, response.status());
+    assertEquals("@prefix n4sch: <neo4j://graph.schema#> .\n" +
+            "@prefix n4ind: <neo4j://graph.individuals#> .\n", response.rawContent());
+
+    response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/9999999");
+    assertEquals(200, response.status());
+    assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<rdf:RDF\n" +
+            "\txmlns:n4sch=\"neo4j://graph.schema#\"\n" +
+            "\txmlns:n4ind=\"neo4j://graph.individuals#\"\n" +
+            "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
+            "\n" +
+            "</rdf:RDF>", response.rawContent());
+
     try (Transaction tx = neo4j.defaultDatabaseService().beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.commit();
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
+
+    response = HTTP.withHeaders("Accept", "text/n3").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
+                    + "neo4j/describe/9999999");
+    assertEquals(200, response.status());
+    assertEquals("", response.rawContent());
+
+    response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/9999999");
-    assertEquals(emptyJsonLd, response.rawContent());
     assertEquals(200, response.status());
+    assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
+            "<rdf:RDF\n" +
+            "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
+            "\n" +
+            "</rdf:RDF>", response.rawContent());
 
   }
 
@@ -1757,12 +1851,9 @@ public class RDFEndpointTest {
   public void testcypherErrorWhereModelIsNotRDF() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
-    String cypherCreate = " CREATE (r:Resource { uri: 'neo4j://ind#123' , name: 'the name' }) "
-        + "return id(r) as id";
-    Long id;
+    String cypherCreate = " CREATE (r:Resource { uri: 'neo4j://explicit_uri#123' , name: 'the name' }) ";
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result res = tx.execute(cypherCreate);
-      id = (Long)res.next().get("id");
       tx.commit();
     }
     Map<String, String> params = new HashMap<>();
@@ -1775,13 +1866,12 @@ public class RDFEndpointTest {
     assertEquals(200, response.status());
 
     assertTrue(ModelTestUtils
-        .compareModels(getExportedAsLPG(id.intValue()), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+        .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(" MATCH (n) DETACH DELETE n ");
       tx.execute(" CALL n10s.graphconfig.init({handleVocabUris: 'IGNORE'}) ");
       Result res = tx.execute(cypherCreate);
-      id = (Long)res.next().get("id");
       tx.commit();
     }
 
@@ -1790,14 +1880,14 @@ public class RDFEndpointTest {
         params);
 
     assertTrue(ModelTestUtils
-        .compareModels(getExportedAsLPG(id.intValue()), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+        .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      String cypherRDFCreate = " CREATE (:Resource { uri: 'neo4j://ind#123' , voc__name: 'the name' }) ";
+      String cypherRDFCreate = " CREATE (:Resource { uri: 'neo4j://explicit_uri#123' , voc__name: 'the name' }) ";
       tx.execute(" MATCH (n) DETACH DELETE n ");
       tx.execute(" CALL n10s.graphconfig.init() ");
-      tx.execute("call n10s.nsprefixes.add('voc','neo4j://graph.schema#')");
+      tx.execute("call n10s.nsprefixes.add('voc','neo4j://myvoc#')");
       tx.execute(cypherRDFCreate);
       tx.commit();
     }
@@ -1807,26 +1897,21 @@ public class RDFEndpointTest {
         params);
 
     String exportedAsRDF = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
-        + "@prefix neoind: <neo4j://graph.individuals#> .\n"
+        + "@prefix neovoc: <neo4j://myvoc#> .\n"
         + "\n"
         + "\n"
-        + "<neo4j://ind#123> neovoc:name \"the name\" .";
+        + "<neo4j://explicit_uri#123> neovoc:name \"the name\" .";
 
     assertTrue(ModelTestUtils
         .compareModels(exportedAsRDF, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
 
   }
 
-  private String getExportedAsLPG( int id ) {
-    return "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
+  private String getExportedAsLPG( String uri ) {
+    return "@prefix neovoc: <neo4j://graph.schema#> .\n"
         + "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "\n"
-        + "\n"
-        + "neoind:" + id + " a neovoc:Resource;\n"
-        + "  neovoc:name \"the name\";\n"
-        + "  neovoc:uri \"neo4j://ind#123\" .";
+        + "<" + uri + "> neovoc:name \"the name\" .";
   }
 
 

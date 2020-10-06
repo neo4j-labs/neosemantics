@@ -176,24 +176,24 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
     Statement statement = null;
 
-    //TODO: FIX THIS USING THE GraphConfig
-    if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
-        rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
-      //if it's  an ontlogy rel, it must apply to an ontology entity
-      if (!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())) {
-        ontologyEntitiesUris.put(rel.getStartNode().getId(),
-            vf.createIRI(BASE_SCH_NS,
-                (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
-      }
-      if (!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())) {
-        ontologyEntitiesUris.put(rel.getEndNode().getId(),
-            vf.createIRI(BASE_SCH_NS,
-                (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
-      }
-      //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
-      statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),
-          getUriforRelName(rel.getType().name()), ontologyEntitiesUris.get(rel.getEndNodeId()));
-    } else {
+//    //TODO: FIX THIS USING THE GraphConfig
+//    if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
+//        rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
+//      //if it's  an ontlogy rel, it must apply to an ontology entity
+//      if (!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())) {
+//        ontologyEntitiesUris.put(rel.getStartNode().getId(),
+//            vf.createIRI(BASE_SCH_NS,
+//                (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
+//      }
+//      if (!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())) {
+//        ontologyEntitiesUris.put(rel.getEndNode().getId(),
+//            vf.createIRI(BASE_SCH_NS,
+//                (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
+//      }
+//      //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
+//      statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),
+//          getUriforRelName(rel.getType().name()), ontologyEntitiesUris.get(rel.getEndNodeId()));
+//    } else {
       if (!exportOnlyMappedElems || exportMappings.containsKey(rel.getType().name())) {
         statement = vf.createStatement(
             getResourceUri(rel.getStartNode()),
@@ -206,7 +206,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 
       }
-    }
+ //   }
     return statement;
 
   }
@@ -232,47 +232,54 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     Set<Statement> statements = new HashSet<>();
     List<Label> nodeLabels = new ArrayList<>();
-    node.getLabels().forEach(l -> nodeLabels.add(l));
+    node.getLabels().forEach(l -> { if(!l.name().equals("Resource")) nodeLabels.add(l); });
     IRI subject;
 
-    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
-        .contains(Label.label("Relationship")) ||
-        nodeLabels.contains(Label.label("Property"))) {
-      // it's an ontology element (for now we're not dealing with ( name: "a")-[:DOMAIN]->( name: "b")
-      subject = vf.createIRI(BASE_SCH_NS, (String) node.getProperty("name", "unnamedEntity"));
-      ontologyEntitiesUris.put(node.getId(), subject);
-    } else {
+//    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
+//        .contains(Label.label("Relationship")) ||
+//        nodeLabels.contains(Label.label("Property"))) {
+//      // it's an ontology element (for now we're not dealing with ( name: "a")-[:DOMAIN]->( name: "b")
+//      subject = vf.createIRI(BASE_SCH_NS, (String) node.getProperty("name", "unnamedEntity"));
+//      ontologyEntitiesUris.put(node.getId(), subject);
+//    } else {
       subject = getResourceUri(node);
-    }
+//    }
 
+//    //TODO: Not doing this mapping. Imported ontos through the onto.import method are non reversible.
     for (Label label : nodeLabels) {
-      if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
-        if (label.equals(Label.label("Class"))) {
-          statements.add(vf.createStatement(subject, RDF.TYPE, RDFS.CLASS));
-        } else if (label.equals(Label.label("Property"))) {
-          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
-        } else if (label.equals(Label.label("Relationship"))) {
-          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
-        } else {
+//      if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
+//        if (label.equals(Label.label("Class"))) {
+//          statements.add(vf.createStatement(subject, RDF.TYPE, RDFS.CLASS));
+//        } else if (label.equals(Label.label("Property"))) {
+//          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
+//        } else if (label.equals(Label.label("Relationship"))) {
+//          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
+//        } else {
           statements.add(vf.createStatement(subject,
               RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
                   .createIRI(exportMappings.get(label.name()))
                   : vf.createIRI(BASE_SCH_NS, label.name())));
-        }
-      }
+//        }
+//      }
     }
 
     Map<String, Object> allProperties = node.getAllProperties();
-    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
-        .contains(Label.label("Relationship")) ||
-        nodeLabels.contains(Label.label("Property"))) {
-      //TODO: this assumes property 'name' exists. This is true for imported ontos but
-      // maybe we should define default in case it's not present?
-      statements.add(vf.createStatement(subject,
-          vf.createIRI("neo4j://neo4j.org/rdfs/1#", "name"),
-          vf.createLiteral((String) allProperties.get("name"))));
-      allProperties.remove("name");
-    }
+
+//    //TODO: all this logic goes away
+//    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
+//        .contains(Label.label("Relationship")) ||
+//        nodeLabels.contains(Label.label("Property"))) {
+//      //TODO: this assumes property 'name' exists. This is true for imported ontos but
+//      // maybe we should define default in case it's not present?
+//      statements.add(vf.createStatement(subject,
+//          vf.createIRI("neo4j://neo4j.org/rdfs/1#", "name"),
+//          vf.createLiteral((String) allProperties.get("name"))));
+//      allProperties.remove("name");
+//    }
+
+    // Do not serialise uri as a property.
+    // When present, it will be the resource uri.
+    allProperties.remove("uri");
 
     for (String key : allProperties.keySet()) {
       if (!exportOnlyMappedElems || exportMappings.containsKey(key)) {

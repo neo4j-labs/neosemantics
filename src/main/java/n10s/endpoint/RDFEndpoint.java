@@ -37,6 +37,7 @@ import org.eclipse.rdf4j.rio.helpers.JSONLDMode;
 import org.eclipse.rdf4j.rio.helpers.JSONLDSettings;
 import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
@@ -135,7 +136,10 @@ public class RDFEndpoint {
         }
 
         endRDFWriter(writer);
-      } catch (Exception e) {
+      } catch (NotFoundException e) {
+        //Node not found. Not an error, just return empty RDF fragment
+        writer.endRDF();
+      }catch (Exception e) {
         handleSerialisationError(outputStream, e, acceptHeaderParam, format);
       }
     }).build();
