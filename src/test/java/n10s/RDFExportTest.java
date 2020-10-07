@@ -1,5 +1,7 @@
 package n10s;
 
+import static n10s.graphconfig.Params.BASE_INDIV_NS;
+import static n10s.graphconfig.Params.BASE_SCH_NS;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
@@ -56,13 +58,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI("neo4j://individuals#0"), RDF.TYPE, vf.createIRI("neo4j://vocabulary#Node")),
-              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI("neo4j://individuals#0"), vf.createIRI("neo4j://vocabulary#CONNECTED_TO"), vf.createIRI("neo4j://individuals#1")),
-              vf.createStatement(vf.createIRI("neo4j://individuals#1"), RDF.TYPE, vf.createIRI("neo4j://vocabulary#Node")),
-              vf.createStatement(vf.createIRI("neo4j://individuals#1"), vf.createIRI("neo4j://vocabulary#b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI("neo4j://individuals#1"), vf.createIRI("neo4j://vocabulary#a"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(BASE_SCH_NS + "a"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
