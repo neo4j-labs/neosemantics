@@ -121,7 +121,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       }
     } else if (datatype.equals(XMLSchema.DATE)) {
       try {
-        return DateUtils.parseDateTime(object.stringValue());
+        return DateUtils.parseDate(object.stringValue());
       } catch (IllegalArgumentException e) {
         //if date cannot be parsed we return string value
         return object.stringValue();
