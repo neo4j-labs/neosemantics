@@ -2,6 +2,7 @@ package n10s;
 
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.RDFParserConfig;
+import n10s.utils.DateUtils;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import n10s.utils.NsPrefixMap;
 import org.eclipse.rdf4j.model.*;
@@ -14,10 +15,13 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
 
+import java.time.DateTimeException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.*;
+
+import javax.xml.bind.DatatypeConverter;
 
 import static n10s.graphconfig.GraphConfig.*;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
@@ -113,15 +117,15 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       return object.booleanValue();
     } else if (datatype.equals(XMLSchema.DATETIME)) {
       try {
-        return LocalDateTime.parse(object.stringValue());
-      } catch (DateTimeParseException e) {
+        return DateUtils.parseDateTime(object.stringValue());
+      } catch (IllegalArgumentException e) {
         //if date cannot be parsed we return string value
         return object.stringValue();
       }
     } else if (datatype.equals(XMLSchema.DATE)) {
       try {
-        return LocalDate.parse(object.stringValue());
-      } catch (DateTimeParseException e) {
+        return DateUtils.parseDateTime(object.stringValue());
+      } catch (IllegalArgumentException e) {
         //if date cannot be parsed we return string value
         return object.stringValue();
       }
@@ -143,6 +147,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     // default
     return object.stringValue();
   }
+  
+  
 
   protected String getValueWithDatatype(IRI datatype, String value) {
     StringBuilder result = new StringBuilder(value);
