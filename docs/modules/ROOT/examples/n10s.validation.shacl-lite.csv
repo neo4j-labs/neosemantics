@@ -1,4 +1,5 @@
 ¦signature
+¦n10s.validation.shacl.dropShapes() :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)
 ¦n10s.validation.shacl.listShapes() :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)
 ¦n10s.validation.shacl.validate() :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)
 ¦n10s.validation.shacl.validateSet(nodeList = [] :: LIST? OF NODE?) :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)

@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.validation.shacl.dropShapes¦n10s.validation.shacl.dropShapes() :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)¦n10s.validation.dropShapes() - list SHACL shapes loaded in the Graph
