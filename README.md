@@ -5,7 +5,7 @@
 lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
 * On-demand **export property graph data** from Neo4j *as RDF*.
 * Model **validation** based on the **W3C SHACL language**
-* Impoort of **Ontologies and Taxonomies** in **OWL/RDFS/SKOS/...**
+* Import of **Ontologies and Taxonomies** in **OWL/RDFS/SKOS/...**
 
 Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j graphs.
 
