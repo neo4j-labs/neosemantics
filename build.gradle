@@ -89,9 +89,29 @@ task versions {
             n10sVersion = neo4jToApoc[matchingNeo4jVersion]==null ? firstApocVersion : neo4jToApoc[matchingNeo4jVersion]
         }
         if (n10sVersion != null) {
-            def version = [ neo4j : neo4jRelease, n10s : n10sVersion,
+            def version = [ neo4j : neo4jRelease,
+                            neo4jVersion : neo4jRelease,
+                            n10s : n10sVersion,
+                            version : n10sVersion,
                             url : "http://github.com/neo4j-labs/neosemantics/releases/" + n10sVersion,
-                            jar: "https://github.com/neo4j-labs/neosemantics/releases/download/${n10sVersion}/neosemantics-${n10sVersion}.jar" ]
+                            homepageUrl : "http://github.com/neo4j-labs/neosemantics/releases/" + n10sVersion,
+                            jar: "https://github.com/neo4j-labs/neosemantics/releases/download/${n10sVersion}/neosemantics-${n10sVersion}.jar",
+                            downloadUrl: "https://github.com/neo4j-labs/neosemantics/releases/download/${n10sVersion}/neosemantics-${n10sVersion}.jar"
+            ]
+
+            if (prefix < "4.0") {
+                version["config"] = [
+                        "+:dbms.security.procedures.unrestricted": ["semantics.*"]
+                ]
+
+            } else {
+                version["config"] = [
+                        "+:dbms.security.procedures.unrestricted": ["n10s.*"]
+                ]
+
+            }
+
+
             versions.add(version)
         }
     }
