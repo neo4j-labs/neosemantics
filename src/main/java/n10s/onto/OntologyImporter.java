@@ -2,6 +2,8 @@ package n10s.onto;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +20,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.SKOS;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.Direction;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -35,6 +38,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   protected Set<Statement> extraStatements = new HashSet<>();
   public static final Label RESOURCE = Label.label("Resource");
+  protected static final List<IRI> ANNOTATION_PROPERTIES_TO_IMPORT = Arrays.asList(RDFS.LABEL, RDFS.COMMENT, SKOS.PREF_LABEL, SKOS.ALT_LABEL, SKOS.DEFINITION);
   Cache<String, Node> nodeCache;
 
   public OntologyImporter(GraphDatabaseService db, Transaction tx,
@@ -136,7 +140,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         addStatement(st);
-      } else if ((st.getPredicate().equals(RDFS.LABEL) || st.getPredicate().equals(RDFS.COMMENT))
+      } else if (ANNOTATION_PROPERTIES_TO_IMPORT.contains(st.getPredicate())
           && st.getSubject() instanceof IRI) {
         setProp(st.getSubject().stringValue(), vf.createIRI(BASE_SCH_NS, st.getPredicate().getLocalName()),
                 (Literal) st.getObject());
