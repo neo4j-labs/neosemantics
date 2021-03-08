@@ -1,10 +1,12 @@
 package n10s.inference;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
+
+import n10s.graphconfig.GraphConfigProcedures;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.Config;
@@ -19,7 +21,7 @@ public class MicroReasonersTest {
 
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(MicroReasoners.class).withFunction(MicroReasoners.class);
+      .withProcedure(MicroReasoners.class).withFunction(MicroReasoners.class).withProcedure(GraphConfigProcedures.class);
 
   @Test
   public void testGetNodesNoOnto() throws Exception {
@@ -27,10 +29,23 @@ public class MicroReasonersTest {
         Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
-
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
-      Result results = session.run(
-          "CALL n10s.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+      Result results = null;
+      try {
+        results = session.run(
+                "CALL n10s.inference.nodesLabelled('B') YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+        results.hasNext();
+        assertTrue(false);
+      } catch (Exception mie){
+        assertTrue(mie.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: " +
+                "No GraphConfig or in-procedure params. Method cannot be run."));
+      }
+
+
+
+      results = session.run(
+              "CALL n10s.inference.nodesLabelled('B',{ catLabel: 'something', catNameProp : 'something', subCatRel: 'something'}) " +
+                      "YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
       assertEquals(true, results.hasNext());
       Record next = results.next();
       Set<String> expectedNodeIds = new HashSet<String>();
@@ -47,6 +62,7 @@ public class MicroReasonersTest {
         Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
+      session.run("call n10s.graphconfig.init({classLabel: 'Label', subClassOfRel: 'SLO'})");
 
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
       session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
@@ -99,8 +115,26 @@ public class MicroReasonersTest {
           "MATCH (b:Thing {id:'iamb'}),(a:Thing {id: 'iama' }),(bcat:Category { name: \"B\"}),(acat:Category { name: \"A\"}) "
               +
               "CREATE (a)-[:IN_CAT]->(acat) CREATE (b)-[:IN_CAT]->(bcat)");
-      Result results = session.run(
-          "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat) YIELD node "
+
+      Result results;
+
+      try {
+        results = session.run(
+                "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat) YIELD node "
+                        +
+                        "RETURN count(node) as ct, collect(node.id) as nodes");
+        results.hasNext();
+        assertTrue(false);
+      } catch (Exception mie){
+        assertTrue(mie.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: " +
+                "No GraphConfig or in-procedure params. Method cannot be run."));
+      }
+
+      session.run("call n10s.graphconfig.init({ classLabel: 'Category', " +
+              "subClassOfRel: 'SCO' })");
+
+      results = session.run(
+          "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat, { inCatRel: 'IN_CAT' }) YIELD node "
               +
               "RETURN count(node) as ct, collect(node.id) as nodes");
       assertEquals(true, results.hasNext());
@@ -115,6 +149,11 @@ public class MicroReasonersTest {
       //Non-existent relationship
       results = session.run(
           "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat, { inCatRel: 'TYPE' } ) YIELD node RETURN node");
+      assertEquals(false, results.hasNext());
+
+      //Using Default
+      results = session.run(
+              "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat) YIELD node RETURN node");
       assertEquals(false, results.hasNext());
 
       //Custom relationship
@@ -141,6 +180,22 @@ public class MicroReasonersTest {
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(2L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
+
+
+      //default relationship
+      session.run("MATCH (a)-[ic:TYPE]->(b) CREATE (a)-[:IN_CATEGORY]->(b) DELETE ic");
+      session.run("MATCH (a)-[sco:SUBCAT_OF]->(b) CREATE (a)-[:SCO]->(b) DELETE sco");
+      results = session.run(
+              "MATCH (bcat:Category { name: \"B\"}) CALL n10s.inference.nodesInCategory(bcat) YIELD node RETURN count(node) as ct, collect(node.id) as nodes");
+      assertEquals(true, results.hasNext());
+      next = results.next();
+      expectedNodeIds = new HashSet<String>();
+      expectedNodeIds.add("iama");
+      expectedNodeIds.add("iamb");
+      assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
+      assertEquals(2L, next.get("ct").asLong());
+      assertEquals(false, results.hasNext());
+
     }
   }
 
@@ -175,7 +230,7 @@ public class MicroReasonersTest {
       session.run(
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
       Result results = session.run(
-          "MATCH (b:B) CALL n10s.inference.getRels(b,'REL2') YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+          "MATCH (b:B) CALL n10s.inference.getRels(b,'REL2',{ relLabel: 'Something', subRelRel: 'Something'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
       assertEquals(true, results.hasNext());
       Record next = results.next();
       assertEquals("iamb", next.get("source").asString());
@@ -184,7 +239,7 @@ public class MicroReasonersTest {
       assertEquals("iama", next.get("target").asString());
       assertEquals(false, results.hasNext());
       assertEquals(false, session.run(
-          "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC') YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target")
+          "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relLabel: 'Something', subRelRel: 'Something'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target")
           .hasNext());
     }
   }
@@ -200,10 +255,40 @@ public class MicroReasonersTest {
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
       session.run(
           "CREATE (n:Relationship { name: 'REL1'})-[:SRO]->(:Relationship { name: 'GENERIC'})");
-      Result results = session.run(
-          "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
-      assertEquals(true, results.hasNext());
+      Result results;
+      try {
+        results = session.run(
+                "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+        assertEquals(true, results.hasNext());
+        assertTrue(false);
+      }catch (Exception e){
+        assertTrue(e.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: No GraphConfig or in-procedure params. Method cannot be run"));
+      }
+
+      results = session.run(
+              "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>', relLabel: 'Relationship', subRelRel: 'SRO'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+
       Record next = results.next();
+      assertEquals("iamb", next.get("source").asString());
+      assertEquals("REL1", next.get("relType").asString());
+      assertEquals(123L, next.get("propVal").asLong());
+      assertEquals("iama", next.get("target").asString());
+      assertEquals(false, results.hasNext());
+
+      session.run("call n10s.graphconfig.init()");
+
+      results = session.run(
+              "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+
+      assertEquals(false, results.hasNext());
+
+      session.run("call n10s.graphconfig.init({ objectPropertyLabel: 'Relationship', " +
+              "subPropertyOfRel: 'SRO' })");
+
+      results = session.run(
+              "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+
+      next = results.next();
       assertEquals("iamb", next.get("source").asString());
       assertEquals("REL1", next.get("relType").asString());
       assertEquals(123L, next.get("propVal").asLong());
@@ -219,12 +304,15 @@ public class MicroReasonersTest {
 
       Session session = driver.session();
 
+      session.run("call n10s.graphconfig.init({ objectPropertyLabel: 'ObjectProperty', " +
+              "subPropertyOfRel: 'SubPropertyOf' })");
+
       session.run(
           "CREATE (b:B {id:'iamb'})-[:REL1 { prop: 123 }]->(a:A {id: 'iama' }) CREATE (b)-[:REL2 { prop: 456 }]->(a)");
       session.run(
-          "CREATE (n:ObjectProperty { opName: 'REL1'})-[:SubPropertyOf]->(:ObjectProperty { opName: 'GENERIC'})");
+          "CREATE (n:ObjectProperty { name: 'REL1'})-[:SubPropertyOf]->(:ObjectProperty { name: 'GENERIC'})"); //relNameProp: 'opName',
       Result results = session.run(
-          "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>',  relLabel: 'ObjectProperty', relNameProp: 'opName', subRelRel: 'SubPropertyOf'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
+          "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relDir: '>'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target");
       assertEquals(true, results.hasNext());
       Record next = results.next();
       assertEquals("iamb", next.get("source").asString());
@@ -244,9 +332,20 @@ public class MicroReasonersTest {
 
       session
           .run("CREATE (:A {id:'iamA1'}) CREATE (:A {id: 'iamA2' }) CREATE (:B {id: 'iamB1' }) ");
-      Result results = session.run(
-          "MATCH (n) WHERE n10s.inference.hasLabel(n,'A') RETURN count(n) as ct, collect(n.id) as nodes");
-      assertEquals(true, results.hasNext());
+      Result results = null;
+      try {
+        results = session.run(
+                "MATCH (n) WHERE n10s.inference.hasLabel(n,'A') RETURN count(n) as ct, collect(n.id) as nodes");
+        results.hasNext();
+        assertTrue(false);
+      } catch (Exception mie){
+        assertTrue(mie.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: " +
+                "No GraphConfig or in-function params. Method cannot be run."));
+      }
+
+      results = session.run(
+              "MATCH (n) WHERE n10s.inference.hasLabel(n,'A', { catLabel: 'something', catNameProp : 'something', subCatRel: 'something'}) " +
+                      "RETURN count(n) as ct, collect(n.id) as nodes");
       Record next = results.next();
       Set<String> expectedNodeIds = new HashSet<String>();
       expectedNodeIds.add("iamA1");
@@ -255,7 +354,7 @@ public class MicroReasonersTest {
       assertEquals(2L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
       assertEquals(false,
-          session.run("MATCH (n:A) WHERE n10s.inference.hasLabel(n,'C') RETURN *").hasNext());
+          session.run("MATCH (n:A) WHERE n10s.inference.hasLabel(n,'C', { catLabel: 'something', catNameProp : 'something', subCatRel: 'something'}) RETURN *").hasNext());
     }
   }
 
@@ -269,11 +368,34 @@ public class MicroReasonersTest {
       session
           .run("CREATE (:A {id:'iamA1'}) CREATE (:A {id: 'iamA2' }) CREATE (:B {id: 'iamB1' }) ");
       session.run("CREATE (b:Label { name: \"B\"}) CREATE (a:Label { name: \"A\"})-[:SLO]->(b) ");
-      Result results = session.run(
-          "MATCH (n) WHERE n10s.inference.hasLabel(n,'B') RETURN count(n) as ct, collect(n.id) as nodes");
-      assertEquals(true, results.hasNext());
+      Result results;
+      try {
+        results = session.run(
+                "MATCH (n) WHERE n10s.inference.hasLabel(n,'B') RETURN count(n) as ct, collect(n.id) as nodes");
+        assertEquals(true, results.hasNext());
+        results.hasNext();
+        assertTrue(false);
+      } catch (Exception e){
+        assertTrue(e.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: No GraphConfig or in-function params. Method cannot be run"));
+      }
+
+      results = session.run(
+              "MATCH (n) WHERE n10s.inference.hasLabel(n,'B', { catLabel:'Label', subCatRel:'SLO'}) RETURN count(n) as ct, collect(n.id) as nodes");
       Record next = results.next();
       Set<String> expectedNodeIds = new HashSet<String>();
+      expectedNodeIds.add("iamA1");
+      expectedNodeIds.add("iamA2");
+      expectedNodeIds.add("iamB1");
+      assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
+      assertEquals(3L, next.get("ct").asLong());
+
+      session.run("call n10s.graphconfig.init({ classLabel: 'Label', " +
+              "subClassOfRel: 'SLO' })");
+
+      results = session.run(
+              "MATCH (n) WHERE n10s.inference.hasLabel(n,'B') RETURN count(n) as ct, collect(n.id) as nodes");
+      next = results.next();
+      expectedNodeIds = new HashSet<String>();
       expectedNodeIds.add("iamA1");
       expectedNodeIds.add("iamA2");
       expectedNodeIds.add("iamB1");
@@ -322,7 +444,10 @@ public class MicroReasonersTest {
           .run("MATCH (bcat:Category)<-[:IN_CAT]-(b:Thing {id:'iamb'}) RETURN bcat.name as inCat");
       assertEquals(true, results.hasNext());
       assertEquals("B", results.next().get("inCat").asString());
-      String cypherString = "MATCH (x:Thing {id:$thingId}),(y:Category) WHERE n10s.inference.inCategory(x,y) RETURN collect(y.name) as cats";
+
+      session.run("call n10s.graphconfig.init({classLabel: 'Category', subClassOfRel: 'SCO'})");
+
+      String cypherString = "MATCH (x:Thing {id:$thingId}),(y:Category) WHERE n10s.inference.inCategory(x,y, { inCatRel: 'IN_CAT' }) RETURN collect(y.name) as cats";
 
       results = session.run(cypherString, new HashMap<String, Object>() {{
         put("thingId", "iama");
@@ -342,13 +467,13 @@ public class MicroReasonersTest {
       }}, new HashSet<>(results.next().get("cats").asList()));
 
       results = session.run(
-          "MATCH (x:Thing {id: 'iama' }),(y:Category { name: \"B\"}) RETURN n10s.inference.inCategory(x,y) as islinked ");
+          "MATCH (x:Thing {id: 'iama' }),(y:Category { name: \"B\"}) RETURN n10s.inference.inCategory(x,y, { inCatRel: 'IN_CAT' } ) as islinked ");
       assertEquals(true, results.hasNext());
       assertEquals(true, results.next().get("islinked").asBoolean());
 
       //Non-existent relationship
       results = session.run(
-          "MATCH (x:Thing {id: 'iama' } ),(y:Category) WHERE n10s.inference.inCategory(x,y, { inCatRel: 'TYPE' } ) RETURN collect(y.name) as cats");
+          "MATCH (x:Thing {id: 'iama' } ),(y:Category) WHERE n10s.inference.inCategory(x,y) RETURN collect(y.name) as cats");
       assertEquals(true, results.hasNext());
       assertEquals(new HashSet<String>(), new HashSet<>(results.next().get("cats").asList()));
 //
