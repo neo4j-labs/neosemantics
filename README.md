@@ -41,6 +41,8 @@ You can also test the extension is mounted by running `:get http://localhost:747
 {"ping":"here!"}
 ```
 
+### Installation on Neo4j Desktop
+You can donwload the NeoSemantics directly from the Graph Apps Menu > Graph Apps Gallery (Open) > NeoSemantics (Install).
 
 ## Basic flow
 
