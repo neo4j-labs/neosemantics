@@ -97,7 +97,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
 
   private String buildURI(String baseVocabNS, String name) {
     //TODO: we know what kind of graph we have from the config (fix this)
-    Pattern regex = Pattern.compile("^(\\w+)" + PREFIX_SEPARATOR + "(.*)$");
+    Pattern regex = Pattern.compile("^([-\\w]+)" + PREFIX_SEPARATOR + "(.*)$");
     Matcher matcher = regex.matcher(name);
     if (matcher.matches()) {
       String prefix = matcher.group(1);
@@ -109,7 +109,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       String localName = matcher.group(2);
       return uriNsPart + localName;
     } else if (name.startsWith("http")) {
-      //TODO make this test better?
+      //TODO make this test better? (is this for the 'KEEP' case?)
       return name;
     } else {
       return baseVocabNS + name;

@@ -266,6 +266,72 @@ public class RDFEndpointTest {
 
   }
 
+  @Test
+  public void testPrefixwithHyphen() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    //first import onto
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
+              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.commit();
+    }
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init()");
+      tx.execute("CALL n10s.nsprefixes.add(\"my-prefix\", \"http://www.example.com/example#\")");
+
+      tx.commit();
+    }
+
+    String xmlrdf = "<rdf:RDF xmlns=\"http://www.example.com/example#\"\n" +
+            "     xml:base=\"http://www.example.com/example\"\n" +
+            "     xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
+            "     xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
+            "     xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n" +
+            "     xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n" +
+            "     xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n" +
+            "     xmlns:example=\"http://www.example.com/example#\">\n" +
+            "    <owl:Ontology rdf:about=\"http://www.example.com/example\"/>\n" +
+            "    \n" +
+            "    <owl:ObjectProperty rdf:about=\"http://www.example.com/example#requires\"/>\n" +
+            "\n" +
+            "    <owl:Class rdf:about=\"http://www.example.com/example#Enitity1\"/>\n" +
+            "\n" +
+            "    <owl:Class rdf:about=\"http://www.example.com/example#Entity2\"/>\n" +
+            "\n" +
+            "    <owl:NamedIndividual rdf:about=\"http://www.example.com/example#Enitity1Individual\">\n" +
+            "        <rdf:type rdf:resource=\"http://www.example.com/example#Enitity1\"/>\n" +
+            "        <requiresProp>12345</requiresProp>" +
+            "        <requires rdf:resource=\"http://www.example.com/example#Entity2Individual\"/>\n" +
+            "    </owl:NamedIndividual>\n" +
+            "\n" +
+            "    <owl:NamedIndividual rdf:about=\"http://www.example.com/example#Entity2Individual\">\n" +
+            "        <rdf:type rdf:resource=\"http://www.example.com/example#Entity2\"/>\n" +
+            "    </owl:NamedIndividual>\n" +
+            "</rdf:RDF>";
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.rdf.import.inline('" + xmlrdf + "','RDF/XML')");
+      tx.commit();
+    }
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() +
+                    "neo4j/describe/http%3A%2F%2Fwww.example.com%2Fexample%23Enitity1Individual?format=RDF/XML");
+
+    String expected =
+            "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.example.com/example#Enitity1> .\n" +
+            "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requires> <http://www.example.com/example#Entity2Individual> .\n" +
+            "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requiresProp> \"12345\" ." +
+            "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .";
+    assertEquals(200, response.status());
+    System.out.println(response.rawContent());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.RDFXML));
+
+  }
+
 
   @Test
   public void testCypherOnMovieDBReturnsList() throws Exception {
