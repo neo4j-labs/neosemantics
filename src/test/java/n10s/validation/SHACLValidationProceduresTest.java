@@ -283,11 +283,11 @@ public class SHACLValidationProceduresTest {
 
       while (validationResults.hasNext()) {
         Record next = validationResults.next();
-        if (next.get("nodeType").equals("Person")) {
+        if (next.get("nodeType").asString().equals("Person")) {
           assertEquals("Rosie O'Donnell", next.get("offendingValue").asString());
           assertEquals("http://www.w3.org/ns/shacl#PatternConstraintComponent",
               next.get("propertyShape").asString());
-        } else if (next.get("nodeType").equals("Movie")) {
+        } else if (next.get("nodeType").asString().equals("Movie")) {
           assertEquals(1993, next.get("offendingValue").asInt());
           assertEquals("http://www.w3.org/ns/shacl#MinExclusiveConstraintComponent",
               next.get("propertyShape").asString());
@@ -297,8 +297,74 @@ public class SHACLValidationProceduresTest {
     }
   }
 
-
   @Test
+  public void testBug213() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      session.run("CREATE(s:Object) SET s.minVal = \"200\";");
+
+      session.run("call n10s.validation.shacl.import.inline('\n" +
+              "\n" +
+              "@prefix dtc: <http://ttt/#> .\n" +
+              "@prefix vs: <http:/ttt/vs#>.\n" +
+              "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+              "\n" +
+              "dtc:ObjectShape\n" +
+              "    a sh:NodeShape;\n" +
+              "    sh:targetClass vs:Object;    \n" +
+              "    sh:property [            \n" +
+              "        sh:path vs:minVal;\n" +
+              "                sh:datatype xsd:integer ;\n" +
+              "            sh:minInclusive 0;\n" +
+              "            sh:maxInclusive 100;\n" +
+              "    ] ;\n" +
+              ".\n" +
+              "\n" +
+              "','Turtle')");
+
+      Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
+
+      assertEquals(true, validationResults.hasNext());
+
+      Record next = validationResults.next();
+      assertTrue(next.get("nodeType").asString().equals("Object"));
+      assertTrue(next.get("resultPath").asString().equals("minVal"));
+      assertEquals("200", next.get("offendingValue").asString());
+      assertEquals("http://www.w3.org/ns/shacl#DatatypeConstraintComponent",
+              next.get("propertyShape").asString());
+      assertEquals("property value should be of type integer",
+              next.get("resultMessage").asString());
+
+      assertEquals(false, validationResults.hasNext());
+
+      session.run("MATCH(s:Object) SET s.minVal = \"hello-world\";");
+
+      validationResults = session.run("CALL n10s.validation.shacl.validate() ");
+
+      assertEquals(true, validationResults.hasNext());
+
+      next = validationResults.next();
+      assertTrue(next.get("nodeType").asString().equals("Object"));
+      assertTrue(next.get("resultPath").asString().equals("minVal"));
+      assertEquals("hello-world", next.get("offendingValue").asString());
+      assertEquals("http://www.w3.org/ns/shacl#DatatypeConstraintComponent",
+              next.get("propertyShape").asString());
+      assertEquals("property value should be of type integer",
+              next.get("resultMessage").asString());
+
+      assertEquals(false, validationResults.hasNext());
+
+    }
+
+
+  }
+
+    @Test
     public void testValidationBeforeNsDefined() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
@@ -529,8 +595,8 @@ public class SHACLValidationProceduresTest {
             && next.get("param").asString().equals("maxInclusive")) {
           assertEquals(2019, next.get("value").asInt());
         }
-        if (next.get("target").equals("Person") && next.get("propertyOrRelationshipPath").isNull()
-            && next.get("param").equals("ignoredProperties")) {
+        if (next.get("target").asString().equals("Person") && next.get("propertyOrRelationshipPath").isNull()
+            && next.get("param").asString().equals("ignoredProperties")) {
           List<Object> expected = new ArrayList<>();
           expected.add("WROTE");
           expected.add("PRODUCED");
@@ -538,7 +604,8 @@ public class SHACLValidationProceduresTest {
           expected.add("FOLLOWS");
           expected.add("DIRECTED");
           expected.add("born");
-          assertEquals(expected, next.get("value").asList());
+          List<Object> actual = next.get("value").asList();
+          assertTrue(expected.containsAll(actual) && actual.containsAll(expected));
         }
       }
 
@@ -596,9 +663,9 @@ public class SHACLValidationProceduresTest {
             && next.get("param").asString().equals("sh:maxInclusive")) {
           assertEquals(2019, next.get("value").asInt());
         }
-        if (next.get("target").equals("neo4j__Person") && next.get("propertyOrRelationshipPath")
+        if (next.get("target").asString().equals("neo4j__Person") && next.get("propertyOrRelationshipPath")
             .isNull()
-            && next.get("param").equals("sh:ignoredProperties")) {
+            && next.get("param").asString().equals("sh:ignoredProperties")) {
           List<Object> expected = new ArrayList<>();
           expected.add("neo4j__WROTE");
           expected.add("neo4j__PRODUCED");
@@ -606,7 +673,8 @@ public class SHACLValidationProceduresTest {
           expected.add("neo4j__FOLLOWS");
           expected.add("neo4j__DIRECTED");
           expected.add("neo4j__born");
-          assertEquals(expected, next.get("value").asList());
+          List<Object> actual = next.get("value").asList();
+          assertTrue(expected.containsAll(actual) && actual.containsAll(expected));
         }
       }
 

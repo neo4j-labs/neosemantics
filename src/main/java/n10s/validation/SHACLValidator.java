@@ -894,7 +894,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_DATATYPE_V_SUFF() {
-    return " NOT all(x in [] +  focus.`%s` where %s x %s = x) RETURN " +
+    return " NOT all(x in [] +  focus.`%s` where coalesce( %s x %s = x , false)) RETURN " +
         (shallIUseUriInsteadOfId() ? " focus.uri " : " id(focus) ") + " as nodeId, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
         " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
