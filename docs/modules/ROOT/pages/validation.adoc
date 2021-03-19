@@ -194,7 +194,7 @@ You can easily define a trigger using the `apoc.trigger.add` procedure in https:
 
 [source, cypher]
 ----
-CALL apoc.trigger.add('shacl-validate','call n10s.validation.shacl.validateTransaction($createdNodes,$createdRelationships, $assignedLabels, $removedLabels, $assignedNodeProperties, $removedNodeProperties)', {phase:'before'})
+CALL apoc.trigger.add('shacl-validate','call n10s.validation.shacl.validateTransaction($createdNodes,$createdRelationships, $assignedLabels, $removedLabels, $assignedNodeProperties, $removedNodeProperties, $deletedRelationships, $deletedNodes)', {phase:'before'})
 ----
 
 If everything goes well, you  should get the following confirmation indicating that the trigger  has been successfully installed:
@@ -206,7 +206,7 @@ If everything goes well, you  should get the following confirmation indicating t
 ╞════════════════╪══════════════════════════════════════════════════════════════════════╪══════════════════╪════════╪═══════════╪════════╡
 │"shacl-validate"│"call n10s.validation.shacl.validateTransaction($createdNodes,$created│{"phase":"before"}│{}      │true       │false   │
 │                │Relationships, $assignedLabels, $removedLabels, $assignedNodePropertie│                  │        │           │        │
-│                │s, $removedNodeProperties)"                                           │                  │        │           │        │
+│                │s, $removedNodeProperties, $deletedRelationships, $deletedNodes)"     │                  │        │           │        │
 └────────────────┴──────────────────────────────────────────────────────────────────────┴──────────────────┴────────┴───────────┴────────┘
 ----
 
