@@ -27,7 +27,9 @@ public class ValidationProcedures extends CommonProcedures {
       @Name("createdRelationships") Object createdRelationships,
       @Name("assignedLabels") Object assignedLabels, @Name("removedLabels") Object removedLabels,
       @Name("assignedNodeProperties") Object assignedNodeProperties,
-      @Name("removedNodeProperties") Object removedNodeProperties) {
+      @Name("removedNodeProperties") Object removedNodeProperties,
+      @Name("deletedRelationships") Object deletedRelationships,
+      @Name("deletedNodes") Object deletedNodes) {
 
     //we may want to add additional params to this method like the max duration of the validation?
 
@@ -39,6 +41,8 @@ public class ValidationProcedures extends CommonProcedures {
       params.put("removedLabels", removedLabels);
       params.put("assignedNodeProperties", assignedNodeProperties);
       params.put("removedNodeProperties", removedNodeProperties);
+      params.put("deletedRelationships", deletedRelationships);
+      params.put("deletedNodes", deletedNodes);
 
       Result validationResults = tx.execute(MAP_APOC_TRIGGER_PARAMS_TO_VALIDATION, params);
 
@@ -136,21 +140,20 @@ public class ValidationProcedures extends CommonProcedures {
         .flatMap(x -> tx.execute(x, vc.getAllParams()).stream()).map(ValidationResult::new);
 
   }
-
-  // TODO: need to add deleted labels and deleted nodes (basically everything but relationship properties)
-  // TODO: rethink which  ones are needed   <--
+  
   private static final String MAP_APOC_TRIGGER_PARAMS_TO_VALIDATION =
       "UNWIND reduce(nodes = [], x IN keys($removedLabels) | nodes + $removedLabels[x]) AS rln "
           + " MATCH (rln)<--(x) WITH collect(DISTINCT x) AS sn "
           //the direction makes it valid for both direct and  inverse
-          + " UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + [x IN $createdRelationships | endNode(x)] +"
+          + " UNWIND sn + $createdNodes + [x IN $createdRelationships | startNode(x)] + [x IN $createdRelationships | endNode(x)] + " +
+              " [x IN $deletedRelationships | startNode(x)] + [x IN $deletedRelationships | endNode(x)] +"
           //end node is also for inverse rels
           + "  reduce( nodes = [] , x IN keys($assignedLabels) | nodes + $assignedLabels[x]) + "
           + "  reduce( nodes = [] , x IN keys($assignedNodeProperties) | nodes + "
           + "  [ item IN $assignedNodeProperties[x] | item.node] ) +"
           + "  reduce( nodes = [] , x IN keys($removedNodeProperties) | nodes + "
           + "  [ item IN $removedNodeProperties[x] | item.node] ) AS nd "
-          + " WITH collect( DISTINCT nd) AS touchedNodes\n"
+          + " WITH apoc.coll.subtract(collect( DISTINCT nd), $deletedNodes) AS touchedNodes\n"
           + "CALL n10s.validation.shacl.validateSet(touchedNodes) YIELD focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage\n"
           + "RETURN {focusNode: focusNode, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, resultPath:resultPath, severity:severity, resultMessage:resultMessage } AS validationResult ";
 
