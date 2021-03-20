@@ -2073,6 +2073,50 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testStreamFromFileWithExclusionList() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      String filteredPred = "http://schema.org/image";
+
+      Result importResults
+              = session.run("CALL n10s.rdf.stream.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("event.json")
+                      .toURI() + "','JSON-LD')");
+
+      int tripleCount = 0;
+      int filteredPredicatesCount = 0;
+      while(importResults.hasNext()){
+        Record next = importResults.next();
+        if(next.get("predicate").asString().equals(filteredPred)){
+          filteredPredicatesCount++;
+        }
+        tripleCount++;
+      }
+      assertEquals(28,tripleCount);
+      assertEquals(3,filteredPredicatesCount);
+
+
+      importResults
+              = session.run("CALL n10s.rdf.stream.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("event.json")
+                      .toURI() + "','JSON-LD',{ predicateExclusionList: ['" + filteredPred + "'] })");
+
+      tripleCount = 0;
+      filteredPredicatesCount = 0;
+      while(importResults.hasNext()){
+        Record next = importResults.next();
+        if(next.get("predicate").asString().equals(filteredPred)){
+          filteredPredicatesCount++;
+        }
+        tripleCount++;
+      }
+      assertEquals(25,tripleCount);
+      assertEquals(0,filteredPredicatesCount);
+    }
+  }
+
+  @Test
   public void testStreamFromString() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {

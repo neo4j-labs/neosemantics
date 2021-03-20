@@ -142,6 +142,30 @@ public class RDFEndpointTest {
 
   }
 
+//  @Test
+//  public void testGetNodeByUriOnLPGGraph() throws Exception {
+//    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+//    try (Transaction tx = graphDatabaseService.beginTx()) {
+//
+//      String dataInsertion = "create (:Person:Resource { name: \"JB\", uri: \"http://neo4j.paradise.icij.dataset/ind/JB\"})" +
+//              "-[:KNOWS]->(:Person:Resource { name: \"CC\", uri: \"http://neo4j.paradise.icij.dataset/ind/CC\"})";
+//      tx.execute(dataInsertion);
+//      tx.commit();
+//
+//    }
+//
+//    // When
+//    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
+//            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+//                    + URLEncoder.encode("http://neo4j.paradise.icij.dataset/ind/JB",StandardCharsets.UTF_8));
+//
+//    String expected = "";
+//    assertEquals(200, response.status());
+//    System.out.println(response.rawContent());
+//    assertTrue(ModelTestUtils
+//            .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+//
+//  }
 
   @Test
   public void testGetNodeByIdFromRDFizedLPG() throws Exception {

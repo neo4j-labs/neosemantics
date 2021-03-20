@@ -39,13 +39,17 @@ public class StatementStreamer extends ConfiguredStatementHandler {
   @Override
   public void handleStatement(Statement st) throws RDFHandlerException {
     if (statements.size() < parserConfig.getStreamTripleLimit()) {
-      Value object = st.getObject();
-      StreamedStatement statement = new StreamedStatement(st.getSubject().stringValue(),
-          st.getPredicate().stringValue(), object.stringValue(),
-          (object instanceof Literal),
-          ((object instanceof Literal) ? ((Literal) object).getDatatype().stringValue() : null),
-          (object instanceof Literal ? ((Literal) object).getLanguage().orElse(null) : null));
-      statements.add(statement);
+      if(parserConfig.getPredicateExclusionList() == null || !parserConfig
+              .getPredicateExclusionList()
+              .contains(st.getPredicate().stringValue())) {
+        Value object = st.getObject();
+        StreamedStatement statement = new StreamedStatement(st.getSubject().stringValue(),
+                st.getPredicate().stringValue(), object.stringValue(),
+                (object instanceof Literal),
+                ((object instanceof Literal) ? ((Literal) object).getDatatype().stringValue() : null),
+                (object instanceof Literal ? ((Literal) object).getLanguage().orElse(null) : null));
+        statements.add(statement);
+      }
     } else {
       throw new TripleLimitReached(parserConfig.getStreamTripleLimit() + " triples streamed");
     }
