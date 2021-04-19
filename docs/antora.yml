@@ -1,11 +1,13 @@
 name: neosemantics
-version: '4.1'
+version: '4.2'
 title: Neosemantics
 nav:
 - modules/ROOT/nav.adoc
 
 asciidoc:
   attributes:
-    docs-version: 4.0
-    page-neo4jversion: 4.0
+    docs-version: 4.2
+    page-neo4jversion: 4.2
     page-product: Neosemantics
+    page-type: Neosemantics Manual
+    page-canonical-root: /labs/
