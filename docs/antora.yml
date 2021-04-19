@@ -6,6 +6,8 @@ nav:
 
 asciidoc:
   attributes:
-    docs-version: 4.0
-    page-neo4jversion: 4.0
+    docs-version: 4.1
+    page-neo4jversion: 4.1
     page-product: Neosemantics
+    page-type: Neosemantics Manual
+    canonical-root: /labs/
