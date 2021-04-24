@@ -153,7 +153,8 @@ public class ValidationProcedures extends CommonProcedures {
           + "  [ item IN $assignedNodeProperties[x] | item.node] ) +"
           + "  reduce( nodes = [] , x IN keys($removedNodeProperties) | nodes + "
           + "  [ item IN $removedNodeProperties[x] | item.node] ) AS nd "
-          + " WITH apoc.coll.subtract(collect( DISTINCT nd), $deletedNodes) AS touchedNodes\n"
+          + " WITH reduce (minus = [], x in collect( DISTINCT nd) |  case when not (x in $deletedNodes) then minus + x else minus end )  AS touchedNodes\n"
+          //+ " WITH apoc.coll.subtract(collect( DISTINCT nd), $deletedNodes) AS touchedNodes\n"
           + "CALL n10s.validation.shacl.validateSet(touchedNodes) YIELD focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage\n"
           + "RETURN {focusNode: focusNode, nodeType: nodeType, shapeId: shapeId, propertyShape: propertyShape, offendingValue: offendingValue, resultPath:resultPath, severity:severity, resultMessage:resultMessage } AS validationResult ";
 

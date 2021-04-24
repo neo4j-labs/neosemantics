@@ -695,7 +695,7 @@ public class SHACLValidationProceduresTest {
 
     }
   }
-
+  
   @Test
   public void testTxTriggerValidation() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -731,7 +731,7 @@ public class SHACLValidationProceduresTest {
               .toURI() + "\",\"Turtle\", {})");
 
       Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
-          + "call n10s.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}) "
+          + "call n10s.validation.shacl.validateTransaction(nodes,[], {}, {}, {}, {}, [], []) "
           + "yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
           + "RETURN focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage");
 
