@@ -484,8 +484,9 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
             result = tx.execute("MATCH ()-[r]->(o:Resource { uri:  $uri }) RETURN r", params);
           } else {
             //it's a Literal
+            //TODO: what happens with datatypes and lang tags?
             params.put("propVal",
-                object.stringValue());//translateLiteral((Literal)object, graphConfig));
+                    castValueFromXSDType((Literal)object));//translateLiteral((Literal)object, graphConfig));
             result = tx.execute("MATCH (r:Resource) UNWIND keys(r) as propName \n"
                         + "WITH r, propName\n"
                         + "WHERE $propVal in [] + r[propName] \n"

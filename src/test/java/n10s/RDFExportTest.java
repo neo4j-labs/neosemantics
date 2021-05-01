@@ -109,14 +109,15 @@ public class RDFExportTest {
 
       session.run("CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
 
-      String export_as_nt = getNTriplesGraphFromSPOPattern(session, null, "CONNECTED_TO", null, false, null, null);
-      //should not get here
-      assertTrue(false);
+      String export_as_nt = getNTriplesGraphFromSPOPattern(session, null, "neo4j://graph.schema#a", "1", true, "http://www.w3.org/2001/XMLSchema#long", null);
 
-    } catch(Exception e){
-      assertEquals("Failed to invoke procedure `n10s.rdf.export.spo`: Caused by: " +
-              "java.lang.UnsupportedOperationException: method not currently implemented for non-RDF graphs", e.getMessage());
+      System.out.println(">> \n" + export_as_nt);
+
     }
+//    catch(Exception e){
+//      assertEquals("Failed to invoke procedure `n10s.rdf.export.spo`: Caused by: " +
+//              "java.lang.UnsupportedOperationException: method not currently implemented for non-RDF graphs", e.getMessage());
+//    }
 
 
   }

@@ -19,6 +19,7 @@ import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
 
 public abstract class ExportProcessor {
@@ -210,6 +211,33 @@ public abstract class ExportProcessor {
         return Boolean.valueOf(propVal);
       default:
         return propVal;
+    }
+  }
+
+  Object castValueFromXSDType(Literal l) {
+
+    if (l.getDatatype().equals(XSD.LONG)) {
+      return l.longValue();
+    } else if (l.getDatatype().equals(XSD.INT) || l.getDatatype().equals(XSD.INTEGER)) {
+      return l.intValue();
+    } else if (l.getDatatype().equals(XSD.DECIMAL)) {
+      return l.decimalValue();
+    } else if (l.getDatatype().equals(XSD.FLOAT)) {
+      return l.floatValue();
+    } else if (l.getDatatype().equals(XSD.DOUBLE)) {
+      return l.doubleValue();
+    } else if (l.getDatatype().equals(XSD.BOOLEAN)) {
+      return l.booleanValue();
+//    } else if (l.getDatatype().equals(XSD.DATETIME)) {
+//      return l.calendarValue().d;
+//    } else if (l.getDatatype().equals(XSD.BOOLEAN)) {
+//      return l.booleanValue();
+//    } else if (l.getDatatype().equals(XSD.BOOLEAN)) {
+//      return l.booleanValue();
+//    } else if (l.getDatatype().equals(XSD.BOOLEAN)) {
+//      return l.booleanValue();
+    } else {
+      return l.stringValue();
     }
   }
 

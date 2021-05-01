@@ -2,22 +2,30 @@ package n10s.rdf.export;
 
 import n10s.graphconfig.GraphConfig;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
+import n10s.utils.UriUtils;
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.neo4j.graphdb.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
 import static n10s.graphconfig.Params.BASE_SCH_NS;
+import static n10s.utils.UriUtils.translateUri;
 
 
 public class LPGToRDFProcesssor extends ExportProcessor {
 
+  private static final String DEFAULT_GRAPH_INDIV_PREFIX = "neo4j://graph.individuals#";
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
 
@@ -176,24 +184,6 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
     Statement statement = null;
 
-//    //TODO: FIX THIS USING THE GraphConfig
-//    if (rel.getType().name().equals("SCO") || rel.getType().name().equals("SPO") ||
-//        rel.getType().name().equals("DOMAIN") || rel.getType().name().equals("RANGE")) {
-//      //if it's  an ontlogy rel, it must apply to an ontology entity
-//      if (!ontologyEntitiesUris.containsKey(rel.getStartNode().getId())) {
-//        ontologyEntitiesUris.put(rel.getStartNode().getId(),
-//            vf.createIRI(BASE_SCH_NS,
-//                (String) rel.getStartNode().getProperty("name", "unnamedEntity")));
-//      }
-//      if (!ontologyEntitiesUris.containsKey(rel.getEndNode().getId())) {
-//        ontologyEntitiesUris.put(rel.getEndNode().getId(),
-//            vf.createIRI(BASE_SCH_NS,
-//                (String) rel.getEndNode().getProperty("name", "unnamedEntity")));
-//      }
-//      //TODO: Deal with cases where standards not followed (label not set, name not present, etc.)
-//      statement = vf.createStatement(ontologyEntitiesUris.get(rel.getStartNodeId()),
-//          getUriforRelName(rel.getType().name()), ontologyEntitiesUris.get(rel.getEndNodeId()));
-//    } else {
       if (!exportOnlyMappedElems || exportMappings.containsKey(rel.getType().name())) {
         statement = vf.createStatement(
             getResourceUri(rel.getStartNode()),
@@ -206,7 +196,6 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 
       }
- //   }
     return statement;
 
   }
@@ -231,69 +220,42 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   @Override
   protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     Set<Statement> statements = new HashSet<>();
-    List<Label> nodeLabels = new ArrayList<>();
-    node.getLabels().forEach(l -> { if(!l.name().equals("Resource")) nodeLabels.add(l); });
-    IRI subject;
+    //List<Label> nodeLabels = new ArrayList<>();
+    //node.getLabels().forEach(l -> { if(!l.name().equals("Resource")) nodeLabels.add(l); });
+    //TODO: Note that we can be looking up by id (implicit uri) and returning an explicit uri --> confusing/inconsistent
+    IRI subject = getResourceUri(node);
 
-//    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
-//        .contains(Label.label("Relationship")) ||
-//        nodeLabels.contains(Label.label("Property"))) {
-//      // it's an ontology element (for now we're not dealing with ( name: "a")-[:DOMAIN]->( name: "b")
-//      subject = vf.createIRI(BASE_SCH_NS, (String) node.getProperty("name", "unnamedEntity"));
-//      ontologyEntitiesUris.put(node.getId(), subject);
-//    } else {
-      subject = getResourceUri(node);
-//    }
-
-//    //TODO: Not doing this mapping. Imported ontos through the onto.import method are non reversible.
-    for (Label label : nodeLabels) {
-      if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
-//        if (label.equals(Label.label("Class"))) {
-//          statements.add(vf.createStatement(subject, RDF.TYPE, RDFS.CLASS));
-//        } else if (label.equals(Label.label("Property"))) {
-//          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
-//        } else if (label.equals(Label.label("Relationship"))) {
-//          statements.add(vf.createStatement(subject, RDF.TYPE, RDF.PROPERTY));
-//        } else {
+    if (propNameFilter == null || propNameFilter.equals(RDF.TYPE.stringValue())){
+      for (Label label : node.getLabels()) {
+        if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
           statements.add(vf.createStatement(subject,
-              RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
-                  .createIRI(exportMappings.get(label.name()))
-                  : vf.createIRI(BASE_SCH_NS, label.name())));
-//        }
+                  RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
+                          .createIRI(exportMappings.get(label.name()))
+                          : vf.createIRI(BASE_SCH_NS, label.name())));
+        }
       }
     }
 
     Map<String, Object> allProperties = node.getAllProperties();
-
-//    //TODO: all this logic goes away
-//    if (nodeLabels.contains(Label.label("Class")) || nodeLabels
-//        .contains(Label.label("Relationship")) ||
-//        nodeLabels.contains(Label.label("Property"))) {
-//      //TODO: this assumes property 'name' exists. This is true for imported ontos but
-//      // maybe we should define default in case it's not present?
-//      statements.add(vf.createStatement(subject,
-//          vf.createIRI("neo4j://neo4j.org/rdfs/1#", "name"),
-//          vf.createLiteral((String) allProperties.get("name"))));
-//      allProperties.remove("name");
-//    }
-
     // Do not serialise uri as a property.
     // When present, it will be the resource uri.
     allProperties.remove("uri");
 
     for (String key : allProperties.keySet()) {
-      if (!exportOnlyMappedElems || exportMappings.containsKey(key)) {
-        IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
-            vf.createIRI(BASE_SCH_NS, key));
-        Object propertyValueObject = allProperties.get(key);
-        if (propertyValueObject instanceof Object[]) {
-          for (Object o : (Object[]) propertyValueObject) {
+      if(propNameFilter == null || propNameFilter.equals(vf.createIRI(BASE_SCH_NS, key).stringValue())){
+        if (!exportOnlyMappedElems || exportMappings.containsKey(key)) {
+          IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
+                  vf.createIRI(BASE_SCH_NS, key));
+          Object propertyValueObject = allProperties.get(key);
+          if (propertyValueObject instanceof Object[]) {
+            for (Object o : (Object[]) propertyValueObject) {
+              statements.add(vf.createStatement(subject, predicate,
+                      createTypedLiteral(o)));
+            }
+          } else {
             statements.add(vf.createStatement(subject, predicate,
-                createTypedLiteral(o)));
+                    createTypedLiteral(propertyValueObject)));
           }
-        } else {
-          statements.add(vf.createStatement(subject, predicate,
-              createTypedLiteral(propertyValueObject)));
         }
       }
 
@@ -301,19 +263,257 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     return statements;
   }
 
+
+  @Override
+  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
+          throws InvalidNamespacePrefixDefinitionInDB {
+    //Do we take mappings into account when filtering by prop/label/etc? NO
+    // When we query via cypher the mappings are applied to the results but not used in the query
+    if (tp.getSubject() != null) {
+      Set<Statement> allStatements = new HashSet<>();
+      Node resource = getNodeByUri(tp.getSubject());
+      if (resource != null) {
+        String predicate = tp.getPredicate();
+        if (tp.getObject() == null) {
+          //labels and properties applying predicate filter
+          allStatements.addAll(processNode(resource, null, predicate));
+          //relationships
+          Iterable<Relationship> relationships =
+                  predicate == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
+                          Direction.OUTGOING, RelationshipType.withName(vf.createIRI(predicate).getLocalName()));
+          for (Relationship r : relationships) {
+            allStatements.add(processRelationship(r, null));
+          }
+        } else {
+          //filter on value (object)
+          Value object = getValueFromTriplePatternObject(tp);
+          allStatements.addAll(processNode(resource, null, predicate).stream()
+                  .filter(st -> st.getObject().equals(object)).collect(Collectors.toSet()));
+
+          //if filter on object  is of type literal then we  can skip the rels, it will be a prop
+          if (!tp.getLiteral()) {
+            Iterable<Relationship> relationships =
+                    predicate == null ? resource.getRelationships(Direction.OUTGOING)
+                            : resource.getRelationships(
+                            Direction.OUTGOING, RelationshipType.withName(vf.createIRI(predicate).getLocalName()));
+            //watch out, if filter on predicate is rdf:type, it will match things like ()-[:type]->({uri:$obj})
+            //what are the chances?? TODO: create unit test
+            for (Relationship r : relationships) {
+              if (getResourceUri(r.getEndNode()).stringValue().equals(object.stringValue())) {
+                allStatements.add(processRelationship(r, null));
+              }
+            }
+          }
+        }
+      }
+      return allStatements.stream();
+    } else {
+      //subject is null
+      Set<Statement> allStatements = new HashSet<>();
+      String predicate = null;
+      try {
+        //what if predicate is not a URI TODO: test
+        predicate = tp.getPredicate() != null ? translateUri(tp.getPredicate(), tx, graphConfig) : null;
+      } catch (UriUtils.UriNamespaceHasNoAssociatedPrefix e) {
+        //graph is in shorten mode but the uri in the filter is not in use in the graph
+        predicate = tp.getPredicate();
+        //ugly way of making the filter not return anything.
+      }
+      if (tp.getObject() == null) {
+        //null,x,null
+        Result result;
+        if (predicate != null) {
+          //null, pred, null
+          if (tp.getPredicate().equals(RDF.TYPE.stringValue())) {
+            result = tx.execute("MATCH (r) RETURN r");
+            while (result.hasNext()) {
+              Map<String, Object> next = result.next();
+              Node node = (Node) next.get("r");
+              for (Label label : node.getLabels()) {
+                if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
+                  allStatements.add(vf.createStatement(getResourceUri(node),
+                          RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
+                                  .createIRI(exportMappings.get(label.name()))
+                                  : vf.createIRI(BASE_SCH_NS, label.name())));
+                }
+              }
+            }
+            return allStatements.stream();
+          } else {
+            result = tx.execute(String
+                    .format("MATCH (s) WHERE exists(s.`%s`) RETURN s, s.`%s` as o\n"
+                                    + "UNION \n"
+                                    + "MATCH (s)-[:`%s`]->(o) RETURN s, o",
+                            predicate, predicate, predicate));
+            while (result.hasNext()) {
+              Map<String, Object> next = result.next();
+              Node subjectNode = (Node) next.get("s");
+              Object objectThing = next.get("o");
+              if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
+                allStatements.add(vf.createStatement(getResourceUri(subjectNode),
+                        exportMappings.containsKey(predicate) ? vf
+                                .createIRI(exportMappings.get(predicate))
+                                : vf.createIRI(BASE_SCH_NS, predicate),
+                        objectThing instanceof Node ? getResourceUri((Node) objectThing) : vf.createLiteral(objectThing.toString())));
+                //TODO: this tostring is wrong. Check how it's done in processnode()
+              }
+            }
+            return allStatements.stream();
+          }
+        } else {
+          //no subject, no pred, no object: null, null, null -> return all triples
+          result = tx.execute("MATCH (r) RETURN r\n"
+                  + "UNION \n"
+                  + "MATCH ()-[r]->() RETURN r");
+          return result.stream().flatMap(row -> {
+            Set<Statement> rowResult = new HashSet<>();
+            Object r = row.get("r");
+            if (r instanceof Node) {
+              rowResult.addAll(processNode((Node) r, null, null));
+            } else if (r instanceof Relationship) {
+              rowResult.add(processRelationship((Relationship) r, null));
+            }
+            return rowResult.stream();
+          });
+        }
+      } else {
+        //filter on value (object)
+        Value object = getValueFromTriplePatternObject(tp);
+        Result result;
+        Map<String, Object> params = new HashMap<>();
+        if (predicate != null) {
+          // null, pred, obj
+          if (tp.getPredicate().equals(RDF.TYPE.stringValue())) {
+            String objectAsLabel = null;
+            if (object instanceof IRI) {
+              objectAsLabel = ((IRI) object).getLocalName();
+            } else {
+              objectAsLabel = "____";
+            }
+            result = tx.execute(String.format("MATCH (r:`%s`) RETURN r", objectAsLabel));
+            while(result.hasNext()){
+              if (!exportOnlyMappedElems || exportMappings.containsKey(objectAsLabel)) {
+                allStatements.add(vf.createStatement(getResourceUri((Node)result.next().get("r")),
+                        RDF.TYPE, object));
+              }
+            }
+            return allStatements.stream();
+          } else {
+            if (object instanceof IRI) {
+              params.put("uri", object.stringValue());
+              //query for relationships
+              result = tx.execute(String
+                      .format("MATCH (:Resource)-[r:`%s`]->(o:Resource { uri:  $uri }) RETURN r",
+                              predicate), params);
+
+              while(result.hasNext()){
+                if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
+                  allStatements.add(vf.createStatement(getResourceUri((Node)result.next().get("r")),
+                          exportMappings.containsKey(predicate) ? vf
+                                  .createIRI(exportMappings.get(predicate))
+                                  : vf.createIRI(BASE_SCH_NS, predicate), object));
+                }
+              }
+              return allStatements.stream();
+
+            } else {
+              //it's a Literal
+              params.put("propVal",
+                      castValueFromXSDType((Literal) object));//translateLiteral((Literal)object, graphConfig));
+              result = tx.execute(String
+                        .format("MATCH (r) WHERE r.`%s` = $propVal RETURN r",
+                                predicate), params);
+              while(result.hasNext()){
+                if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
+                  allStatements.add(vf.createStatement(getResourceUri((Node)result.next().get("r")),
+                          exportMappings.containsKey(predicate) ? vf
+                                  .createIRI(exportMappings.get(predicate))
+                                  : vf.createIRI(BASE_SCH_NS, predicate), object));
+                }
+              }
+              return allStatements.stream();
+            }
+          }
+
+
+        } else {
+          //null, null, obj
+          if (object instanceof IRI) {
+            //query for relationships
+            Node objectNode = getNodeByUri(object.stringValue());
+            params.put("objectNodeInternalId", objectNode.getId());
+            result = tx.execute("MATCH ()-[r]->(o) WHRE id(o) = $objectNodeInternalId RETURN r", params);
+            return result.stream().flatMap(row -> {
+              Set<Statement> rowResult = new HashSet<>();
+              Object r = row.get("r");
+              rowResult.add(processRelationship((Relationship) r, null));
+              return rowResult.stream();
+            });
+          } else {
+            //it's a Literal
+            params.put("propVal",
+                    castValueFromXSDType((Literal) object));
+            //this is expensive...
+            result = tx.execute("MATCH (r) UNWIND keys(r) as propName \n"
+                    + "WITH r, propName\n"
+                    + "WHERE $propVal in [] + r[propName] \n"
+                    + "RETURN r, propName", params);
+
+            while (result.hasNext()) {
+              Map<String, Object> next = result.next();
+              if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
+                allStatements.add(vf.createStatement(getResourceUri((Node) next.get("r")),
+                        exportMappings.containsKey((String)next.get("propName")) ? vf
+                                .createIRI(exportMappings.get((String)next.get("propName")))
+                                : vf.createIRI(BASE_SCH_NS, (String)next.get("propName")),
+                        object));
+              }
+            }
+            return allStatements.stream();
+          }
+
+        }
+//        //refactor with previous section
+//        String finalPredicate1 = predicate;
+//        return result.stream().flatMap(row -> {
+//          Set<Statement> rowResult = new HashSet<>();
+//          Object r = row.get("r");
+//          if(r instanceof Node){
+//            rowResult.addAll(processNode((Node)r, null,
+//                    (finalPredicate1!=null?finalPredicate1:(String)row.get("propName"))));
+//          } else if(r instanceof Relationship){
+//            rowResult.add(processRelationship((Relationship)r,null));
+//          }
+//          return rowResult.stream();
+//        }).filter(
+//                st ->
+//                        st.getObject().equals(object));
+//        //post filtering on the generated statements.
+//      }
+      }
+    }
+  }
+
+
+  private Node getNodeByUri(String uri) {
+    try{
+      return tx.getNodeById(getNodeIdFromUri(uri));
+    } catch (NumberFormatException e){
+      //local part of uri is not a long
+      return null;
+    }
+  }
+
+  private long getNodeIdFromUri(String subject) {
+    //this throws numberFormatException
+    return Long.parseLong(subject.substring(DEFAULT_GRAPH_INDIV_PREFIX.length()));
+  }
+
   private IRI getResourceUri(Node node) {
 
     String explicituri = (String)node.getProperty("uri", null);
     return (explicituri==null?vf.createIRI(BASE_INDIV_NS, String.valueOf(node.getId())):
             vf.createIRI(explicituri));
-  }
-
-
-  @Override
-  public Stream<Statement> streamTriplesFromTriplePattern(TriplePattern tp)
-          throws InvalidNamespacePrefixDefinitionInDB {
-    //unimplemented
-    return null;
   }
 
 }

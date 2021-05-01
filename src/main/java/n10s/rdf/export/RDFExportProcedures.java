@@ -82,10 +82,10 @@ public class RDFExportProcedures extends RDFProcedures {
 
     GraphConfig gc = getGraphConfig(tx);
     if (gc == null) {
-      throw new UnsupportedOperationException("method not currently implemented for non-RDF graphs");
-//      proc = new LPGToRDFProcesssor(db, tx, gc,
-//          getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
-//          props.get("mappedElemsOnly").equals(true), rdfstar);
+     // throw new UnsupportedOperationException("method not currently implemented for non-RDF graphs");
+      proc = new LPGToRDFProcesssor(db, tx, gc,
+          getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
+          props.get("mappedElemsOnly").equals(true), rdfstar);
     } else {
       proc = new LPGRDFToRDFProcesssor(db, tx, gc, rdfstar);
     }
