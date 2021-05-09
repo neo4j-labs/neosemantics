@@ -16,16 +16,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
-import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
-import static n10s.graphconfig.Params.BASE_SCH_NS;
+import static n10s.graphconfig.Params.NOT_MATCHING_NS;
 import static n10s.utils.UriUtils.translateUri;
 
 
 public class LPGToRDFProcesssor extends ExportProcessor {
 
-  private static final String DEFAULT_GRAPH_INDIV_PREFIX = "neo4j://graph.individuals#";
   private final Map<String, String> exportMappings;
   private final boolean exportOnlyMappedElems;
 
@@ -220,13 +217,13 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   @Override
   protected  Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter) {
     Set<Statement> statements = new HashSet<>();
-    //List<Label> nodeLabels = new ArrayList<>();
-    //node.getLabels().forEach(l -> { if(!l.name().equals("Resource")) nodeLabels.add(l); });
+    List<Label> nodeLabels = new ArrayList<>();
+    node.getLabels().forEach(l -> { if(!l.name().equals("Resource")) nodeLabels.add(l); });
     //TODO: Note that we can be looking up by id (implicit uri) and returning an explicit uri --> confusing/inconsistent
     IRI subject = getResourceUri(node);
 
     if (propNameFilter == null || propNameFilter.equals(RDF.TYPE.stringValue())){
-      for (Label label : node.getLabels()) {
+      for (Label label : nodeLabels) {
         if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
           statements.add(vf.createStatement(subject,
                   RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
@@ -317,7 +314,8 @@ public class LPGToRDFProcesssor extends ExportProcessor {
       } catch (UriUtils.UriNamespaceHasNoAssociatedPrefix e) {
         //graph is in shorten mode but the uri in the filter is not in use in the graph
         predicate = tp.getPredicate();
-        //ugly way of making the filter not return anything.
+        // TODO: use the NOT_MATCHING_NS
+        // ugly way of making the filter not return anything.
       }
       if (tp.getObject() == null) {
         //null,x,null
@@ -340,22 +338,26 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             }
             return allStatements.stream();
           } else {
-            result = tx.execute(String
-                    .format("MATCH (s) WHERE exists(s.`%s`) RETURN s, s.`%s` as o\n"
-                                    + "UNION \n"
-                                    + "MATCH (s)-[:`%s`]->(o) RETURN s, o",
-                            predicate, predicate, predicate));
-            while (result.hasNext()) {
-              Map<String, Object> next = result.next();
-              Node subjectNode = (Node) next.get("s");
-              Object objectThing = next.get("o");
-              if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
-                allStatements.add(vf.createStatement(getResourceUri(subjectNode),
-                        exportMappings.containsKey(predicate) ? vf
-                                .createIRI(exportMappings.get(predicate))
-                                : vf.createIRI(BASE_SCH_NS, predicate),
-                        objectThing instanceof Node ? getResourceUri((Node) objectThing) : vf.createLiteral(objectThing.toString())));
-                //TODO: this tostring is wrong. Check how it's done in processnode()
+            //CHECK IF predicate is <NONE>, in which case there's no point in running the query
+            if (!predicate.equals(NOT_MATCHING_NS)) {
+              result = tx.execute(String
+                      .format("MATCH (s) WHERE exists(s.`%s`) RETURN s, s.`%s` as o\n"
+                                      + "UNION \n"
+                                      + "MATCH (s)-[:`%s`]->(o) RETURN s, o",
+                              predicate, predicate, predicate));
+
+              while (result.hasNext()) {
+                Map<String, Object> next = result.next();
+                Node subjectNode = (Node) next.get("s");
+                Object objectThing = next.get("o");
+                if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
+                  allStatements.add(vf.createStatement(getResourceUri(subjectNode),
+                          exportMappings.containsKey(predicate) ? vf
+                                  .createIRI(exportMappings.get(predicate))
+                                  : vf.createIRI(BASE_SCH_NS, predicate),
+                          objectThing instanceof Node ? getResourceUri((Node) objectThing) : vf.createLiteral(objectThing.toString())));
+                  //TODO: this tostring is wrong. Check how it's done in processnode()
+                }
               }
             }
             return allStatements.stream();
@@ -442,7 +444,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             //query for relationships
             Node objectNode = getNodeByUri(object.stringValue());
             params.put("objectNodeInternalId", objectNode.getId());
-            result = tx.execute("MATCH ()-[r]->(o) WHRE id(o) = $objectNodeInternalId RETURN r", params);
+            result = tx.execute("MATCH ()-[r]->(o) WHERE id(o) = $objectNodeInternalId RETURN r", params);
             return result.stream().flatMap(row -> {
               Set<Statement> rowResult = new HashSet<>();
               Object r = row.get("r");
@@ -506,7 +508,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
   private long getNodeIdFromUri(String subject) {
     //this throws numberFormatException
-    return Long.parseLong(subject.substring(DEFAULT_GRAPH_INDIV_PREFIX.length()));
+    return Long.parseLong(subject.substring(BASE_INDIV_NS.length()));
   }
 
   private IRI getResourceUri(Node node) {

@@ -6,11 +6,15 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import n10s.result.GraphConfigItemResult;
+import org.eclipse.rdf4j.model.util.URIUtil;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+
+import static n10s.graphconfig.Params.*;
 
 public class GraphConfig {
 
@@ -67,6 +71,8 @@ public class GraphConfig {
   private String subPropertyOfRelName;
   private String domainRelName;
   private String rangeRelName;
+  private String baseSchemaNamespace;
+  private String baseSchemaNamespacePrefix;
 
 
   public GraphConfig(Map<String, Object> props) throws InvalidParamException {
@@ -94,6 +100,23 @@ public class GraphConfig {
         .get("customDataTypePropList"))
         .stream().collect(Collectors.toSet()) : null)
         : null);
+    this.baseSchemaNamespace = (props.containsKey("baseSchemaNamespace") && URIUtil.isCorrectURISplit(
+            (String) props.get("baseSchemaNamespace"),"someLocalName")?
+            (String)props.get("baseSchemaNamespace"): null);
+
+    if (props.containsKey("baseSchemaPrefix")){
+      Matcher matcher = PREFIX_PATTERN.matcher((String)props.get("baseSchemaPrefix"));
+      if(matcher.matches()) {
+        //should we check that it's not one of the default ones? No because this is for the 'IGNORE' and native PG case
+        this.baseSchemaNamespacePrefix = (String)props.get("baseSchemaPrefix");
+      } else{
+        //not a valid prefix so use default
+        this.baseSchemaNamespacePrefix = null;
+      }
+    } else {
+      //no def in the config, use default
+      this.baseSchemaNamespacePrefix = null;
+    }
 
     // Ontology config
 
@@ -132,6 +155,8 @@ public class GraphConfig {
       this.multivalPropList = getListOfStringsOrNull(graphConfigProperties, "_multivalPropList");
       this.customDataTypePropList = getListOfStringsOrNull(graphConfigProperties,
           "_customDataTypePropList");
+      this.baseSchemaNamespace = (String)graphConfigProperties.get("_baseSchemaNamespace");
+      this.baseSchemaNamespacePrefix = (String)graphConfigProperties.get("_baseSchemaPrefix");
 
       this.classLabelName =
           graphConfigProperties.containsKey("_classLabel") ? (String) graphConfigProperties
@@ -280,10 +305,20 @@ public class GraphConfig {
     result.add(new GraphConfigItemResult("handleMultival", getHandleMultivalAsString()));
     result.add(new GraphConfigItemResult("handleRDFTypes", getHandleRDFTypesAsString()));
     result.add(new GraphConfigItemResult("keepLangTag", isKeepLangTag()));
-    result.add(new GraphConfigItemResult("multivalPropList", getMultivalPropList()));
+    if(getMultivalPropList()!=null) {
+      result.add(new GraphConfigItemResult("multivalPropList", getMultivalPropList()));
+    }
     result.add(new GraphConfigItemResult("keepCustomDataTypes", isKeepCustomDataTypes()));
-    result.add(new GraphConfigItemResult("customDataTypePropList", getCustomDataTypePropList()));
+    if (getCustomDataTypePropList()!=null){
+      result.add(new GraphConfigItemResult("customDataTypePropList", getCustomDataTypePropList()));
+    }
     result.add(new GraphConfigItemResult("applyNeo4jNaming", isApplyNeo4jNaming()));
+    if (getBaseSchemaNamespace()!=null){
+      result.add(new GraphConfigItemResult("baseSchemaNamespace", getBaseSchemaNamespace()));
+    }
+    if (getBaseSchemaNamespacePrefix()!=null){
+      result.add(new GraphConfigItemResult("baseSchemaPrefix", getBaseSchemaNamespacePrefix()));
+    }
     //onto  import config
     result.add(new GraphConfigItemResult("classLabel", getClassLabelName()));
     result.add(new GraphConfigItemResult("subClassOfRel", getSubClassOfRelName()));
@@ -309,6 +344,8 @@ public class GraphConfig {
     configAsMap.put("_applyNeo4jNaming", this.applyNeo4jNaming);
     configAsMap.put("_multivalPropList", this.multivalPropList);
     configAsMap.put("_customDataTypePropList", this.customDataTypePropList);
+    configAsMap.put("_baseSchemaNamespace", this.baseSchemaNamespace);
+    configAsMap.put("_baseSchemaPrefix", this.baseSchemaNamespacePrefix);
     configAsMap.put("_classLabel", this.classLabelName);
     configAsMap.put("_subClassOfRel", this.subClassOfRelName);
     configAsMap.put("_dataTypePropertyLabel", this.dataTypePropertyLabelName);
@@ -352,6 +389,13 @@ public class GraphConfig {
     return customDataTypePropList;
   }
 
+  public String getBaseSchemaNamespace() {
+    return baseSchemaNamespace;
+  }
+
+  public String getBaseSchemaNamespacePrefix() {
+    return baseSchemaNamespacePrefix;
+  }
   public String getClassLabelName() {
     return classLabelName;
   }
@@ -414,6 +458,12 @@ public class GraphConfig {
           ((List<String>) props.get("customDataTypePropList")).stream().collect(Collectors.toSet())
           : null);
     }
+    if (props.containsKey("baseSchemaNamespace") && URIUtil.isCorrectURISplit(
+            (String) props.get("baseSchemaNamespace"),"someLocalName")) {
+      this.baseSchemaNamespace =  (String)props.get("baseSchemaNamespace");
+    }
+
+
     if (props.containsKey("classLabel")) {
       this.classLabelName = (String) props.get("classLabel");
     }

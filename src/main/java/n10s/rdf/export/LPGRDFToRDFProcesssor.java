@@ -2,7 +2,6 @@ package n10s.rdf.export;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_MULTIVAL_PROP_ARRAY;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_RDFTYPES_AS_LABELS;
-import static n10s.graphconfig.Params.BASE_SCH_NS;
 import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static n10s.utils.UriUtils.translateUri;
@@ -43,7 +42,6 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
           .quote(PREFIX_SEPARATOR) + "(.+)$");
 
   private final NsPrefixMap namespaces;
-
 
   public LPGRDFToRDFProcesssor(GraphDatabaseService graphdb, Transaction tx, GraphConfig gc, boolean isRDFStarSerialisation)
       throws InvalidNamespacePrefixDefinitionInDB {

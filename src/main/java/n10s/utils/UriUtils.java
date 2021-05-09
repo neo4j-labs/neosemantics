@@ -4,7 +4,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_MODE_LPG;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static n10s.graphconfig.Params.*;
 
 
 import n10s.graphconfig.GraphConfig;
@@ -18,7 +18,12 @@ public class UriUtils {
   public static String translateUri(String uri, Transaction tx, GraphConfig gc)
       throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
     if (gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) {
-      return uri.substring(URIUtil.getLocalNameIndex(uri));
+      if ((gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS).equals(uri.substring(0,URIUtil.getLocalNameIndex(uri)))){
+        return uri.substring(URIUtil.getLocalNameIndex(uri));
+      } else{
+        return NOT_MATCHING_NS;
+      }
+
     } else if (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {

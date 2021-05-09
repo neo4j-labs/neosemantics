@@ -22,6 +22,15 @@ public class ModelTestUtils {
     return Models.isomorphic(expectedModel, actualModel);
   }
 
+  public static boolean modelContains(String container, RDFFormat formatContainer, String contained,
+                                      RDFFormat formatContained) throws IOException {
+
+    Model containerModel = createModel(container, formatContainer);
+    Model containedModel = createModel(contained, formatContained);
+
+    return Models.isSubset(containedModel, containerModel);
+  }
+
   private static Model createModel(String expected, RDFFormat formatExpected) throws IOException {
     RDFParser rdfParser = Rio.createParser(formatExpected);
     rdfParser.getParserConfig().set(BasicParserSettings.NORMALIZE_DATATYPE_VALUES, true);

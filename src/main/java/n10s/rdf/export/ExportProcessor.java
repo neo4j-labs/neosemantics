@@ -22,6 +22,8 @@ import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
 
+import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
+
 public abstract class ExportProcessor {
 
   protected Transaction tx;
@@ -29,11 +31,13 @@ public abstract class ExportProcessor {
   protected final ValueFactory vf = SimpleValueFactory.getInstance();
   protected boolean exportPropertiesInRels;
   protected GraphConfig graphConfig;
+  protected final String BASE_SCH_NS;
 
   public ExportProcessor(Transaction tx, GraphDatabaseService graphdb, GraphConfig gc) {
     this.tx = tx;
     this.graphdb = graphdb;
     this.graphConfig = gc;
+    this.BASE_SCH_NS = (gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS);
   }
 
   public Stream<Statement> streamTriplesFromCypher(String cypher, Map<String, Object> params) {
