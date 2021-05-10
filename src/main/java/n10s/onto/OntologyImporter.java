@@ -38,7 +38,10 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   protected Set<Statement> extraStatements = new HashSet<>();
   public static final Label RESOURCE = Label.label("Resource");
-  protected static final List<IRI> ANNOTATION_PROPERTIES_TO_IMPORT = Arrays.asList(RDFS.LABEL, RDFS.COMMENT, SKOS.PREF_LABEL, SKOS.ALT_LABEL, SKOS.DEFINITION);
+  protected static final List<IRI> ANNOTATION_PROPERTIES_TO_IMPORT = Arrays.asList(RDFS.LABEL, RDFS.COMMENT,
+          SKOS.PREF_LABEL, SKOS.ALT_LABEL, SKOS.DEFINITION);
+  protected static final List<IRI> PROPERTY_DECORATIONS_TO_IMPORT = Arrays.asList(OWL.TRANSITIVEPROPERTY,
+          OWL.INVERSEFUNCTIONALPROPERTY, OWL.SYMMETRICPROPERTY, OWL.FUNCTIONALPROPERTY);
   Cache<String, Node> nodeCache;
 
   public OntologyImporter(GraphDatabaseService db, Transaction tx,
@@ -158,6 +161,11 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           && st.getSubject() instanceof IRI) {
         setProp(st.getSubject().stringValue(), vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), st.getPredicate().getLocalName()),
                 (Literal) st.getObject());
+        mappedTripleCounter++;
+      }else if (st.getPredicate().equals(RDF.TYPE) && PROPERTY_DECORATIONS_TO_IMPORT.contains(st.getObject())
+              && st.getSubject() instanceof IRI) {
+        setProp(st.getSubject().stringValue(), vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "propCharacteristics"),
+                vf.createLiteral(((IRI)st.getObject()).getLocalName().substring(0,((IRI)st.getObject()).getLocalName().indexOf("Property"))));
         mappedTripleCounter++;
       }
     }

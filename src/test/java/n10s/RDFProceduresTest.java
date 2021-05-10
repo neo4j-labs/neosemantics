@@ -3700,6 +3700,69 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void ontoImportTestWithRelCharacteristicsMultival() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ baseSchemaNamespace : 'http://basenamespace#' , handleMultival: 'ARRAY'}");
+      Session session = driver.session();
+
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
+              + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
+
+      assertEquals(60L, importResults.next().get("triplesLoaded").asLong());
+
+      assertEquals(2L,
+              session.run("MATCH (n:n4sch__Class) RETURN count(n) AS count").next().get("count").asLong());
+
+      assertEquals(5L,
+              session.run("MATCH (n:n4sch__Property)-[:n4sch__DOMAIN]->(:n4sch__Class)  RETURN count(n) AS count").next()
+                      .get("count").asLong());
+
+      assertEquals(6L,
+              session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
+                      .asLong());
+
+      List<Object> propCharsForDirected = session.run("MATCH (n:n4sch__Relationship { n4sch__name: 'DIRECTED'} ) RETURN n.n4sch__propCharacteristics AS pc").next().get("pc")
+              .asList();
+      assertTrue(propCharsForDirected.contains("Symmetric"));
+      assertTrue(propCharsForDirected.size() == 1);
+
+      List<Object> propCharsForReviewed = session.run("MATCH (n:n4sch__Relationship { n4sch__name: 'REVIEWED'} ) RETURN n.n4sch__propCharacteristics AS pc").next().get("pc")
+              .asList();
+      assertTrue(propCharsForReviewed.contains("InverseFunctional"));
+      assertTrue(propCharsForReviewed.contains("Functional"));
+      assertTrue(propCharsForReviewed.size() == 2);
+    }
+
+  }
+
+  @Test
+  public void ontoImportTestWithRelCharacteristicsOverwrite() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{}");
+      Session session = driver.session();
+
+      Result importResults = session.run("CALL n10s.onto.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
+              + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
+
+
+      assertEquals("Symmetric", session.run("MATCH (n:n4sch__Relationship { n4sch__name: 'DIRECTED'} ) " +
+              "RETURN n.n4sch__propCharacteristics AS pc").next().get("pc").asString());
+
+      assertEquals("Functional",session.run("MATCH (n:n4sch__Relationship { n4sch__name: 'REVIEWED'} ) " +
+              "RETURN n.n4sch__propCharacteristics AS pc").next().get("pc").asString());
+
+    }
+
+  }
+
+  @Test
   public void ontoSnippetImportTest() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {

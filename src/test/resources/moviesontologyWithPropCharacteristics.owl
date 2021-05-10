@@ -1,0 +1,125 @@
+<?xml version="1.0"?>
+<rdf:RDF
+        xmlns     = "http://neo4j.com/voc/movies#"
+        xmlns:mov = "http://neo4j.com/voc/movies#"
+        xml:base  = "http://neo4j.com/voc/movies#"
+        xmlns:owl = "http://www.w3.org/2002/07/owl#"
+        xmlns:rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+        xmlns:rdfs= "http://www.w3.org/2000/01/rdf-schema#"
+        xmlns:xsd = "http://www.w3.org/2001/XMLSchema#">
+
+    <owl:Ontology rdf:about="">
+        <rdfs:comment>A basic OWL ontology for Neo4j's movie database</rdfs:comment>
+        <rdfs:comment>Simple ontology providing basic vocabulary and domain+range axioms
+            for the movie database.</rdfs:comment>
+        <rdfs:label>Neo4j's Movie Ontology</rdfs:label>
+    </owl:Ontology>
+
+    <owl:Class rdf:ID="Person">
+        <rdfs:label xml:lang="en">Person</rdfs:label>
+        <rdfs:comment xml:lang="en">Individual involved in the film industry</rdfs:comment>
+    </owl:Class>
+
+    <owl:Class rdf:ID="Movie">
+        <rdfs:label xml:lang="en">Movie</rdfs:label>
+        <rdfs:comment xml:lang="en">A film</rdfs:comment>
+    </owl:Class>
+
+    <owl:DatatypeProperty rdf:ID="name">
+        <rdfs:label xml:lang="en">name</rdfs:label>
+        <rdfs:comment xml:lang="en">A person's name</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="born">
+        <rdfs:label xml:lang="en">born</rdfs:label>
+        <rdfs:comment xml:lang="en">A person's date of birth</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="title">
+        <rdfs:label xml:lang="en">title</rdfs:label>
+        <rdfs:comment xml:lang="en">The title of a film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Movie" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="released">
+        <rdfs:label xml:lang="en">released</rdfs:label>
+        <rdfs:comment xml:lang="en">A film's release date</rdfs:comment>
+        <rdfs:domain rdf:resource="#Movie" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="tagline">
+        <rdfs:label xml:lang="en">tagline</rdfs:label>
+        <rdfs:comment xml:lang="en">Tagline for a film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Movie" />
+    </owl:DatatypeProperty>
+
+    <owl:ObjectProperty rdf:ID="ACTED_IN">
+        <rdfs:label xml:lang="en">ACTED_IN</rdfs:label>
+        <rdfs:comment xml:lang="en">Actor had a role in film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Movie" />
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:ID="DIRECTED">
+        <rdfs:label xml:lang="en">DIRECTED</rdfs:label>
+        <rdfs:comment xml:lang="en">Director directed film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Movie" />
+        <!-- i know the following does not make sense, it's just for the tests -->
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#SymmetricProperty" />
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:ID="PRODUCED">
+        <rdfs:label xml:lang="en">PRODUCED</rdfs:label>
+        <rdfs:comment xml:lang="en">Producer produced film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Movie" />
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:ID="REVIEWED">
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#InverseFunctionalProperty" />
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#FunctionalProperty" />
+        <rdfs:label xml:lang="en">REVIEWED</rdfs:label>
+        <rdfs:comment xml:lang="en">Critic reviewed film</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Movie" />
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:ID="FOLLOWS">
+        <rdfs:label xml:lang="en">FOLLOWS</rdfs:label>
+        <rdfs:comment xml:lang="en">Critic follows another critic</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Person" />
+        <rdf:type rdf:resource="http://www.w3.org/2002/07/owl#TransitiveProperty" />
+    </owl:ObjectProperty>
+
+    <owl:ObjectProperty rdf:ID="WROTE">
+        <rdfs:label xml:lang="en">WROTE</rdfs:label>
+        <rdfs:comment xml:lang="en">Screenwriter wrote screenplay of</rdfs:comment>
+        <rdfs:domain rdf:resource="#Person" />
+        <rdfs:range  rdf:resource="#Movie" />
+    </owl:ObjectProperty>
+
+    <!-- Properties on properties is not alowed in RDFS
+    <owl:DatatypeProperty rdf:ID="roles">
+        <rdfs:label xml:lang="en">roles</rdfs:label>
+        <rdfs:comment xml:lang="en">characters played by an actor in a movie</rdfs:comment>
+        <rdfs:domain rdf:resource="#ACTED_IN" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="summary">
+        <rdfs:label xml:lang="en">summary</rdfs:label>
+        <rdfs:comment xml:lang="en">characters played by an actor in a movie</rdfs:comment>
+        <rdfs:domain rdf:resource="#REVIEWED" />
+    </owl:DatatypeProperty>
+
+    <owl:DatatypeProperty rdf:ID="rating">
+        <rdfs:label xml:lang="en">rating</rdfs:label>
+        <rdfs:comment xml:lang="en">Film rating (0 to 100)</rdfs:comment>
+        <rdfs:domain rdf:resource="#REVIEWED" />
+    </owl:DatatypeProperty>
+    -->
+
+</rdf:RDF>
