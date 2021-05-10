@@ -29,7 +29,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
-import static n10s.graphconfig.Params.BASE_SCH_NS;
 
 public class SkosImporter extends RDFToLPGStatementProcessor {
 
@@ -113,7 +112,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
         .contains(st.getPredicate().stringValue())) {
       if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(SKOS.CONCEPT)) && st
           .getSubject() instanceof IRI) {
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
       } else if ((st.getPredicate().equals(SKOS.BROADER) || st.getPredicate().equals(SKOS.RELATED))
           && st.getObject() instanceof IRI && st
@@ -130,7 +129,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
           (st.getPredicate().equals(SKOS.PREF_LABEL) || st.getPredicate().equals(SKOS.ALT_LABEL) ||
               st.getPredicate().equals(SKOS.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //we also instantiate when we get a label property
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
         setProp(st.getSubject().stringValue(), st.getPredicate(), (Literal) st.getObject());
       } else if (
@@ -138,7 +137,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
               ||
               st.getPredicate().equals(SKOSXL.HIDDEN_LABEL)) && st.getSubject() instanceof IRI) {
         //instantiate when we get a label property
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
         //set the indirect reference
         setIndirectPropFirstLeg(st.getSubject().stringValue(), st.getPredicate(),
@@ -165,7 +164,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
     setLabel(iri.stringValue(), handleIRI(label, LABEL));
 
     resourceProps.get(iri.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri.getLocalName());
 
     mappedTripleCounter++;
   }
@@ -173,10 +172,10 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
   private void instantiatePair(String label1, IRI iri1, String label2, IRI iri2) {
     setLabel(iri1.stringValue(), label1);
     resourceProps.get(iri1.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri1.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri1.getLocalName());
     setLabel(iri2.stringValue(), label2);
     resourceProps.get(iri2.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri2.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri2.getLocalName());
     mappedTripleCounter++;
   }
 
@@ -327,12 +326,12 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   private IRI translateRelName(IRI iri) {
     if (iri.equals(SKOS.BROADER)) {
-      return vf.createIRI(BASE_SCH_NS,parserConfig.getGraphConf().getSubClassOfRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(),parserConfig.getGraphConf().getSubClassOfRelName());
     } else if (iri.equals(SKOS.RELATED)) {
-      return vf.createIRI(BASE_SCH_NS,parserConfig.getGraphConf().getRelatedConceptRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(),parserConfig.getGraphConf().getRelatedConceptRelName());
     } else {
       //Not valid. Should not happen.
-      return vf.createIRI(BASE_SCH_NS,"REL");
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(),"REL");
     }
   }
 
