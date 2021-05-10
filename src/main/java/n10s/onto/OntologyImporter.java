@@ -32,7 +32,6 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
-import static n10s.graphconfig.Params.BASE_SCH_NS;
 
 public class OntologyImporter extends RDFToLPGStatementProcessor {
 
@@ -114,15 +113,15 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
         .contains(st.getPredicate().stringValue())) {
       if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDFS.CLASS) || st.getObject()
           .equals(OWL.CLASS)) && st.getSubject() instanceof IRI) {
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getClassLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDF.TYPE) && (st.getObject().equals(RDF.PROPERTY) || st
           .getObject().equals(OWL.OBJECTPROPERTY)) && st.getSubject() instanceof IRI) {
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getObjectPropertyLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getObjectPropertyLabelName()),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDF.TYPE) && st.getObject().equals(OWL.DATATYPEPROPERTY)
           && st.getSubject() instanceof IRI) {
-        instantiate(vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getDataTypePropertyLabelName()),
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getDataTypePropertyLabelName()),
             (IRI) st.getSubject());
       } else if (st.getPredicate().equals(RDFS.SUBCLASSOF) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
@@ -142,7 +141,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
         addStatement(st);
       } else if (ANNOTATION_PROPERTIES_TO_IMPORT.contains(st.getPredicate())
           && st.getSubject() instanceof IRI) {
-        setProp(st.getSubject().stringValue(), vf.createIRI(BASE_SCH_NS, st.getPredicate().getLocalName()),
+        setProp(st.getSubject().stringValue(), vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), st.getPredicate().getLocalName()),
                 (Literal) st.getObject());
         mappedTripleCounter++;
       }
@@ -160,17 +159,17 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
   private void instantiate(IRI label, IRI iri) {
     setLabel(iri.stringValue(), handleIRI(label, LABEL));
     resourceProps.get(iri.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri.getLocalName());
     mappedTripleCounter++;
   }
 
   private void instantiatePair(String label1, IRI iri1, String label2, IRI iri2) {
     setLabel(iri1.stringValue(), label1);
     resourceProps.get(iri1.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri1.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri1.getLocalName());
     setLabel(iri2.stringValue(), label2);
     resourceProps.get(iri2.stringValue()).put(handleIRI(
-            vf.createIRI(BASE_SCH_NS, "name"),PROPERTY), iri2.getLocalName());
+            vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "name"),PROPERTY), iri2.getLocalName());
     mappedTripleCounter++;
   }
 
@@ -292,16 +291,16 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   protected IRI translateRelName(IRI iri) {
     if (iri.equals(RDFS.SUBCLASSOF)) {
-      return vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getSubClassOfRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getSubClassOfRelName());
     } else if (iri.equals(RDFS.SUBPROPERTYOF)) {
-      return vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getSubPropertyOfRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getSubPropertyOfRelName());
     } else if (iri.equals(RDFS.DOMAIN)) {
-      return vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getDomainRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getDomainRelName());
     } else if (iri.equals(RDFS.RANGE)) {
-      return vf.createIRI(BASE_SCH_NS, parserConfig.getGraphConf().getRangeRelName());
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getRangeRelName());
     } else {
       //Not valid
-      return vf.createIRI(BASE_SCH_NS, "REL");
+      return vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), "REL");
     }
   }
 

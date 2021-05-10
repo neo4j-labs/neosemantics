@@ -1,11 +1,11 @@
 package n10s;
 
 import static n10s.graphconfig.Params.BASE_INDIV_NS;
-import static n10s.graphconfig.Params.BASE_SCH_NS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
+import static org.junit.Assert.*;
 
 
+import n10s.endpoint.RDFEndpointTest;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
@@ -27,8 +27,11 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.driver.Record;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class RDFExportTest {
@@ -58,13 +61,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(BASE_SCH_NS + "a"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
@@ -107,19 +110,16 @@ public class RDFExportTest {
 
       Session session = driver.session();
 
-      session.run("CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
-
-      String export_as_nt = getNTriplesGraphFromSPOPattern(session, null, "neo4j://graph.schema#a", "1", true, "http://www.w3.org/2001/XMLSchema#long", null);
-
-      System.out.println(">> \n" + export_as_nt);
-
+      Transaction tx = session.beginTransaction();
+      tx.run(Files.readString(Paths.get(
+              RDFEndpointTest.class.getClassLoader().getResource("movies.cypher").getPath())));
+      tx.run("MERGE (pb:Person {name:'Paul Blythe'}) SET pb:Critic ");
+      tx.run( "MERGE (as:Person {name:'Angela Scope'}) SET as:Critic " );
+      tx.run( "MERGE (jt:Person {name:'Jessica Thompson'}) SET jt:Critic " );
+      tx.run("MERGE (jt2:Person {name:'James Thompson'}) SET jt2:Critic ");
+      tx.commit();
     }
-//    catch(Exception e){
-//      assertEquals("Failed to invoke procedure `n10s.rdf.export.spo`: Caused by: " +
-//              "java.lang.UnsupportedOperationException: method not currently implemented for non-RDF graphs", e.getMessage());
-//    }
-
-
+    allTriplePatternsOnLPG();
   }
 
   @Test
@@ -288,6 +288,247 @@ public class RDFExportTest {
 
     }
   }
+
+  private void allTriplePatternsOnLPG() throws IOException {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+
+      //getting a node's assigned uri
+      long emilId = session
+              .run("MATCH (n:Person) WHERE n.name = \"Emil Eifrem\" RETURN id(n) as id ").next().get("id").asLong();
+
+      long theMatrixId = session
+              .run("MATCH (n:Movie) WHERE n.title = \"The Matrix\" RETURN id(n) as id ").next().get("id").asLong();
+
+      long robReinerId = session
+              .run("MATCH (n:Person) WHERE n.name = \"Rob Reiner\" RETURN id(n) as id ").next().get("id").asLong();
+
+      List<Object> critics = session
+              .run("MATCH (n:Critic) RETURN collect(id(n)) as ids ").next().get("ids").asList();
+
+
+      String expected = null;
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://base/about#nonexistingresource",null, null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://base/about#nonexistingresource",DEFAULT_BASE_SCH_NS + "name", null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://base/about#nonexistingresource",DEFAULT_BASE_SCH_NS + "name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@type\" : \"n4sch:Person\",\n" +
+              "  \"n4sch:ACTED_IN\" : {\n" +
+              "    \"@id\" : \"n4ind:0\"\n" +
+              "  },\n" +
+              "  \"n4sch:born\" : {\n" +
+              "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+              "    \"@value\" : \"1978\"\n" +
+              "  },\n" +
+              "  \"n4sch:name\" : \"Emil Eifrem\",\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,null, null, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"n4sch:name\" : \"Emil Eifrem\",\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@type\" : \"n4sch:Person\",\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"n4sch:name\" : \"Emil Eifrem\",\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "name", "Emil Eifrem", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "name",  "Manuela", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@type\" : \"n4sch:Person\",\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId, "http://www.w3.org/1999/02/22-rdf-syntax-ns#type", DEFAULT_BASE_SCH_NS + "Person", false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "title", "The Matrix", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,"http://undefinedvoc.org/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "ACTED_IN", BASE_INDIV_NS + emilId, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "<" + BASE_INDIV_NS + emilId + ">  <neo4j://graph.schema#ACTED_IN> " + "<" + BASE_INDIV_NS + theMatrixId + "> .";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "ACTED_IN", null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "ACTED_IN", BASE_INDIV_NS + theMatrixId, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://undefinedvoc.org/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      String titleTriples = "<neo4j://graph.individuals#0> <neo4j://graph.schema#title> \"The Matrix\" .\n" +
+              "<neo4j://graph.individuals#9> <neo4j://graph.schema#title> \"The Matrix Reloaded\" .\n" +
+              "<neo4j://graph.individuals#10> <neo4j://graph.schema#title> \"The Matrix Revolutions\" .\n" +
+              "<neo4j://graph.individuals#11> <neo4j://graph.schema#title> \"The Devil's Advocate\" .\n" +
+              "<neo4j://graph.individuals#15> <neo4j://graph.schema#title> \"A Few Good Men\" .\n" +
+              "<neo4j://graph.individuals#29> <neo4j://graph.schema#title> \"Top Gun\" .\n" +
+              "<neo4j://graph.individuals#37> <neo4j://graph.schema#title> \"Jerry Maguire\" .\n" +
+              "<neo4j://graph.individuals#46> <neo4j://graph.schema#title> \"Stand By Me\" .\n" +
+              "<neo4j://graph.individuals#52> <neo4j://graph.schema#title> \"As Good as It Gets\" .\n" +
+              "<neo4j://graph.individuals#56> <neo4j://graph.schema#title> \"What Dreams May Come\" .\n" +
+              "<neo4j://graph.individuals#62> <neo4j://graph.schema#title> \"Snow Falling on Cedars\" .\n" +
+              "<neo4j://graph.individuals#67> <neo4j://graph.schema#title> \"You've Got Mail\" .\n" +
+              "<neo4j://graph.individuals#73> <neo4j://graph.schema#title> \"Sleepless in Seattle\" .\n" +
+              "<neo4j://graph.individuals#78> <neo4j://graph.schema#title> \"Joe Versus the Volcano\" .\n" +
+              "<neo4j://graph.individuals#81> <neo4j://graph.schema#title> \"When Harry Met Sally\" .\n" +
+              "<neo4j://graph.individuals#85> <neo4j://graph.schema#title> \"That Thing You Do\" .\n" +
+              "<neo4j://graph.individuals#87> <neo4j://graph.schema#title> \"The Replacements\" .\n" +
+              "<neo4j://graph.individuals#92> <neo4j://graph.schema#title> \"RescueDawn\" .\n" +
+              "<neo4j://graph.individuals#95> <neo4j://graph.schema#title> \"The Birdcage\" .\n" +
+              "<neo4j://graph.individuals#97> <neo4j://graph.schema#title> \"Unforgiven\" .\n" +
+              "<neo4j://graph.individuals#100> <neo4j://graph.schema#title> \"Johnny Mnemonic\" .\n" +
+              "<neo4j://graph.individuals#105> <neo4j://graph.schema#title> \"Cloud Atlas\" .\n" +
+              "<neo4j://graph.individuals#111> <neo4j://graph.schema#title> \"The Da Vinci Code\" .\n" +
+              "<neo4j://graph.individuals#116> <neo4j://graph.schema#title> \"V for Vendetta\" .\n" +
+              "<neo4j://graph.individuals#121> <neo4j://graph.schema#title> \"Speed Racer\" .\n" +
+              "<neo4j://graph.individuals#128> <neo4j://graph.schema#title> \"Ninja Assassin\" .\n" +
+              "<neo4j://graph.individuals#130> <neo4j://graph.schema#title> \"The Green Mile\" .\n" +
+              "<neo4j://graph.individuals#137> <neo4j://graph.schema#title> \"Frost/Nixon\" .\n" +
+              "<neo4j://graph.individuals#141> <neo4j://graph.schema#title> \"Hoffa\" .\n" +
+              "<neo4j://graph.individuals#144> <neo4j://graph.schema#title> \"Apollo 13\" .\n" +
+              "<neo4j://graph.individuals#147> <neo4j://graph.schema#title> \"Twister\" .\n" +
+              "<neo4j://graph.individuals#150> <neo4j://graph.schema#title> \"Cast Away\" .\n" +
+              "<neo4j://graph.individuals#152> <neo4j://graph.schema#title> \"One Flew Over the Cuckoo's Nest\" .\n" +
+              "<neo4j://graph.individuals#154> <neo4j://graph.schema#title> \"Something's Gotta Give\" .\n" +
+              "<neo4j://graph.individuals#157> <neo4j://graph.schema#title> \"Bicentennial Man\" .\n" +
+              "<neo4j://graph.individuals#159> <neo4j://graph.schema#title> \"Charlie Wilson's War\" .\n" +
+              "<neo4j://graph.individuals#161> <neo4j://graph.schema#title> \"The Polar Express\" .\n" +
+              "<neo4j://graph.individuals#162> <neo4j://graph.schema#title> \"A League of Their Own\" .";
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(titleTriples, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "title", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "<" + BASE_INDIV_NS + theMatrixId + "> <" + DEFAULT_BASE_SCH_NS + "title> \"The Matrix\" .";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "title", "The Matrix", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,null, "The Matrix", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      expected = "<" + BASE_INDIV_NS + robReinerId + "> <" + DEFAULT_BASE_SCH_NS + "name> \"Rob Reiner\"^^<http://www.w3.org/2001/XMLSchema#string> .";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,null, "Rob Reiner", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      StringBuilder criticTypesTriples  = new StringBuilder();
+      critics.forEach(id->
+        { criticTypesTriples.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Critic> .\n");
+          criticTypesTriples.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Person> .\n");} );
+
+      String someMovies = "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#9> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#10> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#11> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#15> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#29> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#37> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#46> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
+              "<neo4j://graph.individuals#52> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" ;
+
+      assertTrue(ModelTestUtils
+              .modelContains(getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, false, null, null), RDFFormat.NTRIPLES,
+              criticTypesTriples.toString() + someMovies, RDFFormat.NTRIPLES));
+
+      StringBuilder criticTypesTriples2  = new StringBuilder();
+      critics.forEach(id-> criticTypesTriples2.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Critic> .\n") );
+
+      assertTrue(ModelTestUtils
+              .compareModels(criticTypesTriples2.toString(), RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", DEFAULT_BASE_SCH_NS +  "Critic", false, null, null), RDFFormat.NTRIPLES));
+
+      String allGraphAsNTriples = getNTriplesGraphFromSPOPattern(session, null, null, null, false, null, null);
+      assertTrue(ModelTestUtils.modelContains(allGraphAsNTriples, RDFFormat.NTRIPLES,
+                      criticTypesTriples.toString() + someMovies + titleTriples, RDFFormat.NTRIPLES ));
+
+      assertFalse(ModelTestUtils.modelContains(allGraphAsNTriples, RDFFormat.NTRIPLES,
+              "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#AwesomeMovie> ." , RDFFormat.NTRIPLES ));
+
+    }
+  }
+
 
   private void allTriplePatterns( int mode) throws IOException {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),

@@ -2,7 +2,7 @@ package n10s.endpoint;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
-import static n10s.graphconfig.Params.BASE_INDIV_NS;
+import static n10s.graphconfig.Params.*;
 import static n10s.mapping.MappingUtils.*;
 
 import java.io.IOException;
@@ -107,7 +107,8 @@ public class RDFEndpoint {
         if ( gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
                 || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
           getPrefixesFromMappingDefinitions(neo4j).forEach( (pref,ns) -> writer.handleNamespace(pref,ns));
-          writer.handleNamespace(gc.getBaseSchemaNamespacePrefix(), gc.getBaseSchemaNamespace());
+          writer.handleNamespace((gc!=null?gc.getBaseSchemaNamespacePrefix():DEFAULT_BASE_SCH_PREFIX),
+                  (gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS));
           if (gc == null) {
             // needed to serialise nodes without uri -> base + nodeid
             writer.handleNamespace("n4ind", BASE_INDIV_NS);
@@ -179,7 +180,8 @@ public class RDFEndpoint {
         if ( gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
                 || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
           getPrefixesFromMappingDefinitions(neo4j).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
-          writer.handleNamespace(gc.getBaseSchemaNamespacePrefix(), gc.getBaseSchemaNamespace());
+          writer.handleNamespace((gc!=null?gc.getBaseSchemaNamespacePrefix():DEFAULT_BASE_SCH_PREFIX),
+                  (gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS));
           if (gc == null) {
             // needed to serialise nodes without uri -> base + nodeid
             writer.handleNamespace("n4ind", BASE_INDIV_NS);
@@ -225,7 +227,8 @@ public class RDFEndpoint {
         if (gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
             || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
           getPrefixesFromMappingDefinitions(neo4j).forEach((pref, ns) -> writer.handleNamespace(pref, ns));
-          writer.handleNamespace(gc.getBaseSchemaNamespacePrefix(), gc.getBaseSchemaNamespace());
+          writer.handleNamespace((gc!=null?gc.getBaseSchemaNamespacePrefix():DEFAULT_BASE_SCH_PREFIX),
+                  (gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS));
           if (gc == null) {
             // needed to serialise nodes without uri -> base + nodeid
             writer.handleNamespace("n4ind", BASE_INDIV_NS);

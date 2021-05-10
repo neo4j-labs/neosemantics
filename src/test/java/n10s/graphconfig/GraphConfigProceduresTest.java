@@ -59,6 +59,16 @@ public class GraphConfigProceduresTest {
       assertEquals(true, results.hasNext());
       assertEquals("Class", results.next().get("value").asString());
 
+      results = session.run("CALL n10s.graphconfig.init( { baseSchemaNamespace: 'http://base#' }) yield param, value "
+              + " with param, value where param = 'baseSchemaNamespace' return param, value ");
+      assertEquals(true, results.hasNext());
+      assertEquals("http://base#", results.next().get("value").asString());
+
+      results = session.run("CALL n10s.graphconfig.show() yield param, value "
+              + " with param, value where param = 'baseSchemaNamespace' return param, value ");
+      assertEquals(true, results.hasNext());
+      assertEquals("http://base#", results.next().get("value").asString());
+
     }
   }
 

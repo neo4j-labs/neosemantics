@@ -390,12 +390,22 @@ public class GraphConfig {
   }
 
   public String getBaseSchemaNamespace() {
-    return baseSchemaNamespace;
+    if (baseSchemaNamespacePrefix != null) {
+      return baseSchemaNamespace;
+    } else {
+      return DEFAULT_BASE_SCH_NS;
+    }
   }
 
   public String getBaseSchemaNamespacePrefix() {
-    return baseSchemaNamespacePrefix;
+
+    if(baseSchemaNamespacePrefix!= null) {
+      return baseSchemaNamespacePrefix;
+    } else {
+      return DEFAULT_BASE_SCH_PREFIX;
+    }
   }
+
   public String getClassLabelName() {
     return classLabelName;
   }

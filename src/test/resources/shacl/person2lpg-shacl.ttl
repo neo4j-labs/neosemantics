@@ -1,0 +1,42 @@
+@prefix ex: <http://example/> .
+@prefix neo4j: <neo4j://graph.schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:PersonShape
+	a sh:NodeShape ;
+	sh:targetClass neo4j:Person ;    # Applies to all Person nodes in Neo4j
+	sh:property [
+		sh:path neo4j:name ;           # constrains the values of neo4j:name
+		sh:maxCount 1 ;                # cardinality
+		sh:datatype xsd:string ;       # data type
+		sh:pattern "^\w[\s\w\.]*$" ;   # string data format
+	] ;
+	sh:property [
+		sh:path neo4j:ACTED_IN ;       # constrains the values of neo4j:ACTED_IN
+		sh:class neo4j:Movie ;         # range
+		sh:nodeKind sh:IRI ;           # type of property
+		sh:severity sh:Warning ;
+	] ;
+	sh:closed true ;
+	sh:ignoredProperties ( neo4j:born neo4j:DIRECTED neo4j:FOLLOWS neo4j:REVIEWED neo4j:PRODUCED neo4j:WROTE ) .
+
+
+neo4j:Movie
+	a sh:NodeShape , rdfs:Class;
+	sh:property [
+		sh:path neo4j:title ;           # constrains the values of neo4j:title
+		sh:maxCount 1 ;                 # cardinality
+		sh:datatype xsd:string ;        # data type
+		sh:minLength 10 ;               # string length
+		sh:maxLength 20 ;               # string length
+	] ;
+	sh:property [
+		sh:path neo4j:released ;        # constrains the values of neo4j:title
+		sh:datatype xsd:integer ;       # data type
+		sh:nodeKind sh:Literal ;        # type of property
+        sh:minInclusive 2000 ;      # numeric range
+        sh:maxInclusive 2019 ;      # numeric range
+	] ;
+	sh:closed true ;
+	sh:ignoredProperties ( neo4j:tagline ) .
+

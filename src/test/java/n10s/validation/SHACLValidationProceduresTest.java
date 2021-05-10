@@ -82,45 +82,45 @@ public class SHACLValidationProceduresTest {
       loadDataResults.hasNext();
 
       String SHACL_SNIPPET = "@prefix ex: <http://example/> .\n"
-          + "@prefix neo4j: <neo4j://voc#> .\n"
-          + "@prefix sh: <http://www.w3.org/ns/shacl#> .\n"
-          + "\n"
-          + "ex:PersonShape\n"
-          + "\ta sh:NodeShape ;\n"
-          + "\tsh:targetClass neo4j:Person ;    # Applies to all Person nodes in Neo4j\n"
-          + "\tsh:property [\n"
-          + "\t\tsh:path neo4j:name ;           # constrains the values of neo4j:name\n"
-          + "\t\tsh:maxCount 1 ;                # cardinality\n"
-          + "\t\tsh:datatype xsd:string ;       # data type\n"
-          + "\t] ;\n"
-          + "\tsh:property [\n"
-          + "\t\tsh:path neo4j:ACTED_IN ;       # constrains the values of neo4j:ACTED_IN\n"
-          + "\t\tsh:class neo4j:Movie ;         # range\n"
-          + "\t\tsh:nodeKind sh:IRI ;           # type of property\n"
-          + "\t\tsh:severity sh:Warning ;\n"
-          + "\t] ;\n"
-          + "\tsh:closed true ;\n"
-          + "\tsh:ignoredProperties ( neo4j:born neo4j:DIRECTED neo4j:FOLLOWS neo4j:REVIEWED neo4j:PRODUCED neo4j:WROTE ) .\n"
-          + "\n"
-          + "\n"
-          + "neo4j:Movie\n"
-          + "\ta sh:NodeShape , rdfs:Class;\n"
-          + "\tsh:property [\n"
-          + "\t\tsh:path neo4j:title ;           # constrains the values of neo4j:title\n"
-          + "\t\tsh:maxCount 1 ;                 # cardinality\n"
-          + "\t\tsh:datatype xsd:string ;        # data type\n"
-          + "\t\tsh:minLength 10 ;               # string length\n"
-          + "\t\tsh:maxLength 18 ;               # string length\n"
-          + "\t] ;\n"
-          + "\tsh:property [\n"
-          + "\t\tsh:path neo4j:released ;        # constrains the values of neo4j:title\n"
-          + "\t\tsh:datatype xsd:integer ;       # data type\n"
-          + "\t\tsh:nodeKind sh:Literal ;        # type of property\n"
-          + "        sh:minInclusive 2000 ;      # numeric range\n"
-          + "        sh:maxInclusive 2019 ;      # numeric range\n"
-          + "\t] ;\n"
-          + "\tsh:closed true ;\n"
-          + "\tsh:ignoredProperties ( neo4j:tagline ) .";
+              + "@prefix n4sch: <neo4j://graph.schema#> .\n"
+              + "@prefix sh: <http://www.w3.org/ns/shacl#> .\n"
+              + "\n"
+              + "ex:PersonShape\n"
+              + "\ta sh:NodeShape ;\n"
+              + "\tsh:targetClass n4sch:Person ;    # Applies to all Person nodes in Neo4j\n"
+              + "\tsh:property [\n"
+              + "\t\tsh:path n4sch:name ;           # constrains the values of n4sch:name\n"
+              + "\t\tsh:maxCount 1 ;                # cardinality\n"
+              + "\t\tsh:datatype xsd:string ;       # data type\n"
+              + "\t] ;\n"
+              + "\tsh:property [\n"
+              + "\t\tsh:path n4sch:ACTED_IN ;       # constrains the values of n4sch:ACTED_IN\n"
+              + "\t\tsh:class n4sch:Movie ;         # range\n"
+              + "\t\tsh:nodeKind sh:IRI ;           # type of property\n"
+              + "\t\tsh:severity sh:Warning ;\n"
+              + "\t] ;\n"
+              + "\tsh:closed true ;\n"
+              + "\tsh:ignoredProperties ( n4sch:born n4sch:DIRECTED n4sch:FOLLOWS n4sch:REVIEWED n4sch:PRODUCED n4sch:WROTE ) .\n"
+              + "\n"
+              + "\n"
+              + "n4sch:Movie\n"
+              + "\ta sh:NodeShape , rdfs:Class;\n"
+              + "\tsh:property [\n"
+              + "\t\tsh:path n4sch:title ;           # constrains the values of n4sch:title\n"
+              + "\t\tsh:maxCount 1 ;                 # cardinality\n"
+              + "\t\tsh:datatype xsd:string ;        # data type\n"
+              + "\t\tsh:minLength 10 ;               # string length\n"
+              + "\t\tsh:maxLength 18 ;               # string length\n"
+              + "\t] ;\n"
+              + "\tsh:property [\n"
+              + "\t\tsh:path n4sch:released ;        # constrains the values of n4sch:title\n"
+              + "\t\tsh:datatype xsd:integer ;       # data type\n"
+              + "\t\tsh:nodeKind sh:Literal ;        # type of property\n"
+              + "        sh:minInclusive 2000 ;      # numeric range\n"
+              + "        sh:maxInclusive 2019 ;      # numeric range\n"
+              + "\t] ;\n"
+              + "\tsh:closed true ;\n"
+              + "\tsh:ignoredProperties ( n4sch:tagline ) .";
 
       Result results = session
           .run(
@@ -274,7 +274,7 @@ public class SHACLValidationProceduresTest {
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
-          .getResource("shacl/person2-shacl.ttl")
+          .getResource("shacl/person2lpg-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
       Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
@@ -311,7 +311,7 @@ public class SHACLValidationProceduresTest {
       session.run("call n10s.validation.shacl.import.inline('\n" +
               "\n" +
               "@prefix dtc: <http://ttt/#> .\n" +
-              "@prefix vs: <http:/ttt/vs#>.\n" +
+              "@prefix vs: <neo4j://graph.schema#>.\n" +
               "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
               "\n" +
               "dtc:ObjectShape\n" +
@@ -410,7 +410,7 @@ public class SHACLValidationProceduresTest {
       Result result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
-              .getResource("shacl/person2-shacl.ttl")
+              .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
       int matches = 0;
@@ -492,7 +492,7 @@ public class SHACLValidationProceduresTest {
       result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
-              .getResource("shacl/person2-shacl.ttl")
+              .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
       matches = 0;
@@ -579,7 +579,7 @@ public class SHACLValidationProceduresTest {
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
-          .getResource("shacl/person2-shacl.ttl")
+          .getResource("shacl/person2lpg-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
 
       Result shapesResults = session.run("CALL n10s.validation.shacl.listShapes() ");
@@ -727,7 +727,7 @@ public class SHACLValidationProceduresTest {
       Result loadShapesResult = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
-              .getResource("shacl/person2-shacl.ttl")
+              .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
       Result validationResults = session.run("MATCH (p:Person) WITH collect(p) as nodes "
