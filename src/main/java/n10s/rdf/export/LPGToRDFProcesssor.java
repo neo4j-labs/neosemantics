@@ -355,7 +355,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                           exportMappings.containsKey(predicate) ? vf
                                   .createIRI(exportMappings.get(predicate))
                                   : vf.createIRI(BASE_SCH_NS, predicate),
-                          objectThing instanceof Node ? getResourceUri((Node) objectThing) : vf.createLiteral(objectThing.toString())));
+                          objectThing instanceof Node ? getResourceUri((Node) objectThing) : createTypedLiteral(objectThing)));
                   //TODO: this tostring is wrong. Check how it's done in processnode()
                 }
               }

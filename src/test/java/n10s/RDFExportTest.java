@@ -385,6 +385,25 @@ public class RDFExportTest {
               .compareModels(expected, RDFFormat.JSONLD,
                       getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "name", "Emil Eifrem", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"n4sch:born\" : {\n" +
+              "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+              "    \"@value\" : \"1978\"\n" +
+              "  },\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "born", "1978", true, "http://www.w3.org/2001/XMLSchema#long", null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "born", null, true, null, null), RDFFormat.NTRIPLES));
 
       assertTrue(ModelTestUtils
               .compareModels("{}", RDFFormat.JSONLD,
@@ -431,6 +450,8 @@ public class RDFExportTest {
                       getNTriplesGraphFromSPOPattern(session,null,"http://undefinedvoc.org/name", null, false, null, null), RDFFormat.NTRIPLES));
 
 
+      // if we hardcode the ids here what's the point of getting them at the beginning for Emil, Renier and The Matrix?
+      //TODO: do this right
       String titleTriples = "<neo4j://graph.individuals#0> <neo4j://graph.schema#title> \"The Matrix\" .\n" +
               "<neo4j://graph.individuals#9> <neo4j://graph.schema#title> \"The Matrix Reloaded\" .\n" +
               "<neo4j://graph.individuals#10> <neo4j://graph.schema#title> \"The Matrix Revolutions\" .\n" +
@@ -474,6 +495,22 @@ public class RDFExportTest {
       assertTrue(ModelTestUtils
               .compareModels(titleTriples, RDFFormat.NTRIPLES,
                       getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "title", null, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"n4sch:born\" : {\n" +
+              "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+              "    \"@value\" : \"1978\"\n" +
+              "  },\n" +
+              "  \"@context\" : {\n" +
+              "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
+              "    \"n4ind\" : \"neo4j://graph.individuals#\"\n" +
+              "  }\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .modelContains(getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "born", null, false, null, null), RDFFormat.NTRIPLES,
+                      expected, RDFFormat.JSONLD));
 
 
       expected = "<" + BASE_INDIV_NS + theMatrixId + "> <" + DEFAULT_BASE_SCH_NS + "title> \"The Matrix\" .";
