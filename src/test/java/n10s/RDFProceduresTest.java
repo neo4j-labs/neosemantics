@@ -760,6 +760,38 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportSKOSFetchWithParamsCustomSchemaNs() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ baseSchemaNamespace: 'http://baseschema.mine/voc1#' , " +
+                      "baseSchemaPrefix: 'basev' }");
+
+      Result importResults
+              = session.run("CALL n10s.skos.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("unesco-thesaurus.ttl").toURI()
+              + "','Turtle',{   commitSize: 100, languageFilter: 'fr' })"); //
+
+      assertEquals(57185L, importResults
+              .single().get("triplesLoaded").asLong());
+      Result queryResults = session.run(
+              "MATCH (n:basev__Class  { uri: 'http://vocabularies.unesco.org/thesaurus/concept10928'}) "
+                      + "RETURN labels(n) AS labels, properties(n) as props limit 1");
+      assertTrue(queryResults.hasNext());
+      Record result = queryResults.next();
+      List<Object> labels = result.get("labels").asList();
+      assertTrue(labels.contains("Resource"));
+      assertTrue(labels.contains("basev__Class"));
+      assertEquals(2, labels.size());
+      Map<String, Object> props = result.get("props").asMap();
+      assertEquals("concept10928", props.get("basev__name"));
+      assertEquals("Industrie alimentaire", props.get("skos__prefLabel"));
+      assertFalse(queryResults.hasNext());
+    }
+  }
+
+  @Test
   public void testImportRDFStar () throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -3644,7 +3676,7 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{ baseSchemaNamespace : 'http://basenamespace#' }");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
@@ -3704,7 +3736,8 @@ public class RDFProceduresTest {
         Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-          " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop'}");
+          " { classLabel : 'Category', objectPropertyLabel: 'Rel', " +
+                  "dataTypePropertyLabel: 'Prop', baseSchemaNamespace: 'http://base.org/voc#'}");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
@@ -4008,7 +4041,7 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
+      initialiseGraphDB(neo4j.defaultDatabaseService(), " { baseSchemaPrefix : 'basevoc' }");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
@@ -4016,7 +4049,7 @@ public class RDFProceduresTest {
           "','RDF/XML')");
 
       assertEquals(1L,
-          session.run("MATCH p=(:n4sch__Property { n4sch__name:'prop1'})-[:n4sch__SPO]->(:n4sch__Property{ n4sch__name:'superprop'})" +
+          session.run("MATCH p=(:basevoc__Property { basevoc__name:'prop1'})-[:basevoc__SPO]->(:basevoc__Property{ basevoc__name:'superprop'})" +
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
     }

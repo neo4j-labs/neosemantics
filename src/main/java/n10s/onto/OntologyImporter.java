@@ -32,6 +32,7 @@ import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
 
 public class OntologyImporter extends RDFToLPGStatementProcessor {
 
@@ -79,6 +80,20 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
 
     mappedTripleCounter = 0;
 
+  }
+
+  @Override
+  public void startRDF() throws RDFHandlerException{
+    super.startRDF();
+    //Loading an onto, using the default namespaces/prefixes when shortening
+    if(parserConfig.getGraphConf().getHandleVocabUris()== GRAPHCONF_VOC_URI_SHORTEN ||
+            parserConfig.getGraphConf().getHandleVocabUris()== GRAPHCONF_VOC_URI_SHORTEN_STRICT) {
+      namespaces.add(parserConfig.getGraphConf().getBaseSchemaNamespacePrefix(),
+              parserConfig.getGraphConf().getBaseSchemaNamespace());
+      log.debug(
+              "Added schema ns and prefix " + parserConfig.getGraphConf().getBaseSchemaNamespacePrefix() +
+              ": " + parserConfig.getGraphConf().getBaseSchemaNamespace());
+    }
   }
 
   @Override

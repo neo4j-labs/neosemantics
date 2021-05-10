@@ -390,7 +390,7 @@ public class GraphConfig {
   }
 
   public String getBaseSchemaNamespace() {
-    if (baseSchemaNamespacePrefix != null) {
+    if (baseSchemaNamespace != null) {
       return baseSchemaNamespace;
     } else {
       return DEFAULT_BASE_SCH_NS;
