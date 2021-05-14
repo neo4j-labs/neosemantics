@@ -9,12 +9,8 @@ import java.util.Map;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.Config;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MappingUtilsTest {
@@ -197,4 +193,26 @@ public class MappingUtilsTest {
     }
   }
 
+  @Test
+  public void testBug12931() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session();) {
+      String step1 = "CALL n10s.nsprefixes.add(\"a\",\"neo4j://vocs/a/\")";
+      String step2 = "CALL n10s.mapping.add(\"neo4j://vocs/a/something\",\"something\")";
+      String step3 = "CALL n10s.mapping.add(\"neo4j://vocs/a/other\",\"other\")";
+      String step4 = "CALL n10s.mapping.add(\"neo4j://vocs/a/something\",\"somethingElse\")";
+
+      session.run(step1);
+      session.run(step2);
+      session.run(step3);
+      session.run(step4);
+
+      assertEquals(2L,session.run("call n10s.mapping.list() yield schemaElement\n" +
+              "return count(*) as mappingcount").next().get("mappingcount").asLong());
+      assertEquals(1L,session.run("call n10s.nsprefixes.list() yield namespace\n" +
+              "return count(*) as namespacecount").next().get("namespacecount").asLong());
+
+    }
+
+  }
 }

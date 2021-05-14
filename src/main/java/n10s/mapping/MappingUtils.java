@@ -65,8 +65,8 @@ public class MappingUtils {
         + "DETACH DELETE oldmd";
 
     String cleanOrphansIfAny = "MATCH (oldns:`_MapNs`)\n"
-        + "WITH DISTINCT oldns WHERE size((oldns)<-[:_IN]-())=0\n"
-        + "DELETE oldns";
+        + " WHERE size((oldns)<-[:_IN]-())=0\n"
+        + " DELETE oldns";
 
     String createNewMapping = "MERGE (newmns:`_MapNs` { _ns: $namespace, _prefix: $prefix }) \n"
         + "MERGE  (newmd:`_MapDef` { _key: $graphElement, _local: $local})\n"
