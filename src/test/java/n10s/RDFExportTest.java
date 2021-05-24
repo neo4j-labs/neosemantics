@@ -16,6 +16,7 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -46,7 +47,7 @@ public class RDFExportTest {
 
 
   @Test
-  public void testExportFromCypher() throws Exception {
+  public void testExportFromCypherOnLPG() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -76,6 +77,97 @@ public class RDFExportTest {
         resultCount++;
       }
       assertEquals(resultCount,expectedStatememts.size());
+    }
+  }
+
+  @Test
+  public void testExportFromCypherOnLPGWithMappings() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      session
+              .run(
+                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+
+      session.run("call n10s.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
+      session.run("call n10s.nsprefixes.add('myv','http://myvoc.org/testing#')");
+      assertEquals(2L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
+      session.run("call n10s.mapping.add('http://xmlns.com/foaf/0.1/linkedTo','CONNECTED_TO')");
+      session.run("call n10s.mapping.add('http://xmlns.com/foaf/0.1/Thang','Node')");
+      session.run("call n10s.mapping.add('http://myvoc.org/testing#propA','a')");
+      session.run("call n10s.mapping.add('http://myvoc.org/testing#propB','b')");
+      List<Object> mappings = session.run("call n10s.mapping.list() yield schemaNs, schemaElement, elemName\n" +
+              "return collect ({uri: schemaNs + schemaElement, elem: elemName}) as m").next().get("m").asList();
+      assertEquals(4L, mappings.size());
+
+
+      Result res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+      Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propB"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://xmlns.com/foaf/0.1/linkedTo"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(2L))));
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount,expectedStatememts.size());
+    }
+  }
+
+  @Test
+  public void testExportFromCypherOnRDF() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'SHORTEN' } ");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD')");
+      assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
+
+      Result res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+      Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI("http://me.markus-lanthaler.com/"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Individual")),
+              vf.createStatement(vf.createIRI("http://me.markus-lanthaler.com/"), FOAF.NAME, vf.createLiteral("Markus Lanthaler")),
+              vf.createStatement(vf.createIRI("http://me.markus-lanthaler.com/"), FOAF.KNOWS, vf.createIRI("http://manu.sporny.org/about#manu")),
+              vf.createStatement(vf.createIRI("http://manu.sporny.org/about#manu"), RDF.TYPE,vf.createIRI("http://xmlns.com/foaf/0.1/Subject")),
+              vf.createStatement(vf.createIRI("http://manu.sporny.org/about#manu"), FOAF.NAME, vf.createLiteral("Manu Sporny")),
+              vf.createStatement(vf.createIRI("http://manu.sporny.org/about#manu"), RDF.TYPE,vf.createIRI("http://xmlns.com/foaf/0.1/Citizen"))
+              ));
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(returnedStatement.getSubject().stringValue().startsWith("bnode://") ||
+                returnedStatement.getObject().stringValue().startsWith("bnode://")  ||
+                expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(9,resultCount);
     }
   }
 

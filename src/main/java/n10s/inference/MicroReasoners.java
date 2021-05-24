@@ -36,6 +36,7 @@ public class MicroReasoners {
       + " WITH collect(label) as labels MATCH path = (c:`%1$s`)<-[:`%3$s`*]-(s:`%1$s`) "
       + " WHERE s.`%2$s` in labels AND NOT (c)-[:`%3$s`]->() AND any(x in nodes (path) "
       + " WHERE x.`%2$s` = $virtLabel ) RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
+
   private static final String subcatPathQuery =
       "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
           + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
@@ -60,7 +61,7 @@ public class MicroReasoners {
    * semantics (cat:Cat { name: 'xyz'})-[:SCO]->(parent:Cat { name: ''}) */
 
   @Procedure(mode = Mode.READ)
-  @Description("semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.")
+  @Description("n10s.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.")
   public Stream<NodeResult> nodesLabelled(@Name("label") String virtLabel,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
     final GraphConfig gc = getGraphConfig();
@@ -103,7 +104,7 @@ public class MicroReasoners {
   /* in this case the node representing the category exist in the graph and is explicitly linked to the instances of the category
    *  hence the use of a node as param */
   @Procedure(mode = Mode.READ)
-  @Description("semantics.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories.")
+  @Description("n10s.inference.nodesInCategory('category') - returns all nodes connected to Node 'catNode' or its subcategories.")
   public Stream<NodeResult> nodesInCategory(@Name("category") Node catNode,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
 
@@ -165,7 +166,7 @@ public class MicroReasoners {
 
   @Procedure(mode = Mode.READ)
   @Description(
-      "semantics.inference.getRels(node,'rel', { relDir: '>'} ) - returns all relationships "
+      "n10s.inference.getRels(node,'rel', { relDir: '>'} ) - returns all relationships "
           + "of type 'rel' or its subtypes along with the target nodes.")
   public Stream<RelAndNodeResult> getRels(@Name("node") Node node, @Name("rel") String virtRel,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
@@ -204,7 +205,7 @@ public class MicroReasoners {
 
   @UserFunction
   @Description(
-      "semantics.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
+      "n10s.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or "
           + "implicitly labeled as 'label'.")
   public boolean hasLabel(
       @Name("node") Node individual,
@@ -248,7 +249,7 @@ public class MicroReasoners {
 
 
   @UserFunction
-  @Description("semantics.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category.")
+  @Description("n10s.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category.")
   public boolean inCategory(
       @Name("node") Node individual, @Name("category") Node category,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
