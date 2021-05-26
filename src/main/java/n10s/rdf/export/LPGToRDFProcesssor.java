@@ -12,6 +12,7 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.neo4j.graphdb.*;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -244,11 +245,36 @@ public class LPGToRDFProcesssor extends ExportProcessor {
           IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
                   vf.createIRI(BASE_SCH_NS, key));
           Object propertyValueObject = allProperties.get(key);
-          if (propertyValueObject instanceof Object[]) {
-            for (Object o : (Object[]) propertyValueObject) {
-              statements.add(vf.createStatement(subject, predicate,
-                      createTypedLiteral(o)));
+          if (propertyValueObject instanceof long[]) {
+            for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
+              Literal object = createTypedLiteral(((long[]) propertyValueObject)[i]);
+              statements.add(
+                      vf.createStatement(subject, predicate, object));
             }
+          } else if (propertyValueObject instanceof double[]) {
+            for (int i = 0; i < ((double[]) propertyValueObject).length; i++) {
+              Literal object = createTypedLiteral(((double[]) propertyValueObject)[i]);
+              statements.add(
+                      vf.createStatement(subject, predicate, object));
+            }
+          } else if (propertyValueObject instanceof boolean[]) {
+            for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
+              Literal object = createTypedLiteral(((boolean[]) propertyValueObject)[i]);
+              statements.add(
+                      vf.createStatement(subject, predicate, object));
+            }
+          } else if (propertyValueObject instanceof LocalDateTime[]) {
+            for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
+              Literal object = createTypedLiteral(((LocalDateTime[]) propertyValueObject)[i]);
+              statements.add(
+                      vf.createStatement(subject, predicate, object));
+            }
+          } else if (propertyValueObject instanceof Object[]) {
+              for (Object o : (Object[]) propertyValueObject) {
+                statements.add(vf.createStatement(subject, predicate,
+                        createTypedLiteral(o)));
+              }
+
           } else {
             statements.add(vf.createStatement(subject, predicate,
                     createTypedLiteral(propertyValueObject)));

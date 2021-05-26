@@ -1,0 +1,9 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+<http://data.elsevier.com/vocabulary/OmniScience> {
+  <http://data.elsevier.com/vocabulary/OmniScience> a skos:ConceptScheme;
+    skos:hasTopConcept <http://data.elsevier.com/vocabulary/OmniScience/Concept-189723269>;
+    <https://data.elsevier.com/schema/evo/topConcepts> 0, 3, 5 .
+}

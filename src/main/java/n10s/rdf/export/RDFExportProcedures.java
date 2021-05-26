@@ -1,5 +1,7 @@
 package n10s.rdf.export;
 
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_IGNORE;
+import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.util.HashMap;
@@ -44,7 +46,8 @@ public class RDFExportProcedures extends RDFProcedures {
 
     boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
     GraphConfig gc = getGraphConfig(tx);
-    if (gc == null) {
+    if (gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
       proc = new LPGToRDFProcesssor(db, tx, gc,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
           props.get("mappedElemsOnly").equals(true), rdfstar);
@@ -81,8 +84,8 @@ public class RDFExportProcedures extends RDFProcedures {
     boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
 
     GraphConfig gc = getGraphConfig(tx);
-    if (gc == null) {
-     // throw new UnsupportedOperationException("method not currently implemented for non-RDF graphs");
+    if (gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
+            || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
       proc = new LPGToRDFProcesssor(db, tx, gc,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
           props.get("mappedElemsOnly").equals(true), rdfstar);

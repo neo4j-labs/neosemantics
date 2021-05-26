@@ -1,9 +1,7 @@
 package n10s.endpoint;
 
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,9 +12,8 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+
 import n10s.ModelTestUtils;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
@@ -26,8 +23,11 @@ import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
 import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.delete.RDFDeleteProcedures;
+import n10s.rdf.export.ExportProcessor;
+import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import n10s.validation.ValidationProcedures;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
@@ -60,7 +60,8 @@ public class RDFEndpointTest {
       .withProcedure(RDFDeleteProcedures.class)
       .withProcedure(OntoLoadProcedures.class)
       .withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(ValidationProcedures.class);
+      .withProcedure(ValidationProcedures.class)
+      .withProcedure(RDFExportProcedures.class);
 
   @Rule
   public Neo4jRule temp = new Neo4jRule().withProcedure(RDFLoadProcedures.class)
@@ -2439,6 +2440,76 @@ public class RDFEndpointTest {
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
 
+  }
+
+
+  @Test
+  public void testTicket13061() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+    //create constraint
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
+              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.commit();
+    }
+    //create graph config and import RDF
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init(" +
+              "{ handleVocabUris: 'MAP', handleMultival: 'ARRAY', keepCustomDataTypes: true, keepLangTag: true})");
+      Result importResult = tx.execute("CALL n10s.rdf.import.fetch('" +
+              RDFEndpointTest.class.getClassLoader().getResource("data13061.trig")
+                      .toURI() + "','TriG',{})");
+
+      tx.commit();
+    } catch (Exception e){
+      fail("exception raised on rdf.import");
+    }
+    //  check data is  correctly loaded
+    Long id;
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("match (n:ConceptScheme) return properties(n) as n, size((n)--()) as deg");
+      Map<String, Object> next = result.next();
+      Map<String,Object> n = (Map<String,Object>)next.get("n");
+      long[] tcVals = (long[])n.get("topConcepts");
+      assertEquals(3L, tcVals.length);
+      long[] expected = new long[]{0, 3, 5};
+      assertTrue(Arrays.equals(tcVals, expected));
+      assertEquals(1L, next.get("deg"));
+
+
+      Result res
+              = tx
+              .execute(" CALL n10s.rdf.export.cypher(' match(n:ConceptScheme) return n ', {}) ");
+      assertTrue(res.hasNext());
+      while(res.hasNext()){
+        Map<String, Object> triple = res.next();
+        assertTrue(triple.get("subject").equals("http://data.elsevier.com/vocabulary/OmniScience"));
+        List<String> expectedList = new ArrayList<String>();
+        expectedList.add("0");
+        expectedList.add("3");
+        expectedList.add("5");
+        assertTrue((triple.get("predicate").equals(RDF.TYPE.stringValue()) &&
+                triple.get("object").equals("neo4j://graph.schema#ConceptScheme"))
+        || (triple.get("predicate").equals("neo4j://graph.schema#topConcepts") &&
+                expectedList.contains(triple.get("object"))) &&
+                triple.get("isLiteral").equals(true) && triple.get("literalType").equals("http://www.w3.org/2001/XMLSchema#long"));
+      }
+    }
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("cypher", "match(n:ConceptScheme) return n");
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+
+    assertEquals(200, response.status());
+    String expected = "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"5\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+            "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"3\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+            "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"0\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
+            "<http://data.elsevier.com/vocabulary/OmniScience> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#ConceptScheme> .\n";
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.TURTLE));
   }
 
 }
