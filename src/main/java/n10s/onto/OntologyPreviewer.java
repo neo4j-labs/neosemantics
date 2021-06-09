@@ -1,13 +1,18 @@
 package n10s.onto;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+
 import n10s.Util;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.result.VirtualNode;
 import n10s.result.VirtualRelationship;
 import n10s.utils.NamespacePrefixConflictException;
+import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -16,6 +21,8 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
+
+import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
 
 public class OntologyPreviewer extends OntologyImporter {
 
@@ -53,6 +60,18 @@ public class OntologyPreviewer extends OntologyImporter {
           getPropsPlusUri(uri)));
     }
 
+    openSubClassRestrictions.keySet().stream().forEach(c -> {
+      openSubClassRestrictions.get(c).forEach( rest -> {
+        processRestriction(c, rest);
+      });
+    });
+
+    openEquivRestrictions.keySet().stream().forEach(c -> {
+      openEquivRestrictions.get(c).forEach( rest -> {
+        processRestriction(c, rest);
+      });
+    });
+
     statements.forEach(st -> {
       try {
         vRels.add(
@@ -63,6 +82,23 @@ public class OntologyPreviewer extends OntologyImporter {
         e.printStackTrace();
       }
     });
+  }
+
+  private void processRestriction(IRI c, OWLRestriction rest) {
+    try {
+    if (rest.isComplete()) {
+      Map<String,Object> relProps = new HashMap<>();
+      relProps.put("onPropertyURI", rest.getRelName().stringValue());
+      relProps.put("onPropertyName", rest.getRelName().getLocalName());
+      relProps.put("restrictionType", getTypeAsString(rest));
+      vRels.add(
+              new VirtualRelationship(vNodes.get(c.stringValue().replace("'", "\'")),
+                      vNodes.get(rest.getTargetClass().stringValue().replace("'", "\'")),
+                      RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + "RESTRICTION"), RELATIONSHIP)), relProps));
+    };
+    } catch (NamespacePrefixConflictException e) {
+      e.printStackTrace();
+    }
   }
 
 
