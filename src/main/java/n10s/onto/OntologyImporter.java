@@ -150,7 +150,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           addStatement(st);
         } else if (st.getObject() instanceof BNode){
           //object is a blank node, probably a restriction
-          addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(), "SC");
+          addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(), openSubClassRestrictions);
         }
       }else if (st.getPredicate().equals(OWL.EQUIVALENTCLASS) && st
               .getSubject() instanceof IRI) {
@@ -159,7 +159,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           addStatement(st);
         } else if (st.getObject() instanceof BNode){
           //object is a blank node, probably a restriction
-          addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(),"EC");
+          addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(),openEquivRestrictions);
         }
       } else if (st.getPredicate().equals(OWL.ONPROPERTY) && st
               .getSubject() instanceof BNode && st.getObject() instanceof IRI) {
@@ -214,7 +214,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
     //we are adding the relationship to a restriction
     OWLRestriction restr = (allOpenRestrictions.containsKey(rId)? allOpenRestrictions.get(rId): new OWLRestriction(rId));
     restr.setTarget(target);
-    restr.setType(OWL.SOMEVALUESFROM);
+    restr.setType(type);
     if(!allOpenRestrictions.containsKey(rId)){
       allOpenRestrictions.put(rId,restr);
     }
@@ -229,21 +229,11 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
     }
   }
 
-  private void addLinkToClass(IRI subject, BNode rId, String type) {
+  private void addLinkToClass(IRI subject, BNode rId, Map<IRI, List<OWLRestriction>> mapofLists) {
     //we are adding the link to the subject via SCO
     OWLRestriction restr = (allOpenRestrictions.containsKey(rId)? allOpenRestrictions.get(rId): new OWLRestriction(rId));
     if(!allOpenRestrictions.containsKey(rId)){
       allOpenRestrictions.put(rId,restr);
-    }
-
-    Map<IRI, List<OWLRestriction>> mapofLists;
-    if(type.equals("SC")){
-      mapofLists = openSubClassRestrictions;
-    } else if(type.equals("EC")){
-      mapofLists = openEquivRestrictions;
-    } else {
-      mapofLists = null;
-      throw new RuntimeException("Invalid method invocation. Type: " + type);
     }
 
     if(mapofLists.containsKey(subject)){
@@ -422,18 +412,34 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
             return inThreadTransaction.findNode(RESOURCE, "uri", rest.getTargetClass().stringValue());
           }
         });
-        //Link the two with a rel
-        Relationship restrictionRel = fromNode.createRelationshipTo(
-                toNode,
-                RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + "RESTRICTION"), RELATIONSHIP)));
-        restrictionRel.setProperty("onPropertyURI", rest.getRelName().stringValue());
-        restrictionRel.setProperty("onPropertyName", rest.getRelName().getLocalName());
-        restrictionRel.setProperty("restrictionType", getTypeAsString(rest));
 
+        //check if an identical restriction exists already, if not create
+        boolean found = false;
+        for (Relationship rel : fromNode
+                .getRelationships(Direction.OUTGOING,
+                        RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + "RESTRICTION"), RELATIONSHIP)))) {
+          if (rel.getEndNode().equals(toNode)) {
+            found = rel.getProperty("onPropertyURI").equals(rest.getRelName().stringValue()) &&
+                    rel.getProperty("onPropertyName").equals(rest.getRelName().getLocalName()) &&
+                    rel.getProperty("restrictionType").equals(getTypeAsString(rest));
+            break;
+          }
+        }
 
-        //delete restriction (TODO: delete via iterator or mark for deletion)
-        //openSubClassRestrictions.get(c).remove(rest);
-        //allOpenRestrictions.remove(rest.getRestrictionId());
+        if (!found) {
+
+          Relationship restrictionRel = fromNode.createRelationshipTo(
+                  toNode,
+                  RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + "RESTRICTION"), RELATIONSHIP)));
+          restrictionRel.setProperty("onPropertyURI", rest.getRelName().stringValue());
+          restrictionRel.setProperty("onPropertyName", rest.getRelName().getLocalName());
+          restrictionRel.setProperty("restrictionType", getTypeAsString(rest));
+
+          //TODO: Complete this<<<<<<<
+          //delete restriction (TODO: delete via iterator or mark for deletion)
+          //openSubClassRestrictions.get(c).remove(rest);
+          //allOpenRestrictions.remove(rest.getRestrictionId());
+        }
       } catch (ExecutionException e) {
         e.printStackTrace();
       }
