@@ -707,7 +707,7 @@ public class RDFProceduresTest {
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("movies.ttls").toURI()
-          + "','Turtle*')"); //,{   commitSize: 1000 }
+          + "','Turtle-star')"); //,{   commitSize: 1000 }
 
       assertEquals(1372L, importResults
           .single().get("triplesLoaded").asLong());
@@ -735,7 +735,7 @@ public class RDFProceduresTest {
       Result importResults
               = session.run("CALL n10s.rdf.import.fetch('" +
               RDFProceduresTest.class.getClassLoader().getResource("movies.ttls").toURI()
-              + "','Turtle*')");
+              + "','Turtle-star')");
 
       assertEquals(1372L, importResults
               .single().get("triplesLoaded").asLong());
@@ -1512,7 +1512,7 @@ public class RDFProceduresTest {
       Result importResults
           = session
           .run("CALL n10s.rdf.preview.inline('" + rdfStarFragment
-              + "','Turtle*')");
+              + "','Turtle-star')");
       Map<String, Object> next = importResults
           .next().asMap();
       final List<Node> nodes = (List<Node>) next.get("nodes");
@@ -1535,7 +1535,7 @@ public class RDFProceduresTest {
       Result importResults
               = session
               .run("CALL n10s.rdf.import.inline('" + rdfStarFragmentWithTriplesAsObjects
-                      + "','Turtle*')");
+                      + "','Turtle-star')");
       Map<String, Object> next = importResults
               .next().asMap();
       ;
