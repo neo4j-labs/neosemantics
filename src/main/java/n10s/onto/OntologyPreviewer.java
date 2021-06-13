@@ -62,13 +62,13 @@ public class OntologyPreviewer extends OntologyImporter {
 
     openSubClassRestrictions.keySet().stream().forEach(c -> {
       openSubClassRestrictions.get(c).forEach( rest -> {
-        processRestriction(c, rest);
+        processRestriction(c, rest, SUB_CLASS_REST);
       });
     });
 
     openEquivRestrictions.keySet().stream().forEach(c -> {
       openEquivRestrictions.get(c).forEach( rest -> {
-        processRestriction(c, rest);
+        processRestriction(c, rest, EQUIV_CLASS_REST);
       });
     });
 
@@ -84,7 +84,7 @@ public class OntologyPreviewer extends OntologyImporter {
     });
   }
 
-  private void processRestriction(IRI c, OWLRestriction rest) {
+  private void processRestriction(IRI c, OWLRestriction rest, int type) {
     try {
     if (rest.isComplete()) {
       Map<String,Object> relProps = new HashMap<>();
@@ -94,7 +94,7 @@ public class OntologyPreviewer extends OntologyImporter {
       vRels.add(
               new VirtualRelationship(vNodes.get(c.stringValue().replace("'", "\'")),
                       vNodes.get(rest.getTargetClass().stringValue().replace("'", "\'")),
-                      RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + "RESTRICTION"), RELATIONSHIP)), relProps));
+                      RelationshipType.withName(handleIRI(vf.createIRI(DEFAULT_BASE_SCH_NS + getRestrictionRelName(type)), RELATIONSHIP)), relProps));
     };
     } catch (NamespacePrefixConflictException e) {
       e.printStackTrace();

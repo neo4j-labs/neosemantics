@@ -35,7 +35,7 @@ import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
 public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   protected static final int SUB_CLASS_REST = 0;
-  private static final int EQUIV_CLASS_REST = 1;
+  protected static final int EQUIV_CLASS_REST = 1;
 
   public static final Label RESOURCE = Label.label("Resource");
   protected static final List<IRI> ANNOTATION_PROPERTIES_TO_IMPORT = Arrays.asList(RDFS.LABEL, RDFS.COMMENT,
@@ -192,14 +192,17 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         addStatement(st);
+        mappedTripleCounter++;
       } else if (st.getPredicate().equals(RDFS.DOMAIN) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         addStatement(st);
+        mappedTripleCounter++;
       } else if (st.getPredicate().equals(RDFS.RANGE) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
         addStatement(st);
+        mappedTripleCounter++;
       } else if (ANNOTATION_PROPERTIES_TO_IMPORT.contains(st.getPredicate())
           && st.getSubject() instanceof IRI) {
         setProp(st.getSubject().stringValue(), vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), st.getPredicate().getLocalName()),
@@ -488,7 +491,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
       }
   }
 
-  private String getRestrictionRelName(int type) {
+  protected String getRestrictionRelName(int type) {
     String relName;
     switch (type) {
       case SUB_CLASS_REST:  relName = "SCO_RESTRICTION";
