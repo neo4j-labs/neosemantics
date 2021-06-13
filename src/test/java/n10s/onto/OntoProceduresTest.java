@@ -232,8 +232,8 @@ public class OntoProceduresTest {
           "                              owl:someValuesFrom :Person\n" +
           "                            ] ;\n" +
           "        rdfs:subClassOf [ rdf:type owl:Restriction ;\n" +
-          "                          owl:onProperty :hasChild ;\n" +
-          "                          owl:someValuesFrom :Person\n" +
+          "                          owl:onProperty :hasPet ;\n" +
+          "                          owl:allValuesFrom :Animal\n" +
           "                        ] .";
 
 
@@ -960,65 +960,77 @@ public class OntoProceduresTest {
       Result importResults = session
               .run("CALL n10s.onto.import.inline($rdf,'Turtle')", params);
 
-      assertEquals(3L, importResults.next().get("triplesLoaded").asLong());
+      Record next = importResults.next();
+
+      assertEquals(7L, next.get("triplesLoaded").asLong());
+
+      assertEquals(9L, next.get("triplesParsed").asLong());
 
       assertEquals(2L,
-              session.run("MATCH (n:Class) RETURN count(n) AS count").next().get("count").asLong());
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
 
-      assertEquals(5L,
-              session.run("MATCH (n:Property)-[:DOMAIN]->(:Class)  RETURN count(n) AS count").next()
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
+
+      assertEquals(1L,
+              session.run("MATCH ()-[r:EQC_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION]->(:Class) RETURN count(r) AS count").next()
                       .get("count").asLong());
 
-      assertEquals(6L,
-              session.run("MATCH (n:Relationship) RETURN count(n) AS count").next().get("count")
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION { restrictionType:'SOME'}]->() RETURN count(r) AS count").next().get("count")
                       .asLong());
 
-      Record singleRecord = session
-              .run("MATCH (n:Class { uri: 'http://neo4j.com/voc/movies#Movie'}) "
-                      + " RETURN n.label as label, n.comment as comment, "
-                      + " n10s.rdf.getLangValue('en',n.label) as label_en, "
-                      + " n10s.rdf.getLangValue('es',n.label) as label_es, "
-                      + " n10s.rdf.getLangValue('en',n.comment) as comment_en, "
-                      + " n10s.rdf.getLangValue('es',n.comment) as comment_es").next();
-      assertTrue(singleRecord.get("label").asList().contains("Movie@en") &&
-              singleRecord.get("label").asList().contains("Pelicula@es"));
-      assertTrue(singleRecord.get("comment").asList().contains("A film@en") &&
-              singleRecord.get("comment").asList().contains("Una pelicula@es"));
-      assertEquals("Movie", singleRecord.get("label_en").asString());
-      assertEquals("Pelicula", singleRecord.get("label_es").asString());
-      assertEquals("A film", singleRecord.get("comment_en").asString());
-      assertEquals("Una pelicula", singleRecord.get("comment_es").asString());
+      assertEquals(0L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION { restrictionType:'SOME'}]->() RETURN count(r) AS count").next().get("count")
+                      .asLong());
 
-      singleRecord = session
-              .run("MATCH (n:Relationship { uri: 'http://neo4j.com/voc/movies#PRODUCED'}) "
-                      + " RETURN n.label as label, n.comment as comment, "
-                      + " n10s.rdf.getLangValue('en',n.label) as label_en, "
-                      + " n10s.rdf.getLangValue('es',n.label) as label_es, "
-                      + " n10s.rdf.getLangValue('en',n.comment) as comment_en, "
-                      + " n10s.rdf.getLangValue('es',n.comment) as comment_es").next();
-      assertTrue(singleRecord.get("label").asList().contains("PRODUCED@en") &&
-              singleRecord.get("label").asList().contains("PRODUCE@es"));
-      assertTrue(singleRecord.get("comment").asList().contains("Producer produced film@en") &&
-              singleRecord.get("comment").asList().contains("productor de una pelicula@es"));
-      assertEquals("PRODUCED", singleRecord.get("label_en").asString());
-      assertEquals("PRODUCE", singleRecord.get("label_es").asString());
-      assertEquals("Producer produced film", singleRecord.get("comment_en").asString());
-      assertEquals("productor de una pelicula", singleRecord.get("comment_es").asString());
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION { restrictionType:'ALL'}]->() RETURN count(r) AS count").next().get("count")
+                      .asLong());
 
-      singleRecord = session.run("MATCH (n:Property { uri: 'http://neo4j.com/voc/movies#title'}) "
-              + " RETURN n.label as label, n.comment as comment, "
-              + " n10s.rdf.getLangValue('en',n.label) as label_en, "
-              + " n10s.rdf.getLangValue('es',n.label) as label_es, "
-              + " n10s.rdf.getLangValue('en',n.comment) as comment_en, "
-              + " n10s.rdf.getLangValue('es',n.comment) as comment_es").next();
-      assertTrue(singleRecord.get("label").asList().contains("title@en") &&
-              singleRecord.get("label").asList().contains("titulo@es"));
-      assertTrue(singleRecord.get("comment").asList().contains("The title of a film@en") &&
-              singleRecord.get("comment").asList().contains("El titulo de una pelicula@es"));
-      assertEquals("title", singleRecord.get("label_en").asString());
-      assertEquals("titulo", singleRecord.get("label_es").asString());
-      assertEquals("The title of a film", singleRecord.get("comment_en").asString());
-      assertEquals("El titulo de una pelicula", singleRecord.get("comment_es").asString());
+      Result deleteResult = session
+              .run(" MATCH (r:Resource) DETACH DELETE r RETURN COUNT(r) as deleted");
+      assertTrue(deleteResult.hasNext());
+
+      assertEquals(5L, deleteResult.next().get("deleted").asLong());
+
+      importResults = session
+              .run("CALL n10s.onto.import.inline($rdf,'Turtle', { commitSize: 1 })", params);
+
+      next = importResults.next();
+
+      assertEquals(7L, next.get("triplesLoaded").asLong());
+
+      assertEquals(9L, next.get("triplesParsed").asLong());
+
+      assertEquals(2L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
+
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
+
+      assertEquals(1L,
+              session.run("MATCH ()-[r:EQC_RESTRICTION]->() RETURN count(r) AS count").next().get("count").asLong());
+
+      assertEquals(2L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION]->(:Class) RETURN count(r) AS count").next()
+                      .get("count").asLong());
+
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION|EQC_RESTRICTION { restrictionType:'SOME'}]->() RETURN count(r) AS count").next().get("count")
+                      .asLong());
+
+      assertEquals(0L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION { restrictionType:'SOME'}]->() RETURN count(r) AS count").next().get("count")
+                      .asLong());
+
+      assertEquals(1L,
+              session.run("MATCH ()-[r:SCO_RESTRICTION { restrictionType:'ALL'}]->() RETURN count(r) AS count").next().get("count")
+                      .asLong());
+
 
     }
 
