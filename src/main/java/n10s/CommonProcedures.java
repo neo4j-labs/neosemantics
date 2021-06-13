@@ -85,8 +85,8 @@ public class CommonProcedures {
   }
 
   protected void checkIndexExist() throws RDFImportPreRequisitesNotMet {
-    Iterable<IndexDefinition> indexes = tx.schema().getIndexes();
-    if (isConstraintOnResourceUriPresent() || missing(indexes.iterator(), "Resource")) {
+
+    if (isConstraintOnResourceUriPresent() || missingIndexOnResourceUri()) {
       throw new RDFImportPreRequisitesNotMet(
           "An index on :Resource(uri) is required for importing RDF Quads. "
               + "Please run 'CREATE INDEX ON :Resource(uri)' and try again. "
@@ -94,11 +94,14 @@ public class CommonProcedures {
     }
   }
 
-  protected boolean missing(Iterator<IndexDefinition> iterator, String indexLabel) {
-    while (iterator.hasNext()) {
-      IndexDefinition indexDef = iterator.next();
-      if (!indexDef.isCompositeIndex() && indexDef.getLabels().iterator().next().name()
-          .equals(indexLabel) &&
+  protected boolean missingIndexOnResourceUri() {
+    Iterator<IndexDefinition> indexesIterator = tx.schema().getIndexes().iterator();
+    while (indexesIterator.hasNext()) {
+      IndexDefinition indexDef = indexesIterator.next();
+      if (!indexDef.isCompositeIndex() && indexDef.isNodeIndex() &&
+              indexDef.getLabels().iterator().hasNext() &&
+              indexDef.getLabels().iterator().next().name().equals("Resource") &&
+              indexDef.getPropertyKeys().iterator().hasNext() &&
           indexDef.getPropertyKeys().iterator().next().equals("uri")) {
         return false;
       }
