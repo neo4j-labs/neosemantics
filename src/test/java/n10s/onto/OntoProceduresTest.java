@@ -9,18 +9,18 @@ import org.junit.Test;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
+import org.neo4j.driver.types.Node;
+import org.neo4j.driver.types.Relationship;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Created by jbarrasa on 21/03/2016.
@@ -237,6 +237,38 @@ public class OntoProceduresTest {
           "                        ] .";
 
 
+  String restrictionsWithDomAndRange = "" +
+          "@prefix : <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#> .\n" +
+          "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n" +
+          "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+          "@prefix xml: <http://www.w3.org/XML/1998/namespace> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "@base <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2> .\n" +
+          "\n" +
+          "\n" +
+          ":Parent rdf:type owl:Class ;\n" +
+          "        rdfs:subClassOf [ rdf:type owl:Restriction ;\n" +
+          "                          owl:onProperty :hasChild ;\n" +
+          "                          owl:someValuesFrom :Person\n" +
+          "                        ] .\n" +
+          "\n" +
+          ":PetOwner rdf:type owl:Class ;\n" +
+          "        owl:equivalentClass [ rdf:type owl:Restriction ;\n" +
+          "                              owl:onProperty :hasPet ;\n" +
+          "                              owl:someValuesFrom :Animal\n" +
+          "                            ] .\n" +
+          "\n" +
+          ":Animal rdfs:label \"Animal\" ; \n" +
+          "        rdfs:comment \"an animal\" .\n" +
+          "\n" +
+          " :hasChild rdf:type owl:ObjectProperty ;\n" +
+          "        rdfs:domain :Person ;\n" +
+          "        rdfs:range :Person ;\n" +
+          "        rdfs:label \"has child\" ;\n" +
+          "        rdfs:comment \"be the parent of\" .\n" +
+          "\n";
+
   private static URI file(String path) {
     try {
       return OntoProceduresTest.class.getClassLoader().getResource(path).toURI();
@@ -300,6 +332,85 @@ public class OntoProceduresTest {
       assertEquals(5, nodes.size());
       rels = (List<Relationship>) next.get("relationships");
       assertEquals(1, rels.size());
+    }
+  }
+
+  @Test
+  public void testOntoPreviewFromSnippetWithRestrictions() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.restrictionsBasicTurtle);
+
+      Result importResults
+              = session
+              .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
+      Map<String, Object> next = importResults
+              .next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(5, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(2, rels.size());
+    }
+  }
+
+  @Test
+  public void testOntoPreviewFromSnippetWithRestrictionsAndOtherElements() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE'}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.restrictionsWithDomAndRange);
+
+      Result importResults
+              = session
+              .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
+      Map<String, Object> next = importResults
+              .next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(6, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(4, rels.size());
+
+      int domainCount = 0;
+      int rangeCount = 0;
+      int restrictionCount = 0;
+      Iterator<Relationship> relsIterator = rels.iterator();
+      while (relsIterator.hasNext()) {
+        String relName = relsIterator.next().type();
+        if (relName.equals("DOMAIN")) {
+          domainCount++;
+        } else if (relName.equals("RANGE")) {
+          rangeCount++;
+        } else if (relName.equals("SCO_RESTRICTION") || relName.equals("EQC_RESTRICTION")) {
+          restrictionCount++;
+        }
+      }
+      assertEquals(1,domainCount);
+      assertEquals(1,rangeCount);
+      assertEquals(2,restrictionCount);
+
+      Iterator<Node> nodesIterator = nodes.iterator();
+      while (nodesIterator.hasNext()) {
+        Map<String, Object> nodeAsMap = nodesIterator.next().asMap();
+        if(nodeAsMap.get("uri").equals("http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#Animal")){
+          assertEquals("Animal", nodeAsMap.get("label"));
+          assertEquals("an animal", nodeAsMap.get("comment"));
+        } else if(nodeAsMap.get("uri").equals("http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#hasChild")){
+          assertEquals("has child", nodeAsMap.get("label"));
+          assertEquals("be the parent of", nodeAsMap.get("comment"));
+        } else {
+          assertFalse(nodeAsMap.containsKey("label") || nodeAsMap.containsKey("comment"));
+        }
+
+      }
     }
   }
 
