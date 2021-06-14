@@ -57,7 +57,7 @@ public class GraphConfigProcedures {
       throws GraphConfigException {
     //update
     //TODO: identify config changes that are acceptable (additive) when graph is not empty?
-    if (graphIsEmpty()) {
+    if ((props.containsKey("force") && props.get("force").equals(Boolean.TRUE)) ||graphIsEmpty()) {
       GraphConfig currentGraphConfig;
       try {
         try {
