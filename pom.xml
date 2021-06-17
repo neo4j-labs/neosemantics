@@ -7,8 +7,12 @@
   <artifactId>neosemantics</artifactId>
   <version>4.3.0.0</version>
   <packaging>jar</packaging>
-  <name>neosemantics</name>
+  <name>neosemantics (n10s)</name>
   <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
+  <organization>
+    <name>Neo4j Labs</name>
+    <url>https://neo4j.com/labs/</url>
+  </organization>
   <url>https://github.com/neo4j-labs/neosemantics</url>
   <scm>
     <url>https://github.com/neo4j-labs/neosemantics</url>
@@ -232,7 +236,17 @@
           <additionalJOption>-Xdoclint:none</additionalJOption>
         </configuration>
       </plugin>
-
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+            </manifest>
+          </archive>
+        </configuration>
+      </plugin>
 
     </plugins>
   </build>
