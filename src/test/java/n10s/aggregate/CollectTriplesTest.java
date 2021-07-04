@@ -70,7 +70,7 @@ public class CollectTriplesTest {
             Session session = driver.session();
             Result results = session.run("CALL n10s.rdf.stream.inline('"+ TURTLE_FRAGMENT +"', 'Turtle') " +
                     " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.aggregate.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+                    + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
             assertEquals(true, results.hasNext());
             assertTrue(ModelTestUtils
                     .compareModels(results.next().get("rdf").asString(),
@@ -98,7 +98,7 @@ public class CollectTriplesTest {
                     .getResource("100k.nt")
                     .toURI() + "',\"N-Triples\" ,{ limit: 999999}) yield subject, predicate, object, isLiteral, literalType, literalLang\n" +
                     "where subject in indivList\n" +
-                    "return n10s.rdf.aggregate.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+                    "return n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
             assertEquals(true, results.hasNext());
             assertTrue(ModelTestUtils
                     .compareModels(results.next().get("rdf").asString(),
@@ -119,7 +119,7 @@ public class CollectTriplesTest {
                     .getResource("datetime/datetime-and-other.ttl")
                     .toURI() +"', 'Turtle') " +
                     " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.aggregate.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+                    + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
             assertEquals(true, results.hasNext());
 
 
@@ -142,7 +142,7 @@ public class CollectTriplesTest {
                     .getResource("multilang.ttl")
                     .toURI() +"', 'Turtle') " +
                     " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.aggregate.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+                    + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
             assertEquals(true, results.hasNext());
 
 

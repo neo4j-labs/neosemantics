@@ -13,8 +13,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
 public class CollectTriples {
-    @UserAggregationFunction
-    @Description( "n10s.rdf.collect(...) - collects a set of triples and serialises them as N-triples" )
+    @UserAggregationFunction(name = "n10s.rdf.collect")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as N-triples" )
     public TripleCollector collect()
     {
         return new TripleCollector();
