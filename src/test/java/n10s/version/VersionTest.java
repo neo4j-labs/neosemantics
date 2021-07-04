@@ -1,9 +1,5 @@
 package n10s.version;
 
-import n10s.RDFProceduresTest;
-import n10s.graphconfig.GraphConfigProcedures;
-import n10s.inference.MicroReasoners;
-import n10s.similarity.Similarities;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
@@ -12,7 +8,6 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class VersionTest {
 
@@ -22,7 +17,7 @@ public class VersionTest {
 
 
     @Test
-    public void testOntoPreviewFromFileLimit()throws Exception {
+    public void testGetVersion()throws Exception {
         try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
                 Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 

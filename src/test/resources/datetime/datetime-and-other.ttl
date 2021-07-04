@@ -1,0 +1,11 @@
+@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.
+@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.
+@prefix exterms: <hhttp://www.example.org/terms/>.
+@prefix ex: <hhttp://www.example.org/indiv/>.
+
+ex:index.html  exterms:creation-date  "1999-08-16"^^xsd:date ;
+               exterms:reportedOn "2012-12-31T23:57:00"^^xsd:dateTime ;
+               exterms:counter "-5"^^xsd:integer ;
+               exterms:counterDec "-5.0"^^xsd:decimal ;
+               exterms:counterDouble "4.2E9"^^xsd:double ;
+               exterms:active false .
