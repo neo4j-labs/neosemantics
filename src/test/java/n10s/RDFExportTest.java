@@ -381,6 +381,44 @@ public class RDFExportTest {
     }
   }
 
+  @Test
+  public void testExportFromTriplePatternOnRDFGraphIgnoreDefault() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'IGNORE' } ");
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD')");
+      assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+    allTriplePatternsIgnore(1);
+
+  }
+
+  @Test
+  public void testExportFromTriplePatternOnRDFGraphIgnoreDefaultMultivalued() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'IGNORE' , handleMultival: 'ARRAY'} ");
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD')");
+      assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+    allTriplePatternsIgnore(2);
+
+  }
+
   private void allTriplePatternsOnLPG() throws IOException {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -683,61 +721,62 @@ public class RDFExportTest {
               .compareModels("{}", RDFFormat.JSONLD,
                       getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource","http://xmlns.com/foaf/0.1/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
-      if( mode == 1){
-         expected = "{\n" +
-                "  \"@context\": {\n" +
-                "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
-                "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
-                "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
-                "  },\n" +
-                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-                "      \"name\": [\"Manu Sporny\"] ,\n" +
-                "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
-                "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
-                "}";
-      } else if( mode==2){
-         expected = "{\n" +
-                "  \"@context\": {\n" +
-                "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
-                "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
-                "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
-                "  },\n" +
-                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
-                "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
-                "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
-                "}";
-      }
 
-      assertTrue(ModelTestUtils
-              .compareModels(expected, RDFFormat.JSONLD,
-                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu",null, null, false, null, null), RDFFormat.NTRIPLES));
+        if (mode == 1) {
+          expected = "{\n" +
+                  "  \"@context\": {\n" +
+                  "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+                  "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+                  "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+                  "  },\n" +
+                  "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                  "      \"name\": [\"Manu Sporny\"] ,\n" +
+                  "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
+                  "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
+                  "}";
+        } else if (mode == 2) {
+          expected = "{\n" +
+                  "  \"@context\": {\n" +
+                  "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+                  "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+                  "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+                  "  },\n" +
+                  "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                  "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
+                  "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
+                  "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
+                  "}";
+        }
 
-      if( mode == 1) {
-        expected = "{\n" +
-                "  \"@context\": {\n" +
-                "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
-                "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
-                "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
-                "  },\n" +
-                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-                "      \"name\": [\"Manu Sporny\"] \n" +
-                "}";
-      } else if( mode == 2) {
-        expected = "{\n" +
-                "  \"@context\": {\n" +
-                "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
-                "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
-                "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
-                "  },\n" +
-                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
-                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] \n" +
-                "}";
-      }
+        assertTrue(ModelTestUtils
+                .compareModels(expected, RDFFormat.JSONLD,
+                        getNTriplesGraphFromSPOPattern(session, "http://manu.sporny.org/about#manu", null, null, false, null, null), RDFFormat.NTRIPLES));
 
-      assertTrue(ModelTestUtils
-              .compareModels(expected, RDFFormat.JSONLD,
-                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://xmlns.com/foaf/0.1/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+        if (mode == 1) {
+          expected = "{\n" +
+                  "  \"@context\": {\n" +
+                  "    \"name\": \"http://xmlns.com/foaf/0.1/name\"\n" +
+                  "  },\n" +
+                  "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                  "      \"name\": [\"Manu Sporny\"] \n" +
+                  "}";
+        } else if (mode == 2) {
+          expected = "{\n" +
+                  "  \"@context\": {\n" +
+                  "    \"name\": \"http://xmlns.com/foaf/0.1/name\"\n" +
+                  "  },\n" +
+                  "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                  "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] \n" +
+                  "}";
+        }
+
+
+        assertTrue(ModelTestUtils
+                .compareModels(expected, RDFFormat.JSONLD,
+                        getNTriplesGraphFromSPOPattern(session, "http://manu.sporny.org/about#manu", "http://xmlns.com/foaf/0.1/name", null, false, null, null), RDFFormat.NTRIPLES));
+
 
 
       expected = "{\n" +
@@ -959,6 +998,329 @@ public class RDFExportTest {
                 "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
                 "      \"@type\": [\"http://xmlns.com/foaf/0.1/Subject\"," +
                 "                   \"http://xmlns.com/foaf/0.1/Citizen\"]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@id\": \"" + bnodeUri + "\",\n" +
+                "      \"name\": \"Dave Longley\",\n" +
+                "\t  \"modified\":\n" +
+                "\t    {\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
+                "\t    }\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";;
+      }
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,null, null, false, null, null), RDFFormat.NTRIPLES));
+
+
+    }
+  }
+
+
+  private void allTriplePatternsIgnore( int mode) throws IOException {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      //getting a bnode's assigned uri
+      String bnodeUri = session
+              .run(" CALL n10s.rdf.export.spo(null,"
+                      + "'" + DEFAULT_BASE_SCH_NS + "name','Dave Longley',true,'http://www.w3.org/2001/XMLSchema#string',null) ").next().get("subject").asString();
+
+
+      String expected = null;
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource",null, null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource","http://xmlns.com/foaf/0.1/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#nonexistingresource","http://xmlns.com/foaf/0.1/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      if (mode == 1) {
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "\t\"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"Manu Sporny\"] ,\n" +
+                "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\"," +
+                "                   \"" + DEFAULT_BASE_SCH_NS + "Citizen\"]\n" +
+                "}";
+      } else if (mode == 2) {
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "\t\"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
+                "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\"," +
+                "                   \"" + DEFAULT_BASE_SCH_NS + "Citizen\"]\n" +
+                "}";
+      }
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session, "http://manu.sporny.org/about#manu", null, null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      if (mode == 1) {
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "\t\"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"Manu Sporny\"] \n" +
+                "}";
+      } else if (mode == 2) {
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "\t\"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] \n" +
+                "}";
+      }
+
+        assertTrue(ModelTestUtils
+                .compareModels("{}", RDFFormat.JSONLD,
+                        getNTriplesGraphFromSPOPattern(session, "http://manu.sporny.org/about#manu", "http://xmlns.com/foaf/0.1/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session, "http://manu.sporny.org/about#manu", DEFAULT_BASE_SCH_NS + "name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"name\": \"http://xmlns.com/foaf/0.1/name\",\n" +
+              "    \"knows\": \"http://xmlns.com/foaf/0.1/knows\",\n" +
+              "\t\"modified\": \"http://xmlns.com/foaf/0.1/modified\"\n" +
+              "  },\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+              "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\"," +
+              "                   \"" + DEFAULT_BASE_SCH_NS + "Citizen\"]\n" +
+              "}";
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\"\n" +
+              "  },\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+              "      \"name\": \"Manu Sporny\" \n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://xmlns.com/foaf/0.1/name", "Manu Sporny", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu",DEFAULT_BASE_SCH_NS + "name", "Manu Sporny", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu",DEFAULT_BASE_SCH_NS + "name", "Manuela", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      expected = "{\n" +
+              "  \"@context\": {},\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+              "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\" ]\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://www.w3.org/1999/02/22-rdf-syntax-ns#type", DEFAULT_BASE_SCH_NS + "Subject", false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu",DEFAULT_BASE_SCH_NS + "familyname", "Manuela", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu","http://undefinedvoc.org/name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://manu.sporny.org/about#manu",DEFAULT_BASE_SCH_NS + "knows", "http://manu.sporny.org/about#manu", false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\"\n" +
+              "  },\n" +
+              "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+              "  \"knows\": [\n" +
+              "    {\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\" },\n" +
+              "    {\n" +
+              "      \"@id\": \"" + bnodeUri +"\" }\n" +
+              "  ]\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://me.markus-lanthaler.com/", DEFAULT_BASE_SCH_NS + "knows", null, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = "{\n" +
+              "  \"@context\": {\n" +
+              "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\"\n" +
+              "  },\n" +
+              "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+              "  \"knows\": [\n" +
+              "    {\n" +
+              "      \"@id\": \"http://manu.sporny.org/about#manu\" }\n" +
+              "  ]\n" +
+              "}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,"http://me.markus-lanthaler.com/",DEFAULT_BASE_SCH_NS + "knows", "http://manu.sporny.org/about#manu", false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("{}", RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://undefinedvoc.org/name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      if( mode ==1){
+        expected = "{ \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\"\n" +
+                "  },\"@graph\": [" +
+                "{ \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+                "  \"name\": \"Markus Lanthaler\"} , " +
+                "{ \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "  \"name\": \"Manu Sporny\" },\n" +
+                "{ \"@id\": \""+ bnodeUri +"\",\n" +
+                "  \"name\": \"Dave Longley\" }\n" +
+                "]}";
+      } else if ( mode ==2 ){
+        expected = "{ \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\"\n" +
+                "  },\"@graph\": [" +
+                "{ \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+                "  \"name\": \"Markus Lanthaler\"} , " +
+                "{ \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "  \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] },\n" +
+                "{ \"@id\": \""+ bnodeUri +"\",\n" +
+                "  \"name\": \"Dave Longley\" }\n" +
+                "]}";
+      }
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "name", null, false, null, null), RDFFormat.NTRIPLES));
+
+
+      expected = "{ \"@context\": {\n" +
+              "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\"\n" +
+              "  }, " +
+              " \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+              "  \"name\": \"Markus Lanthaler\"}";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "name", "Markus Lanthaler", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.JSONLD,
+                      getNTriplesGraphFromSPOPattern(session,null,null, "Markus Lanthaler", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      expected = "<" + bnodeUri + "> <" + DEFAULT_BASE_SCH_NS + "name> \"Dave Longley\"^^<http://www.w3.org/2001/XMLSchema#string> .";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,null, "Dave Longley", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
+
+      expected = "<http://me.markus-lanthaler.com/> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS + "Individual> .\n" +
+              "<http://manu.sporny.org/about#manu> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS + "Subject> .\n" +
+              "<http://manu.sporny.org/about#manu> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS + "Citizen> .";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, false, null, null), RDFFormat.NTRIPLES));
+
+      expected = " <http://manu.sporny.org/about#manu> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS + "Subject> . ";
+
+      assertTrue(ModelTestUtils
+              .compareModels(expected, RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type",  DEFAULT_BASE_SCH_NS + "Subject", false, null, null), RDFFormat.NTRIPLES));
+
+      assertTrue(ModelTestUtils
+              .compareModels("", RDFFormat.NTRIPLES,
+                      getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", "http://xmlns.com/foaf/0.1/Subject", false, null, null), RDFFormat.NTRIPLES));
+
+
+      if( mode ==1 ) {
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "    \"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+                "  \"name\": \"Markus Lanthaler\",\n" +
+                "  \"@type\": \"" + DEFAULT_BASE_SCH_NS + "Individual\",\n" +
+                "  \"knows\": [\n" +
+                "    {\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"Manu Sporny\"] ,\n" +
+                "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\"," +
+                "                   \"" + DEFAULT_BASE_SCH_NS + "Citizen\"]\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"@id\": \"" + bnodeUri + "\",\n" +
+                "      \"name\": \"Dave Longley\",\n" +
+                "\t  \"modified\":\n" +
+                "\t    {\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
+                "\t    }\n" +
+                "    }\n" +
+                "  ]\n" +
+                "}";
+      } else if ( mode == 2){
+        expected = "{\n" +
+                "  \"@context\": {\n" +
+                "    \"name\": \"" + DEFAULT_BASE_SCH_NS + "name\",\n" +
+                "    \"knows\": \"" + DEFAULT_BASE_SCH_NS + "knows\",\n" +
+                "    \"modified\": \"" + DEFAULT_BASE_SCH_NS + "modified\"\n" +
+                "  },\n" +
+                "  \"@id\": \"http://me.markus-lanthaler.com/\",\n" +
+                "  \"name\": \"Markus Lanthaler\",\n" +
+                "  \"@type\": \"" + DEFAULT_BASE_SCH_NS + "Individual\",\n" +
+                "  \"knows\": [\n" +
+                "    {\n" +
+                "      \"@id\": \"http://manu.sporny.org/about#manu\",\n" +
+                "      \"name\": [\"MS\", \"Mr Sporny\",\"Manu Sporny\"] ,\n" +
+                "      \"@type\": [\"" + DEFAULT_BASE_SCH_NS + "Subject\"," +
+                "                   \"" + DEFAULT_BASE_SCH_NS + "Citizen\"]\n" +
                 "    },\n" +
                 "    {\n" +
                 "      \"@id\": \"" + bnodeUri + "\",\n" +

@@ -17,8 +17,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static n10s.graphconfig.Params.BASE_INDIV_NS;
-import static n10s.graphconfig.Params.NOT_MATCHING_NS;
+import static n10s.graphconfig.Params.*;
 import static n10s.utils.UriUtils.translateUri;
 
 
@@ -236,7 +235,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
     Map<String, Object> allProperties = node.getAllProperties();
     // Do not serialise uri as a property.
-    // When present, it will be the resource uri.
+    // When present, it will be the triple subject.
     allProperties.remove("uri");
 
     for (String key : allProperties.keySet()) {
@@ -245,45 +244,49 @@ public class LPGToRDFProcesssor extends ExportProcessor {
           IRI predicate = (exportMappings.containsKey(key) ? vf.createIRI(exportMappings.get(key)) :
                   vf.createIRI(BASE_SCH_NS, key));
           Object propertyValueObject = allProperties.get(key);
-          if (propertyValueObject instanceof long[]) {
-            for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
-              Literal object = createTypedLiteral(((long[]) propertyValueObject)[i]);
-              statements.add(
-                      vf.createStatement(subject, predicate, object));
-            }
-          } else if (propertyValueObject instanceof double[]) {
-            for (int i = 0; i < ((double[]) propertyValueObject).length; i++) {
-              Literal object = createTypedLiteral(((double[]) propertyValueObject)[i]);
-              statements.add(
-                      vf.createStatement(subject, predicate, object));
-            }
-          } else if (propertyValueObject instanceof boolean[]) {
-            for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
-              Literal object = createTypedLiteral(((boolean[]) propertyValueObject)[i]);
-              statements.add(
-                      vf.createStatement(subject, predicate, object));
-            }
-          } else if (propertyValueObject instanceof LocalDateTime[]) {
-            for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
-              Literal object = createTypedLiteral(((LocalDateTime[]) propertyValueObject)[i]);
-              statements.add(
-                      vf.createStatement(subject, predicate, object));
-            }
-          } else if (propertyValueObject instanceof Object[]) {
-              for (Object o : (Object[]) propertyValueObject) {
-                statements.add(vf.createStatement(subject, predicate,
-                        createTypedLiteral(o)));
-              }
-
-          } else {
-            statements.add(vf.createStatement(subject, predicate,
-                    createTypedLiteral(propertyValueObject)));
-          }
+          addStatementsForPotentiallyMultivalLiteral(statements, subject, predicate, propertyValueObject);
         }
       }
 
     }
     return statements;
+  }
+
+  private void addStatementsForPotentiallyMultivalLiteral(Set<Statement> statements, IRI subject, IRI predicate, Object propertyValueObject) {
+    if (propertyValueObject instanceof long[]) {
+      for (int i = 0; i < ((long[]) propertyValueObject).length; i++) {
+        Literal object = createTypedLiteral(((long[]) propertyValueObject)[i]);
+        statements.add(
+                vf.createStatement(subject, predicate, object));
+      }
+    } else if (propertyValueObject instanceof double[]) {
+      for (int i = 0; i < ((double[]) propertyValueObject).length; i++) {
+        Literal object = createTypedLiteral(((double[]) propertyValueObject)[i]);
+        statements.add(
+                vf.createStatement(subject, predicate, object));
+      }
+    } else if (propertyValueObject instanceof boolean[]) {
+      for (int i = 0; i < ((boolean[]) propertyValueObject).length; i++) {
+        Literal object = createTypedLiteral(((boolean[]) propertyValueObject)[i]);
+        statements.add(
+                vf.createStatement(subject, predicate, object));
+      }
+    } else if (propertyValueObject instanceof LocalDateTime[]) {
+      for (int i = 0; i < ((LocalDateTime[]) propertyValueObject).length; i++) {
+        Literal object = createTypedLiteral(((LocalDateTime[]) propertyValueObject)[i]);
+        statements.add(
+                vf.createStatement(subject, predicate, object));
+      }
+    } else if (propertyValueObject instanceof Object[]) {
+        for (Object o : (Object[]) propertyValueObject) {
+          statements.add(vf.createStatement(subject, predicate,
+                  createTypedLiteral(o)));
+        }
+
+    } else {
+      statements.add(vf.createStatement(subject, predicate,
+              createTypedLiteral(propertyValueObject)));
+    }
   }
 
 
@@ -354,12 +357,21 @@ public class LPGToRDFProcesssor extends ExportProcessor {
               Map<String, Object> next = result.next();
               Node node = (Node) next.get("r");
               for (Label label : node.getLabels()) {
-                if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
-                  allStatements.add(vf.createStatement(getResourceUri(node),
-                          RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
-                                  .createIRI(exportMappings.get(label.name()))
-                                  : vf.createIRI(BASE_SCH_NS, label.name())));
-                }
+                  //TODO: we also need to take into account the TYPES AS NODES here
+                  // should we in the case of IGNORE (graphconfig!=null) query for nodes of type Resource???
+                  if(graphConfig!=null){
+                    if (!label.name().equals("Resource")&&!label.name().equals("_GraphConfig")) {
+                      allStatements.add(vf.createStatement(getResourceUri(node),
+                              RDF.TYPE, vf.createIRI(BASE_SCH_NS, label.name())));
+                    }
+                  } else {
+                    if (!exportOnlyMappedElems || exportMappings.containsKey(label.name())) {
+                      allStatements.add(vf.createStatement(getResourceUri(node),
+                              RDF.TYPE, exportMappings.containsKey(label.name()) ? vf
+                                      .createIRI(exportMappings.get(label.name()))
+                                      : vf.createIRI(BASE_SCH_NS, label.name())));
+                    }
+                  }
               }
             }
             return allStatements.stream();
@@ -377,12 +389,17 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                 Node subjectNode = (Node) next.get("s");
                 Object objectThing = next.get("o");
                 if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
-                  allStatements.add(vf.createStatement(getResourceUri(subjectNode),
-                          exportMappings.containsKey(predicate) ? vf
-                                  .createIRI(exportMappings.get(predicate))
-                                  : vf.createIRI(BASE_SCH_NS, predicate),
-                          objectThing instanceof Node ? getResourceUri((Node) objectThing) : createTypedLiteral(objectThing)));
-                  //TODO: this tostring is wrong. Check how it's done in processnode()
+                  if (objectThing instanceof Node) {
+                    allStatements.add(vf.createStatement(getResourceUri(subjectNode),
+                            exportMappings.containsKey(predicate) ? vf
+                                    .createIRI(exportMappings.get(predicate))
+                                    : vf.createIRI(BASE_SCH_NS, predicate),
+                            getResourceUri((Node) objectThing)));
+                  } else {
+                    addStatementsForPotentiallyMultivalLiteral(allStatements, getResourceUri(subjectNode), exportMappings.containsKey(predicate) ? vf
+                            .createIRI(exportMappings.get(predicate))
+                            : vf.createIRI(BASE_SCH_NS, predicate), objectThing);
+                  }
                 }
               }
             }
@@ -390,7 +407,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
           }
         } else {
           //no subject, no pred, no object: null, null, null -> return all triples
-          result = tx.execute("MATCH (r) RETURN r\n"
+          //TODO: Exclude other control elements like mappings. Will be solved when all that stuff is moved to the
+          // admin DB.
+          result = tx.execute("MATCH (r) WHERE NOT r:_GraphConfig RETURN r\n"
                   + "UNION \n"
                   + "MATCH ()-[r]->() RETURN r");
           return result.stream().flatMap(row -> {
@@ -412,9 +431,10 @@ public class LPGToRDFProcesssor extends ExportProcessor {
         if (predicate != null) {
           // null, pred, obj
           if (tp.getPredicate().equals(RDF.TYPE.stringValue())) {
+            //TODO: Deal with types as nodes
             String objectAsLabel = null;
             if (object instanceof IRI) {
-              objectAsLabel = ((IRI) object).getLocalName();
+              objectAsLabel = (((IRI) object).getNamespace().equals(DEFAULT_BASE_SCH_NS)?((IRI) object).getLocalName():"____");
             } else {
               objectAsLabel = "____";
             }
@@ -430,6 +450,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             if (object instanceof IRI) {
               params.put("uri", object.stringValue());
               //query for relationships
+              //TODO: This does not work on a pure LPG (TEST)
               result = tx.execute(String
                       .format("MATCH (:Resource)-[r:`%s`]->(o:Resource { uri:  $uri }) RETURN r",
                               predicate), params);
@@ -448,8 +469,9 @@ public class LPGToRDFProcesssor extends ExportProcessor {
               //it's a Literal
               params.put("propVal",
                       castValueFromXSDType((Literal) object));//translateLiteral((Literal)object, graphConfig));
+              //TODO: what if hte value is an array?
               result = tx.execute(String
-                        .format("MATCH (r) WHERE r.`%s` = $propVal RETURN r",
+                        .format("MATCH (r) WHERE $propVal in r.`%s` + [] RETURN r",
                                 predicate), params);
               while(result.hasNext()){
                 if (!exportOnlyMappedElems || exportMappings.containsKey(predicate)) {
@@ -524,11 +546,19 @@ public class LPGToRDFProcesssor extends ExportProcessor {
 
 
   private Node getNodeByUri(String uri) {
-    try{
-      return tx.getNodeById(getNodeIdFromUri(uri));
-    } catch (NumberFormatException e){
-      //local part of uri is not a long
-      return null;
+    // what if it is a mixed graph where one part is the result of importing RDF using the 'IGNORE' setup
+    // in this case there may be Resources with uris. Should we expect consistency?
+    // this would mean the rest of the graph follows the same approach and nodes are
+    // created using the n10s.add methods
+    if(this.graphConfig != null){
+      return tx.findNode(Label.label("Resource"), "uri", uri);
+    } else{
+      try{
+        return tx.getNodeById(getNodeIdFromUri(uri));
+      } catch (NumberFormatException e){
+        //local part of uri is not a long
+        return null;
+      }
     }
   }
 
