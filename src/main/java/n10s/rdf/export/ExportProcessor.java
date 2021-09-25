@@ -2,6 +2,7 @@ package n10s.rdf.export;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,8 +22,12 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.spatial.Coordinate;
+import org.neo4j.values.storable.PointValue;
 
 import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
+import static n10s.graphconfig.Params.GEOSPARQL_NS;
+import static n10s.graphconfig.Params.WKTLITERAL;
 
 public abstract class ExportProcessor {
 
@@ -163,16 +168,28 @@ public abstract class ExportProcessor {
       result = vf
               .createLiteral(((LocalDateTime) value).format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
                       XMLSchema.DATETIME);
+    }else if (value instanceof ZonedDateTime) {
+      result = vf
+              .createLiteral(((ZonedDateTime) value).toLocalDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+                      XMLSchema.DATETIME);
     } else if (value instanceof LocalDate) {
       result = vf
               .createLiteral(((LocalDate) value).format(DateTimeFormatter.ISO_LOCAL_DATE),
                       XMLSchema.DATE);
+    } else if (value instanceof PointValue) {
+      // Using http://schemas.opengis.net/geosparql/1.0/geosparql_vocab_all.rdf#wktLiteral
+      result = vf
+              .createLiteral(pointValueToWTK((PointValue) value), vf.createIRI(GEOSPARQL_NS,WKTLITERAL));
     } else {
       // default to string
       result = getLiteralWithTagOrDTIfPresent((String) value);
     }
 
     return result;
+  }
+
+  private String pointValueToWTK(PointValue pv) {
+    return "Point(" + pv.coordinate()[0] + " " + pv.coordinate()[1] + ")";
   }
 
   private Literal getLiteralWithTagOrDTIfPresent(String value) {

@@ -6,6 +6,8 @@ public class Params {
 
   public static final String BASE_INDIV_NS = "neo4j://graph.individuals#";
   public static final String DEFAULT_BASE_SCH_NS = "neo4j://graph.schema#";
+  public static final String GEOSPARQL_NS = "http://www.opengis.net/ont/geosparql#";
+  public static final String WKTLITERAL = "wktLiteral";
   public static final String DEFAULT_BASE_SCH_PREFIX = "n4sch";
   public static final String NOT_MATCHING_NS = "__NONE__";
 

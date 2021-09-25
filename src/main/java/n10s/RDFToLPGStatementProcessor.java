@@ -14,18 +14,17 @@ import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
+import org.neo4j.values.storable.PointValue;
 
-import java.time.DateTimeException;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeParseException;
 import java.util.*;
-
-import javax.xml.bind.DatatypeConverter;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static n10s.graphconfig.GraphConfig.*;
-import static n10s.graphconfig.Params.CUSTOM_DATA_TYPE_SEPERATOR;
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static n10s.graphconfig.Params.*;
 import static n10s.mapping.MappingUtils.getImportMappingsFromDB;
 
 
@@ -119,6 +118,13 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
         //if date cannot be parsed we return string value
         return object.stringValue();
       }
+    }else if (datatype.equals(vf.createIRI(GEOSPARQL_NS, WKTLITERAL))) {
+      try {
+        return PointValue.parse(wktToCartesian(object.stringValue()));
+      } catch (IllegalArgumentException e) {
+        //if pointvalue cannot be parsed we return string value
+        return object.stringValue();
+      }
     } else if (datatype.equals(XMLSchema.DATE)) {
       try {
         return DateUtils.parseDate(object.stringValue());
@@ -144,8 +150,19 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     // default
     return object.stringValue();
   }
-  
-  
+
+  private String wktToCartesian(String wktString) {
+    Pattern wktRegex = Pattern.compile("^Point\\((\\-?\\d+(\\.\\d+)?)\\s+(\\-?\\d+(\\.\\d+)?)\\)$");
+    Matcher m = wktRegex.matcher(wktString);
+    if(m.matches()){
+      return m.replaceFirst("point({x: $1, y: $3, crs: 'cartesian'})");
+    } else {
+      // if it cannot be parsed it's left unchanged and will crash
+      // when trying to create a PointObject out of it (exception will be thrown)
+      return wktString;
+    }
+  }
+
 
   protected String getValueWithDatatype(IRI datatype, String value) {
     StringBuilder result = new StringBuilder(value);
