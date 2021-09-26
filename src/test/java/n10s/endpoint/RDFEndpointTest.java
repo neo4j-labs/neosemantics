@@ -238,6 +238,38 @@ public class RDFEndpointTest {
   }
 
   @Test
+  public void testCypherCognite() throws Exception {
+    // Given
+    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("UNWIND RANGE(1,100,1) as id\n" +
+              "CREATE(cable:Cable{id: id, name: \"cable_\"+id, createdAt: datetime()})\n" +
+              "WITH cable\n" +
+              "UNWIND RANGE(1, toInteger(round(rand()*10)), 1) as cableRoutingPointId\n" +
+              "WITH cable, cableRoutingPointId\n" +
+              "CREATE (routingPoint:CableRoutingPoint{id: cableRoutingPointId, " +
+              "location: point({x: rand(), y: rand(), z: rand()}), typeCodes: ['A', 'B', 'C'], " +
+              "inspectionDates: [datetime(), datetime(), datetime()]})\n" +
+              "CREATE (cable)-[:HAS_ROUTING_POINT{createdAt: datetime(), labels: [\"foo\", \"bar\"]}]->(routingPoint);");
+      tx.commit();
+    }
+
+    Map<String, Object> map = new HashMap<>();
+    map.put("cypher", "MATCH (s) RETURN s");
+    map.put("format", "Turtle-star");
+
+    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+
+    String expected = "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n";
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+
+  }
+
+  @Test
   public void testCypherReturnsList() throws Exception {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();

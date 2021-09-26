@@ -1,7 +1,6 @@
 package n10s;
 
-import static n10s.graphconfig.Params.BASE_INDIV_NS;
-import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
+import static n10s.graphconfig.Params.*;
 import static org.junit.Assert.*;
 
 
@@ -184,6 +183,8 @@ public class RDFExportTest {
         o = vf.createLiteral(Long.parseLong(r.get("object").asString()));
       } else if (datatype.equals(XSD.BOOLEAN)){
         o = vf.createLiteral(Boolean.valueOf(r.get("object").asString()));
+      }else if (datatype.equals(vf.createIRI(GEOSPARQL_NS + WKTLITERAL))){
+        o = vf.createLiteral(r.get("object").asString(), vf.createIRI(GEOSPARQL_NS + WKTLITERAL));
       } else {
         //string default
         o = vf.createLiteral(r.get("object").asString());
@@ -1392,6 +1393,36 @@ public class RDFExportTest {
       sb.append(".\n");
     }
     return sb.toString();
+  }
+
+
+  @Test
+  public void testExportFromCypherOnLPGPointTypeProperties() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      session.run("CREATE (n:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222})  })");
+
+      Result res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing) RETURN n ', {}) ");
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+      Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+                      vf.createLiteral("Point(-0.1275 51.507222222)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount,expectedStatememts.size());
+    }
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
