@@ -152,10 +152,12 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   }
 
   private String wktToCartesian(String wktString) {
-    Pattern wktRegex = Pattern.compile("^Point\\((\\-?\\d+(\\.\\d+)?)\\s+(\\-?\\d+(\\.\\d+)?)\\)$");
+    Pattern wktRegex = Pattern.compile("^Point\\((?:(\\-?\\d+(?:\\.\\d+)?)\\s+)?(\\-?\\d+(?:\\.\\d+)?)\\s+(\\-?\\d+(?:\\.\\d+)?)\\)$");
     Matcher m = wktRegex.matcher(wktString);
-    if(m.matches()){
-      return m.replaceFirst("point({x: $1, y: $3, crs: 'cartesian'})");
+    if(m.matches() && m.groupCount() == 3 && m.group(1)==null){
+      return m.replaceFirst("point({x: $2, y: $3, crs: 'cartesian'})");
+    } else if(m.matches() && m.groupCount() == 3 && m.group(1)!=null){
+      return m.replaceFirst("point({x: $1, y: $2, z: $3, crs: 'cartesian-3d'})");
     } else {
       // if it cannot be parsed it's left unchanged and will crash
       // when trying to create a PointObject out of it (exception will be thrown)

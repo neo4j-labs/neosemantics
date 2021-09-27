@@ -1422,6 +1422,28 @@ public class RDFExportTest {
         resultCount++;
       }
       assertEquals(resultCount,expectedStatememts.size());
+
+
+      session.run("CREATE (n:GeoLocatedThing3D { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222, z: 34.0 })  })");
+
+      res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing3D) RETURN n ', {}) ");
+      assertTrue(res.hasNext());
+
+      expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing3D")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+                      vf.createLiteral("Point(-0.1275 51.507222222 34.0)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
+
+      resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount,expectedStatememts.size());
     }
   }
 

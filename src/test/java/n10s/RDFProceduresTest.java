@@ -44,6 +44,7 @@ import org.neo4j.driver.Session;
 import org.neo4j.driver.internal.InternalRelationship;
 import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
+import org.neo4j.driver.types.Point;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
@@ -310,6 +311,27 @@ public class RDFProceduresTest {
       + "exDoc:G3 {\n"
       + "    exDoc:John a ex:Person . }\n"
       + "\n";
+
+
+  String turtleWithPointData =
+          "@prefix wd: <http://www.wikidata.org/prop/direct/> .\n" +
+          "@prefix gs: <http://www.opengis.net/ont/geosparql#> .\n" +
+          "\n" + "<http://www.wikidata.org/entity/Q84> wd:P624 \"This is something geolocated\". " +
+          "<http://www.wikidata.org/entity/Q84> wd:P625 \"Point(-0.1275 51.507222222)\"^^gs:wktLiteral .";
+
+  String turtleStarWithPointData = "@prefix neoind: <neo4j://individuals#> .\n"
+          + "@prefix neovoc: <neo4j://vocabulary#> .\n"
+          + "@prefix gs: <http://www.opengis.net/ont/geosparql#> .\n"
+          + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+          + "\n"
+          + "neoind:0 a neovoc:Movie;\n"
+          + "  neovoc:released \"1999\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+          + "\n"
+          + "neoind:4 a neovoc:Person;\n"
+          + "  neovoc:ACTED_IN neoind:0;\n"
+          + "  neovoc:born \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+          + "\n"
+          + "<<neoind:4 neovoc:ACTED_IN neoind:0>> neovoc:roles \"Morpheus\" ; neovoc:where \"Point(-51.507222222 0.1275)\"^^gs:wktLiteral .\n" ;
 
   private static URI file(String path) {
     try {
@@ -810,6 +832,47 @@ public class RDFProceduresTest {
           session.run(
               "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
               .next().get("count").asLong());
+    }
+  }
+
+  @Test
+  public void testImportTurtleSnippetWithPoints() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'SHORTEN' } ");
+
+      String turtleFragmentWithPoints = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
+              "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
+              "\n" +
+              "n4ind:0 a n4sch:Cable;\n" +
+              "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
+              "  n4sch:createdAt \"2021-08-05T16:18:45.262\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+              "  n4sch:name \"cable_1\" .\n" +
+              "\n" +
+              "n4ind:1 a n4sch:CableRoutingPoint;\n" +
+              "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
+              "  n4sch:inspectionDates \"2021-08-05T16:18:45.262\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+              "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
+              "  n4sch:location \"Point(0.13677937940559515 0.12571228469149265 0.5158046487527811)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
+              "\n" +
+              "n4ind:2 a n4sch:CableRoutingPoint;\n" +
+              "  n4sch:typeCodes \"C\", \"B\", \"A\";\n" +
+              "  n4sch:location \"Point(0.7387649148541224 0.9566884508913421 0.08440601703554396)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
+              "  n4sch:inspectionDates \"2021-08-05T16:18:45.262\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+              "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long> .\n";
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
+              turtleFragmentWithPoints + "','Turtle')");
+      assertEquals(18L, importResults1.single().get("triplesLoaded").asLong());
+      assertEquals(0.08440601703554396D,
+              session.run(
+                      "MATCH (r:Resource { uri: 'neo4j://graph.individuals#2'}) return r.ns0__location.z as h")
+                      .next().get("h").asDouble(), 0.00000000001D);
+
     }
   }
 
@@ -1631,6 +1694,49 @@ public class RDFProceduresTest {
           .next().get("nodes").asList(ofNode()).get(0)
           .get("http://example.org/vocab/show/localName").asString());
 
+    }
+  }
+
+  @Test
+  public void testPointDatatype() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleVocabUris: 'IGNORE'}");
+      Result importResults
+              = session
+              .run("CALL n10s.rdf.import.inline('" + turtleWithPointData
+                      + "','Turtle')");
+      Map<String, Object> next = importResults
+              .next().asMap();
+      assertEquals(2L, next.get("triplesLoaded"));
+      Record record = session
+              .run("MATCH (x:Resource { uri: 'http://www.wikidata.org/entity/Q84'}) return x.P624 as s, x.P625 as p")
+              .next();
+      assertEquals("This is something geolocated", record.get("s").asString());
+      Point p = record.get("p").asPoint();
+      assertEquals(-0.1275,p.x(),0.0005);
+      assertEquals(51.507222222,p.y(),0.0005);
+      assertEquals(7203,p.srid()); //cartesian
+
+
+      importResults
+              = session
+              .run("CALL n10s.rdf.import.inline('" + turtleStarWithPointData
+                      + "','Turtle-star')");
+      next = importResults
+              .next().asMap();
+      assertEquals(7L, next.get("triplesLoaded"));
+      record = session
+              .run("MATCH (:Resource { uri: 'neo4j://individuals#4'})-[ai:ACTED_IN]->" +
+                      "(:Resource { uri: 'neo4j://individuals#0'}) return ai.roles as s, ai.where as p")
+              .next();
+      assertEquals("Morpheus", record.get("s").asString());
+      p = record.get("p").asPoint();
+      assertEquals(-51.507222222,p.x(),0.0005);
+      assertEquals(0.1275,p.y(),0.0005);
+      assertEquals(7203,p.srid()); //cartesian
     }
   }
 

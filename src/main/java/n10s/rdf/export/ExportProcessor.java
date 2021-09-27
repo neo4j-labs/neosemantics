@@ -22,6 +22,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
+import org.neo4j.graphdb.spatial.CRS;
 import org.neo4j.graphdb.spatial.Coordinate;
 import org.neo4j.values.storable.PointValue;
 
@@ -179,7 +180,8 @@ public abstract class ExportProcessor {
     } else if (value instanceof PointValue) {
       // Using http://schemas.opengis.net/geosparql/1.0/geosparql_vocab_all.rdf#wktLiteral
       result = vf
-              .createLiteral(pointValueToWTK((PointValue) value), vf.createIRI(GEOSPARQL_NS,WKTLITERAL));
+                .createLiteral(pointValueToWTK((PointValue) value), vf.createIRI(GEOSPARQL_NS, WKTLITERAL));
+
     } else {
       // default to string
       result = getLiteralWithTagOrDTIfPresent((String) value);
@@ -189,7 +191,7 @@ public abstract class ExportProcessor {
   }
 
   private String pointValueToWTK(PointValue pv) {
-    return "Point(" + pv.coordinate()[0] + " " + pv.coordinate()[1] + ")";
+    return "Point(" + pv.coordinate()[0] + " " + pv.coordinate()[1] + (pv.getCRS().getCode() == 9157?" "+pv.coordinate()[2]:"") + ")";
   }
 
   private Literal getLiteralWithTagOrDTIfPresent(String value) {
