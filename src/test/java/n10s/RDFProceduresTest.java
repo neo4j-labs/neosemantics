@@ -13,6 +13,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -855,7 +856,7 @@ public class RDFProceduresTest {
               "\n" +
               "n4ind:1 a n4sch:CableRoutingPoint;\n" +
               "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-              "  n4sch:inspectionDates \"2021-08-05T16:18:45.262\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+              "  n4sch:inspectionDates \"2010-05-29T14:17:39.262+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
               "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
               "  n4sch:location \"Point(0.13677937940559515 0.12571228469149265 0.5158046487527811)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
               "\n" +
@@ -868,10 +869,16 @@ public class RDFProceduresTest {
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
               turtleFragmentWithPoints + "','Turtle')");
       assertEquals(18L, importResults1.single().get("triplesLoaded").asLong());
+
       assertEquals(0.08440601703554396D,
               session.run(
                       "MATCH (r:Resource { uri: 'neo4j://graph.individuals#2'}) return r.ns0__location.z as h")
                       .next().get("h").asDouble(), 0.00000000001D);
+
+      assertEquals(ZonedDateTime.parse("2010-05-29T14:17:39.262+02:00"),
+              session.run(
+                      "MATCH (r:Resource { uri: 'neo4j://graph.individuals#1'}) return r.ns0__inspectionDates as h")
+                      .next().get("h").asZonedDateTime());
 
     }
   }

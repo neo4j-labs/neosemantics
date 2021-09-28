@@ -22,8 +22,6 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
-import org.neo4j.graphdb.spatial.CRS;
-import org.neo4j.graphdb.spatial.Coordinate;
 import org.neo4j.values.storable.PointValue;
 
 import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
@@ -171,7 +169,7 @@ public abstract class ExportProcessor {
                       XMLSchema.DATETIME);
     }else if (value instanceof ZonedDateTime) {
       result = vf
-              .createLiteral(((ZonedDateTime) value).toLocalDateTime().format(DateTimeFormatter.ISO_LOCAL_DATE_TIME),
+              .createLiteral(((ZonedDateTime) value).format(DateTimeFormatter.ISO_ZONED_DATE_TIME),
                       XMLSchema.DATETIME);
     } else if (value instanceof LocalDate) {
       result = vf

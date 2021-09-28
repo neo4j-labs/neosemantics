@@ -255,6 +255,13 @@ public class CommonProcedures {
     }
   }
 
+  public class InvalidURI extends Exception {
+
+    public InvalidURI(String message) {
+      super(message);
+    }
+  }
+
   public class InvalidShortenedName extends Exception {
 
     public InvalidShortenedName(String s) {

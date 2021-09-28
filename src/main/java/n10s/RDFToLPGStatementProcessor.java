@@ -19,6 +19,8 @@ import org.neo4j.values.storable.PointValue;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -113,10 +115,14 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       return object.booleanValue();
     } else if (datatype.equals(XMLSchema.DATETIME)) {
       try {
-        return DateUtils.parseDateTime(object.stringValue());
-      } catch (IllegalArgumentException e) {
-        //if date cannot be parsed we return string value
-        return object.stringValue();
+        return ZonedDateTime.parse(object.stringValue());
+      }catch(DateTimeParseException dtpe){
+        try {
+          return DateUtils.parseDateTime(object.stringValue());
+        } catch (IllegalArgumentException e) {
+          //if date cannot be parsed we return string value
+          return object.stringValue();
+        }
       }
     }else if (datatype.equals(vf.createIRI(GEOSPARQL_NS, WKTLITERAL))) {
       try {

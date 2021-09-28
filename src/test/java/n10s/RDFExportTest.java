@@ -977,7 +977,7 @@ public class RDFExportTest {
                 "      \"name\": \"Dave Longley\",\n" +
                 "\t  \"modified\":\n" +
                 "\t    {\n" +
-                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39.262+02:00\",\n" +
                 "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
                 "\t    }\n" +
                 "    }\n" +
@@ -1005,7 +1005,7 @@ public class RDFExportTest {
                 "      \"name\": \"Dave Longley\",\n" +
                 "\t  \"modified\":\n" +
                 "\t    {\n" +
-                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39.262+02:00\",\n" +
                 "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
                 "\t    }\n" +
                 "    }\n" +
@@ -1300,7 +1300,7 @@ public class RDFExportTest {
                 "      \"name\": \"Dave Longley\",\n" +
                 "\t  \"modified\":\n" +
                 "\t    {\n" +
-                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39.262+02:00\",\n" +
                 "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
                 "\t    }\n" +
                 "    }\n" +
@@ -1328,7 +1328,7 @@ public class RDFExportTest {
                 "      \"name\": \"Dave Longley\",\n" +
                 "\t  \"modified\":\n" +
                 "\t    {\n" +
-                "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+                "\t      \"@value\": \"2010-05-29T14:17:39.262+02:00\",\n" +
                 "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
                 "\t    }\n" +
                 "    }\n" +
@@ -1475,7 +1475,7 @@ public class RDFExportTest {
       "      \"name\": \"Dave Longley\",\n" +
       "\t  \"modified\":\n" +
       "\t    {\n" +
-      "\t      \"@value\": \"2010-05-29T14:17:39\",\n" +
+      "\t      \"@value\": \"2010-05-29T14:17:39.262+02:00\",\n" +
       "\t      \"@type\": \"http://www.w3.org/2001/XMLSchema#dateTime\"\n" +
       "\t    }\n" +
       "    }\n" +

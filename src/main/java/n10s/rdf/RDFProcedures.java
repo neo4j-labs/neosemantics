@@ -6,7 +6,9 @@ import static n10s.graphconfig.Params.LANGUAGE_TAGGED_VALUE_PATTERN;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static n10s.graphconfig.Params.SHORTENED_URI_PATTERN;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -22,6 +24,8 @@ import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.rdf.delete.DirectStatementDeleter;
+import n10s.rdf.load.DirectNodeAdder;
+import n10s.rdf.load.DirectRelationshipAdder;
 import n10s.rdf.load.DirectStatementLoader;
 import n10s.rdf.preview.StatementPreviewer;
 import n10s.rdf.stream.StatementStreamer;
@@ -33,9 +37,8 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFHandlerException;
-import org.eclipse.rdf4j.rio.RDFParseException;
+import org.eclipse.rdf4j.rio.*;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.QueryExecutionException;
 import org.neo4j.graphdb.Relationship;
@@ -191,6 +194,26 @@ public class RDFProcedures extends CommonProcedures {
     return deleteResults;
   }
 
+  protected DirectStatementLoader doAdd(String rdfFragment, Map<String, Object> props, RDFFormat format, boolean isRel)
+          throws RDFImportPreRequisitesNotMet, IOException, GraphConfig.GraphConfigNotFound {
+
+    DirectStatementLoader statementAdder = null;
+    RDFParserConfig conf = null;
+    RDFProcedures.ImportResults importResults = new RDFProcedures.ImportResults();
+
+    checkConstraintExist();
+    conf = new RDFParserConfig(props, new GraphConfig(tx));
+    statementAdder = (isRel?new DirectRelationshipAdder(db, tx, conf, log):new DirectNodeAdder(db, tx, conf, log));
+    RDFParser rdfParser = Rio.createParser(format);
+    rdfParser
+            .set(BasicParserSettings.VERIFY_URI_SYNTAX, statementAdder.getParserConfig().isVerifyUriSyntax());
+    rdfParser.setRDFHandler(statementAdder);
+    rdfParser.parse(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+            "http://neo4j.com/base/");
+
+    return statementAdder;
+  }
+
   @UserFunction
   @Description("Returns the XMLSchema or custom datatype of a property when present")
   public String getDataType(@Name("literal") Object literal) {
@@ -254,6 +277,10 @@ public class RDFProcedures extends CommonProcedures {
   public String getIRINamespace(@Name("url") String url) {
     return url.substring(0, URIUtil.getLocalNameIndex(url));
   }
+
+  @UserFunction
+  @Description("Returns the true if string is a valid IRI")
+  public Boolean isIRI(@Name("str") String str) { return URIUtil.isValidURIReference(str); }
 
   @UserFunction
   @Description("Returns the first value with the language tag passed as first argument or null if "

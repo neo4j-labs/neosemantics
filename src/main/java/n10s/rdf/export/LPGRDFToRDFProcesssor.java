@@ -8,6 +8,7 @@ import static n10s.utils.UriUtils.translateUri;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -307,7 +308,13 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
             result.add(
                 vf.createStatement(subject, predicate, object, context));
           }
-        } else if (propertyValueObject instanceof LocalDate[]) {
+        } else if (propertyValueObject instanceof ZonedDateTime[]) {
+          for (int i = 0; i < ((ZonedDateTime[]) propertyValueObject).length; i++) {
+            Literal object = createTypedLiteral(((ZonedDateTime[]) propertyValueObject)[i]);
+            result.add(
+                    vf.createStatement(subject, predicate, object, context));
+          }
+        }else if (propertyValueObject instanceof LocalDate[]) {
           for (int i = 0; i < ((LocalDate[]) propertyValueObject).length; i++) {
             Literal object = createTypedLiteral(((LocalDate[]) propertyValueObject)[i]);
             result.add(
