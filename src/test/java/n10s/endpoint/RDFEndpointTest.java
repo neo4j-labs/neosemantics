@@ -244,15 +244,15 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("UNWIND RANGE(1,5,1) as id\n" +
-              "CREATE(cable:Cable{id: id, name: \"cable_\"+id, createdAt: datetime(\"2017-04-05T12:34:00[Europe/Berlin]\")})\n" +
+              "CREATE(cable:Cable{id: id, name: \"cable_\"+id, createdAt: datetime(\"2017-04-05T12:34:00+02:00\")})\n" +
               "WITH cable\n" +
               "UNWIND RANGE(1, 2, 1) as cableRoutingPointId\n" +
               "WITH cable, cableRoutingPointId\n" +
               "CREATE (routingPoint:CableRoutingPoint{id: cableRoutingPointId, " +
               "location: point({x: -0.1275 , y: 51.507222222}), typeCodes: ['A', 'B', 'C'], " +
-              "inspectionDates: [datetime(\"2018-04-05T12:34:00[Europe/Berlin]\"), " +
-              "datetime(\"2019-04-05T12:34:00[Europe/Berlin]\"), datetime(\"2020-04-05T12:34:00[Europe/Berlin]\")]})\n" +
-              "CREATE (cable)-[:HAS_ROUTING_POINT{createdAt: datetime(\"2018-04-05T12:34:00[Europe/Berlin]\"), " +
+              "inspectionDates: [datetime(\"2018-04-05T12:34:00+02:00\"), " +
+              "datetime(\"2019-04-05T12:34:00+02:00\"), datetime(\"2020-04-05T12:34:00+02:00\")]})\n" +
+              "CREATE (cable)-[:HAS_ROUTING_POINT{createdAt: datetime(\"2018-04-05T12:34:00+02:00\"), " +
               "labels: [\"foo\", \"bar\"]}]->(routingPoint);");
       tx.commit();
     }
@@ -268,134 +268,134 @@ public class RDFEndpointTest {
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
             "\n" +
             "n4ind:3 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:typeCodes \"C\", \"B\", \"A\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "n4ind:0 a n4sch:Cable;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:HAS_ROUTING_POINT n4ind:3, n4ind:1;\n" +
-            "  n4sch:name \"cable_1\";\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:name \"cable_1\" .\n" +
             "\n" +
-            "<<n4ind:0 n4sch:HAS_ROUTING_POINT n4ind:3>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "<<n4ind:0 n4sch:HAS_ROUTING_POINT n4ind:3>> n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:labels \"bar\", \"foo\" .\n" +
             "\n" +
             "n4ind:1 a n4sch:CableRoutingPoint;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
             "  n4sch:typeCodes \"A\", \"B\", \"C\" .\n" +
             "\n" +
             "<<n4ind:0 n4sch:HAS_ROUTING_POINT n4ind:1>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "<<n4ind:2 n4sch:HAS_ROUTING_POINT n4ind:6>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:2 a n4sch:Cable;\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:6, n4ind:4;\n" +
-            "  n4sch:name \"cable_2\";\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:6 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
             "  n4sch:typeCodes \"B\", \"A\", \"C\";\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
             "\n" +
+            "n4ind:2 a n4sch:Cable;\n" +
+            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
+            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:HAS_ROUTING_POINT n4ind:6, n4ind:4;\n" +
+            "  n4sch:name \"cable_2\" .\n" +
+            "\n" +
             "n4ind:4 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"C\", \"A\", \"B\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "<<n4ind:2 n4sch:HAS_ROUTING_POINT n4ind:4>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:7 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:typeCodes \"A\", \"C\", \"B\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
             "\n" +
             "<<n4ind:5 n4sch:HAS_ROUTING_POINT n4ind:7>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:5 a n4sch:Cable;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:HAS_ROUTING_POINT n4ind:7, n4ind:9;\n" +
             "  n4sch:id \"3\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:name \"cable_3\" .\n" +
             "\n" +
             "<<n4ind:5 n4sch:HAS_ROUTING_POINT n4ind:9>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:9 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "n4ind:8 a n4sch:Cable;\n" +
             "  n4sch:name \"cable_4\";\n" +
+            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"4\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:HAS_ROUTING_POINT n4ind:12, n4ind:10 .\n" +
             "\n" +
             "n4ind:12 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "<<n4ind:8 n4sch:HAS_ROUTING_POINT n4ind:12>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:10 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"A\", \"C\", \"B\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "<<n4ind:8 n4sch:HAS_ROUTING_POINT n4ind:10>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:13>> n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:labels \"foo\", \"bar\" .\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:13 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
             "\n" +
             "n4ind:11 a n4sch:Cable;\n" +
             "  n4sch:id \"5\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:HAS_ROUTING_POINT n4ind:13, n4ind:14;\n" +
-            "  n4sch:name \"cable_5\" .\n" +
+            "  n4sch:name \"cable_5\";\n" +
+            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
-            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:14>> n4sch:createdAt \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:labels \"foo\", \"bar\" .\n" +
+            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:13>> n4sch:labels \"foo\", \"bar\";\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" +
             "n4ind:14 a n4sch:CableRoutingPoint;\n" +
+            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
+            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:inspectionDates \"2018-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2019-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:typeCodes \"C\", \"B\", \"A\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
+            "\n" +
+            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:14>> n4sch:labels \"foo\", \"bar\";\n" +
+            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n";
 
     assertEquals(200, response.status());
