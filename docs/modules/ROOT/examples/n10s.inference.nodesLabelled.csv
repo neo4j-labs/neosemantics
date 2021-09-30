@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.inference.nodesLabelled¦n10s.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)¦semantics.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.
+¦procedure¦n10s.inference.nodesLabelled¦n10s.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)¦n10s.inference.nodesLabelled('label') - returns all nodes with label 'label' or its sublabels.

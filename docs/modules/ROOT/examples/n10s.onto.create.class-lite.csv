@@ -1,0 +1,2 @@
+¦signature
+¦n10s.onto.create.class(uri :: STRING?, name :: STRING?, params = {} :: MAP?) :: (node :: NODE?)

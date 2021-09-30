@@ -1,0 +1,2 @@
+¦signature
+¦n10s.onto.create.sco(childCass :: NODE?, parentClass :: NODE?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)

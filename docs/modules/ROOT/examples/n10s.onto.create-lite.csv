@@ -1,0 +1,4 @@
+¦signature
+¦n10s.onto.create.childandparent(childClassUri :: STRING?, childClassName :: STRING?, parentClassUri :: STRING?, parentClassName :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)
+¦n10s.onto.create.class(uri :: STRING?, name :: STRING?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.onto.create.sco(childCass :: NODE?, parentClass :: NODE?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)

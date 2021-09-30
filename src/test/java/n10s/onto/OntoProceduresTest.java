@@ -269,6 +269,29 @@ public class OntoProceduresTest {
           "        rdfs:comment \"be the parent of\" .\n" +
           "\n";
 
+  String cardinalityRestriction = "<rdf:RDF\n" +
+          "    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
+          "    xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
+          "    xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\">\n" +
+          "  <owl:Ontology rdf:about=\"http://test\"/>\n" +
+          "  <owl:Class rdf:about=\"http://test#Characteristic\"/>\n" +
+          "  <owl:Class rdf:about=\"http://test#Scale\"/>\n" +
+          "  <owl:Class rdf:about=\"http://test#Numeric\">\n" +
+          "    <rdfs:subClassOf>\n" +
+          "      <owl:Restriction>\n" +
+          "        <owl:onClass rdf:resource=\"http://test#Scale\"/>\n" +
+          "        <owl:maxQualifiedCardinality rdf:datatype=\"http://www.w3.org/2001/XMLSchema#nonNegativeInteger\"\n" +
+          "        >1</owl:maxQualifiedCardinality>\n" +
+          "        <owl:onProperty>\n" +
+          "          <owl:ObjectProperty rdf:about=\"http://test#hasUnit\"/>\n" +
+          "        </owl:onProperty>\n" +
+          "      </owl:Restriction>\n" +
+          "    </rdfs:subClassOf>\n" +
+          "    <rdfs:subClassOf rdf:resource=\"http://test#Characteristic\"/>\n" +
+          "    <rdfs:label>Numeric</rdfs:label>\n" +
+          "  </owl:Class>\n" +
+          "</rdf:RDF>\n";
+
   private static URI file(String path) {
     try {
       return OntoProceduresTest.class.getClassLoader().getResource(path).toURI();
@@ -410,6 +433,54 @@ public class OntoProceduresTest {
           assertFalse(nodeAsMap.containsKey("label") || nodeAsMap.containsKey("comment"));
         }
 
+      }
+    }
+  }
+
+  @Test
+  public void testOntoPreviewFromSnippetWithCardinalityRestrictions() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE'}");
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.cardinalityRestriction);
+
+      Result importResults
+              = session
+              .run("CALL n10s.onto.preview.inline($rdf,'RDF/XML')", params);
+      Map<String, Object> next = importResults
+              .next().asMap();
+      final List<Node> nodes = (List<Node>) next.get("nodes");
+      assertEquals(4, nodes.size());
+      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
+      assertEquals(2, rels.size());
+
+      int restrictionCount = 0;
+      Iterator<Relationship> relsIterator = rels.iterator();
+      while (relsIterator.hasNext()) {
+        Relationship rel = relsIterator.next();
+        String relName = rel.type();
+        if (relName.equals("SCO_RESTRICTION") || relName.equals("EQC_RESTRICTION")) {
+          restrictionCount++;
+          Map<String, Object> relprops = rel.asMap();
+          System.out.println(relprops);
+          assertEquals("http://test#hasUnit", relprops.get("onPropertyURI"));
+          assertEquals("MAXQUALIFIEDCARDINALITY", relprops.get("restrictionType"));
+          assertEquals(1L, relprops.get("cardinalityVal"));
+          assertEquals("hasUnit", relprops.get("onPropertyName"));
+        }
+      }
+      assertEquals(1,restrictionCount);
+
+      Iterator<Node> nodesIterator = nodes.iterator();
+      while (nodesIterator.hasNext()) {
+        Map<String, Object> nodeAsMap = nodesIterator.next().asMap();
+        if(nodeAsMap.get("uri").equals("http://test#hasUnit")){
+          assertEquals("hasUnit", nodeAsMap.get("name"));
+        }
       }
     }
   }

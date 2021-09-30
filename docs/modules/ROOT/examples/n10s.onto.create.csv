@@ -1,0 +1,4 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.onto.create.childandparent¦n10s.onto.create.childandparent(childClassUri :: STRING?, childClassName :: STRING?, parentClassUri :: STRING?, parentClassName :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)¦creates a sco rel between two classes in the ontology.
+¦procedure¦n10s.onto.create.class¦n10s.onto.create.class(uri :: STRING?, name :: STRING?, params = {} :: MAP?) :: (node :: NODE?)¦creates a class in the ontology.
+¦procedure¦n10s.onto.create.sco¦n10s.onto.create.sco(childCass :: NODE?, parentClass :: NODE?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)¦creates a sco rel between two classes in the ontology.

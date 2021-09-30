@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.onto.create.class¦n10s.onto.create.class(uri :: STRING?, name :: STRING?, params = {} :: MAP?) :: (node :: NODE?)¦creates a class in the ontology.

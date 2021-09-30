@@ -1,0 +1,2 @@
+¦signature
+¦n10s.sim.pathsim.value(node1 :: NODE?, node2 :: NODE?, params = {} :: MAP?) :: (FLOAT?)

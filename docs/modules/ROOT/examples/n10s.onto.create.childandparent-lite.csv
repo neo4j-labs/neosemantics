@@ -1,0 +1,2 @@
+¦signature
+¦n10s.onto.create.childandparent(childClassUri :: STRING?, childClassName :: STRING?, parentClassUri :: STRING?, parentClassName :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?)

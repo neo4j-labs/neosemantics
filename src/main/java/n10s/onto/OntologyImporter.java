@@ -188,6 +188,17 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
                 (IRI) st.getObject());
         addTargetToRestriction((BNode)st.getSubject(), (IRI)st.getObject(), OWL.ALLVALUESFROM);
         mappedTripleCounter++;
+      } else if ((st.getPredicate().equals(OWL.CARDINALITY)||st.getPredicate().equals(OWL.MAXCARDINALITY)||
+              st.getPredicate().equals(OWL.MAXQUALIFIEDCARDINALITY)||st.getPredicate().equals(OWL.MINCARDINALITY)||
+              st.getPredicate().equals(OWL.MINQUALIFIEDCARDINALITY)||st.getPredicate().equals(OWL.QUALIFIEDCARDINALITY)) && st
+              .getSubject() instanceof BNode && st.getObject() instanceof Literal) {
+        addValueToCardinalityRestriction((BNode)st.getSubject(), (Literal)st.getObject(), (IRI)st.getPredicate());
+        mappedTripleCounter++;
+      } else if (st.getPredicate().equals(OWL.ONCLASS) && st.getSubject() instanceof BNode && st.getObject() instanceof IRI) {
+        instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
+                (IRI) st.getObject());
+        addTargetToRestriction((BNode)st.getSubject(), (IRI)st.getObject(), OWL.ONCLASS);
+        mappedTripleCounter++;
       } else if (st.getPredicate().equals(RDFS.SUBPROPERTYOF) && st.getObject() instanceof IRI && st
           .getSubject() instanceof IRI) {
         instantiatePair("Resource", (IRI) st.getSubject(), "Resource", (IRI) st.getObject());
@@ -223,6 +234,16 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
       periodicOperation();
     }
 
+  }
+
+  private void addValueToCardinalityRestriction(BNode rId, Literal cardinalityValue, IRI type) {
+    //we are adding the cardinality element to the restriction
+    OWLRestriction restr = (allOpenRestrictions.containsKey(rId)? allOpenRestrictions.get(rId): new OWLRestriction(rId));
+    restr.setCardinalityValue(cardinalityValue);
+    restr.setCardinalitySpecificType(type);
+    if(!allOpenRestrictions.containsKey(rId)){
+      allOpenRestrictions.put(rId,restr);
+    }
   }
 
   private void addTargetToRestriction(BNode rId, IRI target, IRI type) {
@@ -351,17 +372,6 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
       }
     }
 
-
-//    openSubClassRestrictions.keySet().stream().forEach(c -> {
-//      openSubClassRestrictions.get(c).forEach( rest -> {
-//        processRestriction(inThreadTransaction, c, rest);
-//        //TODO: Complete this<<<<<<<
-//        //delete restriction (TODO: delete via iterator or mark for deletion)
-//        openSubClassRestrictions.get(c).remove(rest);
-//        allOpenRestrictions.remove(rest.getRestrictionId());
-//      });
-//    });
-
     Iterator<Entry<IRI, List<OWLRestriction>>> eqcRestIter = openEquivRestrictions.entrySet().iterator();
     while(eqcRestIter.hasNext()){
       Entry<IRI, List<OWLRestriction>> classAndRestrictions = eqcRestIter.next();
@@ -375,17 +385,6 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
         }
       }
     }
-
-//    openEquivRestrictions.keySet().stream().forEach(c -> {
-//      openEquivRestrictions.get(c).forEach( rest -> {
-//        processRestriction(inThreadTransaction, c, rest);
-//        //TODO: Complete this<<<<<<<
-//        //delete restriction (TODO: delete via iterator or mark for deletion)
-//        openEquivRestrictions.get(c).remove(rest);
-//        openEquivRestrictions.remove(rest.getRestrictionId());
-//      });
-//    });
-
 
     for (Statement st : statements) {
       try {
@@ -471,7 +470,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           if (rel.getEndNode().equals(toNode)) {
             found = rel.getProperty("onPropertyURI").equals(rest.getRelName().stringValue()) &&
                     rel.getProperty("onPropertyName").equals(rest.getRelName().getLocalName()) &&
-                    rel.getProperty("restrictionType").equals(getTypeAsString(rest));
+                    rel.getProperty("restrictionType").equals(getTypeAsString(rest)) &&
+                    ((!rel.hasProperty("cardinalityVal")&&!rest.isCardinalityConstraint()) ||
+                            (rel.getProperty("cardinalityVal").equals(rest.getCardinalityVal())));
             break;
           }
         }
@@ -484,6 +485,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           restrictionRel.setProperty("onPropertyURI", rest.getRelName().stringValue());
           restrictionRel.setProperty("onPropertyName", rest.getRelName().getLocalName());
           restrictionRel.setProperty("restrictionType", getTypeAsString(rest));
+          if(rest.isCardinalityConstraint()){
+            restrictionRel.setProperty("cardinalityVal", rest.getCardinalityVal());
+          }
 
         }
       } catch (ExecutionException e) {
@@ -509,6 +513,8 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
       return "SOME";
     } else if (rest.getType().equals(OWL.ALLVALUESFROM)){
       return "ALL";
+    } else if (rest.isCardinalityConstraint()){
+      return rest.getCardinalityType().getLocalName().toUpperCase();
     } else {
       return "UNKNOWN";
     }

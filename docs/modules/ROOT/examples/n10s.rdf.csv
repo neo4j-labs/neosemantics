@@ -1,4 +1,5 @@
 ¦type¦qualified name¦signature¦description
+¦function¦n10s.rdf.collect¦n10s.rdf.collect(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?) :: (STRING?)¦n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* and returns them serialised as N-triples
 ¦function¦n10s.rdf.fullUriFromShortForm¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)¦Returns the expanded (full) IRI given a shortened one created in the load process with semantics.importRDF
 ¦function¦n10s.rdf.getDataType¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)¦Returns the XMLSchema or custom datatype of a property when present
 ¦function¦n10s.rdf.getIRILocalName¦n10s.rdf.getIRILocalName(url :: STRING?) :: (STRING?)¦Returns the local part of an IRI

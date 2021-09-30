@@ -91,6 +91,9 @@ public class OntologyPreviewer extends OntologyImporter {
       relProps.put("onPropertyURI", rest.getRelName().stringValue());
       relProps.put("onPropertyName", rest.getRelName().getLocalName());
       relProps.put("restrictionType", getTypeAsString(rest));
+      if(rest.isCardinalityConstraint()){
+        relProps.put("cardinalityVal", rest.getCardinalityVal());
+      }
       vRels.add(
               new VirtualRelationship(vNodes.get(c.stringValue().replace("'", "\'")),
                       vNodes.get(rest.getTargetClass().stringValue().replace("'", "\'")),

@@ -1,4 +1,5 @@
 ¦signature
+¦n10s.rdf.collect(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?) :: (STRING?)
 ¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)
 ¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)
 ¦n10s.rdf.getIRILocalName(url :: STRING?) :: (STRING?)
