@@ -466,7 +466,6 @@ public class OntoProceduresTest {
         if (relName.equals("SCO_RESTRICTION") || relName.equals("EQC_RESTRICTION")) {
           restrictionCount++;
           Map<String, Object> relprops = rel.asMap();
-          System.out.println(relprops);
           assertEquals("http://test#hasUnit", relprops.get("onPropertyURI"));
           assertEquals("MAXQUALIFIEDCARDINALITY", relprops.get("restrictionType"));
           assertEquals(1L, relprops.get("cardinalityVal"));
