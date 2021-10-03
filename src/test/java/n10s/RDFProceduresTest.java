@@ -320,6 +320,12 @@ public class RDFProceduresTest {
           "\n" + "<http://www.wikidata.org/entity/Q84> wd:P624 \"This is something geolocated\". " +
           "<http://www.wikidata.org/entity/Q84> wd:P625 \"Point(-0.1275 51.507222222)\"^^gs:wktLiteral .";
 
+  String turtleWithPointDataInMars =
+          "@prefix wd: <http://www.wikidata.org/prop/direct/> .\n" +
+                  "@prefix gs: <http://www.opengis.net/ont/geosparql#> .\n" +
+                  "\n" + "<http://www.wikidata.org/entity/Q84> wd:P624 \"This is something geolocated in Mars\". " +
+                  "<http://www.wikidata.org/entity/Q84> wd:P625 \"<http://www.wikidata.org/entity/Q111> Point(351.83 -14.47)\"^^gs:wktLiteral .";
+
   String turtleStarWithPointData = "@prefix neoind: <neo4j://individuals#> .\n"
           + "@prefix neovoc: <neo4j://vocabulary#> .\n"
           + "@prefix gs: <http://www.opengis.net/ont/geosparql#> .\n"
@@ -1744,6 +1750,28 @@ public class RDFProceduresTest {
       assertEquals(-51.507222222,p.x(),0.0005);
       assertEquals(0.1275,p.y(),0.0005);
       assertEquals(7203,p.srid()); //cartesian
+    }
+  }
+
+  @Test
+  public void testPointDatatypeInMars() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{handleVocabUris: 'IGNORE'}");
+      Result importResults
+              = session
+              .run("CALL n10s.rdf.import.inline('" + turtleWithPointDataInMars
+                      + "','Turtle')");
+      Map<String, Object> next = importResults
+              .next().asMap();
+      assertEquals(2L, next.get("triplesLoaded"));
+      Record record = session
+              .run("MATCH (x:Resource { uri: 'http://www.wikidata.org/entity/Q84'}) return x.P624 as s, x.P625 as p")
+              .next();
+      assertEquals("This is something geolocated in Mars", record.get("s").asString());
+      assertEquals("<http://www.wikidata.org/entity/Q111> Point(351.83 -14.47)",record.get("p").asString());
     }
   }
 

@@ -10,6 +10,7 @@ import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.neo4j.exceptions.InvalidArgumentException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.internal.helpers.collection.Iterables;
@@ -127,7 +128,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     }else if (datatype.equals(vf.createIRI(GEOSPARQL_NS, WKTLITERAL))) {
       try {
         return PointValue.parse(wktToCartesian(object.stringValue()));
-      } catch (IllegalArgumentException e) {
+      } catch (InvalidArgumentException e) {
         //if pointvalue cannot be parsed we return string value
         return object.stringValue();
       }
