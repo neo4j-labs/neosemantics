@@ -88,7 +88,7 @@ public class ValidationProcedures extends CommonProcedures {
 
     SHACLValidator validator = new SHACLValidator(tx, log);
     ValidatorConfig validatorConfig = validator
-        .compileValidations(validator.parseConstraints(is, getFormat(format)));
+        .compileValidations(validator.parseConstraints(is, getFormat(format), props));
 
     validatorConfig.writeToDB(tx);
 

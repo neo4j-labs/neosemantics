@@ -33,6 +33,7 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -617,12 +618,15 @@ public class SHACLValidator {
     return params;
   }
 
-  protected Iterator<Map<String, Object>> parseConstraints(InputStream is, RDFFormat format)
+  protected Iterator<Map<String, Object>> parseConstraints(InputStream is, RDFFormat format, Map<String,Object> props)
       throws IOException {
     Repository repo = new SailRepository(new MemoryStore());
 
     List<Map<String, Object>> constraints = new ArrayList<>();
     try (RepositoryConnection conn = repo.getConnection()) {
+      conn.getParserConfig().set(BasicParserSettings.VERIFY_URI_SYNTAX,
+              props.containsKey("verifyUriSyntax") ? (Boolean) props
+                      .get("verifyUriSyntax") : true);
       conn.begin();
       conn.add(new InputStreamReader(is), "http://neo4j.com/base/", format);
       conn.commit();
@@ -752,7 +756,7 @@ public class SHACLValidator {
         constraints.add(record);
       }
 
-    }
+    } 
     return constraints.iterator();
   }
 

@@ -5,10 +5,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.RDFProcedures;
@@ -135,6 +133,44 @@ public class SHACLValidationProceduresTest {
 
       Result loadCompiled = session.run("call n10s.validation.shacl.validate()");
       assertTrue(loadCompiled.hasNext());
+    }
+  }
+
+  @Test
+  public void testUriWithWhitespaces() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      String SHACL_URI_WHITESPACES = "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+              "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+              "  @prefix xsd: <http://www.w3.org/2001/XMLSchema> .\n" +
+              "  @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+              " @prefix sp: <neo4j://graph.schema#Soccer > .\n" +
+              "\n" +
+              "  neo4j:PersonFooShape a sh:NodeShape ;\n" +
+              "    sh:targetClass sp:Player ;\n" +
+              "    sh:property [\n" +
+              "      sh:path neo4j:gender ;\n" +
+              "      sh:datatype xsd:string ;\n" +
+              "      sh:not [ sh:hasValue rdf:nil ];\n" +
+              "      sh:in (\"female\" \"male\");\n" +
+              "    ];\n" +
+              "." ;
+
+      Result results = session
+              .run(
+                      "CALL n10s.validation.shacl.import.inline('" + SHACL_URI_WHITESPACES + "',\"Turtle\", {" +
+                              "verifyUriSyntax: false })");
+
+      assertTrue(results.hasNext());
+
+      results = session.run("call n10s.validation.shacl.listShapes() yield target return collect(distinct target) as t");
+      assertTrue(results.hasNext());
+      List<Object> targetClasses = results.next().get("t").asList();
+      assertTrue(targetClasses.size()==1);
+      assertEquals("Soccer Player", targetClasses.get(0));
     }
   }
 
