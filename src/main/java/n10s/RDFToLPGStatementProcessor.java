@@ -21,7 +21,10 @@ import org.neo4j.values.storable.PointValue;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoField;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -118,11 +121,20 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
       try {
         return ZonedDateTime.parse(object.stringValue());
       }catch(DateTimeParseException dtpe){
-        try {
-          return DateUtils.parseDateTime(object.stringValue());
-        } catch (IllegalArgumentException e) {
-          //if date cannot be parsed we return string value
-          return object.stringValue();
+        try{
+          //formatter to support the format shown int the cypher refcard (timezone but no offset)
+          DateTimeFormatter neo4jZonedDateFormat = new DateTimeFormatterBuilder()
+                  .appendPattern("yyyy-MM-dd'T'HH:mm:ss")
+                  .appendFraction(ChronoField.MILLI_OF_SECOND, 0, 9, true)
+                  .appendPattern("'['").appendZoneId().appendPattern("']'").toFormatter();
+          return ZonedDateTime.parse(object.stringValue(), neo4jZonedDateFormat);
+        }catch(DateTimeParseException dtpe2){
+          try {
+            return DateUtils.parseDateTime(object.stringValue());
+          } catch (IllegalArgumentException e) {
+            //if date cannot be parsed we return string value
+            return object.stringValue();
+          }
         }
       }
     }else if (datatype.equals(vf.createIRI(GEOSPARQL_NS, WKTLITERAL))) {

@@ -4,9 +4,12 @@ import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static n10s.graphconfig.Params.WKTLITERAL_URI;
 
+import java.time.ZonedDateTime;
 import java.util.*;
 
+import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.RDFProcedures;
@@ -50,7 +53,7 @@ public class SHACLValidationProceduresTest {
   public Neo4jRule neo4j = new Neo4jRule()
       .withProcedure(ValidationProcedures.class).withProcedure(GraphConfigProcedures.class)
       .withProcedure(RDFLoadProcedures.class).withFunction(RDFProcedures.class).withProcedure(
-          NsPrefixDefProcedures.class);
+          NsPrefixDefProcedures.class).withFunction(AuxProcedures.class);
 
 
   @Test
@@ -136,6 +139,7 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+
   @Test
   public void testUriWithWhitespaces() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -217,6 +221,229 @@ public class SHACLValidationProceduresTest {
       }
       assertEquals(3, minCountCount);
       assertEquals(3, datatypeConstCount);
+    }
+  }
+
+  String DATE_TYPE_CONSTRAINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testDate;   \n" +
+          "        sh:datatype xsd:dateTime ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_1 =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  String DATE_DATA_2 =
+          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  @Test
+  public void testDataTypeShape() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CALL n10s.graphconfig.init()");
+      session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
+      session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
+      session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_1 + "',\"N-Triples\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT + "\",\"Turtle\", {})");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      assertFalse(result.hasNext());
+
+
+      results = session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_2 + "',\"N-Triples\")");
+      assertTrue(results.hasNext());
+
+      result = session.run("call n10s.validation.shacl.validate()");
+      assertTrue(result.hasNext());
+
+      int totalCount = 0;
+      int datatypeConstCount = 0;
+      while (result.hasNext()) {
+        Record next = result.next();
+        if (next.get("propertyShape").asString()
+                .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
+          datatypeConstCount++;
+          assertEquals(353,next.get("offendingValue").asInt());
+          assertEquals("http://adaptive.accenture.com/ind#testIndividual3",next.get("focusNode").asString());
+        }
+        totalCount++;
+      }
+      assertEquals(1, totalCount);
+      assertEquals(1, datatypeConstCount);
+    }
+  }
+
+  String DATE_DATA_WHERE_PROP_IS_USED_AS_REL =
+          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "<http://adaptive.accenture.com/ind#ADateForTestIndividual3> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  @Test
+  public void testDataTypeShapeDataTypeRestrictedPropUsedAsRel() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CALL n10s.graphconfig.init()");
+      session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
+      session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
+      session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_WHERE_PROP_IS_USED_AS_REL + "',\"N-Triples\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT + "\",\"Turtle\", {})");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+
+      int totalCount = 0;
+      int datatypeConstCount = 0;
+      while (result.hasNext()) {
+        Record next = result.next();
+        if (next.get("propertyShape").asString()
+                .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
+          datatypeConstCount++;
+          assertEquals("http://adaptive.accenture.com/ind#ADateForTestIndividual3",next.get("offendingValue").asString());
+          assertEquals("http://adaptive.accenture.com/ind#testIndividual3",next.get("focusNode").asString());
+        }
+        totalCount++;
+      }
+      assertEquals(1, totalCount);
+      assertEquals(1, datatypeConstCount);
+    }
+  }
+
+  String DATE_TYPE_CONSTRAINT_DATE_AND_POINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testDate;   \n" +
+          "        sh:datatype xsd:date ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testPoint;   \n" +
+          "        sh:datatype <" + WKTLITERAL_URI.stringValue()+ "> ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_POINT_AND_TYPE =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"Point(-1.324 -5.354)\"^^<" + WKTLITERAL_URI.stringValue() + "> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"1956-02-25T10:00:00.00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"1956-02-25T10:00:00.0000+01:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  @Test
+  public void testDataTypeShapeDataPointAndDate() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CALL n10s.graphconfig.init()");
+      session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
+      session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
+      session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_POINT_AND_TYPE + "',\"N-Triples\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT_DATE_AND_POINT + "\",\"Turtle\", {})");
+
+      assertTrue(results.hasNext());
+
+      results = session
+              .run("MATCH (n:Resource) return properties(n) as p, labels(n) as l ");
+      while(results.hasNext()){
+        System.out.println(results.next());
+      }
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+
+      int totalCount = 0;
+      int datatypeConstCount = 0;
+      while (result.hasNext()) {
+        Record next = result.next();
+        if (next.get("propertyShape").asString()
+                .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
+          datatypeConstCount++;
+          if(next.get("focusNode").asString().equals("http://adaptive.accenture.com/ind#testIndividual2")) {
+            if (next.get("resultPath").asString().equals("http://adaptive.accenture.com/ontologies/o1#testDate")||
+                    next.get("resultPath").asString().equals("http://adaptive.accenture.com/ontologies/o1#testPoint")){
+              assertEquals(ZonedDateTime.parse("1956-02-25T10:00:00.0000+01:00[Europe/Berlin]"), next.get("offendingValue").asZonedDateTime());
+            } else {
+              assertFalse(true); //we should not get here
+            }
+          } else if (next.get("focusNode").asString().equals("http://adaptive.accenture.com/ind#testIndividual3")) {
+            if (next.get("resultPath").asString().equals("http://adaptive.accenture.com/ontologies/o1#testDate")||
+                    next.get("resultPath").asString().equals("http://adaptive.accenture.com/ontologies/o1#testPoint")){
+              assertEquals(353, next.get("offendingValue").asInt());
+            } else {
+              assertFalse(true); //we should not get here
+            }
+          } else {
+            assertFalse(true); //we should not get here
+          }
+        }
+        totalCount++;
+      }
+      assertEquals(4, totalCount);
+      assertEquals(4, datatypeConstCount);
     }
   }
 

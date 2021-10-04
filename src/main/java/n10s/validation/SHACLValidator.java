@@ -4,6 +4,7 @@ import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_KEEP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_MAP;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN;
 import static n10s.graphconfig.GraphConfig.GRAPHCONF_VOC_URI_SHORTEN_STRICT;
+import static n10s.graphconfig.Params.WKTLITERAL_URI;
 import static n10s.utils.UriUtils.translateUri;
 
 import java.io.IOException;
@@ -193,9 +194,8 @@ public class SHACLValidator {
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
           severity, (String) theConstraint.get("dataType"));
 
-      //TODO: Complete all datatypes: spatial type Point, Temporal types: Date, Time, LocalTime, DateTime, LocalDateTime and Duration
-
-      //TODO: This part is for custom datatypes? Think if it's needed
+      //TODO: This part is to check that a property for which a datatype constraint has been defined
+      // is not being used as a relationship
       addCypherToValidationScripts(vc, Arrays.asList(focusLabel), getDataTypeViolationQuery2(false),
           getDataTypeViolationQuery2(true), focusLabel,
           propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
@@ -756,23 +756,25 @@ public class SHACLValidator {
         constraints.add(record);
       }
 
-    } 
+    }
     return constraints.iterator();
   }
 
   private String getDatatypeCastExpressionPref(String dataType) {
     if (dataType.equals(XMLSchema.BOOLEAN.stringValue())) {
-      return "toBoolean(toString(";
+      return "coalesce(toBoolean(toString(";
     } else if (dataType.equals(XMLSchema.STRING.stringValue())) {
-      return "toString(";
+      return "coalesce(toString(";
     } else if (dataType.equals(XMLSchema.INTEGER.stringValue())) {
-      return "toInteger(";
+      return "coalesce(toInteger(";
     } else if (dataType.equals(XMLSchema.FLOAT.stringValue())) {
-      return "toFloat(";
+      return "coalesce(toFloat(";
     } else if (dataType.equals(XMLSchema.DATE.stringValue())) {
-      return "date(";
+      return "n10s.aux.dt.check('" + XMLSchema.DATE.stringValue()+ "',";
     } else if (dataType.equals(XMLSchema.DATETIME.stringValue())) {
-      return "datetime(";
+      return "n10s.aux.dt.check('" + XMLSchema.DATETIME.stringValue()+ "',";
+    } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
+      return "n10s.aux.dt.check('" +WKTLITERAL_URI.stringValue()+ "',";
     } else {
       return "";
     }
@@ -780,18 +782,20 @@ public class SHACLValidator {
 
   private String getDatatypeCastExpressionSuff(String dataType) {
     if (dataType.equals(XMLSchema.BOOLEAN.stringValue())) {
-      return "))";
+      return ")) = x , false)";
     } else if (dataType.equals(XMLSchema.STRING.stringValue())) {
-      return ")";
+      return ") = x , false)";
     } else if (dataType.equals(XMLSchema.INTEGER.stringValue())) {
-      return ")";
+      return ") = x , false)";
     } else if (dataType.equals(XMLSchema.FLOAT.stringValue())) {
-      return ")";
+      return ") = x , false)";
     } else if (dataType.equals(XMLSchema.DATE.stringValue())) {
       return ")";
     } else if (dataType.equals(XMLSchema.DATETIME.stringValue())) {
       return ")";
-    } else {
+    } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
+      return ")";
+    }else {
       return "";
     }
   }
@@ -898,7 +902,7 @@ public class SHACLValidator {
   }
 
   private String CYPHER_DATATYPE_V_SUFF() {
-    return " NOT all(x in [] +  focus.`%s` where coalesce( %s x %s = x , false)) RETURN " +
+    return " NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " +
         (shallIUseUriInsteadOfId() ? " focus.uri " : " id(focus) ") + " as nodeId, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
         " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
