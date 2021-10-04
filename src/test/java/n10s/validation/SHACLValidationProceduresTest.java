@@ -407,12 +407,6 @@ public class SHACLValidationProceduresTest {
 
       assertTrue(results.hasNext());
 
-      results = session
-              .run("MATCH (n:Resource) return properties(n) as p, labels(n) as l ");
-      while(results.hasNext()){
-        System.out.println(results.next());
-      }
-
       Result result = session.run("call n10s.validation.shacl.validate()");
 
       int totalCount = 0;
@@ -1160,8 +1154,6 @@ public class SHACLValidationProceduresTest {
           (handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
               ? VAL_RESULTS_QUERY_AS_RDF : VAL_RESULTS_QUERY);
 
-      //print them out
-      //System.out.println("expected: ");
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
       while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
@@ -1179,18 +1171,12 @@ public class SHACLValidationProceduresTest {
         expectedResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, offendingValue));
-
-//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-//            propertyName + ", severity: " + severity + ", constraint: " + constraint
-//            + ", offendingValue: " + offendingValue  + ", message: " + message);
       }
 
       // run validation
       Result actualValidationResults = session
           .run("call n10s.validation.shacl.validate() ");
 
-      // print out validation results
-      //System.out.println("actual: ");
       Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
@@ -1205,14 +1191,8 @@ public class SHACLValidationProceduresTest {
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, offendingValue));
-
-//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-//            propertyName + ", severity: " + severity + ", constraint: " + constraint
-//            + ", offendingValue: " + offendingValue  + ", message: " + message);
-
       }
 
-      //System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -1232,8 +1212,6 @@ public class SHACLValidationProceduresTest {
               + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
               + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
 
-      // print out validation results
-      //System.out.println("actual on set of nodes: ");
       actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
@@ -1249,13 +1227,8 @@ public class SHACLValidationProceduresTest {
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, offendingValue));
 
-//        System.out.println("focusNode: " + focusNode + ", nodeType: " + nodeType + ",  propertyName: " +
-//            propertyName + ", severity: " + severity + ", constraint: " + constraint
-//            + ", offendingValue: " + offendingValue  + ", message: " + message);
-
       }
 
-      //System.out.println("expected results size: " + expectedResults.size() +  " / " + "actual results size: " + actualResults.size() );
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -1278,9 +1251,6 @@ public class SHACLValidationProceduresTest {
     for (ValidationResult vr : set) {
       contained |= equivalentValidationResult(vr, res);
     }
-//    if (!contained) {
-//      System.out.println("Validation Result: " + res + "\nnot found in oposite set: " + set);
-//    }
     return contained;
   }
 
