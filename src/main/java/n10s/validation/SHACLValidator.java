@@ -412,19 +412,20 @@ public class SHACLValidator {
           severity);
     }
 
-    if (theConstraint.get("ignoredProps") != null) {
+    if (theConstraint.containsKey("constraintType") && theConstraint.get("constraintType").equals("closedDefinitionPropList")){
 
       String paramSetId = theConstraint.get("nodeShapeUid") + "_" + SHACL.CLOSED.stringValue();
       Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
       List<String> allowedPropsTranslated = new ArrayList<>();
       for (String uri : (List<String>) theConstraint.get("ignoredProps")) {
-        if (!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+        if(!uri.isEmpty()) {
           allowedPropsTranslated.add(translateUri(uri, tx, gc));
         }
       }
       if (theConstraint.get("definedProps") != null) {
+        //we cannot override rdf:type (but it can be ignored)
         for (String uri : (List<String>) theConstraint.get("definedProps")) {
-          if (!uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+          if (!uri.isEmpty() && !uri.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
             allowedPropsTranslated.add(translateUri(uri, tx, gc));
           }
         }
@@ -586,11 +587,12 @@ public class SHACLValidator {
           propConstraint.get("maxExc")));
     }
 
-    if (propConstraint.get("ignoredProps") != null) {
+    //if (propConstraint.get("ignoredProps") != null) {
+    if(propConstraint.containsKey("constraintType") && propConstraint.get("constraintType").equals("closedDefinitionPropList")){
       List<String> ignoredUrisRaw = (List<String>) propConstraint.get("ignoredProps");
       List<String> ignoredUrisTranslated = new ArrayList<>();
       for (String x : ignoredUrisRaw) {
-        if (!x.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+        if (!x.isEmpty() && !x.equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
           ignoredUrisTranslated.add(translateUri(x, tx, gc));
         }
       }
@@ -721,6 +723,7 @@ public class SHACLValidator {
       while (queryResult.hasNext()) {
         Map<String, Object> record = new HashMap<>();
         BindingSet next = queryResult.next();
+        record.put("constraintType","closedDefinitionPropList");
         record.put("appliesToCat", next.getValue("targetClass").stringValue());
         record
             .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);

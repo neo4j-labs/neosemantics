@@ -224,6 +224,153 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+  String SHAPES_CLOSED_IGNORE_TYPE = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+          "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "@prefix ex:    <http://www.example.com/device#> .\n" +
+          "@prefix owl:   <http://www.w3.org/2002/07/owl#> .\n" +
+          "\n" +
+          "\n" +
+          "ex:SoftwareShape\n" +
+          "    a sh:NodeShape ;\n" +
+          "    sh:targetClass ex:Software ;\n" +
+          "    sh:property [             \n" +
+          "        sh:path ex:id;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "        sh:maxLength 255;\n" +
+          "    ] ;\n" +
+          "    sh:property [             \n" +
+          "        sh:path rdf:type;     \n" +
+          "        sh:class owl:Class;\n" +
+          "\t\tsh:nodeKind sh:IRI ;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:type;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:status;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:closed true ;\n" +
+          "    sh:ignoredProperties ( rdf:type owl:topDataProperty owl:topObjectProperty ) ;\n" +
+          "    .";
+
+  String SHAPES_CLOSED_DATA = "<?xml version=\"1.0\"?>\n" +
+          "<rdf:RDF xmlns=\"http://www.example.com/device#\"\n" +
+          "     xml:base=\"http://www.example.com/device\"\n" +
+          "     xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
+          "     xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
+          "     xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n" +
+          "     xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n" +
+          "     xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n" +
+          "     xmlns:device=\"http://www.example.com/device#\">\n" +
+          " \n" +
+          "\n" +
+          "    <!-- http://ww.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4 -->\n" +
+          "\n" +
+          "    <owl:NamedIndividual rdf:about=\"http://www.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4\">\n" +
+          "        <rdf:type rdf:resource=\"http://www.example.com/device#Software\"/>\n" +
+          "        <id rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">2</id>\n" +
+          "        <status rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">NEW</status>\n" +
+          "        <type rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">SCRIPT1</type>\n" +
+          "    </owl:NamedIndividual>\n" +
+          "</rdf:RDF>";
+
+  @Test
+  public void testClosedShapeIgnore() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
+      session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
+      session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_IGNORE_TYPE + "\",\"Turtle\")");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      assertFalse(result.hasNext());
+    }
+  }
+
+  String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+          "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "@prefix ex:    <http://www.example.com/device#> .\n" +
+          "@prefix owl:   <http://www.w3.org/2002/07/owl#> .\n" +
+          "\n" +
+          "\n" +
+          "ex:SoftwareShape\n" +
+          "    a sh:NodeShape ;\n" +
+          "    sh:targetClass ex:Software ;\n" +
+          "    sh:property [             \n" +
+          "        sh:path ex:id;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "        sh:maxLength 255;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:type;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:status;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:closed true ;\n" +
+          "    .";
+
+  @Test
+  public void testClosedShapeNoExclusion() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
+      session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
+      session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_NO_EXCLUSION + "\",\"Turtle\")");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      assertTrue(result.hasNext());
+      Record violation = result.next();
+      assertEquals("http://www.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4",violation.get("focusNode").asString());
+      assertEquals("http://www.w3.org/ns/shacl#ClosedConstraintComponent",violation.get("propertyShape").asString());
+      assertEquals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", violation.get("resultPath").asString());
+
+      assertFalse(result.hasNext());
+    }
+  }
+
   String DATE_TYPE_CONSTRAINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
           "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
           "\n" +
@@ -1121,7 +1268,7 @@ public class SHACLValidationProceduresTest {
       //db is empty
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
-      session.run("CALL n10s.graphconfig.init({ handleMultival: 'ARRAY'" +
+      session.run("CALL n10s.graphconfig.init({ handleRDFTypes: 'LABELS_AND_NODES', handleMultival: 'ARRAY'" +
           ", handleVocabUris: '" + handleVocabUris + "' })");
 
       //load data
