@@ -6,6 +6,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static n10s.graphconfig.Params.WKTLITERAL_URI;
 
+import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.util.*;
 
@@ -588,8 +589,83 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+  String DATE_TYPE_CONSTRAINT_ANYURI = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testUri ;   \n" +
+          "        sh:datatype xsd:anyURI ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_ANYURI =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"http://www.example.com\" . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"http://www.example with.whitespaces.com\" . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." ;
+
   @Test
-  public void tesMusicExample() throws Exception {
+  public void testDataTypeShapeAnyUri() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CALL n10s.graphconfig.init()");
+      session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
+      session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
+      session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_ANYURI + "',\"N-Triples\")");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT_ANYURI + "\",\"Turtle\", {})");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+
+      int totalCount = 0;
+      int datatypeConstCount = 0;
+      while (result.hasNext()) {
+        Record next = result.next();
+        if (next.get("propertyShape").asString()
+                .equals(SHACL.DATATYPE_CONSTRAINT_COMPONENT.stringValue())) {
+          datatypeConstCount++;
+          if(next.get("resultPath").asString().equals("http://adaptive.accenture.com/ontologies/o1#testUri")) {
+            if (next.get("focusNode").asString().equals("http://adaptive.accenture.com/ind#testIndividual")){
+              assertEquals(LocalDate.parse("1956-06-25"), next.get("offendingValue").asLocalDate());
+            } else if (next.get("focusNode").asString().equals("http://adaptive.accenture.com/ind#testIndividual3")){
+              assertEquals("http://www.example with.whitespaces.com", next.get("offendingValue").asString());
+            } else {
+              assertFalse(true); //we should not get here
+            }
+          } else {
+            assertFalse(true); //we should not get here
+          }
+        }
+        totalCount++;
+      }
+      assertEquals(2, totalCount);
+      assertEquals(2, datatypeConstCount);
+    }
+  }
+
+  @Test
+  public void testMusicExample() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());

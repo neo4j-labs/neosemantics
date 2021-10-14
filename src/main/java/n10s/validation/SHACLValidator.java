@@ -778,6 +778,8 @@ public class SHACLValidator {
       return "n10s.aux.dt.check('" + XMLSchema.DATETIME.stringValue()+ "',";
     } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
       return "n10s.aux.dt.check('" +WKTLITERAL_URI.stringValue()+ "',";
+    } else if (dataType.equals(XMLSchema.ANYURI.stringValue())) {
+      return "n10s.aux.dt.check('" +XMLSchema.ANYURI.stringValue()+ "',";
     } else {
       return "";
     }
@@ -797,6 +799,8 @@ public class SHACLValidator {
     } else if (dataType.equals(XMLSchema.DATETIME.stringValue())) {
       return ")";
     } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
+      return ")";
+    } else if (dataType.equals(XMLSchema.ANYURI.stringValue())) {
       return ")";
     }else {
       return "";

@@ -73,21 +73,37 @@ public class AuxProceduresTest {
             assertFalse(record.get("no2").asBoolean());
             assertFalse(record.get("no3").asBoolean());
 
+            res = session.run("RETURN n10s.aux.dt.check('" + XMLSchema.ANYURI.stringValue() + "',44.56) as no0," +
+                    "n10s.aux.dt.check('" + XMLSchema.ANYURI.stringValue() + "',point({x: -0.1275, y: 51.507222222})) as no1," +
+                    "n10s.aux.dt.check('" + XMLSchema.ANYURI.stringValue() + "','this is a string') as no2," +
+                    "n10s.aux.dt.check('" + XMLSchema.ANYURI.stringValue() + "','neo4j://home.voc/123#something') as yes");
+            assertTrue(res.hasNext());
+            record = res.next();
+            assertFalse(record.get("no0").asBoolean());
+            assertFalse(record.get("no1").asBoolean());
+            assertFalse(record.get("no2").asBoolean());
+            assertTrue(record.get("yes").asBoolean());
+
             session.run("CREATE (:Thing { dt: date(), dtm: datetime(), zdt: datetime('1956-06-25T09:00:00[Europe/Berlin]')," +
-                    "theint: 45, thebo: false, flo: 4.567, po: point({x: -0.1275, y: 51.507222222, z: 44 })})");
+                    "theint: 45, thebo: false, flo: 4.567, po: point({x: -0.1275, y: 51.507222222, z: 44 }), " +
+                    "uri: 'mail://somet hing.io#123'})");
 
             assertEquals(1L,session.run("MATCH (t:Thing) RETURN count(t) as thingcount").next().get("thingcount").asInt());
 
             res = session.run("MATCH (t:Thing) RETURN n10s.aux.dt.check('" + WKTLITERAL_URI.stringValue() + "',t.zdt) as no1," +
                     "n10s.aux.dt.check('" + XMLSchema.DATETIME.stringValue() + "',t.zdt) as yes," +
                     "n10s.aux.dt.check('" + XMLSchema.DATE.stringValue() + "',t.zdt) as no2," +
-                    "n10s.aux.dt.check('" + XMLSchema.TIME.stringValue() + "',t.zdt) as no3");
+                    "n10s.aux.dt.check('" + XMLSchema.TIME.stringValue() + "',t.zdt) as no3," +
+                    "n10s.aux.dt.check('" + XMLSchema.ANYURI.stringValue() + "',t.uri) as no4");
             assertTrue(res.hasNext());
             record = res.next();
             assertTrue(record.get("yes").asBoolean());
             assertFalse(record.get("no1").asBoolean());
             assertFalse(record.get("no2").asBoolean());
             assertFalse(record.get("no3").asBoolean());
+            assertFalse(record.get("no4").asBoolean());
+
+
         }
     }
 }
