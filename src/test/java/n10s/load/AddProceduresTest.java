@@ -67,7 +67,11 @@ public class AddProceduresTest {
                     //"[ { key: 'ns0__one', val: 'one'},{ key: 'ns0__two', val: 2},{ key: 'ns0__three', val: true }])");
             assertTrue(addResult.hasNext());
             Node nodeCreated = addResult.next().get("node").asNode();
-            assertEquals("one", nodeCreated.get("ns2__one").asString());
+            String v1_ns = session.run("call n10s.nsprefixes.list() yield prefix, namespace\n"
+                    + "with prefix, namespace where namespace = 'http://somevocab/v1/'\n"
+                    + "return prefix, namespace").next().get("prefix").asString();
+            assertEquals("one", nodeCreated.get(v1_ns + "__one").asString());
+            long idOf1234 = nodeCreated.id();
 
             addResult = session.run("call n10s.add.node('http://something/5678'," +
                     "['ns0__Thingamajiggy','ns0__Thingemeebobby']," +
@@ -75,21 +79,39 @@ public class AddProceduresTest {
             //"[ { key: 'ns0__one', val: 'one'},{ key: 'ns0__two', val: 2},{ key: 'ns0__three', val: true }])");
             assertTrue(addResult.hasNext());
             nodeCreated = addResult.next().get("node").asNode();
-            assertEquals("two \"quoted\" ", nodeCreated.get("ns2__two").asString());
+            assertEquals("two \"quoted\" ", nodeCreated.get(v1_ns + "__two").asString());
+            long idOf5678 = nodeCreated.id();
 
             addResult = session.run("match (from:Resource{uri:'http://something/1234'}), " +
                     " (to:Resource{uri:'http://something/5678'}) with from, to" +
-                    " call n10s.add.relationship(from ," +
+                    " call n10s.add.relationship.nodes(from ," +
                     "'ns0__relationshipppy'," +
-                    "[ { key: 'http://somevocab/v1/relone', val: point({ x: 12, y : -33}) }],to) yield rel " +
+                    "[ { key: 'http://somevocab/v2/relone', val: point({ x: 12, y : -33}) }],to) yield rel " +
                     " return rel ");
             //"[ { key: 'ns0__one', val: 'one'},{ key: 'ns0__two', val: 2},{ key: 'ns0__three', val: true }])");
             assertTrue(addResult.hasNext());
             Relationship rel = addResult.next().get("rel").asRelationship();
-            Point thepoint = rel.get("ns2__relone").asPoint();
+            String v2_ns = session.run("call n10s.nsprefixes.list() yield prefix, namespace\n"
+                    + "with prefix, namespace where namespace = 'http://somevocab/v2/'\n"
+                    + "return prefix, namespace").next().get("prefix").asString();
+            Point thepoint = rel.get(v2_ns + "__relone").asPoint();
             assertEquals(12, thepoint.x(),0.00005);
             assertEquals(-33, thepoint.y(),0.00005);
             assertEquals(7203, thepoint.srid());
+
+            addResult = session.run(" call n10s.add.relationship.uris('http://something/1234' ," +
+                    "'ns0__relationshipppyType2'," +
+                    "[ { key: 'http://somevocab/v2/r1', val: point({ x: 12, y : -33}) }],'http://something/5678') yield rel " +
+                    " return rel ");
+            //"[ { key: 'ns0__one', val: 'one'},{ key: 'ns0__two', val: 2},{ key: 'ns0__three', val: true }])");
+            assertTrue(addResult.hasNext());
+            rel = addResult.next().get("rel").asRelationship();
+            thepoint = rel.get(v2_ns + "__r1").asPoint();
+            assertEquals(12, thepoint.x(),0.00005);
+            assertEquals(-33, thepoint.y(),0.00005);
+            assertEquals(7203, thepoint.srid());
+            assertEquals(idOf1234,rel.startNodeId());
+            assertEquals(idOf5678,rel.endNodeId());
         }
     }
 
