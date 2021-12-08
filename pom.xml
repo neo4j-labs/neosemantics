@@ -5,7 +5,7 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>neosemantics</artifactId>
-  <version>4.3.0.1</version>
+  <version>4.3.0.2</version>
   <packaging>jar</packaging>
   <name>neosemantics (n10s)</name>
   <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
