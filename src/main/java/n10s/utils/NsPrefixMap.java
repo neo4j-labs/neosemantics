@@ -16,8 +16,8 @@ public class NsPrefixMap {
   private static Map<String, String> createStandardNamespacesMap() {
     Map<String, String> ns = new HashMap<>();
     ns.put("http://schema.org/", "sch");
-    ns.put("http://purl.org/dc/elements/1.1/", "dc");
-    ns.put("http://purl.org/dc/terms/", "dct");
+    //ns.put("http://purl.org/dc/elements/1.1/", "dc");
+    //ns.put("http://purl.org/dc/terms/", "dct");
     ns.put("http://www.w3.org/2004/02/skos/core#", "skos");
     ns.put("http://www.w3.org/2008/05/skos-xl#", "skosxl");
     ns.put("http://www.w3.org/2000/01/rdf-schema#", "rdfs");
@@ -34,8 +34,8 @@ public class NsPrefixMap {
   private static Map<String, String> createStandardPrefixesMap() {
     Map<String, String> ns = new HashMap<>();
     ns.put("sch", "http://schema.org/");
-    ns.put("dc", "http://purl.org/dc/elements/1.1/");
-    ns.put("dct", "http://purl.org/dc/terms/");
+    //ns.put("dc", "http://purl.org/dc/elements/1.1/");
+    //ns.put("dct", "http://purl.org/dc/terms/");
     ns.put("skos", "http://www.w3.org/2004/02/skos/core#");
     ns.put("skosxl", "http://www.w3.org/2008/05/skos-xl#");
     ns.put("rdfs", "http://www.w3.org/2000/01/rdf-schema#");
