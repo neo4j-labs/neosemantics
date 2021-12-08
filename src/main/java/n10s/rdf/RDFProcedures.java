@@ -24,8 +24,8 @@ import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.InvalidParamException;
 import n10s.graphconfig.RDFParserConfig;
 import n10s.rdf.delete.DirectStatementDeleter;
-//import n10s.rdf.load.DirectNodeAdder;
-//import n10s.rdf.load.DirectRelationshipAdder;
+import n10s.rdf.load.DirectNodeAdder;
+import n10s.rdf.load.DirectRelationshipAdder;
 import n10s.rdf.load.DirectStatementLoader;
 import n10s.rdf.preview.StatementPreviewer;
 import n10s.rdf.stream.StatementStreamer;
@@ -194,25 +194,25 @@ public class RDFProcedures extends CommonProcedures {
     return deleteResults;
   }
 
-//  protected DirectStatementLoader doAdd(String rdfFragment, Map<String, Object> props, RDFFormat format, boolean isRel)
-//          throws RDFImportPreRequisitesNotMet, IOException, GraphConfig.GraphConfigNotFound {
-//
-//    DirectStatementLoader statementAdder = null;
-//    RDFParserConfig conf = null;
-//    RDFProcedures.ImportResults importResults = new RDFProcedures.ImportResults();
-//
-//    checkConstraintExist();
-//    conf = new RDFParserConfig(props, new GraphConfig(tx));
-//    statementAdder = (isRel?new DirectRelationshipAdder(db, tx, conf, log):new DirectNodeAdder(db, tx, conf, log));
-//    RDFParser rdfParser = Rio.createParser(format);
-//    rdfParser
-//            .set(BasicParserSettings.VERIFY_URI_SYNTAX, statementAdder.getParserConfig().isVerifyUriSyntax());
-//    rdfParser.setRDFHandler(statementAdder);
-//    rdfParser.parse(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
-//            "http://neo4j.com/base/");
-//
-//    return statementAdder;
-//  }
+  protected DirectStatementLoader doAdd(String rdfFragment, Map<String, Object> props, RDFFormat format, boolean isRel)
+          throws RDFImportPreRequisitesNotMet, IOException, GraphConfig.GraphConfigNotFound {
+
+    DirectStatementLoader statementAdder = null;
+    RDFParserConfig conf = null;
+    RDFProcedures.ImportResults importResults = new RDFProcedures.ImportResults();
+
+    checkConstraintExist();
+    conf = new RDFParserConfig(props, new GraphConfig(tx));
+    statementAdder = (isRel?new DirectRelationshipAdder(db, tx, conf, log):new DirectNodeAdder(db, tx, conf, log));
+    RDFParser rdfParser = Rio.createParser(format);
+    rdfParser
+            .set(BasicParserSettings.VERIFY_URI_SYNTAX, statementAdder.getParserConfig().isVerifyUriSyntax());
+    rdfParser.setRDFHandler(statementAdder);
+    rdfParser.parse(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
+            "http://neo4j.com/base/");
+
+    return statementAdder;
+  }
 
   @UserFunction
   @Description("Returns the XMLSchema or custom datatype of a property when present")
