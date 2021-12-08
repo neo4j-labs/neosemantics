@@ -1561,10 +1561,13 @@ public class RDFEndpointTest {
       //set a prefix that we can remove afterwards
       tx.execute(
           "call n10s.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
+      //add dct namespace prefix, as it's not part of the predefined ones.
+      tx.execute("call n10s.nsprefixes.add(\"dct\",\"http://purl.org/dc/terms/\")").next();
       tx.commit();
     }
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
+
       Map<String, Object> importResult = tx.execute("CALL n10s.rdf.import.fetch('" +
           RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
               .toURI() + "','RDF/XML',{})").next();
