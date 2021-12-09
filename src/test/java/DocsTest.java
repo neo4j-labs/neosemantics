@@ -13,32 +13,32 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.exceptions.KernelException;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.harness.Neo4j;
+import org.neo4j.harness.Neo4jBuilders;
 import org.neo4j.kernel.api.procedure.GlobalProcedures;
 import org.neo4j.kernel.internal.GraphDatabaseAPI;
-import org.neo4j.test.rule.DbmsRule;
-import org.neo4j.test.rule.ImpermanentDbmsRule;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.util.ConfigurationBuilder;
 
 public class DocsTest {
 
-  @Rule
-  public DbmsRule db = new ImpermanentDbmsRule();
+  private static Neo4j db;
 
   @Before
   public void setUp() throws Exception {
+
+    db = Neo4jBuilders.newInProcessBuilder().withDisabledServer().build();
 
     Set<Class<?>> allClasses = allClasses();
     assertFalse(allClasses.isEmpty());
 
     for (Class<?> klass : allClasses) {
       if (!klass.getName().endsWith("Test")) {
-        registerProcedure(db, klass);
+        registerProcedure(db.defaultDatabaseService(), klass);
       }
     }
 
@@ -79,7 +79,7 @@ public class DocsTest {
     // given
     List<Row> rows = new ArrayList<>();
 
-    List<Row> procedureRows = db.executeTransactionally(
+    List<Row> procedureRows = db.defaultDatabaseService().executeTransactionally(
         "CALL dbms.procedures() YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'procedure' AS type, name, description, signature ORDER BY signature",
         Collections.emptyMap(),
         result -> result.stream().map(record -> new Row(
@@ -90,7 +90,7 @@ public class DocsTest {
         ).collect(Collectors.toList()));
     rows.addAll(procedureRows);
 
-    List<Row> functionRows = db.executeTransactionally(
+    List<Row> functionRows = db.defaultDatabaseService().executeTransactionally(
         "CALL dbms.functions() YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'function' AS type, name, description, signature ORDER BY signature",
         Collections.emptyMap(),
         result -> result.stream().map(record -> new Row(
