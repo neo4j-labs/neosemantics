@@ -157,6 +157,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           addStatement(st);
         } else if (st.getObject() instanceof BNode){
           //object is a blank node, probably a restriction
+          instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
+                  (IRI) st.getSubject());
+          mappedTripleCounter++;
           addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(), openSubClassRestrictions);
         }
         mappedTripleCounter++;
@@ -167,6 +170,9 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
           addStatement(st);
         } else if (st.getObject() instanceof BNode){
           //object is a blank node, probably a restriction
+          instantiate(vf.createIRI(parserConfig.getGraphConf().getBaseSchemaNamespace(), parserConfig.getGraphConf().getClassLabelName()),
+                  (IRI) st.getSubject());
+          mappedTripleCounter++;
           addLinkToClass((IRI)st.getSubject(), (BNode) st.getObject(),openEquivRestrictions);
         }
         mappedTripleCounter++;

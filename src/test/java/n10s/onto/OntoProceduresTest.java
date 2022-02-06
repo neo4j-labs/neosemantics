@@ -236,6 +236,22 @@ public class OntoProceduresTest {
           "                          owl:allValuesFrom :Animal\n" +
           "                        ] .";
 
+  String restrictionsOnResourcesImplicitClassTurtle = "" +
+          "@prefix : <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#> .\n" +
+          "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n" +
+          "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "@base <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2> .\n" +
+          "\n" +
+          "\n" +
+          ":Parent owl:equivalentClass [ rdf:type owl:Restriction ;\n" +
+          "                              owl:onProperty :hasChild ;\n" +
+          "                              owl:someValuesFrom :Person\n" +
+          "                            ] ;\n" +
+          "        rdfs:subClassOf [ rdf:type owl:Restriction ;\n" +
+          "                          owl:onProperty :hasPet ;\n" +
+          "                          owl:allValuesFrom :Animal\n" +
+          "                        ] .";
 
   String restrictionsWithDomAndRange = "" +
           "@prefix : <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#> .\n" +
@@ -1143,7 +1159,7 @@ public class OntoProceduresTest {
 
       Record next = importResults.next();
 
-      assertEquals(7L, next.get("triplesLoaded").asLong());
+      assertEquals(9L, next.get("triplesLoaded").asLong());
 
       assertEquals(9L, next.get("triplesParsed").asLong());
 
@@ -1183,7 +1199,7 @@ public class OntoProceduresTest {
 
       next = importResults.next();
 
-      assertEquals(7L, next.get("triplesLoaded").asLong());
+      assertEquals(9L, next.get("triplesLoaded").asLong());
 
       assertEquals(9L, next.get("triplesParsed").asLong());
 
@@ -1216,6 +1232,30 @@ public class OntoProceduresTest {
     }
 
   }
+
+  @Test
+    public void ontoSnippetImportRestrictionsImplicitClass() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE' }");
+      Session session = driver.session();
+
+      Map<String, Object> params = new HashMap<>();
+      params.put("rdf", this.restrictionsOnResourcesImplicitClassTurtle);
+
+      Result importResults = session
+              .run("CALL n10s.onto.import.inline($rdf,'Turtle')", params);
+
+      Record next = importResults.next();
+
+      assertEquals(8L, next.get("triplesLoaded").asLong());
+
+      assertEquals(8L, next.get("triplesParsed").asLong());
+    }
+  }
+
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
