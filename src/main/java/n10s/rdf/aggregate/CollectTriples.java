@@ -1,5 +1,6 @@
 package n10s.rdf.aggregate;
 
+import n10s.mapping.MappingUtils;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.DynamicModel;
 import org.eclipse.rdf4j.model.impl.LinkedHashModelFactory;
@@ -11,15 +12,63 @@ import org.neo4j.procedure.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class CollectTriples {
+    //kept for backwards compatibility
     @UserAggregationFunction(name = "n10s.rdf.collect")
     @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
             "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
             "and returns them serialised as N-triples" )
     public TripleCollector collect()
     {
-        return new TripleCollector();
+        return new TripleCollector(RDFFormat.NTRIPLES);
+    }
+
+    @UserAggregationFunction(name = "n10s.rdf.collect.ttl")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as Turtle" )
+    public TripleCollector collectTurtle()
+    {
+        return new TripleCollector(RDFFormat.TURTLE);
+    }
+
+    @UserAggregationFunction(name = "n10s.rdf.collect.nt")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as Turtle" )
+    public TripleCollector collectNTriples()
+    {
+        return new TripleCollector(RDFFormat.NTRIPLES);
+    }
+
+    @UserAggregationFunction(name = "n10s.rdf.collect.xml")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as RDF/XML" )
+    public TripleCollector collectRdfXml()
+    {
+        return new TripleCollector(RDFFormat.RDFXML);
+    }
+
+    @UserAggregationFunction(name = "n10s.rdf.collect.json")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as JSON-LD" )
+    public TripleCollector collectJson()
+    {
+        return new TripleCollector(RDFFormat.JSONLD);
+    }
+
+    @UserAggregationFunction(name = "n10s.rdf.collect.ttlstar")
+    @Description( "n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - " +
+            "collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* " +
+            "and returns them serialised as JSON-LD" )
+    public TripleCollector collectTurtleStar()
+    {
+        return new TripleCollector(RDFFormat.TURTLESTAR);
     }
 
     public static class TripleCollector
@@ -27,10 +76,16 @@ public class CollectTriples {
         Model m = new DynamicModel(new LinkedHashModelFactory());
         ValueFactory vf = SimpleValueFactory.getInstance();
         ByteArrayOutputStream baos =  new ByteArrayOutputStream();
+        private RDFFormat format;
+
+        public TripleCollector(RDFFormat f) {
+
+            this.format = f;
+        }
 
 
         @UserAggregationUpdate
-        public void findLongest(
+        public void addTriple(
                 @Name( "subject" ) String subject, @Name( "predicate" ) String predicate, @Name( "object" ) String object,
                 @Name( "isLiteral" ) Boolean isLiteral, @Name( "literalType" ) String literalType,
                 @Name( "literalLang" ) String literalLang)
@@ -54,11 +109,12 @@ public class CollectTriples {
 
         }
 
+
         @UserAggregationResult
         public String result()
         {
             try {
-                Rio.write(m, baos, RDFFormat.NTRIPLES);
+                Rio.write(m, baos, format);
                 return baos.toString();
             } finally {
                 try {
