@@ -28,6 +28,7 @@ import n10s.rdf.load.DirectNodeAdder;
 import n10s.rdf.load.DirectRelationshipAdder;
 import n10s.rdf.load.DirectStatementLoader;
 import n10s.rdf.preview.StatementPreviewer;
+import n10s.rdf.stream.StarFormatStatementStreamer;
 import n10s.rdf.stream.StatementStreamer;
 import n10s.result.GraphResult;
 import n10s.result.StreamedStatement;
@@ -138,7 +139,7 @@ public class RDFProcedures extends CommonProcedures {
     try {
       rdfFormat = getFormat(format);
       conf = new RDFParserConfig(props, new GraphConfig(new HashMap<>()));
-      statementStreamer = new StatementStreamer(conf);
+      statementStreamer = (rdfFormat.equals(RDFFormat.TURTLESTAR)||rdfFormat.equals(RDFFormat.TRIGSTAR)?new StarFormatStatementStreamer(conf):new StatementStreamer(conf));
     } catch (RDFImportBadParams e) {
       throw new RDFImportException(e.getMessage());
     } catch (InvalidParamException e) {

@@ -12,8 +12,8 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 public class StatementStreamer extends ConfiguredStatementHandler {
 
-  private final RDFParserConfig parserConfig;
-  private List<StreamedStatement> statements;
+  protected final RDFParserConfig parserConfig;
+  protected List<StreamedStatement> statements;
 
   public StatementStreamer(
       RDFParserConfig pc) {

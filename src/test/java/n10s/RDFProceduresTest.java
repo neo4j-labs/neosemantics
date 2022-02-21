@@ -1602,7 +1602,7 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void testRDFStarWithTriplesAsOobjectFromSnippet() throws Exception {
+  public void testRDFStarWithTriplesAsObjectFromSnippet() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
@@ -2185,6 +2185,48 @@ public class RDFProceduresTest {
       } catch (Exception e) {
         assertTrue(e.getMessage().contains("Illegal percent encoding"));
       }
+    }
+  }
+
+  @Test
+  public void testStreamRDFStarFromSnippet() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result importResults
+              = session
+              .run("CALL n10s.rdf.stream.inline('" + rdfStarFragment
+                      + "','Turtle-star')");
+      while(importResults.hasNext()) {
+        Map<String, Object> next = importResults
+                .next().asMap();
+        if((boolean)next.get("subjectIsTriple")){
+          if(next.get("subject").equals("<<neo4j://individuals#16 neo4j://vocabulary#ACTED_IN neo4j://individuals#0>>")){
+            assertEquals("neo4j://vocabulary#roles",next.get("predicate"));
+            assertEquals(true,next.get("isLiteral"));
+            assertEquals("Emil",next.get("object"));
+            List<String> subjectSPO = (List<String>) next.get("subjectSPO");
+            assertEquals("neo4j://individuals#16", subjectSPO.get(0));
+            assertEquals("neo4j://vocabulary#ACTED_IN", subjectSPO.get(1));
+            assertEquals("neo4j://individuals#0", subjectSPO.get(2));
+          }
+          if(next.get("subject").equals("<<neo4j://individuals#4 neo4j://vocabulary#ACTED_IN neo4j://individuals#0>>")){
+            assertEquals("neo4j://vocabulary#roles",next.get("predicate"));
+            assertEquals(true,next.get("isLiteral"));
+            assertEquals("Morpheus",next.get("object"));
+            List<String> subjectSPO = (List<String>) next.get("subjectSPO");
+            assertEquals("neo4j://individuals#4", subjectSPO.get(0));
+            assertEquals("neo4j://vocabulary#ACTED_IN", subjectSPO.get(1));
+            assertEquals("neo4j://individuals#0", subjectSPO.get(2));
+          }
+        } else {
+          if(next.get("predicate").equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type")) {
+            assertTrue(next.get("object").equals("neo4j://vocabulary#Person") ||
+                    next.get("object").equals("neo4j://vocabulary#Movie"));
+          }
+        }
+      }
+
     }
   }
 
