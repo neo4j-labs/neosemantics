@@ -10,6 +10,7 @@ It's important to note that this procedure exclusively imports the following:
 3. Property definitions with `owl:ObjectProperty`, `owl:DatatypeProperty` and `rdfs:Property`
 4. Explicit property hierarchies defined with `rdfs:subPropertyOf` statements.
 5. Domain and range information for properties described as `rdfs:domain` and `rdfs:range` statements.
+6. Restrictions defined with `owl:Restriction`.
 
 All other elements will be ignored by this loader.
 
