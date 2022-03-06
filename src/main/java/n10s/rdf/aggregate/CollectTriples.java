@@ -12,8 +12,9 @@ import org.neo4j.procedure.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Map;
+
 
 public class CollectTriples {
     //kept for backwards compatibility
@@ -88,9 +89,21 @@ public class CollectTriples {
         public void addTriple(
                 @Name( "subject" ) String subject, @Name( "predicate" ) String predicate, @Name( "object" ) String object,
                 @Name( "isLiteral" ) Boolean isLiteral, @Name( "literalType" ) String literalType,
-                @Name( "literalLang" ) String literalLang)
+                @Name( "literalLang" ) String literalLang,
+                @Name( value = "sspo", defaultValue = "null") List<String> sspo)
+
+
         {
-            Resource s = (subject.indexOf(58) < 0?vf.createBNode(subject):vf.createIRI(subject));
+            Resource s;
+            if(sspo == null) {
+                s = (subject.indexOf(58) < 0?vf.createBNode(subject):vf.createIRI(subject));
+            } else {
+                // if sspo does not contain exactly three items [s,p,o] or the object is literal and cannot be converted
+                // to uri this will fail and an exception will be thrown
+                s = vf.createTriple(sspo.get(0).indexOf(58) < 0?vf.createBNode(sspo.get(0)):vf.createIRI(sspo.get(0)),
+                        vf.createIRI(sspo.get(1)),
+                        sspo.get(2).indexOf(58) < 0?vf.createBNode(sspo.get(2)):vf.createIRI(sspo.get(2)));
+            }
             IRI p = vf.createIRI(predicate);
             if(isLiteral){
                 Literal o;

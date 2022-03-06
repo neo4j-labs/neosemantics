@@ -1,0 +1,17 @@
+PREFIX music: <http://neo4j.com/voc/music#>
+PREFIX ind: <http://neo4j.com/indiv#>
+
+ind:John_Lennon a music:Artist ;
+    music:name "John Lennon" .
+
+ind:Paul_McCartney a music:Artist ;
+    music:name "Paul McCartney" .
+
+ind:White_Album a music:Album ;
+    music:name "The Beatles (White Album)" .
+<<ind:White_Album music:track ind:Helter_Skelter>>  music:trackNo "23"^^xsd:int .
+
+ind:Helter_Skelter a music:Song ;
+    music:name "Helter Skelter" .
+<<ind:Helter_Skelter music:writer ind:Paul_McCartney>> music:contribution "Lyrics" .
+<<ind:Helter_Skelter music:writer ind:John_Lennon>> music:contribution "Music" .

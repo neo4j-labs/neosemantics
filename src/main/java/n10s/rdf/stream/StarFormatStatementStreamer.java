@@ -8,7 +8,6 @@ import org.eclipse.rdf4j.model.Triple;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 
-import java.security.cert.X509CertSelector;
 import java.util.ArrayList;
 import java.util.List;
 
