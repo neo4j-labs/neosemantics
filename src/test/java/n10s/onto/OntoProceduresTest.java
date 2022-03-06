@@ -1256,6 +1256,37 @@ public class OntoProceduresTest {
     }
   }
 
+//  @Test
+//  public void custTxMetadata() throws Exception {
+//    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+//            Config.builder().withoutEncryption().build())) {
+//
+//      initialiseGraphDB(neo4j.defaultDatabaseService(),
+//              "{ handleVocabUris: 'IGNORE' }");
+//      Session session = driver.session();
+//
+//      Map<String, Object> params = new HashMap<>();
+//      params.put("rdf", this.restrictionsOnResourcesImplicitClassTurtle);
+//
+//      Result importResults = session
+//              .run("CALL n10s.onto.import.inline($rdf,'Turtle')", params);
+//
+//      Record next = importResults.next();
+//
+//      assertEquals(8L, next.get("triplesLoaded").asLong());
+//
+//      assertEquals(8L, next.get("triplesParsed").asLong());
+//
+//      Map<String, Object> txm = new HashMap<>();
+//      params.put("batch_id", "BATCH#1234");
+//      TransactionConfig txc = TransactionConfig.builder().withMetadata(txm).build();
+//      Transaction tx = session.beginTransaction(txc);
+//      tx.run("CALL n10s.onto.import.inline($rdf,'Turtle')");
+//      tx.commit();
+//
+//    }
+//  }
+
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
         + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
