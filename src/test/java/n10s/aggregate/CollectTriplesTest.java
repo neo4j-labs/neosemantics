@@ -1,13 +1,19 @@
 package n10s.aggregate;
 
 import n10s.ModelTestUtils;
+import n10s.RDFExportTest;
+import n10s.graphconfig.GraphConfigProcedures;
+import n10s.mapping.MappingUtils;
+import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.aggregate.CollectTriples;
+import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import n10s.rdf.stream.RDFStreamProcedures;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import java.nio.file.Files;
@@ -58,7 +64,11 @@ public class CollectTriplesTest {
 
     @Rule
     public Neo4jRule neo4j = new Neo4jRule()
-            .withProcedure(RDFStreamProcedures.class).withProcedure(RDFLoadProcedures.class)
+            .withProcedure(RDFStreamProcedures.class)
+            .withProcedure(RDFLoadProcedures.class)
+            .withProcedure(GraphConfigProcedures.class)
+            .withProcedure(RDFExportProcedures.class)
+            .withProcedure(NsPrefixDefProcedures.class)
             .withAggregationFunction(CollectTriples.class);
 
     @Test
@@ -271,6 +281,67 @@ public class CollectTriplesTest {
                             RDFFormat.NTRIPLES,fileAsString,RDFFormat.TURTLE));
 
         }
+    }
+
+    @Test
+    public void testCypherPlusCollectOnRDFGraphPropsOnRels() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            initialiseGraphDB(neo4j.defaultDatabaseService(),
+                    " { handleVocabUris: 'SHORTEN_STRICT' } ");
+
+            session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
+
+            assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
+
+        }
+
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
+                    RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                            .toURI() + "','Turtle-star')");
+            assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
+
+        }
+
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            Result results
+                    = session
+                    .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ') " +
+                            "yield subject, predicate, object, isLiteral, literalType, literalLang, subjectSPO " +
+                            "return  n10s.rdf.collect.ttlstar(subject, predicate, object, isLiteral, literalType, " +
+                            "literalLang, subjectSPO) as rdf");
+
+            assertEquals(true, results.hasNext());
+
+
+            String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
+                    .getResource("rdfstar/beatles.ttls").toURI()) ) );
+
+            assertTrue(ModelTestUtils
+                    .compareModels(results.next().get("rdf").asString(),
+                            RDFFormat.TURTLESTAR, fileAsString,RDFFormat.TURTLESTAR));
+
+        }
+
+    }
+
+    private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
+        db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
+                + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+        db.executeTransactionally("CALL n10s.graphconfig.init(" +
+                (graphConfigParams != null ? graphConfigParams : "{}") + ")");
     }
 
 }

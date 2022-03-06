@@ -1,6 +1,5 @@
 package n10s.rdf.aggregate;
 
-import n10s.mapping.MappingUtils;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.DynamicModel;
 import org.eclipse.rdf4j.model.impl.LinkedHashModelFactory;
@@ -13,7 +12,6 @@ import org.neo4j.procedure.*;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 
 public class CollectTriples {
