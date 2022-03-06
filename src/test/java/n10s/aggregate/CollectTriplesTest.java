@@ -220,6 +220,7 @@ public class CollectTriplesTest {
             assertTrue(ModelTestUtils
                     .compareModels(results.next().get("rdf").asString(),
                             RDFFormat.TURTLESTAR, fileAsString,RDFFormat.TURTLESTAR));
+
         }
     }
 

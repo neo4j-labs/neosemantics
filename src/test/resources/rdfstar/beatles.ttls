@@ -8,10 +8,14 @@ ind:Paul_McCartney a music:Artist ;
     music:name "Paul McCartney" .
 
 ind:White_Album a music:Album ;
-    music:name "The Beatles (White Album)" .
-<<ind:White_Album music:track ind:Helter_Skelter>>  music:trackNo "23"^^xsd:int .
+    music:name "The Beatles (White Album)" ;
+    music:track ind:Helter_Skelter .
+
+<<ind:White_Album music:track ind:Helter_Skelter>>  music:trackNo "23"^^xsd:long .
 
 ind:Helter_Skelter a music:Song ;
-    music:name "Helter Skelter" .
+    music:name "Helter Skelter" ;
+    music:writer ind:Paul_McCartney, ind:John_Lennon .
+
 <<ind:Helter_Skelter music:writer ind:Paul_McCartney>> music:contribution "Lyrics" .
 <<ind:Helter_Skelter music:writer ind:John_Lennon>> music:contribution "Music" .

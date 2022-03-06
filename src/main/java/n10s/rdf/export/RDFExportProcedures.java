@@ -6,6 +6,7 @@ import static n10s.mapping.MappingUtils.getExportMappingsFromDB;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.GraphConfigNotFound;
@@ -13,6 +14,7 @@ import n10s.rdf.RDFProcedures;
 import n10s.result.StreamedStatement;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.Triple;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
@@ -44,15 +46,16 @@ public class RDFExportProcedures extends RDFProcedures {
 
     ExportProcessor proc;
 
-    boolean rdfstar = props.containsKey("includeRelProperties") && props.get("includeRelProperties").equals(true);
+    //by default we return props in rels as rdf-star
+    boolean returnPropsInRels = (props.containsKey("includeRelProperties")? (boolean)props.get("includeRelProperties"):true);
     GraphConfig gc = getGraphConfig(tx);
     if (gc == null || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_IGNORE
             || gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP) {
       proc = new LPGToRDFProcesssor(db, tx, gc,
           getExportMappingsFromDB(db), props.containsKey("mappedElemsOnly") &&
-          props.get("mappedElemsOnly").equals(true), rdfstar);
+          props.get("mappedElemsOnly").equals(true), returnPropsInRels);
     } else {
-      proc = new LPGRDFToRDFProcesssor(db, tx, gc,  rdfstar);
+      proc = new LPGRDFToRDFProcesssor(db, tx, gc,  returnPropsInRels);
     }
     return proc.streamTriplesFromCypher(cypher,
         (props.containsKey("cypherParams") ? (Map<String, Object>) props.get("cypherParams") :
@@ -62,7 +65,12 @@ public class RDFExportProcedures extends RDFProcedures {
         (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getDatatype().stringValue()
             : null),
         (st.getObject() instanceof Literal ? ((Literal) st.getObject()).getLanguage().orElse(null)
-            : null)
+            : null),
+        (st.getSubject() instanceof Triple ? Stream.of(((Triple)st.getSubject()).getSubject().stringValue(),
+                ((Triple)st.getSubject()).getPredicate().stringValue(),
+                ((Triple)st.getSubject()).getObject().stringValue())
+                .collect(Collectors.toList())
+                    : null)
     ));
 
   }

@@ -39,4 +39,8 @@ public class ModelTestUtils {
     rdfParser.parse(new ByteArrayInputStream(expected.getBytes()), "");
     return model;
   }
+
+  public static Model getAsModel(String text, RDFFormat format) throws IOException {
+    return createModel(text, format);
+  }
 }

@@ -10,10 +10,7 @@ import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Literal;
-import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -22,6 +19,7 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
+import org.neo4j.driver.Value;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 import org.neo4j.driver.Record;
@@ -78,6 +76,106 @@ public class RDFExportTest {
       assertEquals(resultCount,expectedStatememts.size());
     }
   }
+
+
+
+  @Test
+  public void testExportFromCypherOnLPGPropsOnRels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      session
+              .run(
+                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO" +
+                              " { since: 12345 , kind: 'principal' }]->(:Node {  a:2, b2:'bye@en'})");
+
+      Result res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ', {}) ");
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+      Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L)),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+                      vf.createIRI(DEFAULT_BASE_SCH_NS + "since"), vf.createLiteral(12345L)),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+                      vf.createIRI(DEFAULT_BASE_SCH_NS + "kind"), vf.createLiteral("principal"))));
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expectedStatememts.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount,expectedStatememts.size());
+    }
+  }
+
+  @Test
+  public void testCypherOnRDFGraphPropsOnRels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'SHORTEN_STRICT' } ");
+
+      session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
+
+      assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
+
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                      .toURI() + "','Turtle-star')");
+      assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      Result res
+              = session
+              .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ') ");
+
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+
+      String inputAsString = Files.readString(Paths.get(RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+              .toURI()));
+
+      Model expected = ModelTestUtils.getAsModel(inputAsString, RDFFormat.TURTLESTAR);
+
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expected.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount, expected.size());
+    }
+
+  }
+
 
   @Test
   public void testExportFromCypherOnLPGWithMappings() throws Exception {
@@ -171,7 +269,14 @@ public class RDFExportTest {
   }
 
   private Statement recordAsStatement(ValueFactory vf,  Record r) {
-    IRI s = vf.createIRI(r.get("subject").asString());
+    Resource s;
+    if (!r.get("subjectSPO").isNull()){
+      List<String> subjectSPO = r.get("subjectSPO").asList(Values.ofString());
+      s = vf.createTriple(vf.createIRI(subjectSPO.get(0)),vf.createIRI(subjectSPO.get(1)),vf.createIRI(subjectSPO.get(2)));
+    } else {
+      s = vf.createIRI(r.get("subject").asString());
+    }
+
     IRI p = vf.createIRI(r.get("predicate").asString());
     if(r.get("isLiteral").asBoolean()){
       IRI datatype = vf.createIRI(r.get("literalType").asString());
@@ -205,7 +310,7 @@ public class RDFExportTest {
 
       Transaction tx = session.beginTransaction();
       tx.run(Files.readString(Paths.get(
-              RDFEndpointTest.class.getClassLoader().getResource("movies.cypher").getPath())));
+              RDFExportTest.class.getClassLoader().getResource("movies.cypher").getPath())));
       tx.run("MERGE (pb:Person {name:'Paul Blythe'}) SET pb:Critic ");
       tx.run( "MERGE (as:Person {name:'Angela Scope'}) SET as:Critic " );
       tx.run( "MERGE (jt:Person {name:'Jessica Thompson'}) SET jt:Critic " );
