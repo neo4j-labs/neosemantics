@@ -2200,7 +2200,7 @@ public class RDFProceduresTest {
       while(importResults.hasNext()) {
         Map<String, Object> next = importResults
                 .next().asMap();
-        if((boolean)next.get("subjectIsTriple")){
+        if(next.get("subjectSPO") != null ){
           if(next.get("subject").equals("<<neo4j://individuals#16 neo4j://vocabulary#ACTED_IN neo4j://individuals#0>>")){
             assertEquals("neo4j://vocabulary#roles",next.get("predicate"));
             assertEquals(true,next.get("isLiteral"));
