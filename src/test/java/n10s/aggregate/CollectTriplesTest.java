@@ -337,6 +337,62 @@ public class CollectTriplesTest {
 
     }
 
+    @Test
+    public void testSPOPlusCollectOnRDFGraphPropsOnRels() throws Exception {
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            initialiseGraphDB(neo4j.defaultDatabaseService(),
+                    " { handleVocabUris: 'SHORTEN_STRICT' } ");
+
+            session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
+
+            assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix " +
+                    "return count(*) as ct").next().get("ct").asLong());
+
+        }
+
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
+                    RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                            .toURI() + "','Turtle-star')");
+            assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
+
+        }
+
+        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build())) {
+
+            Session session = driver.session();
+
+            Result results
+                    = session
+                    .run(" CALL n10s.rdf.export.spo(null, null, null) " +
+                            "yield subject, predicate, object, isLiteral, literalType, literalLang, subjectSPO " +
+                            "return  n10s.rdf.collect.ttlstar(subject, predicate, object, isLiteral, literalType, " +
+                            "literalLang, subjectSPO) as rdf");
+
+            assertEquals(true, results.hasNext());
+
+
+            String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
+                    .getResource("rdfstar/beatles.ttls").toURI()) ) );
+
+            assertTrue(ModelTestUtils
+                    .compareModels(results.next().get("rdf").asString(),
+                            RDFFormat.TURTLESTAR, fileAsString,RDFFormat.TURTLESTAR));
+
+        }
+
+    }
+
+
     private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
         db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
                 + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
