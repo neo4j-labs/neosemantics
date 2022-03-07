@@ -114,11 +114,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
-        Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
-        result.add(baseStatement);
-        if(this.exportPropertiesInRels) {
-          rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
-        }
+        result.addAll(processRelationship(rel, ontologyEntitiesUris));
       }
     }
     return result.stream();
@@ -131,11 +127,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
-        Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
-        result.add(baseStatement);
-        if(this.exportPropertiesInRels) {
-          rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
-        }
+        result.addAll(processRelationship(rel, ontologyEntitiesUris));
       }
     }
     return result.stream();
@@ -177,12 +169,12 @@ public class LPGToRDFProcesssor extends ExportProcessor {
   }
 
   @Override
-  protected Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
+  protected Set<Statement> processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
 
-    Statement statement = null;
+    Set<Statement> statements = new HashSet<>();
 
       if (!exportOnlyMappedElems || exportMappings.containsKey(rel.getType().name())) {
-        statement = vf.createStatement(
+        Statement base = vf.createStatement(
             getResourceUri(rel.getStartNode()),
 
             exportMappings.containsKey(rel.getType().name()) ? vf
@@ -190,10 +182,16 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                 :
                     vf.createIRI(BASE_SCH_NS, rel.getType().name()),
                 getResourceUri(rel.getEndNode()));
+        statements.add(base);
 
+        if(this.exportPropertiesInRels) {
+          rel.getAllProperties()
+                  .forEach((k, v) -> processPropOnRel(statements, base, k, v));
+        }
 
       }
-    return statement;
+
+    return statements;
 
   }
 
@@ -308,7 +306,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
                   predicate == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
                           Direction.OUTGOING, RelationshipType.withName(vf.createIRI(predicate).getLocalName()));
           for (Relationship r : relationships) {
-            allStatements.add(processRelationship(r, null));
+            allStatements.addAll(processRelationship(r, null));
           }
         } else {
           //filter on value (object)
@@ -326,7 +324,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             //what are the chances?? TODO: create unit test
             for (Relationship r : relationships) {
               if (getResourceUri(r.getEndNode()).stringValue().equals(object.stringValue())) {
-                allStatements.add(processRelationship(r, null));
+                allStatements.addAll(processRelationship(r, null));
               }
             }
           }
@@ -418,7 +416,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             if (r instanceof Node) {
               rowResult.addAll(processNode((Node) r, null, null));
             } else if (r instanceof Relationship) {
-              rowResult.add(processRelationship((Relationship) r, null));
+              rowResult.addAll(processRelationship((Relationship) r, null));
             }
             return rowResult.stream();
           });
@@ -496,7 +494,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             return result.stream().flatMap(row -> {
               Set<Statement> rowResult = new HashSet<>();
               Object r = row.get("r");
-              rowResult.add(processRelationship((Relationship) r, null));
+              rowResult.addAll(processRelationship((Relationship) r, null));
               return rowResult.stream();
             });
           } else {

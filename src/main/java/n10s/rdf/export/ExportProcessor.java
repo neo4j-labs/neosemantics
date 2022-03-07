@@ -91,12 +91,7 @@ public abstract class ExportProcessor {
 
       for (Relationship rel : rels) {
         if( !filterRelationship(rel,ontologyEntitiesUris)) {
-          Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
-          rowResult.add(baseStatement);
-          if(this.exportPropertiesInRels) {
-            rel.getAllProperties()
-                .forEach((k, v) -> processPropOnRel(rowResult, baseStatement, k, v));
-          }
+          rowResult.addAll(processRelationship(rel, ontologyEntitiesUris));
         }
       }
 
@@ -110,12 +105,7 @@ public abstract class ExportProcessor {
                 }
               } else if (propertyContainer instanceof Relationship &&
                   !filterRelationship((Relationship) propertyContainer, ontologyEntitiesUris)) {
-                Statement baseStatement = processRelationship((Relationship) propertyContainer, ontologyEntitiesUris);
-                rowResult.add(baseStatement);
-                if(this.exportPropertiesInRels) {
-                  propertyContainer.getAllProperties()
-                      .forEach((k, v) -> processPropOnRel(rowResult, baseStatement, k, v));
-                }
+                rowResult.addAll(processRelationship((Relationship) propertyContainer, ontologyEntitiesUris));
               }
             }
         );
@@ -138,11 +128,7 @@ public abstract class ExportProcessor {
       if (includeContext) {
         Iterable<Relationship> relationships = node.getRelationships();
         for (Relationship rel : relationships) {
-          Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
-          result.add(baseStatement);
-          if(this.exportPropertiesInRels) {
-            rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
-          }
+          result.addAll(processRelationship(rel, ontologyEntitiesUris));
         }
       }
     }
@@ -268,7 +254,7 @@ public abstract class ExportProcessor {
 
   protected abstract void processPropOnRel(Set<Statement> rowResult, Statement baseStatement, String key, Object val);
 
-  protected abstract Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);
+  protected abstract Set<Statement> processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);
 
   protected abstract Set<Statement> processNode(Node node, Map<Long, IRI> ontologyEntitiesUris, String propNameFilter);
 

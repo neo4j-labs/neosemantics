@@ -169,13 +169,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       if (rel != null) {
         // no need to  check rels connect to other resources as we're sure they will since they come
         //  in/out of a Resource
-        Statement baseStatement = processRelationship(rel, null); //TODO: ontologyEntitiesUris needed
-        statementResults.add(baseStatement);
-
-        if(this.exportPropertiesInRels) {
-          rel.getAllProperties().forEach((k, v) -> processPropOnRel(statementResults, baseStatement, k, v));
-        }
-
+        statementResults.addAll(processRelationship(rel, null));
       }
     }
     return statementResults.stream();
@@ -189,11 +183,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     if (streamContext) {
       Iterable<Relationship> relationships = node.getRelationships();
       for (Relationship rel : relationships) {
-        Statement baseStatement = processRelationship(rel, ontologyEntitiesUris);
-        result.add(baseStatement);
-        if(this.exportPropertiesInRels) {
-          rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, baseStatement, k, v));
-        }
+        result.addAll(processRelationship(rel, ontologyEntitiesUris));
       }
     }
     return result.stream();
@@ -232,7 +222,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
   }
 
   @Override
-  protected Statement processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
+  protected Set<Statement> processRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris) {
     Resource subject = buildSubjectOrContext(rel.getStartNode().getProperty("uri").toString());
     IRI predicate = vf.createIRI(buildURI(BASE_SCH_NS, rel.getType().name()));
     Resource object = buildSubjectOrContext(rel.getEndNode().getProperty("uri").toString());
@@ -250,7 +240,17 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       throw new IllegalStateException(
           "Graph uri of a statement has to be the same for both start and end node of the relationship!");
     }
-    return vf.createStatement(subject, predicate, object, context);
+
+    Statement base = vf.createStatement(subject, predicate, object, context);
+
+    Set<Statement> result = new HashSet<>();
+    result.add(base);
+
+    if(this.exportPropertiesInRels) {
+      rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, base, k, v));
+    }
+
+    return result;
   }
 
   @Override
@@ -368,7 +368,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
                   tp.getPredicate() == null ? resource.getRelationships(Direction.OUTGOING) : resource.getRelationships(
                           Direction.OUTGOING, RelationshipType.withName(predicate));
           for (Relationship r : relationships) {
-            allStatements.add(processRelationship(r, null));
+            allStatements.addAll(processRelationship(r, null));
           }
         } else {
           //filter on value (object)
@@ -384,7 +384,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
                             Direction.OUTGOING, RelationshipType.withName(predicate));
             for (Relationship r : relationships) {
               if (r.getOtherNode(resource).getProperty("uri").equals(object.stringValue())) {
-                allStatements.add(processRelationship(r, null));
+                allStatements.addAll(processRelationship(r, null));
               }
             }
           }
@@ -429,7 +429,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
           if (r instanceof Node) {
             rowResult.addAll(processNode((Node) r, null, finalPredicate));
           } else if (r instanceof Relationship) {
-            rowResult.add(processRelationship((Relationship) r, null));
+            rowResult.addAll(processRelationship((Relationship) r, null));
           }
           return rowResult.stream();
         });
@@ -508,7 +508,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
             rowResult.addAll(processNode((Node)r, null,
                 (finalPredicate1!=null?finalPredicate1:(String)row.get("propName"))));
           } else if(r instanceof Relationship){
-            rowResult.add(processRelationship((Relationship)r,null));
+            rowResult.addAll(processRelationship((Relationship)r,null));
           }
           return rowResult.stream();
         }).filter(st -> st.getObject().equals(object));

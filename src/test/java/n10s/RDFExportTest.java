@@ -176,6 +176,62 @@ public class RDFExportTest {
 
   }
 
+  @Test
+  public void testSPOExportOnRDFGraphPropsOnRels() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'SHORTEN_STRICT' } ");
+
+      session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
+
+      assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
+
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                      .toURI() + "','Turtle-star')");
+      assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
+
+    }
+
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      Result res
+              = session.run(" CALL n10s.rdf.export.spo(null,null,null)");
+
+      assertTrue(res.hasNext());
+
+      final ValueFactory vf = SimpleValueFactory.getInstance();
+
+      String inputAsString = Files.readString(Paths.get(RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+              .toURI()));
+
+      Model expected = ModelTestUtils.getAsModel(inputAsString, RDFFormat.TURTLESTAR);
+
+
+      int resultCount = 0;
+      while (res.hasNext()) {
+        Statement returnedStatement = recordAsStatement(vf, res.next());
+        assertTrue(expected.contains(returnedStatement));
+        resultCount++;
+      }
+      assertEquals(resultCount, expected.size());
+    }
+
+  }
 
   @Test
   public void testExportFromCypherOnLPGWithMappings() throws Exception {
@@ -1457,20 +1513,24 @@ public class RDFExportTest {
                 + lit +"," + (type!=null?"'"+type+"'":"null") + "," + (lang!=null?"'"+lang+"'":"null") +") ");
     StringBuilder sb = new StringBuilder();
     while (res.hasNext()) {
-      //System.out.println(res.next());
+        //System.out.println(res.next());
       Record record = res.next();
-      sb.append("<").append(record.get("subject").asString()).append("> ");
-      sb.append("<").append(record.get("predicate").asString()).append("> ");
-      if(record.get("isLiteral").asBoolean()){
-        if (!record.get("literalLang").isNull()) {
-          sb.append("\"").append(record.get("object").asString()).append("\"@").append(record.get("literalLang").asString()) ;
+      if(record.get("subjectSPO").isNull()) {
+        // we are skipping the RDF-star triples for these tests.
+        // No N-Triples serialisation for rdf-star.
+        sb.append("<").append(record.get("subject").asString()).append("> ");
+        sb.append("<").append(record.get("predicate").asString()).append("> ");
+        if (record.get("isLiteral").asBoolean()) {
+          if (!record.get("literalLang").isNull()) {
+            sb.append("\"").append(record.get("object").asString()).append("\"@").append(record.get("literalLang").asString());
+          } else {
+            sb.append("\"").append(record.get("object").asString()).append("\"^^<").append(record.get("literalType").asString()).append(">");
+          }
         } else {
-          sb.append("\"").append(record.get("object").asString()).append("\"^^<").append(record.get("literalType").asString()).append(">");
+          sb.append("<").append(record.get("object").asString()).append("> ");
         }
-      } else{
-        sb.append("<").append(record.get("object").asString()).append("> ");
+        sb.append(".\n");
       }
-      sb.append(".\n");
     }
     return sb.toString();
   }
