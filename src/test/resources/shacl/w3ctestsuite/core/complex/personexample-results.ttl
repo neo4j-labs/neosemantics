@@ -1,5 +1,6 @@
 @prefix dash: <http://datashapes.org/dash#> .
 @prefix ex: <neo4j://voc#> .
+@prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -14,7 +15,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:Alice ;
-          sh:resultPath ex:ssn ;
+          sh:resultPath neo:ssn ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:PatternConstraintComponent ;
           sh:sourceShape bnodes:b61064 ;
@@ -23,7 +24,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:Bob ;
-          sh:resultPath ex:ssn ;
+          sh:resultPath neo:ssn ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MaxCountConstraintComponent ;
           sh:sourceShape bnodes:b61064 ;
@@ -31,7 +32,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:Calvin ;
-          sh:resultPath ex:birthDate ;
+          sh:resultPath neo:birthDate ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:ClosedConstraintComponent ;
           sh:sourceShape ex:PersonShape ;
@@ -40,7 +41,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:Calvin ;
-          sh:resultPath ex:worksFor ;
+          sh:resultPath neo:worksFor ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:ClassConstraintComponent ;
           sh:sourceShape bnodes:b60054 ;

@@ -1,5 +1,6 @@
 @prefix dash: <http://datashapes.org/dash#> .
 @prefix ex: <http://datashapes.org/sh/tests/core/property/nodeKind-001.test#> .
+@prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -13,7 +14,7 @@ ex:valReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:WrongInstance1 ;
-          sh:resultPath ex:myLiteralProperty ;
+          sh:resultPath neo:myLiteralProperty ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:NodeKindConstraintComponent ;
           sh:sourceShape ex:b79526 ;
@@ -21,7 +22,7 @@ ex:valReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:WrongInstance2 ;
-          sh:resultPath ex:myObjectProperty ;
+          sh:resultPath neo:myObjectProperty ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:NodeKindConstraintComponent ;
           sh:sourceShape ex:b97614 ;

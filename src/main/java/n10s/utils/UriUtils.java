@@ -11,6 +11,7 @@ import n10s.graphconfig.GraphConfig;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.URIUtil;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.neo4j.graphdb.Transaction;
 
 public class UriUtils {
@@ -20,8 +21,13 @@ public class UriUtils {
     if (gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) {
       if ((gc!=null?gc.getBaseSchemaNamespace():DEFAULT_BASE_SCH_NS).equals(uri.substring(0,URIUtil.getLocalNameIndex(uri)))){
         return uri.substring(URIUtil.getLocalNameIndex(uri));
-      } else{
-        return NOT_MATCHING_NS;
+      } else if(uri.equals(RDF.TYPE.stringValue())){
+        return RDF.TYPE.getLocalName();
+      } else {
+        throw new UriNamespaceHasNoAssociatedPrefix(
+                "The graph is not namespace aware. Prefix <" + uri.substring(URIUtil.getLocalNameIndex(uri))
+                        + "> is undefined. Use <neo4j://graph.schema#> instead.");
+        //return NOT_MATCHING_NS;
       }
 
     } else if (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||

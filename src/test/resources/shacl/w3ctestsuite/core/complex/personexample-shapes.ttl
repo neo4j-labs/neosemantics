@@ -1,5 +1,6 @@
 @prefix dash: <http://datashapes.org/dash#> .
 @prefix ex: <neo4j://voc#> .
+@prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -14,28 +15,28 @@ ex:PersonShape
   rdf:type sh:NodeShape ;
   sh:closed "true"^^xsd:boolean ;
   sh:ignoredProperties (
-      rdf:type ex:uri
+      rdf:type neo:type neo:someUnusedProperty
     ) ;
   sh:property bnodes:b61064 ;
   sh:property bnodes:b60054 ;
   sh:property [
       sh:path [
-          sh:inversePath ex:worksFor ;
+          sh:inversePath neo:worksFor ;
         ] ;
       sh:name "employee" ;
     ] ;
-  sh:targetClass ex:Person ;
+  sh:targetClass neo:Person ;
 .
 
 bnodes:b61064
- sh:path ex:ssn ;
+ sh:path neo:ssn ;
  sh:datatype xsd:string ;
  sh:maxCount 1 ;
  sh:pattern "^\\d{3}-\\d{2}-\\d{4}$"
 .
 
 bnodes:b60054
- sh:path ex:worksFor ;
- sh:class ex:Company ;
+ sh:path neo:worksFor ;
+ sh:class neo:Company ;
  sh:nodeKind sh:IRI
 .

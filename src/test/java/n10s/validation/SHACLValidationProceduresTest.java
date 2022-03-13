@@ -29,26 +29,38 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class SHACLValidationProceduresTest {
 
-  final String VAL_RESULTS_QUERY = "MATCH (vr:sh__ValidationResult)\n"
-      + "RETURN \n"
-      + "       [(vr)-[:sh__sourceConstraintComponent]->(co) | co.uri ][0] as constraint,\n"
-      + "       [(vr)-[:sh__resultPath]->()-[:sh__inversePath*0..1]->(p) where not (p)-->() | n10s.rdf.getIRILocalName(p.uri) ][0] as path,\n"
-      + "       coalesce([(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-()-[:sh__targetClass]->(tc)| n10s.rdf.getIRILocalName(tc.uri) ][0], \n"
-      + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n"
-      + "       [(vr)-[:sh__focusNode]->(f) | id(f) ][0] as focus,\n"
-      + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
-      + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue ";
+  final String VAL_RESULTS_QUERY_ON_IGNORE_GRAPH = "MATCH (vr:ValidationResult)\n" +
+          "RETURN\n" +
+          "        [(vr)-[:sourceConstraintComponent]->(co) | co.uri ][0] as constraint,\n" +
+          "       [(vr)-[:resultPath]->()-[:inversePath*0..1]->(p) where not (p)-->() | n10s.rdf.getIRILocalName(p.uri) ][0] as path,\n" +
+          "coalesce([(vr)-[:sourceShape]->()<-[:property*0..1]-()-[:targetClass]->(tc)| n10s.rdf.getIRILocalName(tc.uri) ][0], \n" +
+          "       [(vr)-[:sourceShape]->()<-[:property*0..1]-(tc:Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n" +
+          "       [(vr)-[:sourceShape]->(ss)| ss.uri ][0] as shapeId,\n" +
+          "       [(vr)-[:focusNode]->(f) | f.uri ][0] as focus,\n" +
+          "       [(vr)-[:resultSeverity]->(sev) | sev.uri ][0]  as sev,toString(([(vr)-[:value]->(x)| x.uri] + ([] + coalesce(vr.value,[])))[0]) as offendingValue ";
 
 
-  final String VAL_RESULTS_QUERY_AS_RDF = "MATCH (vr:sh__ValidationResult)\n"
+  final String VAL_RESULTS_QUERY_ON_SHORTEN_GRAPH = "MATCH (vr:sh__ValidationResult)\n"
       + "RETURN \n"
       + "       [(vr)-[:sh__sourceConstraintComponent]->(co) | co.uri ][0] as constraint,\n"
       + "       [(vr)-[:sh__resultPath]->()-[:sh__inversePath*0..1]->(p) where not (p)-->() | p.uri ][0] as path,\n"
       + "       coalesce([(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-()-[:sh__targetClass]->(tc)| tc.uri ][0], \n"
       + "       [(vr)-[:sh__sourceShape]->()<-[:sh__property*0..1]-(tc:rdfs__Class)| tc.uri ][0]) as targetClass,\n"
+      + "       [(vr)-[:sh__sourceShape]->(ss)| ss.uri ][0] as shapeId,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | f.uri ][0] as focus,\n"
       + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
       + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue ";
+
+  final String VAL_RESULTS_QUERY_ON_KEEP_GRAPH = "MATCH (vr:`http://www.w3.org/ns/shacl#ValidationResult`)\n"
+          + "RETURN \n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#sourceConstraintComponent`]->(co) | co.uri ][0] as constraint,\n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#resultPath`]->()-[:`http://www.w3.org/ns/shacl#inversePath`*0..1]->(p) where not (p)-->() | p.uri ][0] as path,\n"
+          + "       coalesce([(vr)-[:`http://www.w3.org/ns/shacl#sourceShape`]->()<-[:`http://www.w3.org/ns/shacl#property`*0..1]-()-[:`http://www.w3.org/ns/shacl#targetClass`]->(tc)| tc.uri ][0], \n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#sourceShape`]->()<-[:`http://www.w3.org/ns/shacl#property`*0..1]-(tc:`http://www.w3.org/2000/01/rdf-schema#Class`)| tc.uri ][0]) as targetClass,\n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#sourceShape`]->(ss)| ss.uri ][0] as shapeId,\n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#focusNode`]->(f) | f.uri ][0] as focus,\n"
+          + "       [(vr)-[:`http://www.w3.org/ns/shacl#resultSeverity`]->(sev) | sev.uri ][0]  as sev, "
+          + "       toString(([(vr)-[:`http://www.w3.org/ns/shacl#value`]->(x)| x.uri] + ([] + coalesce(vr.`http://www.w3.org/ns/shacl#value`,[])))[0]) as offendingValue ";
 
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
@@ -1282,9 +1294,16 @@ public class SHACLValidationProceduresTest {
   @Test
   public void testRunTestSuite7b() throws Exception {
     // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
-    // runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
     runIndividualTest("core/property", "hasValue-001b", null, "SHORTEN");
     runIndividualTest("core/property", "hasValue-001b", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite7c() throws Exception {
+    runIndividualTest("core/property", "hasValue-001c", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-001c", null, "SHORTEN");
+    runIndividualTest("core/property", "hasValue-001c", null, "KEEP");
   }
 
   @Test
@@ -1348,40 +1367,59 @@ public class SHACLValidationProceduresTest {
           ", handleVocabUris: '" + handleVocabUris + "' })");
 
       //load data
-      session.run(
-          "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
-              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
-              .toURI() + "\",\"Turtle\")");
+      Result dataImportResults = session.run(
+              "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
+                      .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
+                      .toURI() + "\",\"Turtle\")");
+
+      assertTrue(dataImportResults.hasNext());
+
+      assertTrue(dataImportResults.next().get("triplesLoaded").asLong() > 0);
 
       //load shapes
-      Result results = session
+      Result shapesLoadResults = session
           .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
+
+
+      assertTrue(shapesLoadResults.hasNext());
+
+      //assertTrue(dataImportResults.next().get("triplesLoaded").asLong() > 0);
 
       //load shapes for test completeness
-      session
-          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      Result loadShapesAsNodes = session
+          .run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
               .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
+
+      assertTrue(loadShapesAsNodes.hasNext());
+
+      assertTrue(loadShapesAsNodes.next().get("triplesLoaded").asLong() > 0);
+
       //load expected results
-      session.run("call n10s.validation.shacl.import.fetch('" + SHACLValidationProceduresTest.class
-          .getClassLoader()
-          .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
-          .toURI() + "','Turtle')");
+      Result resultsLoadResult = session.run("call n10s.rdf.import.fetch('" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
+              .toURI() + "','Turtle')");
+
+      assertTrue(resultsLoadResult.hasNext());
+
+      assertTrue(resultsLoadResult.next().get("triplesLoaded").asLong() > 0);
 
       // query them in the graph and flatten the list
-      Result expectedValidationResults = session.run(
-          (handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
-              ? VAL_RESULTS_QUERY_AS_RDF : VAL_RESULTS_QUERY);
+      Result expectedValidationResults = session.run(selectQuery(handleVocabUris));
+
+      assertTrue(expectedValidationResults.hasNext());
+
 
       Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
       while (expectedValidationResults.hasNext()) {
         Record validationResult = expectedValidationResults.next();
         Object focusNode = ((handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
-            ? validationResult.get("focus").asString() : validationResult.get("focus").asLong());
+            ? validationResult.get("focus").asString() : validationResult.get("focus").asString());
         String nodeType = validationResult.get("targetClass").asString();
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
@@ -1400,6 +1438,8 @@ public class SHACLValidationProceduresTest {
       Result actualValidationResults = session
           .run("call n10s.validation.shacl.validate() ");
 
+      assertTrue(actualValidationResults.hasNext());
+
       Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
       while (actualValidationResults.hasNext()) {
         Record validationResult = actualValidationResults.next();
@@ -1416,6 +1456,7 @@ public class SHACLValidationProceduresTest {
                 shapeId, message, offendingValue));
       }
 
+      //actual test
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -1467,6 +1508,71 @@ public class SHACLValidationProceduresTest {
     }
 
 
+  }
+
+  private String selectQuery(String handleVocabUris) {
+    if(handleVocabUris.equals("SHORTEN")) {
+      return VAL_RESULTS_QUERY_ON_SHORTEN_GRAPH ;
+    } else if (handleVocabUris.equals("KEEP")){
+      return VAL_RESULTS_QUERY_ON_KEEP_GRAPH ;
+    } else {
+      // "IGNORE"
+      return VAL_RESULTS_QUERY_ON_IGNORE_GRAPH ;
+    }
+  }
+
+
+  @Test
+  public void testHasTypeValidationOnMovieDB() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build())) {
+
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      session.run(
+              "CREATE (SleeplessInSeattle:Movie {title:'Sleepless in Seattle', released:1993, tagline:'What if someone you never met, someone you never saw, someone you never knew was the only someone for you?'})\n"
+                      +
+                      "CREATE (NoraE:Person:Individual {name:'Nora Ephron', born:1941})\n" +
+                      "CREATE (RitaW:Person:Thing {name:'Rita Wilson', born:1956})\n" +
+                      "CREATE (BillPull:Person {name:'Bill Pullman', born:1953})\n" +
+                      "CREATE (VictorG:Person {name:'Victor Garber', born:1949})\n" +
+                      "CREATE (RosieO:Person {name:\"Rosie O'Donnell\", born:1962})\n" +
+                      "CREATE\n" +
+                      "  (RitaW)-[:ACTED_IN {roles:['Suzy']}]->(SleeplessInSeattle),\n" +
+                      "  (BillPull)-[:ACTED_IN {roles:['Walter']}]->(SleeplessInSeattle),\n" +
+                      "  (VictorG)-[:ACTED_IN {roles:['Greg']}]->(SleeplessInSeattle),\n" +
+                      "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
+                      "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
+
+      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/typerestriction-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
+
+      assertEquals(true, validationResults.hasNext());
+
+      while (validationResults.hasNext()) {
+        Record next = validationResults.next();
+        System.out.println(next);
+
+//        if (next.get("nodeType").asString().equals("Person")) {
+//          assertEquals("Rosie O'Donnell", next.get("offendingValue").asString());
+//          assertEquals("http://www.w3.org/ns/shacl#PatternConstraintComponent",
+//                  next.get("propertyShape").asString());
+//        } else if (next.get("nodeType").asString().equals("Movie")) {
+//          assertEquals(1993, next.get("offendingValue").asInt());
+//          assertEquals("http://www.w3.org/ns/shacl#MinExclusiveConstraintComponent",
+//                  next.get("propertyShape").asString());
+//        }
+      }
+
+    }
   }
 
   private boolean contains(Set<ValidationResult> set, ValidationResult res) {

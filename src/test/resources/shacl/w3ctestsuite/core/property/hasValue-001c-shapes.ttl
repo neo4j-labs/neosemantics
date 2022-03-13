@@ -1,5 +1,5 @@
 @prefix dash: <http://datashapes.org/dash#> .
-@prefix ex: <http://datashapes.org/sh/tests/core/property/maxLength-001.test#> .
+@prefix ex: <neo4j://#> .
 @prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
@@ -9,14 +9,15 @@
 @prefix sht: <http://www.w3.org/ns/shacl-test#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
-neo:TestShape
-  rdf:type rdfs:Class ;
+ex:PersonShape
   rdf:type sh:NodeShape ;
-  rdfs:label "Test shape" ;
-  sh:property ex:TestShape-testProperty ;
+  rdfs:label "Person shape" ;
+  sh:property ex:PersonShape-gender ;
+  sh:targetClass neo:MalePerson ;
 .
-ex:TestShape-testProperty
-  sh:path neo:testProperty ;
-  sh:datatype xsd:string ;
-  sh:maxLength 2 ;
+
+#every male person has to be a person too
+ex:PersonShape-gender
+  sh:path rdf:type ;
+  sh:hasValue neo:Person ;
 .

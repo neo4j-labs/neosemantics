@@ -1,5 +1,6 @@
 @prefix dash: <http://datashapes.org/dash#> .
 @prefix ex: <http://datashapes.org/sh/tests/core/property/maxExclusive-001.test#> .
+@prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -14,7 +15,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:InvalidResource1 ;
-          sh:resultPath ex:property ;
+          sh:resultPath neo:property ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MaxExclusiveConstraintComponent ;
           sh:sourceShape ex:TestShape-property ;
@@ -23,7 +24,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:InvalidResource2 ;
-          sh:resultPath ex:property ;
+          sh:resultPath neo:property ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MaxExclusiveConstraintComponent ;
           sh:sourceShape ex:TestShape-property ;
@@ -32,7 +33,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:InvalidResource3 ;
-          sh:resultPath ex:property ;
+          sh:resultPath neo:property ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MaxExclusiveConstraintComponent ;
           sh:sourceShape ex:TestShape-property ;

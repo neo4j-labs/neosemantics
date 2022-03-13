@@ -1,5 +1,6 @@
 @prefix dash: <http://datashapes.org/dash#> .
 @prefix ex: <http://datashapes.org/sh/tests/core/property/nodeKind-001.test#> .
+@prefix neo: <neo4j://graph.schema#>.
 @prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
@@ -13,20 +14,20 @@
 ex:ShapeWithIRI
   rdf:type sh:NodeShape ;
   sh:property ex:b97614 ;
-  sh:targetClass ex:MyClass ;
+  sh:targetClass neo:MyClass ;
 .
 
 ex:ShapeWithLiteral
   rdf:type sh:NodeShape ;
   sh:property ex:b79526 ;
-  sh:targetClass ex:MyClass ;
+  sh:targetClass neo:MyClass ;
 .
 
 ex:b79526
-  sh:path ex:myLiteralProperty ;
+  sh:path neo:myLiteralProperty ;
   sh:nodeKind sh:Literal ;
 .
 ex:b97614
-  sh:path ex:myObjectProperty ;
+  sh:path neo:myObjectProperty ;
   sh:nodeKind sh:BlankNodeOrIRI ;
 .
