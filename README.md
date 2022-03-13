@@ -12,7 +12,7 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 
 ## ⇨ User Manual and Blog ⇦ 
 
-⇨ Check out the complete **[user manual](https://neo4j.com/docs/labs/nsmntx/current/)** with examples of use. ⇦
+⇨ Check out the complete **[user manual](https://neo4j.com/labs/neosemantics/)** with examples of use. ⇦
 
 ⇨ [Blog on neosemantics](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
