@@ -931,6 +931,7 @@ public class SHACLValidationProceduresTest {
           matches++;
         }
       }
+
       assertEquals(4, matches);
 
       session.run("MATCH (n) DETACH DELETE n");
@@ -979,8 +980,8 @@ public class SHACLValidationProceduresTest {
       session.run("MATCH (n) DETACH DELETE n");
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       //RDF IGNORE GRAPH
-      session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
 
+      assertTrue(session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })").hasNext());
       result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
