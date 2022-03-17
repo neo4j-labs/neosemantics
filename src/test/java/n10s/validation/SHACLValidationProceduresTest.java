@@ -15,15 +15,11 @@ import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.junit.Rule;
 import org.junit.Test;
-import org.neo4j.driver.Config;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
-import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
+import org.neo4j.driver.*;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
@@ -237,7 +233,7 @@ public class SHACLValidationProceduresTest {
     }
   }
 
-  String SHAPES_CLOSED_IGNORE_TYPE = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+  String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
           "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
           "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
           "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
@@ -255,11 +251,6 @@ public class SHACLValidationProceduresTest {
           "        sh:minCount 1 ;\n" +
           "        sh:maxLength 255;\n" +
           "    ] ;\n" +
-          "    sh:property [             \n" +
-          "        sh:path rdf:type;     \n" +
-          "        sh:class owl:Class;\n" +
-          "\t\tsh:nodeKind sh:IRI ;\n" +
-          "    ] ;\n" +
           "    sh:property [              \n" +
           "        sh:path ex:type;     \n" +
           "        sh:datatype xsd:string ;\n" +
@@ -273,7 +264,6 @@ public class SHACLValidationProceduresTest {
           "        sh:minCount 1 ;\n" +
           "    ] ;\n" +
           "    sh:closed true ;\n" +
-          "    sh:ignoredProperties ( rdf:type owl:topDataProperty owl:topObjectProperty ) ;\n" +
           "    .";
 
   String SHAPES_CLOSED_DATA = "<?xml version=\"1.0\"?>\n" +
@@ -312,7 +302,7 @@ public class SHACLValidationProceduresTest {
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
       Result results = session
-              .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_IGNORE_TYPE + "\",\"Turtle\")");
+              .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_NO_EXCLUSION + "\",\"Turtle\")");
 
       assertTrue(results.hasNext());
 
@@ -320,39 +310,6 @@ public class SHACLValidationProceduresTest {
       assertFalse(result.hasNext());
     }
   }
-
-  String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-          "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "@prefix ex:    <http://www.example.com/device#> .\n" +
-          "@prefix owl:   <http://www.w3.org/2002/07/owl#> .\n" +
-          "\n" +
-          "\n" +
-          "ex:SoftwareShape\n" +
-          "    a sh:NodeShape ;\n" +
-          "    sh:targetClass ex:Software ;\n" +
-          "    sh:property [             \n" +
-          "        sh:path ex:id;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "        sh:maxLength 255;\n" +
-          "    ] ;\n" +
-          "    sh:property [              \n" +
-          "        sh:path ex:type;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          "    sh:property [              \n" +
-          "        sh:path ex:status;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          "    sh:closed true ;\n" +
-          "    .";
 
   @Test
   public void testClosedShapeNoExclusion() throws Exception {
@@ -374,12 +331,6 @@ public class SHACLValidationProceduresTest {
       assertTrue(results.hasNext());
 
       Result result = session.run("call n10s.validation.shacl.validate()");
-      assertTrue(result.hasNext());
-      Record violation = result.next();
-      assertEquals("http://www.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4",violation.get("focusNode").asString());
-      assertEquals("http://www.w3.org/ns/shacl#ClosedConstraintComponent",violation.get("propertyShape").asString());
-      assertEquals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type", violation.get("resultPath").asString());
-
       assertFalse(result.hasNext());
     }
   }
@@ -1323,6 +1274,14 @@ public class SHACLValidationProceduresTest {
 
 
   @Test
+  public void testRunTestSuite8c() throws Exception {
+    runIndividualTest("core/property", "in-001c", null, "IGNORE");
+    runIndividualTest("core/property", "in-001c", null, "SHORTEN");
+    runIndividualTest("core/property", "in-001c", null, "KEEP");
+  }
+
+
+  @Test
   public void testRunTestSuite9() throws Exception {
     runIndividualTest("core/property", "maxLength-001", null, "IGNORE");
     runIndividualTest("core/property", "maxLength-001", null, "SHORTEN");
@@ -1334,6 +1293,13 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "minCount-001", null, "IGNORE");
     runIndividualTest("core/property", "minCount-001", null, "SHORTEN");
     runIndividualTest("core/property", "minCount-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite10b() throws Exception {
+    runIndividualTest("core/property", "minCount-001b", null, "IGNORE");
+    runIndividualTest("core/property", "minCount-001b", null, "SHORTEN");
+    runIndividualTest("core/property", "minCount-001b", null, "KEEP");
   }
 
   @Test
@@ -1387,8 +1353,6 @@ public class SHACLValidationProceduresTest {
 
       assertTrue(shapesLoadResults.hasNext());
 
-      //assertTrue(dataImportResults.next().get("triplesLoaded").asLong() > 0);
-
       //load shapes for test completeness
       Result loadShapesAsNodes = session
           .run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -1427,9 +1391,8 @@ public class SHACLValidationProceduresTest {
         String constraint = validationResult.get("constraint").asString();
         String message = validationResult.get("messge").asString();
         String shapeId = validationResult.get("shapeId").asString();
-        String offendingValue = validationResult.get("offendingValue").asString();
+        Object offendingValue = validationResult.get("offendingValue").asObject();
 
-        //TODO:  add the value to the results query and complete  below
         expectedResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, offendingValue));
@@ -1457,8 +1420,11 @@ public class SHACLValidationProceduresTest {
                 shapeId, message, offendingValue));
       }
 
-      //actual test
-      assertEquals(expectedResults.size(), actualResults.size());
+      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
+      assertEquals(expectedResults.size() , actualResults.size());
+
+      System.out.println(expectedResults);
+      System.out.println(actualResults);
 
       for (ValidationResult x : expectedResults) {
         assertTrue(contains(actualResults, x));
@@ -1469,8 +1435,6 @@ public class SHACLValidationProceduresTest {
       }
 
       //re-run it on set of nodes
-
-      // run validation
       actualValidationResults = session
           .run("MATCH (n) with collect(n) as nodelist "
               + "call n10s.validation.shacl.validateSet(nodelist)"
@@ -1494,6 +1458,7 @@ public class SHACLValidationProceduresTest {
 
       }
 
+      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
       assertEquals(expectedResults.size(), actualResults.size());
 
       for (ValidationResult x : expectedResults) {
@@ -1532,22 +1497,22 @@ public class SHACLValidationProceduresTest {
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
 
-      session.run(
+      List<Long> invalidNodes = session.run(
               "CREATE (SleeplessInSeattle:Movie {title:'Sleepless in Seattle', released:1993, tagline:'What if someone you never met, someone you never saw, someone you never knew was the only someone for you?'})\n"
                       +
                       "CREATE (NoraE:Person:Individual {name:'Nora Ephron', born:1941})\n" +
                       "CREATE (RitaW:Person:Thing {name:'Rita Wilson', born:1956})\n" +
-                      "CREATE (BillPull:Person {name:'Bill Pullman', born:1953})\n" +
-                      "CREATE (VictorG:Person {name:'Victor Garber', born:1949})\n" +
-                      "CREATE (RosieO:Person {name:\"Rosie O'Donnell\", born:1962})\n" +
+                      "CREATE (BillPull:Person:Entity {name:'Bill Pullman', born:1953})\n" +
+                      "CREATE (VictorG:Person:Entity {name:'Victor Garber', born:1949})\n" +
+                      "CREATE (RosieO:Person:Individual {name:\"Rosie O'Donnell\", born:1962})\n" +
                       "CREATE\n" +
                       "  (RitaW)-[:ACTED_IN {roles:['Suzy']}]->(SleeplessInSeattle),\n" +
                       "  (BillPull)-[:ACTED_IN {roles:['Walter']}]->(SleeplessInSeattle),\n" +
                       "  (VictorG)-[:ACTED_IN {roles:['Greg']}]->(SleeplessInSeattle),\n" +
                       "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
-                      "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
+                      "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) " +
+                      " RETURN [id(RitaW), id(BillPull), id(VictorG)] as invalidNodes").next().get("invalidNodes").asList(Value::asLong);
 
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
@@ -1558,21 +1523,37 @@ public class SHACLValidationProceduresTest {
 
       assertEquals(true, validationResults.hasNext());
 
+      int count = 0;
       while (validationResults.hasNext()) {
         Record next = validationResults.next();
-        System.out.println(next);
-
-//        if (next.get("nodeType").asString().equals("Person")) {
-//          assertEquals("Rosie O'Donnell", next.get("offendingValue").asString());
-//          assertEquals("http://www.w3.org/ns/shacl#PatternConstraintComponent",
-//                  next.get("propertyShape").asString());
-//        } else if (next.get("nodeType").asString().equals("Movie")) {
-//          assertEquals(1993, next.get("offendingValue").asInt());
-//          assertEquals("http://www.w3.org/ns/shacl#MinExclusiveConstraintComponent",
-//                  next.get("propertyShape").asString());
-//        }
+        count++;
+        assertTrue(invalidNodes.contains(next.get("focusNode").asLong()));
+        assertEquals(SHACL.HAS_VALUE_CONSTRAINT_COMPONENT.stringValue(),
+                  next.get("propertyShape").asString());
       }
+      assertEquals(3,count);
 
+
+
+
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/typerestriction-enumerated-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      validationResults = session.run("CALL n10s.validation.shacl.validate() ");
+
+      assertEquals(true, validationResults.hasNext());
+
+      count = 0;
+      while (validationResults.hasNext()) {
+        Record next = validationResults.next();
+        count++;
+        assertTrue(invalidNodes.contains(next.get("focusNode").asLong()));
+        assertEquals(SHACL.IN_CONSTRAINT_COMPONENT.stringValue(),
+                next.get("propertyShape").asString());
+      }
+      assertEquals(3,count);
     }
   }
 
@@ -1587,7 +1568,36 @@ public class SHACLValidationProceduresTest {
   private boolean equivalentValidationResult(ValidationResult x, ValidationResult res) {
     return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) && x.nodeType
         .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
-        .equals(res.resultPath);
+        .equals(res.resultPath) && equivalentOffendingValues(x.offendingValue, res.offendingValue);
+  }
+
+  private boolean equivalentOffendingValues(Object a, Object b) {
+    if(a==null && b==null){
+      return true;
+    } else if (a!=null && b!=null) {
+      if (a instanceof Collection<?>){
+        a = ((Collection<?>) a).iterator().next();
+      }
+      if (b instanceof Collection<?>){
+        b = ((Collection<?>) b).iterator().next();
+      }
+      return getLocalPart(a.toString()).equals(getLocalPart(b.toString()));
+    } else {
+      return false;
+    }
+  }
+
+  private String getLocalPart(String str) {
+    if (str.indexOf(58) < 0) {
+      int index = str.indexOf("__");
+      if( index < 0 ){
+        return str;
+      } else{
+        return str.substring(index + 2);
+      }
+    } else {
+      return SimpleValueFactory.getInstance().createIRI(str).getLocalName();
+    }
   }
 
 

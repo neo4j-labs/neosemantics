@@ -121,7 +121,6 @@ public class ValidationProcedures extends CommonProcedures {
     ValidatorConfig vc = new ValidatorConfig(tx);
     return vc.generateRunnableQueries(tx, true, null).parallelStream()
         .flatMap(x -> tx.execute(x, vc.getAllParams()).stream()).map(ValidationResult::new);
-
   }
 
 

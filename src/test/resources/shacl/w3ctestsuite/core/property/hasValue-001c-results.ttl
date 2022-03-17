@@ -17,5 +17,15 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:HasValueConstraintComponent ;
           sh:sourceShape ex:PersonShape-gender ;
+          sh:resultMessage "one for the link to type"
+        ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidMalePerson ;
+          sh:resultPath rdf:type ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:HasValueConstraintComponent ;
+          sh:sourceShape ex:PersonShape-gender ;
+          sh:resultMessage "one for the label"
         ] ;
 .

@@ -7,7 +7,7 @@ ex:PersonShape
 	sh:targetClass neo4j:Person ;    # Applies to all Person nodes in Neo4j
 	sh:property [
 		sh:path rdf:type ;             # constrains the types of the person nodes (the labels)
-		sh:hasValue neo4j:Individual
+		sh:in (neo4j:Individual neo4j:Person )
 	] ;
 	sh:closed true ;
 	sh:ignoredProperties ( rdf:type neo4j:born neo4j:DIRECTED neo4j:ACTED_IN neo4j:name ) .
