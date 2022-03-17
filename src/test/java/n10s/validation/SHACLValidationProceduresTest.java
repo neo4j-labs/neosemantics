@@ -1230,6 +1230,20 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite5b() throws Exception {
+    runIndividualTest("core/property", "maxCount-001b", null, "IGNORE");
+    runIndividualTest("core/property", "maxCount-001b", null, "SHORTEN");
+    runIndividualTest("core/property", "maxCount-001b", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite5c() throws Exception {
+    runIndividualTest("core/property", "maxCount-001c", null, "IGNORE");
+    runIndividualTest("core/property", "maxCount-001c", null, "SHORTEN");
+    runIndividualTest("core/property", "maxCount-001c", null, "KEEP");
+  }
+
+  @Test
   public void testRunTestSuite6() throws Exception {
     runIndividualTest("core/property", "minExclussive-001", null, "IGNORE");
     runIndividualTest("core/property", "minExclussive-001", null, "SHORTEN");
@@ -1420,11 +1434,11 @@ public class SHACLValidationProceduresTest {
                 shapeId, message, offendingValue));
       }
 
-      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
-      assertEquals(expectedResults.size() , actualResults.size());
-
       System.out.println(expectedResults);
       System.out.println(actualResults);
+
+      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
+      assertEquals(expectedResults.size() , actualResults.size());
 
       for (ValidationResult x : expectedResults) {
         assertTrue(contains(actualResults, x));
