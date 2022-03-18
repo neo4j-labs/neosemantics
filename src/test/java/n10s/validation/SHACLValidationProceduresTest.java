@@ -33,7 +33,8 @@ public class SHACLValidationProceduresTest {
           "       [(vr)-[:sourceShape]->()<-[:property*0..1]-(tc:Class)| n10s.rdf.getIRILocalName(tc.uri) ][0]) as targetClass,\n" +
           "       [(vr)-[:sourceShape]->(ss)| ss.uri ][0] as shapeId,\n" +
           "       [(vr)-[:focusNode]->(f) | f.uri ][0] as focus,\n" +
-          "       [(vr)-[:resultSeverity]->(sev) | sev.uri ][0]  as sev,toString(([(vr)-[:value]->(x)| x.uri] + ([] + coalesce(vr.value,[])))[0]) as offendingValue ";
+          "       [(vr)-[:resultSeverity]->(sev) | sev.uri ][0]  as sev,toString(([(vr)-[:value]->(x)| x.uri] + ([] + coalesce(vr.value,[])))[0]) as offendingValue , " +
+          "      vr.resultMessage as message";
 
 
   final String VAL_RESULTS_QUERY_ON_SHORTEN_GRAPH = "MATCH (vr:sh__ValidationResult)\n"
@@ -45,7 +46,8 @@ public class SHACLValidationProceduresTest {
       + "       [(vr)-[:sh__sourceShape]->(ss)| ss.uri ][0] as shapeId,\n"
       + "       [(vr)-[:sh__focusNode]->(f) | f.uri ][0] as focus,\n"
       + "       [(vr)-[:sh__resultSeverity]->(sev) | sev.uri ][0]  as sev, "
-      + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue ";
+      + "       toString(([(vr)-[:sh__value]->(x)| x.uri] + ([] + coalesce(vr.sh__value,[])))[0]) as offendingValue, "
+          + "      vr.sh__resultMessage as message";
 
   final String VAL_RESULTS_QUERY_ON_KEEP_GRAPH = "MATCH (vr:`http://www.w3.org/ns/shacl#ValidationResult`)\n"
           + "RETURN \n"
@@ -56,7 +58,8 @@ public class SHACLValidationProceduresTest {
           + "       [(vr)-[:`http://www.w3.org/ns/shacl#sourceShape`]->(ss)| ss.uri ][0] as shapeId,\n"
           + "       [(vr)-[:`http://www.w3.org/ns/shacl#focusNode`]->(f) | f.uri ][0] as focus,\n"
           + "       [(vr)-[:`http://www.w3.org/ns/shacl#resultSeverity`]->(sev) | sev.uri ][0]  as sev, "
-          + "       toString(([(vr)-[:`http://www.w3.org/ns/shacl#value`]->(x)| x.uri] + ([] + coalesce(vr.`http://www.w3.org/ns/shacl#value`,[])))[0]) as offendingValue ";
+          + "       toString(([(vr)-[:`http://www.w3.org/ns/shacl#value`]->(x)| x.uri] + ([] + coalesce(vr.`http://www.w3.org/ns/shacl#value`,[])))[0]) as offendingValue, "
+          + "      vr.`http://www.w3.org/ns/shacl#resultMessage` as message";
 
   @Rule
   public Neo4jRule neo4j = new Neo4jRule()
@@ -1403,7 +1406,7 @@ public class SHACLValidationProceduresTest {
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
         String constraint = validationResult.get("constraint").asString();
-        String message = validationResult.get("messge").asString();
+        String message = validationResult.get("message").asList().iterator().next().toString();
         String shapeId = validationResult.get("shapeId").asString();
         Object offendingValue = validationResult.get("offendingValue").asObject();
 
