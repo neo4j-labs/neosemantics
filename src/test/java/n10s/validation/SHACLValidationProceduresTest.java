@@ -1406,7 +1406,7 @@ public class SHACLValidationProceduresTest {
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
         String constraint = validationResult.get("constraint").asString();
-        String message = validationResult.get("message").asList().iterator().next().toString();
+        String message = validationResult.get("message") == null? "": validationResult.get("message").asList().iterator().next().toString();
         String shapeId = validationResult.get("shapeId").asString();
         Object offendingValue = validationResult.get("offendingValue").asObject();
 
