@@ -18,5 +18,15 @@ ex:ValRep1 rdf:type sh:ValidationReport ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MinCountConstraintComponent ;
           sh:sourceShape ex:PersonShape-twotypes ;
+          sh:resultMessage "one for the label"
+        ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidPerson ;
+          sh:resultPath rdf:type ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:MinCountConstraintComponent ;
+          sh:sourceShape ex:PersonShape-twotypes ;
+          sh:resultMessage "one for the type as node"
         ] ;
 .

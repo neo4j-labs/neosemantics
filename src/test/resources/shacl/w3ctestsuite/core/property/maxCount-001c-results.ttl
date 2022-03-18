@@ -15,7 +15,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
       sh:result [
           rdf:type sh:ValidationResult ;
           sh:focusNode ex:InvalidPerson ;
-          sh:resultPath "Labels on node" ;
+          sh:resultPath rdf:type ;
           sh:resultSeverity sh:Violation ;
           sh:sourceConstraintComponent sh:MaxCountConstraintComponent ;
           sh:sourceShape ex:PersonShape-type ;
