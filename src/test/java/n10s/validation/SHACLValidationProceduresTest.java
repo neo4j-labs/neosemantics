@@ -1406,7 +1406,7 @@ public class SHACLValidationProceduresTest {
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
         String constraint = validationResult.get("constraint").asString();
-        String message = validationResult.get("message") == null? "": validationResult.get("message").asList().iterator().next().toString();
+        String message = validationResult.get("message").isNull()? "": validationResult.get("message").asList().iterator().next().toString();
         String shapeId = validationResult.get("shapeId").asString();
         Object offendingValue = validationResult.get("offendingValue").asObject();
 
@@ -1436,9 +1436,6 @@ public class SHACLValidationProceduresTest {
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, offendingValue));
       }
-
-      System.out.println(expectedResults);
-      System.out.println(actualResults);
 
       //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
       assertEquals(expectedResults.size() , actualResults.size());
@@ -1571,6 +1568,36 @@ public class SHACLValidationProceduresTest {
                 next.get("propertyShape").asString());
       }
       assertEquals(3,count);
+
+
+      long tooMany = session.run("CREATE (p:Person:Individual:Thing:Human {name:\"Mr. Toomany Types\", born:1902}) " +
+              "return id(p) as id\n").next().get("id").asLong();
+      long tooFew = session.run("CREATE (p:Person {name:\"Mr. Toofew Types\", born:1922}) " +
+              "return id(p) as id\n").next().get("id").asLong();
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+              .getClassLoader()
+              .getResource("shacl/typerestriction-count-shacl.ttl")
+              .toURI() + "\",\"Turtle\", {})");
+
+      validationResults = session.run("CALL n10s.validation.shacl.validate() ");
+
+      assertEquals(true, validationResults.hasNext());
+
+      count = 0;
+      while (validationResults.hasNext()) {
+        Record next = validationResults.next();
+        count++;
+        System.out.println(next);
+        assertTrue(invalidNodes.contains(next.get("focusNode").asLong()));
+        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+            assertEquals(next.get("focusNode").asLong(), tooFew);
+        } else if(next.get("propertyShape").asString().equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())){
+            assertEquals(next.get("focusNode").asLong(), tooMany);
+        } else {
+          assertFalse(true); //there should not be violations of other types
+        }
+      }
+      assertEquals(2,count);
     }
   }
 

@@ -1,0 +1,15 @@
+@prefix ex: <http://example/> .
+@prefix neo4j: <neo4j://graph.schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:PersonShape
+	a sh:NodeShape ;
+	sh:targetClass neo4j:Person ;    # Applies to all Person nodes in Neo4j
+	sh:property [
+		sh:path rdf:type ;             # constrains the types of the person nodes (the labels)
+		sh:in (neo4j:Individual neo4j:Person neo4j:Thing neo4j:Actor neo4j:Entity neo4j:Human );
+		sh:minCount 2 ;
+		sh:maxCount 3 ;
+	] ;
+	sh:closed true ;
+	sh:ignoredProperties ( rdf:type neo4j:born neo4j:DIRECTED neo4j:ACTED_IN neo4j:name ) .
