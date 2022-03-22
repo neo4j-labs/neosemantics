@@ -163,6 +163,25 @@ public class NsPrefixDefProceduresTest {
 
       session.run("match  (n) detach delete n");
 
+      String turtleNoSpacesPostColon = "@prefix swo:<http://edamontology.org/> .\n" +
+              "@prefix sio:<http://semanticscience.org/resource/> .\n" +
+              "@prefix pathway:<http://www.southgreen.fr/agrold/biocyc.pathway/> .\n" +
+              "@prefix tigr:<http://www.southgreen.fr/agrold/tigr.locus/> .\n" +
+              "@prefix tigr_gene:<http://identifiers.org/ricegap/> .\n" +
+              "@prefix ensembl:<http://identifiers.org/ensembl.plant/> .";
+
+      Map<String, String> validPairsNoSpacesPostColon = new HashMap<>();
+      validPairsNoSpacesPostColon.put("swo", "http://edamontology.org/");
+      validPairsNoSpacesPostColon.put("sio", "http://semanticscience.org/resource/");
+      validPairsNoSpacesPostColon.put("pathway", "http://www.southgreen.fr/agrold/biocyc.pathway/");
+      validPairsNoSpacesPostColon.put("tigr", "http://www.southgreen.fr/agrold/tigr.locus/");
+      validPairsNoSpacesPostColon.put("tigr_gene", "http://identifiers.org/ricegap/");
+      validPairsNoSpacesPostColon.put("ensembl", "http://identifiers.org/ensembl.plant/");
+
+      checkValidPrefixesCreated(session, validPairsNoSpacesPostColon, turtleNoSpacesPostColon);
+
+      session.run("match  (n) detach delete n");
+
       String rdfxml =
           "<rdf:RDF xml:base=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/\"\n"
               + "         xmlns:afn=\"http://jena.apache.org/ARQ/function#\"\n"

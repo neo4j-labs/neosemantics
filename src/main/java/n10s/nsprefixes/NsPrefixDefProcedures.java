@@ -101,7 +101,7 @@ public class NsPrefixDefProcedures {
 
     //Try Turtle fragment
     Pattern turtleNamespaceDefinitionRegex =
-        Pattern.compile("(?i)@prefix (\\S+)\\:\\s+<(\\S*)>", Pattern.MULTILINE);
+        Pattern.compile("(?i)@prefix (\\S+)\\:\\s*<(\\S*)>", Pattern.MULTILINE);
     if (tryExtractNsDefinitions(textFragment, turtleNamespaceDefinitionRegex)) {
       return list();
     }
