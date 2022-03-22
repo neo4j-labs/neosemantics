@@ -47,7 +47,7 @@ You can also test the extension is mounted by running `:get http://localhost:747
 ####  0. Pre-req: Constraint Creation
 
 ``` 
-CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE
+CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE
 ```
 
 #### 1.  Creating a Graph Configuration
