@@ -12,31 +12,53 @@ Other features in NSMNTX include *model mapping* and *inferencing* on Neo4j grap
 
 ## ⇨ User Manual and Blog ⇦ 
 
-⇨ Check out the complete **[user manual](https://neo4j.com/docs/labs/nsmntx/current/)** with examples of use. ⇦
+⇨ Check out the complete **[user manual](https://neo4j.com/labs/neosemantics/4.0)** with examples of use. ⇦
 
 ⇨ [Blog on neosemantics](https://jbarrasa.com/category/graph-rdf/) (and more). ⇦
 
 ## Installation
- 
-You can either download a prebuilt jar from the [releases area](https://github.com/neo4j-labs/neosemantics/releases) or build it from the source. If you prefer to build, check the note below.
 
-1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. (**note:** If you're going to use the JSON-LD serialisation format for RDF, you'll need to include also [APOC](https://neo4j.com/labs/apoc/))
-2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
+### On Neo4j Desktop
+
+Select your database, and in the plugins section click on the install button (the most up-to-date compatible version will be shown). 
+
+<img src="https://raw.githubusercontent.com/neo4j-labs/rdflib-neo4j/master/img/install-n10s.png" height="400">
+
+
+If you want have the http endpoint mounted on your DB server, you'll need to 
+add the following line to your config. 
 
   ```
   dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
   ```
-  
+In the desktop you'll be able to do this by clicking on the 
+three dots to the right hand side of your database and then select settings. 
+You can add the fragment at the end of the file. 
+
+### On a Neo4j Server 
+
+1. Download the jar file from the [releases area](https://github.com/neo4j-labs/neosemantics/releases) and copy 
+it in the <NEO_HOME>/plugins directory of your Neo4j instance. 
+2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
+      ```
+      dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+      ``` 
 3. Restart the server. 
-4. Check that the installation went well by:
+
+
+###Verifying the installation
+
+You can check that the installation went well by:
 Running `call dbms.procedures()`. The list of procedures should include a number of them prefixed by **n10s**.
- 
-Checking that the logs show the following line on startup:
+
+If you installed the http endpoint, you can check it was correctly installed by looking in 
+the logs and making sure they show the following line on startup:
 ```
 YYYY-MM-DD HH:MM:SS.000+0000 INFO  Mounted unmanaged extension [n10s.endpoint] at [/rdf]
 ```
 
-You can also test the extension is mounted by running `:get http://localhost:7474/rdf/ping` on the neo4j browser and this should return the following message
+An alternative way of testing the extension is mounted is by running `:GET /rdf/ping` on 
+the neo4j browser. This should return the following message
 ```
 {"ping":"here!"}
 ```
@@ -62,7 +84,7 @@ We'll find things like
 | multivalPropList | [ list of predicate uris ] |  |
 | ...| ...|...|
 
-Most of them are the same (expect some changes) as in previous versions (see [3.5 manual](https://neo4j.com/docs/labs/nsmntx/current/reference/#_rdf_import_params) for reference). 
+Check the complete list in [the reference](https://neo4j.com/labs/neosemantics/4.0/reference/). 
 
 You can create a graph config with all the defaults like this:
 ``` 
@@ -115,7 +137,7 @@ return terminationStatus, triplesLoaded, triplesParsed, namespaces
 ``` 
 
 It is possible to pass some request specific parameters like headerParams, commitSize, languageFilter...
-(also found [in the 3.5 manual](https://neo4j.com/docs/labs/nsmntx/current/reference/#_rdf_import_params))
+(also found [the reference](https://neo4j.com/labs/neosemantics/4.0/reference/))
 
 
 #### 3.  Importing Ontologies, QuadRDF, etc
