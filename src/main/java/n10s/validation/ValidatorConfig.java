@@ -157,7 +157,7 @@ public class ValidatorConfig {
                   + "with collect(distinct labels(node)) as nodeLabelSet \n"
                   + "return reduce(res=[], x in nodeLabelSet | res + x) as fullNodeLabelWithDuplicates",
               params).next()
-          .get("fullNodeLabelWithDuplicates");
+          .get("fullNodeLabelWithDuplicates");   //the list is deduplicated later
     }
 
     return selectQueriesAndBatchFromTriggerList(global, new HashSet<>(labels));

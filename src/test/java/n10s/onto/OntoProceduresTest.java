@@ -20,6 +20,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static org.junit.Assert.*;
 
 /**
@@ -1288,8 +1289,7 @@ public class OntoProceduresTest {
 //  }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
-        + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+    db.executeTransactionally(UNIQUENESS_CONSTRAINT_STATEMENT);
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }

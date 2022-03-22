@@ -1,5 +1,6 @@
 package n10s;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
@@ -365,7 +366,7 @@ public class RDFProceduresTest {
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
       assertEquals("The following constraint is required for importing RDF. Please "
-              + "run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
+              + "run '"+ UNIQUENESS_CONSTRAINT_STATEMENT + "' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -387,7 +388,7 @@ public class RDFProceduresTest {
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
       assertEquals("The following constraint is required for importing RDF. "
-              + "Please run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
+              + "Please run '" + UNIQUENESS_CONSTRAINT_STATEMENT + "' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -408,7 +409,7 @@ public class RDFProceduresTest {
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
       assertEquals("The following constraint is required for importing RDF. Please "
-              + "run 'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' "
+              + "run '" + UNIQUENESS_CONSTRAINT_STATEMENT + "' "
               + "and try again.",
           singleResult.get("extraInfo"));
     }
@@ -430,7 +431,7 @@ public class RDFProceduresTest {
       assertEquals(0L, singleResult.get("triplesLoaded"));
       assertEquals("KO", singleResult.get("terminationStatus"));
       assertEquals("The following constraint is required for importing RDF. Please run "
-              + "'CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.",
+              + "'" + UNIQUENESS_CONSTRAINT_STATEMENT + "' and try again.",
           singleResult.get("extraInfo"));
     }
   }
@@ -4080,8 +4081,7 @@ public class RDFProceduresTest {
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
-        + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+    db.executeTransactionally(UNIQUENESS_CONSTRAINT_STATEMENT);
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }

@@ -1,5 +1,6 @@
 package n10s.graphconfig;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -76,8 +77,7 @@ public class GraphConfigProceduresTest {
 
       Session session = driver.session();
 
-      session.run("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
 
       Result results = session.run("CALL n10s.graphconfig.init() yield param, value "
           + " with param, value where param = 'classLabel' return param, value ");
@@ -107,8 +107,7 @@ public class GraphConfigProceduresTest {
 
       Session session = driver.session();
 
-      session.run("CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
 
       Result results = session.run("CALL n10s.graphconfig.init() yield param, value "
               + " with param, value where param = 'classLabel' return param, value ");

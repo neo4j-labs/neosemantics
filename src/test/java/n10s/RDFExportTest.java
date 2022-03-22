@@ -1,10 +1,5 @@
 package n10s;
 
-import static n10s.graphconfig.Params.*;
-import static org.junit.Assert.*;
-
-
-import n10s.endpoint.RDFEndpointTest;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
@@ -19,10 +14,8 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
-import org.neo4j.driver.Value;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.driver.Record;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -31,6 +24,11 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
+import static n10s.graphconfig.Params.*;
+import static org.junit.Assert.*;
 
 public class RDFExportTest {
 
@@ -1613,8 +1611,7 @@ public class RDFExportTest {
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
-        + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+    db.executeTransactionally(UNIQUENESS_CONSTRAINT_STATEMENT);
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }

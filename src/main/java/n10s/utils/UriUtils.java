@@ -25,8 +25,9 @@ public class UriUtils {
         return RDF.TYPE.getLocalName();
       } else {
         throw new UriNamespaceHasNoAssociatedPrefix(
-                "The graph is not namespace aware. Prefix <" + uri.substring(URIUtil.getLocalNameIndex(uri))
-                        + "> is undefined. Use <neo4j://graph.schema#> instead.");
+                "The graph is not namespace aware. Use <neo4j://graph.schema#> instead of namespaces like " +
+                        "<" + uri.substring(0,URIUtil.getLocalNameIndex(uri)) + "> that will be stripped off. " +
+                        "Alternatively, use a namespace aware mode of operation.");
         //return NOT_MATCHING_NS;
       }
 

@@ -1,5 +1,6 @@
 package n10s.nsprefixes;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -249,8 +250,7 @@ public class NsPrefixDefProceduresTest {
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE CONSTRAINT n10s_unique_uri "
-        + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+    db.executeTransactionally(UNIQUENESS_CONSTRAINT_STATEMENT);
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }

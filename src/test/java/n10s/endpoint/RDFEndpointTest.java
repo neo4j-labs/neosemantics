@@ -1,5 +1,7 @@
 package n10s.endpoint;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static org.junit.Assert.*;
 import static org.neo4j.internal.helpers.collection.Iterators.count;
@@ -465,8 +467,7 @@ public class RDFEndpointTest {
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -590,7 +591,7 @@ public class RDFEndpointTest {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -712,8 +713,7 @@ public class RDFEndpointTest {
 
     try (Driver driver = GraphDatabase.driver(temp.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
       session
           .run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
       org.neo4j.driver.Result importResults
@@ -751,8 +751,7 @@ public class RDFEndpointTest {
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -802,8 +801,7 @@ public class RDFEndpointTest {
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -868,8 +866,7 @@ public class RDFEndpointTest {
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -966,8 +963,7 @@ public class RDFEndpointTest {
 
     try (Driver driver = GraphDatabase.driver(temp.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
       session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
       org.neo4j.driver.Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
@@ -1498,8 +1494,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImport() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1551,8 +1546,7 @@ public class RDFEndpointTest {
 
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
 
@@ -1627,8 +1621,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImportWithMultilang() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1824,8 +1817,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImportWithCustomDTKeepUris() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
 
@@ -1869,8 +1861,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImportWithCustomDTShortenURIs() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1915,8 +1906,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImportWithMultiCustomDTKeepUris() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1960,8 +1950,7 @@ public class RDFEndpointTest {
   public void testNodeByUriAfterImportWithMultiCustomDTShortenUris() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2007,8 +1996,7 @@ public class RDFEndpointTest {
   public void testcypherAfterImportWithCustomDTKeepURIsSerializeAsTurtle() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2057,8 +2045,7 @@ public class RDFEndpointTest {
   public void testcypherDatesAndDatetimes() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2167,8 +2154,7 @@ public class RDFEndpointTest {
       throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2218,8 +2204,7 @@ public class RDFEndpointTest {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2268,8 +2253,7 @@ public class RDFEndpointTest {
       throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2317,8 +2301,7 @@ public class RDFEndpointTest {
   public void testcypherAfterDeleteRDFBNodes() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-          + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
 
       tx.commit();
     }
@@ -2619,8 +2602,7 @@ public class RDFEndpointTest {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     //create constraint
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE CONSTRAINT n10s_unique_uri "
-              + "ON (r:Resource) ASSERT r.uri IS UNIQUE");
+      tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     //create graph config and import RDF

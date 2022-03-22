@@ -1,6 +1,7 @@
 package n10s.validation;
 
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -1167,8 +1168,7 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-      session.run("CREATE CONSTRAINT " + UNIQUENESS_CONSTRAINT_ON_URI
-          + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
       assertTrue(session.run("call db.schemaStatements").hasNext());
 
       Result loadShapesResult = session.run(
@@ -1339,8 +1339,7 @@ public class SHACLValidationProceduresTest {
               .equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
         //constraint exists. do nothing.
       } else {
-        session.run("CREATE CONSTRAINT " + UNIQUENESS_CONSTRAINT_ON_URI
-            + " ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+        session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
         assertTrue(session.run("call db.schemaStatements").hasNext());
       }
 
@@ -1587,8 +1586,6 @@ public class SHACLValidationProceduresTest {
       while (validationResults.hasNext()) {
         Record next = validationResults.next();
         count++;
-        System.out.println(next);
-        assertTrue(invalidNodes.contains(next.get("focusNode").asLong()));
         if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
             assertEquals(next.get("focusNode").asLong(), tooFew);
         } else if(next.get("propertyShape").asString().equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())){

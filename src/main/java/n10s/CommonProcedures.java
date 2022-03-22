@@ -37,6 +37,8 @@ public class CommonProcedures {
 
 
   public static final String UNIQUENESS_CONSTRAINT_ON_URI = "n10s_unique_uri";
+  public static final String UNIQUENESS_CONSTRAINT_STATEMENT = "CREATE CONSTRAINT " + UNIQUENESS_CONSTRAINT_ON_URI +
+          " FOR (r:Resource) REQUIRE r.uri IS UNIQUE";
 
   protected static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML,
       RDFFormat.JSONLD,
@@ -58,9 +60,7 @@ public class CommonProcedures {
 
     if (!constraintExists) {
       throw new RDFImportPreRequisitesNotMet(
-          "The following constraint is required for importing RDF. Please run 'CREATE CONSTRAINT "
-              + UNIQUENESS_CONSTRAINT_ON_URI
-              + " ON (r:Resource) ASSERT r.uri IS UNIQUE' and try again.");
+          "The following constraint is required for importing RDF. Please run " + UNIQUENESS_CONSTRAINT_STATEMENT + " and try again.");
     }
 
   }
