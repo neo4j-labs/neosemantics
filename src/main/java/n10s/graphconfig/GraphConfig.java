@@ -206,10 +206,10 @@ public class GraphConfig {
   public int getGraphMode() {
     if (handleVocabUris == GRAPHCONF_VOC_URI_SHORTEN ||
         handleVocabUris == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
-        handleVocabUris == GRAPHCONF_VOC_URI_MAP ||
         handleVocabUris == GRAPHCONF_VOC_URI_KEEP) {
       return GRAPHCONF_MODE_RDF;
-    } else if (handleVocabUris == GRAPHCONF_VOC_URI_IGNORE) {
+    } else if (handleVocabUris == GRAPHCONF_VOC_URI_IGNORE ||
+            handleVocabUris == GRAPHCONF_VOC_URI_MAP) {
       return GRAPHCONF_MODE_LPG;
     } else {
       //Default to LPG?

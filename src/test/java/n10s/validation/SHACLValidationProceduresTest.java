@@ -831,9 +831,9 @@ public class SHACLValidationProceduresTest {
         result.hasNext();
         assertFalse(true); //should not get here
       } catch (Exception e) {
-        assertTrue(e.getMessage().startsWith("Failed to invoke procedure `n10s.validation.shacl.import.fetch`: Caused by: n10s.utils.UriUtils$UriNamespaceHasNoAssociatedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://voc#"));
+        assertTrue(e.getMessage().startsWith("Failed to invoke procedure `n10s.validation.shacl.import.fetch`: Caused by: n10s.utils.UriUtils$UriNamespaceHasNoAssociatedPrefix: Prefix Undefined: No prefix defined for namespace <neo4j://graph.schema#"));
       }
-      session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
+      session.run("CALL n10s.nsprefixes.add('neo','neo4j://graph.schema#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");
       result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -894,7 +894,7 @@ public class SHACLValidationProceduresTest {
       //RDF SHORTEN GRAPH
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
       session.run("CALL n10s.graphconfig.init()");
-      session.run("CALL n10s.nsprefixes.add('neo','neo4j://voc#')");
+      session.run("CALL n10s.nsprefixes.add('neo','neo4j://graph.schema#')");
       session.run("CALL n10s.nsprefixes.add('ex','http://example/')");
 
       result = session.run(
@@ -985,28 +985,28 @@ public class SHACLValidationProceduresTest {
       matches = 0;
       while (result.hasNext()) {
         Record next = result.next();
-        if ((next.get("target").asString().equals("neo4j://voc#Person") &&
-            next.get("propertyOrRelationshipPath").asString().equals("neo4j://voc#ACTED_IN") &&
+        if ((next.get("target").asString().equals("neo4j://graph.schema#Person") &&
+            next.get("propertyOrRelationshipPath").asString().equals("neo4j://graph.schema#ACTED_IN") &&
             next.get("param").asString().equals("sh:class") &&
-            next.get("value").asString().equals("neo4j://voc#Movie"))
+            next.get("value").asString().equals("neo4j://graph.schema#Movie"))
             ||
-            (next.get("target").asString().equals("neo4j://voc#Movie") &&
-                next.get("propertyOrRelationshipPath").asString().equals("neo4j://voc#released") &&
+            (next.get("target").asString().equals("neo4j://graph.schema#Movie") &&
+                next.get("propertyOrRelationshipPath").asString().equals("neo4j://graph.schema#released") &&
                 next.get("param").asString().equals("sh:minInclusive") &&
                 next.get("value").asInt() == 2000)
             ||
-            (next.get("target").asString().equals("neo4j://voc#Movie") &&
-                next.get("propertyOrRelationshipPath").asString().equals("neo4j://voc#released") &&
+            (next.get("target").asString().equals("neo4j://graph.schema#Movie") &&
+                next.get("propertyOrRelationshipPath").asString().equals("neo4j://graph.schema#released") &&
                 next.get("param").asString().equals("sh:datatype") &&
                 next.get("value").asString().equals("http://www.w3.org/2001/XMLSchema#integer"))
             ||
-            (next.get("target").asString().equals("neo4j://voc#Person") &&
+            (next.get("target").asString().equals("neo4j://graph.schema#Person") &&
                 next.get("propertyOrRelationshipPath").isNull() &&
                 next.get("param").asString().equals("sh:ignoredProperties") &&
                 next.get("value").asList(x -> x.asString()).equals(
-                    List.of("neo4j://voc#born", "neo4j://voc#DIRECTED", "neo4j://voc#FOLLOWS",
-                        "neo4j://voc#REVIEWED",
-                        "neo4j://voc#PRODUCED", "neo4j://voc#WROTE")))) {
+                    List.of("neo4j://graph.schema#born", "neo4j://graph.schema#DIRECTED", "neo4j://graph.schema#FOLLOWS",
+                        "neo4j://graph.schema#REVIEWED",
+                        "neo4j://graph.schema#PRODUCED", "neo4j://graph.schema#WROTE")))) {
           matches++;
         }
       }
@@ -1087,7 +1087,7 @@ public class SHACLValidationProceduresTest {
       session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
 
       String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
-          + "@prefix neo4j: <neo4j://voc#> .\n"
+          + "@prefix neo4j: <neo4j://graph.schema#> .\n"
           + "@prefix sh: <http://www.w3.org/ns/shacl#> .";
 
       session.run("CALL n10s.nsprefixes.addFromText(' " + turtleNsDefinition + " ')");

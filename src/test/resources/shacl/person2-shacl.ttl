@@ -1,5 +1,5 @@
 @prefix ex: <http://example/> .
-@prefix neo4j: <neo4j://voc#> .
+@prefix neo4j: <neo4j://graph.schema#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 ex:PersonShape

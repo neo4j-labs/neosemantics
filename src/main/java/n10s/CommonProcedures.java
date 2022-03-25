@@ -60,7 +60,7 @@ public class CommonProcedures {
 
     if (!constraintExists) {
       throw new RDFImportPreRequisitesNotMet(
-          "The following constraint is required for importing RDF. Please run " + UNIQUENESS_CONSTRAINT_STATEMENT + " and try again.");
+          "The following constraint is required for importing RDF. Please run '" + UNIQUENESS_CONSTRAINT_STATEMENT + "' and try again.");
     }
 
   }
