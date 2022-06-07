@@ -1,0 +1,283 @@
+{
+  "dataModel" : {
+    "graphModel" : {
+      "relationshipSchemas" : {
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/hasBalancehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance",
+          "type" : "hasBalance",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Parties/Parties/hasRelatedPartyInRolehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "type" : "hasRelatedPartyInRole",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/holdshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+          "type" : "holds",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isProvidedByhttps://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution",
+          "type" : "isProvidedBy",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isHeldByhttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "type" : "isHeldBy",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/nominateshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "type" : "nominates",
+          "properties" : [ ]
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/electshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "targetNodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+          "type" : "elects",
+          "properties" : [ ]
+        }
+      },
+      "nodeSchemas" : {
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance" : {
+          "labelProperties" : [ ],
+          "label" : "Balance",
+          "additionLabels" : [ ],
+          "properties" : [ {
+            "identifier" : "neo4j://graph.schema#uri",
+            "property" : "uri",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#comment",
+            "property" : "comment",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#label",
+            "property" : "label",
+            "type" : "string"
+          } ],
+          "key" : {
+            "name" : "",
+            "properties" : [ ]
+          }
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount" : {
+          "labelProperties" : [ ],
+          "label" : "InvestmentAccount",
+          "additionLabels" : [ ],
+          "properties" : [ {
+            "identifier" : "neo4j://graph.schema#uri",
+            "property" : "uri",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#comment",
+            "property" : "comment",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#label",
+            "property" : "label",
+            "type" : "string"
+          } ],
+          "key" : {
+            "name" : "",
+            "properties" : [ ]
+          }
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "labelProperties" : [ ],
+          "label" : "AccountHolder",
+          "additionLabels" : [ ],
+          "properties" : [ {
+            "identifier" : "neo4j://graph.schema#uri",
+            "property" : "uri",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#comment",
+            "property" : "comment",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#label",
+            "property" : "label",
+            "type" : "string"
+          }, {
+            "identifier" : "https://spec.edmcouncil.org/fibo/ontology/FND/Parties/Roles/isPlayedBy",
+            "property" : "isPlayedBy",
+            "type" : "string"
+          } ],
+          "key" : {
+            "name" : "",
+            "properties" : [ ]
+          }
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution" : {
+          "labelProperties" : [ ],
+          "label" : "FinancialInstitution",
+          "additionLabels" : [ ],
+          "properties" : [ {
+            "identifier" : "neo4j://graph.schema#uri",
+            "property" : "uri",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#comment",
+            "property" : "comment",
+            "type" : "string"
+          }, {
+            "identifier" : "http://www.w3.org/2000/01/rdf-schema#label",
+            "property" : "label",
+            "type" : "string"
+          }, {
+            "identifier" : "https://spec.edmcouncil.org/fibo/ontology/FND/Parties/Roles/isPlayedBy",
+            "property" : "isPlayedBy",
+            "type" : "string"
+          } ],
+          "key" : {
+            "name" : "",
+            "properties" : [ ]
+          }
+        }
+      }
+    },
+    "mappingModel" : {
+      "relationshipMappings" : {
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/hasBalancehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/hasBalancehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Parties/Parties/hasRelatedPartyInRolehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Parties/Parties/hasRelatedPartyInRolehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/holdshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/holdshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isProvidedByhttps://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isProvidedByhttps://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isHeldByhttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isHeldByhttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/nominateshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/nominateshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/electshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "sourceMappings" : [ ],
+          "mappings" : [ ],
+          "targetMappings" : [ ],
+          "relationshipSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/electshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+        }
+      },
+      "nodeMappings" : {
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance" : {
+          "mappings" : [ ],
+          "nodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount" : {
+          "mappings" : [ ],
+          "nodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder" : {
+          "mappings" : [ ],
+          "nodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+        },
+        "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution" : {
+          "mappings" : [ ],
+          "nodeSchema" : "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution"
+        }
+      }
+    },
+    "fileModel" : {
+      "fileSchemas" : { }
+    }
+  },
+  "version" : "0.1.1-beta.0",
+  "graph" : {
+    "relationships" : [ {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/hasBalancehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance",
+      "type" : "hasBalance",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isHeldByhttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "type" : "isHeldBy",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccounthttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/isProvidedByhttps://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution",
+      "type" : "isProvidedBy",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/nominateshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "type" : "nominates",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Parties/Parties/hasRelatedPartyInRolehttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "type" : "hasRelatedPartyInRole",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/FND/Relations/Relations/holdshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+      "type" : "holds",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+    }, {
+      "toId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolderhttps://spec.edmcouncil.org/fibo/ontology/BE/OwnershipAndControl/Executives/electshttps://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "type" : "elects",
+      "fromId" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder"
+    } ],
+    "nodes" : [ {
+      "caption" : "Balance",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance",
+      "position" : {
+        "x" : -400,
+        "y" : 600
+      }
+    }, {
+      "caption" : "InvestmentAccount",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/InvestmentAccount",
+      "position" : {
+        "x" : 800,
+        "y" : 600
+      }
+    }, {
+      "caption" : "AccountHolder",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder",
+      "position" : {
+        "x" : -400,
+        "y" : 1800
+      }
+    }, {
+      "caption" : "FinancialInstitution",
+      "id" : "https://spec.edmcouncil.org/fibo/ontology/FBC/FunctionalEntities/FinancialServicesEntities/FinancialInstitution",
+      "position" : {
+        "x" : 800,
+        "y" : 1800
+      }
+    } ]
+  }
+}

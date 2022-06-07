@@ -1,0 +1,99 @@
+#get the complete list of classes (including ancestors)
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+select distinct ?explicit ?parent
+where {
+  ?explicit rdfs:subClassOf* ?parent
+    filter( ?explicit in (
+     <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrument> ,
+     <https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/Jurisdiction>
+     ) && isIRI(?parent))
+  }
+
+
+#get datataype properties
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+prefix sch: <https://schema.org/>
+select distinct ?prop ?domain ?range
+where {
+
+  ?prop a ?propertyClass .
+  filter(?propertyClass in (rdf:Property, owl:DatatypeProperty, owl:FunctionalProperty))
+
+  {
+    ?prop ?domainPred ?domain
+    	filter(?domainPred in (sch:domainIncludes, rdfs:domain) &&
+        	?domain in ( <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrument> ,
+						<https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/Jurisdiction>  ))
+  } union {
+    ?prop ?domainPred [ owl:unionOf/rdf:rest*/rdf:first  ?domain ]
+          filter(?domainPred in (sch:domainIncludes, rdfs:domain) &&
+             ?domain in ( <https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/FinancialInstrument> ,
+						<https://spec.edmcouncil.org/fibo/ontology/FND/Law/Jurisdiction/Jurisdiction>  ))
+  }
+
+  optional {
+    ?prop ?rangePred ?range
+    filter(?rangePred in (sch:rangeIncludes, rdfs:range) && (?range in ( sch:Text ) || regex(str(?range),"^http://www.w3.org/2001/XMLSchema#.*")))
+  }
+
+}
+
+
+#get object properties
+
+PREFIX owl: <http://www.w3.org/2002/07/owl#>
+PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+prefix sch: <https://schema.org/>
+select distinct ?prop ?domain ?range
+where {
+
+   filter(?domain in ( <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Account> , <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance> , <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder>)
+    && ?range in ( <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Account> , <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/Balance> , <https://spec.edmcouncil.org/fibo/ontology/FBC/ProductsAndServices/ClientsAndAccounts/AccountHolder> ))
+
+  ?prop a ?propertyClass .
+  filter(?propertyClass in (rdf:Property, owl:ObjectProperty, owl:FunctionalProperty, owl:AsymmetricProperty, owl:InverseFunctionalProperty, owl:IrreflexiveProperty, owl:ReflexiveProperty, owl:SymmetricProperty, owl:TransitiveProperty))
+
+  {
+    ?prop ?domainPred ?domain ; ?rangePred ?range .
+    	filter(?domainPred in (sch:domainIncludes, rdfs:domain) && ?rangePred in (sch:rangeIncludes, rdfs:range))
+  } union {
+    ?prop ?domainPred [ owl:unionOf/rdf:rest*/rdf:first  ?domain ]
+          filter(?domainPred in (sch:domainIncludes, rdfs:domain) )
+  } union {
+    ?domain rdfs:subClassOf [ a                   owl:Restriction ;
+                            owl:onProperty      ?prop ;
+                            ?restrictionPred  ?range
+                          ] ;
+          filter(?restrictionPred in (owl:someValuesFrom, owl:allValuesFrom ))
+  } union {
+    ?domain rdfs:subClassOf [ a                   owl:Restriction ;
+                            owl:onProperty      ?prop ;
+                            ?cardinalityRestriction  ?card ;
+        					owl:onClass ?range
+                          ] ;
+          filter(?cardinalityRestriction in (owl:qualifiedCardinality, owl:minQualifiedCardinality, owl:maxQualifiedCardinality ))
+  }
+
+}
+
+
+
+
+############### If no class list provided:
+
+# Get all leaf classes and their list of ancestors
+
+PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+select distinct ?explicit ?parent
+where {
+  ?explicit a ?classtype
+    filter( (?classtype in ( owl:Class, rdfs:Class )) && not exists { ?x rdfs:subClassOf ?explicit })
+
+  ?explicit rdfs:subClassOf* ?parent
+    filter( isIRI(?parent) )
+  }

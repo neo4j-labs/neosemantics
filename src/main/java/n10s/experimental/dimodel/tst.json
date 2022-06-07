@@ -1,0 +1,126 @@
+{
+  "version": "0.1.1-beta.0",
+  "graph": {
+    "nodes": [
+      {
+        "id": "n0",
+        "position": {
+          "x": 0,
+          "y": 0
+        },
+        "caption": "Test1"
+      },
+      {
+        "id": "n1",
+        "position": {
+          "x": 0,
+          "y": 300
+        },
+        "caption": "Test2"
+      }
+    ],
+    "relationships": [
+      {
+        "id": "n0",
+        "type": "connection",
+        "fromId": "n0",
+        "toId": "n1"
+      }
+    ]
+  },
+  "dataModel": {
+    "fileModel": {
+      "fileSchemas": {}
+    },
+    "graphModel": {
+      "nodeSchemas": {
+        "n0": {
+          "label": "Test1",
+          "additionLabels": [],
+          "labelProperties": [],
+          "properties": [
+            {
+              "property": "Property 1",
+              "type": "string",
+              "identifier": "6bb92b08-5244-4714-9e5c-ed83362d0e8a"
+            },
+            {
+              "property": "Property 2",
+              "type": "boolean",
+              "identifier": "1d111607-fb6c-4823-a566-d9955a854c9c"
+            },
+            {
+              "property": "Property 3",
+              "type": "integer",
+              "identifier": "9a666fc6-dd1c-41a0-8235-c9fd4fceff30"
+            },
+            {
+              "property": "Property 4",
+              "type": "float",
+              "identifier": "8ac39e86-51f8-437d-97e2-d64cadc538a3"
+            }
+          ],
+          "key": {
+            "properties": [],
+            "name": ""
+          }
+        },
+        "n1": {
+          "label": "Test2",
+          "additionLabels": [],
+          "labelProperties": [],
+          "properties": [
+            {
+              "property": "Property 5",
+              "type": "string",
+              "identifier": "75da16f5-d2d9-4e50-9b1b-29b064675376"
+            },
+            {
+              "property": "Property 6",
+              "type": "string",
+              "identifier": "https://spec.edmcouncil.org/fibo/ontology/FBC/FinancialInstruments/FinancialInstruments/isNegotiable"
+            }
+          ],
+          "key": {
+            "properties": [],
+            "name": ""
+          }
+        }
+      },
+      "relationshipSchemas": {
+        "n0": {
+          "type": "connection",
+          "sourceNodeSchema": "n0",
+          "targetNodeSchema": "n1",
+          "properties": [
+            {
+              "property": "Property 8",
+              "type": "string",
+              "identifier": "2186f26b-ef3a-45b3-9bd3-b5d4ded79494"
+            }
+          ]
+        }
+      }
+    },
+    "mappingModel": {
+      "nodeMappings": {
+        "n0": {
+          "nodeSchema": "n0",
+          "mappings": []
+        },
+        "n1": {
+          "nodeSchema": "n1",
+          "mappings": []
+        }
+      },
+      "relationshipMappings": {
+        "n0": {
+          "relationshipSchema": "n0",
+          "mappings": [],
+          "sourceMappings": [],
+          "targetMappings": []
+        }
+      }
+    }
+  }
+}
