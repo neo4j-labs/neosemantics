@@ -1,5 +1,20 @@
 [
     {
+        "neo4j": "4.4.8",
+        "neo4jVersion": "4.4.8",
+        "n10s": "4.4.0.1",
+        "version": "4.4.0.1",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.1",
+        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.1",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.1/neosemantics-4.4.0.1.jar",
+        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.1/neosemantics-4.4.0.1.jar",
+        "config": {
+            "+:dbms.security.procedures.unrestricted": [
+                "n10s.*"
+            ]
+        }
+    },
+    {
         "neo4j": "4.4.7",
         "neo4jVersion": "4.4.7",
         "n10s": "4.4.0.1",
@@ -113,6 +128,21 @@
         "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.0",
         "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.0/neosemantics-4.4.0.0.jar",
         "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.0/neosemantics-4.4.0.0.jar",
+        "config": {
+            "+:dbms.security.procedures.unrestricted": [
+                "n10s.*"
+            ]
+        }
+    },
+    {
+        "neo4j": "4.3.14",
+        "neo4jVersion": "4.3.14",
+        "n10s": "4.3.0.2",
+        "version": "4.3.0.2",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/4.3.0.2",
+        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/4.3.0.2",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/4.3.0.2/neosemantics-4.3.0.2.jar",
+        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/4.3.0.2/neosemantics-4.3.0.2.jar",
         "config": {
             "+:dbms.security.procedures.unrestricted": [
                 "n10s.*"
@@ -986,6 +1016,21 @@
         "config": {
             "+:dbms.security.procedures.unrestricted": [
                 "n10s.*"
+            ]
+        }
+    },
+    {
+        "neo4j": "3.5.34",
+        "neo4jVersion": "3.5.34",
+        "n10s": "3.5.0.4",
+        "version": "3.5.0.4",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/3.5.0.4",
+        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/3.5.0.4",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/3.5.0.4/neosemantics-3.5.0.4.jar",
+        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/3.5.0.4/neosemantics-3.5.0.4.jar",
+        "config": {
+            "+:dbms.security.procedures.unrestricted": [
+                "semantics.*"
             ]
         }
     },
