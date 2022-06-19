@@ -24,6 +24,8 @@ import org.neo4j.driver.*;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
+import org.neo4j.driver.Record;
+
 public class SHACLValidationProceduresTest {
 
   final String VAL_RESULTS_QUERY_ON_IGNORE_GRAPH = "MATCH (vr:ValidationResult)\n" +
