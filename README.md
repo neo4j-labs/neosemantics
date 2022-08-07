@@ -46,7 +46,7 @@ it in the <NEO_HOME>/plugins directory of your Neo4j instance.
 3. Restart the server. 
 
 
-###Verifying the installation
+### Verifying the installation
 
 You can check that the installation went well by:
 Running `call dbms.procedures()`. The list of procedures should include a number of them prefixed by **n10s**.
