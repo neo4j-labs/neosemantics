@@ -62,7 +62,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
       String catName = node.getAllProperties().get("name").toString();
       if (!catName.equals("Resource") && !catName.equals("_NsPrefDef")
           && !catName.equals("_GraphConfig") && !catName.equals("_n10sValidatorConfig")
-          && !catName.equals("_MapNs") && !catName.equals("_MapDef") && !catName.equals("_GraphConfig")) {
+          && !catName.equals("_MapNs") && !catName.equals("_MapDef")) {
         IRI subject = vf.createIRI(buildURI(BASE_SCH_NS, catName));
         statements.add(vf.createStatement(subject, RDF.TYPE, OWL.CLASS));
         statements.add(vf.createStatement(subject, RDFS.LABEL,
@@ -88,6 +88,36 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
         IRI rangeUri = vf
             .createIRI(buildURI(BASE_SCH_NS, rangeClassStr));
         statements.add(vf.createStatement(relUri, RDFS.RANGE, rangeUri));
+      }
+    }
+
+    res = tx.execute("call db.schema.nodeTypeProperties() yield nodeLabels, propertyName, propertyTypes \n" +
+            " return [x in nodeLabels where x <> 'Resource'] as domain, propertyName as pName, " +
+            " replace(propertyTypes[0],\"Array\",\"\") as range ");
+
+
+    while(res.hasNext()) {
+      next = res.next();
+
+      List<String> domains = (List<String>)next.get("domain");
+      String pName = next.get("pName").toString();
+      if(!pName.equals("uri")
+         && !domains.contains("_NsPrefDef") && !domains.contains("_GraphConfig") && !domains.contains("_n10sValidatorConfig")
+         && !domains.contains("_MapNs") && !domains.contains("_MapDef")) {
+
+        IRI propUri = vf.createIRI(buildURI(BASE_SCH_NS, next.get("pName").toString()));
+        statements.add(vf.createStatement(propUri, RDF.TYPE, OWL.DATATYPEPROPERTY));
+        statements.add(vf.createStatement(propUri, RDFS.LABEL,
+                vf.createLiteral(propUri.getLocalName())));
+
+        for(String dom:domains) {
+          if (!dom.equals("Resource")) {
+            statements.add(vf.createStatement(propUri, RDFS.DOMAIN,
+                    vf.createIRI(buildURI(BASE_SCH_NS, dom))));
+          }
+        }
+        statements.add(vf.createStatement(propUri, RDFS.RANGE,
+                getXSDType(next.get("range").toString())));
       }
     }
 

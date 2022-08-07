@@ -24,9 +24,7 @@ import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
 import org.neo4j.values.storable.PointValue;
 
-import static n10s.graphconfig.Params.DEFAULT_BASE_SCH_NS;
-import static n10s.graphconfig.Params.GEOSPARQL_NS;
-import static n10s.graphconfig.Params.WKTLITERAL;
+import static n10s.graphconfig.Params.*;
 
 public abstract class ExportProcessor {
 
@@ -246,6 +244,18 @@ public abstract class ExportProcessor {
     } else {
       return l.stringValue();
     }
+  }
+
+  protected IRI getXSDType(String type) {
+    if (type.equals("String")) return XSD.STRING ;
+    else if (type.equals("Long")) return XSD.INTEGER ;
+    else if (type.equals("Double")) return XSD.DECIMAL ;
+    else if (type.equals("Boolean")) return XSD.BOOLEAN ;
+    else if (type.equals("Date")) return XSD.DATE ;
+    else if (type.equals("DateTime")) return XSD.DATETIME ;
+    else if (type.equals("Point")) return WKTLITERAL_URI ;
+
+    else return XSD.STRING ;
   }
 
   protected abstract boolean filterRelationship(Relationship rel, Map<Long, IRI> ontologyEntitiesUris);

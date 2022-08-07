@@ -10,6 +10,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.vocabulary.OWL;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.neo4j.graphdb.*;
 
 import java.time.LocalDateTime;
@@ -76,6 +77,28 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             vf.createIRI(BASE_SCH_NS, rangeLabel)));
       }
     }
+
+    res = tx.execute("call db.schema.nodeTypeProperties() yield nodeLabels, propertyName, propertyTypes \n" +
+            " return [x in nodeLabels where x <> 'Resource'] as domain, propertyName as pName, " +
+            " replace(propertyTypes[0],\"Array\",\"\") as range ");
+    while(res.hasNext()) {
+      next = res.next();
+
+      if(!next.get("pName").toString().equals("uri")) {
+        IRI propUri = vf.createIRI(BASE_SCH_NS, next.get("pName").toString());
+        statements.add(vf.createStatement(propUri, RDF.TYPE, OWL.DATATYPEPROPERTY));
+        statements.add(vf.createStatement(propUri, RDFS.LABEL,
+                vf.createLiteral(next.get("pName").toString())));
+        List<String> domains = (List<String>) next.get("domain");
+        for (String dom : domains) {
+          statements.add(vf.createStatement(propUri, RDFS.DOMAIN,
+                  vf.createIRI(BASE_SCH_NS, dom)));
+        }
+        statements.add(vf.createStatement(propUri, RDFS.RANGE,
+                getXSDType(next.get("range").toString())));
+      }
+    }
+
     return statements.stream();
   }
 

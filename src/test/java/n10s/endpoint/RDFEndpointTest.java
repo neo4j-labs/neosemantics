@@ -1342,26 +1342,46 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
 
     String expected =
-        "<neo4j://graph.schema#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://graph.schema#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n"
-            + "<neo4j://graph.schema#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://graph.schema#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n"
-            + "<neo4j://graph.schema#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://graph.schema#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n"
-            + "<neo4j://graph.schema#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            + "<neo4j://graph.schema#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n"
-            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n"
-            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n"
-            + "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n"
-            + "<neo4j://graph.schema#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n"
-            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n"
-            + "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n"
-            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n"
-            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n"
-            + "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n";
+        "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
+                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n" +
+                "<neo4j://graph.schema#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<neo4j://graph.schema#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                "<neo4j://graph.schema#released> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                "<neo4j://graph.schema#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
+                "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#label> \"title\" .\n" +
+                "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#label> \"released\" .\n" +
+                "<neo4j://graph.schema#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<neo4j://graph.schema#title> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                "<neo4j://graph.schema#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                "<neo4j://graph.schema#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n" +
+                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                "<neo4j://graph.schema#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
+                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
+                "<neo4j://graph.schema#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n" +
+                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                "<neo4j://graph.schema#name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                "<neo4j://graph.schema#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .";
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
@@ -1403,33 +1423,32 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
 
     String expected =
-        "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            +
-            "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n"
-            +
-            "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            +
-            "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n"
-            +
-            "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n"
-            +
-            "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n"
-            +
-            "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            +
-            "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#label> \"Likes\" .\n"
-            +
-            "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Director> .\n"
-            +
-            "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n"
-            +
-            "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n"
-            +
-            "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#label> \"FriendOf\" .\n"
-            +
-            "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n"
-            +
-            "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .";
+        "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n" +
+                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
+                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
+                "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Director> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#label> \"FriendOf\" .\n" +
+                "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#label> \"Likes\" .\n";
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
