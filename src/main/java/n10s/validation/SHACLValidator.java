@@ -11,7 +11,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.util.URIUtil;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.TupleQuery;
@@ -812,43 +812,43 @@ public class SHACLValidator {
   }
 
   private String getDatatypeCastExpressionPref(String dataType) {
-    if (dataType.equals(XMLSchema.BOOLEAN.stringValue())) {
+    if (dataType.equals(XSD.BOOLEAN.stringValue())) {
       return "coalesce(toBoolean(toString(";
-    } else if (dataType.equals(XMLSchema.STRING.stringValue())) {
+    } else if (dataType.equals(XSD.STRING.stringValue())) {
       return "coalesce(toString(";
-    } else if (dataType.equals(XMLSchema.INTEGER.stringValue())) {
+    } else if (dataType.equals(XSD.INTEGER.stringValue())) {
       return "coalesce(toInteger(";
-    } else if (dataType.equals(XMLSchema.FLOAT.stringValue())) {
+    } else if (dataType.equals(XSD.FLOAT.stringValue())) {
       return "coalesce(toFloat(";
-    } else if (dataType.equals(XMLSchema.DATE.stringValue())) {
-      return "n10s.aux.dt.check('" + XMLSchema.DATE.stringValue()+ "',";
-    } else if (dataType.equals(XMLSchema.DATETIME.stringValue())) {
-      return "n10s.aux.dt.check('" + XMLSchema.DATETIME.stringValue()+ "',";
+    } else if (dataType.equals(XSD.DATE.stringValue())) {
+      return "n10s.aux.dt.check('" + XSD.DATE.stringValue()+ "',";
+    } else if (dataType.equals(XSD.DATETIME.stringValue())) {
+      return "n10s.aux.dt.check('" + XSD.DATETIME.stringValue()+ "',";
     } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
       return "n10s.aux.dt.check('" +WKTLITERAL_URI.stringValue()+ "',";
-    } else if (dataType.equals(XMLSchema.ANYURI.stringValue())) {
-      return "n10s.aux.dt.check('" +XMLSchema.ANYURI.stringValue()+ "',";
+    } else if (dataType.equals(XSD.ANYURI.stringValue())) {
+      return "n10s.aux.dt.check('" +XSD.ANYURI.stringValue()+ "',";
     } else {
       return "";
     }
   }
 
   private String getDatatypeCastExpressionSuff(String dataType) {
-    if (dataType.equals(XMLSchema.BOOLEAN.stringValue())) {
+    if (dataType.equals(XSD.BOOLEAN.stringValue())) {
       return ")) = x , false)";
-    } else if (dataType.equals(XMLSchema.STRING.stringValue())) {
+    } else if (dataType.equals(XSD.STRING.stringValue())) {
       return ") = x , false)";
-    } else if (dataType.equals(XMLSchema.INTEGER.stringValue())) {
+    } else if (dataType.equals(XSD.INTEGER.stringValue())) {
       return ") = x , false)";
-    } else if (dataType.equals(XMLSchema.FLOAT.stringValue())) {
+    } else if (dataType.equals(XSD.FLOAT.stringValue())) {
       return ") = x , false)";
-    } else if (dataType.equals(XMLSchema.DATE.stringValue())) {
+    } else if (dataType.equals(XSD.DATE.stringValue())) {
       return ")";
-    } else if (dataType.equals(XMLSchema.DATETIME.stringValue())) {
+    } else if (dataType.equals(XSD.DATETIME.stringValue())) {
       return ")";
     } else if (dataType.equals(WKTLITERAL_URI.stringValue())) {
       return ")";
-    } else if (dataType.equals(XMLSchema.ANYURI.stringValue())) {
+    } else if (dataType.equals(XSD.ANYURI.stringValue())) {
       return ")";
     }else {
       return "";
