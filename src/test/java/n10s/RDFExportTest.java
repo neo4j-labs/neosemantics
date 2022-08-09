@@ -30,6 +30,8 @@ import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static n10s.graphconfig.Params.*;
 import static org.junit.Assert.*;
 
+import org.neo4j.driver.Record;
+
 public class RDFExportTest {
 
   @Rule
