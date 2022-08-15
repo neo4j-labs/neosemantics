@@ -166,7 +166,7 @@ public class ValidatorConfig {
   private StringBuilder newInitialisedStringBuilder() {
     return new StringBuilder().append("UNWIND [] as row RETURN '' as nodeId, " +
         "'' as nodeType, '' as shapeId, '' as propertyShape, '' as offendingValue, '' as propertyName"
-        + ", '' as severity , '' as message ");
+        + ", '' as severity , '' as message, '' as customMsg ");
   }
 
   public void writeToDB(Transaction tx) throws IOException {

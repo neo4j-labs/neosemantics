@@ -43,92 +43,109 @@ public class SHACLValidator {
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
   private static final String BNODE_PREFIX = "bnode://id/";
 
-  String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n"
-      + "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity \n"
-      + "?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen \n"
-      + "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n"
-      + "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) \n"
-      + "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) \n"
-      + "(isLiteral(?inFirst) as ?isliteralIns)\n"
-      + "{ ?ns a ?shapeOrNodeShape ;\n"
-      + "     sh:node?/sh:property ?ps .\n"
-      + "  filter ( ?shapeOrNodeShape = sh:Shape || ?shapeOrNodeShape = sh:NodeShape )\n"
-      + "\n"
-      + "  optional { ?ps sh:path/sh:inversePath ?invPath }\n"
-      + "  optional { ?ps sh:path  ?path }\n"
-      + "  optional { ?ps sh:class  ?rangeClass }\n"
-      + "  optional { ?ps sh:nodeKind  ?rangeKind }  \n"
-      + "  optional { ?ps sh:datatype  ?datatype }\n"
-      + "  optional { ?ps sh:severity  ?severity }\n"
-      + "  optional { \n"
-      + "    { ?ns sh:targetClass  ?targetClass }\n"
-      + "    union\n"
-      + "    { ?targetClass sh:property ?ps;\n"
-      + "          a rdfs:Class . }\n"
-      + "  }\n"
-      + "  optional { ?ps sh:pattern  ?pattern }\n"
-      + "  optional { ?ps sh:maxCount  ?maxCount }\n"
-      + "  \n"
-      + "    optional { ?ps sh:minCount  ?minCount }\n"
-      + "    optional { ?ps sh:minInclusive  ?minInc }\n"
-      + "  \n"
-      + "    optional { ?ps sh:maxInclusive  ?maxInc }\n"
-      + "    optional { ?ps sh:minExclusive  ?minExc }\n"
-      + "    optional { ?ps sh:maxExclusive  ?maxExc }  \n"
-      + "  optional { ?ps sh:minLength  ?minStrLen }\n"
-      + "  \n"
-      + "    optional { ?ps sh:minLength  ?minStrLen }\n"
-      + "    optional { ?ps sh:maxLength  ?maxStrLen }\n"
-      + "  \n"
-      + "   optional { ?ps sh:hasValue  ?hasValueUri . filter(isIRI(?hasValueUri)) } \n"
-      + "    optional { ?ps sh:hasValue  ?hasValueLiteral . filter(isLiteral(?hasValueLiteral)) } \n"
-      + "  \n"
-      + "    optional { ?ps sh:in/rdf:rest*/rdf:first ?in } \n"
-      + "    optional { ?ps sh:in/rdf:first ?inFirst }\n"
-      + "    optional { ?ps sh:minLength  ?minStrLen }\n"
-      + "  \n"
-      + "} group by \n"
-      + "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?targetClass ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?inFirst";
+  String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
+          "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
+          "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen \n" +
+          "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n" +
+          "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) \n" +
+          "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) \n" +
+          "(isLiteral(?inFirst) as ?isliteralIns)\n" +
+          "{ ?ns a ?shapeOrNodeShape ;\n" +
+          "     sh:node?/sh:property ?ps .\n" +
+          "  filter ( ?shapeOrNodeShape = sh:Shape || ?shapeOrNodeShape = sh:NodeShape )\n" +
+          "\n" +
+          "  optional { ?ps sh:path/sh:inversePath ?invPath }\n" +
+          "  optional { ?ps sh:path  ?path }\n" +
+          "  optional { ?ps sh:class  ?rangeClass }\n" +
+          "  optional { ?ps sh:nodeKind  ?rangeKind }  \n" +
+          "  optional { ?ps sh:datatype  ?datatype }\n" +
+          "  optional { ?ps sh:severity  ?severity }\n" +
+          "  optional { ?ps sh:message  ?pmsg }  \n" +
+          "  optional { ?ns sh:message  ?nmsg }  \n" +
+          "  { \n" +
+          "    { ?ns sh:targetClass  ?targetClass .\n" +
+          "      bind( false as ?targetIsQuery )}\n" +
+          "    union\n" +
+          "    { ?targetClass sh:property ?ps;\n" +
+          "          a rdfs:Class . \n" +
+          "            bind( false as ?targetIsQuery )}\n" +
+          "    union \n" +
+          "    { ?ns sh:targetQuery ?targetClass .\n" +
+          "              bind( true as ?targetIsQuery )}\n" +
+          "  }\n" +
+          "  optional { ?ps sh:pattern  ?pattern }\n" +
+          "  optional { ?ps sh:maxCount  ?maxCount }\n" +
+          "  \n" +
+          "    optional { ?ps sh:minCount  ?minCount }\n" +
+          "    optional { ?ps sh:minInclusive  ?minInc }\n" +
+          "  \n" +
+          "    optional { ?ps sh:maxInclusive  ?maxInc }\n" +
+          "    optional { ?ps sh:minExclusive  ?minExc }\n" +
+          "    optional { ?ps sh:maxExclusive  ?maxExc }  \n" +
+          "  optional { ?ps sh:minLength  ?minStrLen }\n" +
+          "  \n" +
+          "    optional { ?ps sh:minLength  ?minStrLen }\n" +
+          "    optional { ?ps sh:maxLength  ?maxStrLen }\n" +
+          "  \n" +
+          "   optional { ?ps sh:hasValue  ?hasValueUri . filter(isIRI(?hasValueUri)) } \n" +
+          "    optional { ?ps sh:hasValue  ?hasValueLiteral . filter(isLiteral(?hasValueLiteral)) } \n" +
+          "  \n" +
+          "    optional { ?ps sh:in/rdf:rest*/rdf:first ?in } \n" +
+          "    optional { ?ps sh:in/rdf:first ?inFirst }\n" +
+          "    optional { ?ps sh:minLength  ?minStrLen }\n" +
+          "  \n" +
+          "} group by \n" +
+          "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?nmsg ?pmsg ?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?inFirst";
 
-  String NODE_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
-      + "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
-      + "SELECT ?ns ?targetClass (GROUP_CONCAT (distinct ?definedProp; separator=\"---\") AS ?definedProps)\n"
-      + "(GROUP_CONCAT (distinct ?ignored; separator=\"---\") AS ?ignoredProps)\n"
-      + "{ ?ns a sh:NodeShape ;\n"
-      + "    sh:closed true .\n"
-      + "  \n"
-      + "   optional { \n"
-      + "     ?ns sh:targetClass  ?targetClass \n"
-      + "   }\n"
-      + "   \n"
-      + "   optional { \n"
-      + "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns)\n"
-      + "   }\n"
-      + "  \n"
-      + "  optional { ?ns sh:property [ sh:path ?definedProp ].  filter(isIRI(?definedProp)) }\n"
-      + "   optional { ?ns sh:ignoredProperties/rdf:rest*/rdf:first ?ignored }\n"
-      + "   \n"
-      + "} group by ?ns ?targetClass";
+  String NODE_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+          "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
+          "SELECT ?ns (coalesce(?nmsg,\"\") as ?msg) ?targetClass ?targetIsQuery (GROUP_CONCAT (distinct ?definedProp; separator=\"---\") AS ?definedProps)\n" +
+          "(GROUP_CONCAT (distinct ?ignored; separator=\"---\") AS ?ignoredProps)\n" +
+          "{ ?ns a sh:NodeShape ;\n" +
+          "    sh:closed true .\n" +
+          "  {\n" +
+          "   { \n" +
+          "     ?ns sh:targetClass  ?targetClass .\n" +
+          "      bind( false as ?targetIsQuery )\n" +
+          "   }\n" +
+          "   union\n" +
+          "   { \n" +
+          "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns) .\n" +
+          "     bind( false as ?targetIsQuery )\n" +
+          "   }\n" +
+          "   union\n" +
+          "   { \n" +
+          "     ?ns sh:targetQuery  ?targetClass .\n" +
+          "      bind( true as ?targetIsQuery )\n" +
+          "   }\n" +
+          "  }\n" +
+          "  optional { ?ns sh:message  ?nmsg }\n" +
+          "  optional { ?ns sh:property [ sh:path ?definedProp ].  filter(isIRI(?definedProp)) }\n" +
+          "   optional { ?ns sh:ignoredProperties/rdf:rest*/rdf:first ?ignored }\n" +
+          "   \n" +
+          "} group by ?ns ?nmsg ?targetClass ?targetIsQuery";
 
   //the sh:class at the node shape level is not used (consider removing)
-  String NODE_ADDITIONAL_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n"
-      + "prefix sh: <http://www.w3.org/ns/shacl#>  \n"
-      + "SELECT ?ns ?targetClass (GROUP_CONCAT (distinct ?class; separator=\"---\") AS ?class)\n"
-      + "(GROUP_CONCAT (distinct ?disjointclass; separator=\"---\") AS ?disjointclass)\n"
-      + "{ ?ns a sh:NodeShape .\n"
-      + "  \n"
-      + "   optional { \n"
-      + "     ?ns sh:targetClass  ?targetClass \n"
-      + "   }\n"
-      + "   \n"
-      + "   optional { \n"
-      + "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns)\n"
-      + "   }\n"
-      + "  \n"
-      + "  optional { ?ns sh:not [ sh:class ?disjointclass ].  filter(isIRI(?disjointclass)) }\n"
-      + "  optional { ?ns sh:class ?class .  filter(isIRI(?class)) }\n"
-      + "  filter(bound(?disjointclass) || bound(?class))\n"
-      + "} group by ?ns ?targetClass";
+  String NODE_ADDITIONAL_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
+          "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
+          "SELECT ?ns (coalesce(?nmsg,\"\") as ?msg) ?targetClass (GROUP_CONCAT (distinct ?class; separator=\"---\") AS ?class)\n" +
+          "(GROUP_CONCAT (distinct ?disjointclass; separator=\"---\") AS ?disjointclass)\n" +
+          "{ ?ns a sh:NodeShape .\n" +
+          "  \n" +
+          "  { \n" +
+          "    { \n" +
+          "     ?ns sh:targetClass  ?targetClass \n" +
+          "    }\n" +
+          "    union \n" +
+          "    { \n" +
+          "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns)\n" +
+          "    }\n" +
+          "  }\n" +
+          "  optional { ?ns sh:message ?nmsg }\n" +
+          "  optional { ?ns sh:not [ sh:class ?disjointclass ].  filter(isIRI(?disjointclass)) }\n" +
+          "  optional { ?ns sh:class ?class .  filter(isIRI(?class)) }\n" +
+          "  filter(bound(?disjointclass) || bound(?class))\n" +
+          "} group by ?ns ?nmsg ?targetClass";
 
   private Transaction tx;
   private Log log;
@@ -155,9 +172,9 @@ public class SHACLValidator {
     while (constraints.hasNext()) {
 
       Map<String, Object> propConstraint = constraints.next();
-      if (propConstraint.get("appliesToCat") == null) {
+      if (!propConstraint.containsKey("appliesToCat") && !propConstraint.containsKey("appliesToQueryResult")) {
         log.debug(
-            "Only class-based targets (sh:targetClass) and implicit class targets are validated.");
+            "Only class-based targets (sh:targetClass), implicit class targets and query-based shapes are validated.");
       }
       else {
         processConstraint(propConstraint, vc);
@@ -181,6 +198,9 @@ public class SHACLValidator {
     String severity = theConstraint.containsKey("severity") ? (String) theConstraint.get("severity")
         : SHACL.VIOLATION.stringValue();
 
+    String customMsg = theConstraint.containsKey("msg") ? (String) theConstraint.get("msg")
+            : "";
+
     if (theConstraint.get("dataType") != null && !isConstraintOnType) {
       //TODO: would this be safer via APOC? maybe exclude some of them? and log the ignored ones?
       addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
@@ -189,14 +209,14 @@ public class SHACLValidator {
           getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
           getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity, (String) theConstraint.get("dataType"));
+          severity, (String) theConstraint.get("dataType"), customMsg);
 
       // Check that a property for which a datatype constraint has been defined
       // is not being used as a relationship
       addCypherToValidationScripts(vc, Arrays.asList(focusLabel), getDataTypeViolationQuery2(false),
           getDataTypeViolationQuery2(true), focusLabel,
           propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
-          severity, propOrRel);
+          severity, propOrRel, customMsg);
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -221,7 +241,7 @@ public class SHACLValidator {
             addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
                     getHasValueOnTypeAsLabelViolationQuery(false), getHasValueOnTypeAsLabelViolationQuery(true), paramSetId,
                     focusLabel,
-                    focusLabel, (String) theConstraint.get("propShapeUid"), severity);
+                    focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg);
             params.put("theHasTypeTranslatedUris", translateUriList(valueUriList));
           }
           // not an if/else because both can coexist when NODES_AND_LABELS
@@ -230,7 +250,7 @@ public class SHACLValidator {
                     getHasValueOnTypeAsNodeViolationQuery(false), getHasValueOnTypeAsNodeViolationQuery(true), paramSetId,
                     focusLabel,
                     propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                    propOrRel, severity, propOrRel);
+                    propOrRel, severity, propOrRel, customMsg);
             params.put("theHasTypeUris", valueUriList);
           }
         } else {
@@ -238,7 +258,7 @@ public class SHACLValidator {
                   getHasValueUriViolationQuery(false), getHasValueUriViolationQuery(true), paramSetId,
                   focusLabel,
                   propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                  propOrRel, severity, propOrRel);
+                  propOrRel, severity, propOrRel, customMsg);
           params.put("theHasValueUri", valueUriList);
         }
 
@@ -261,7 +281,7 @@ public class SHACLValidator {
             getHasValueLiteralViolationQuery(false), getHasValueLiteralViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-            propOrRel, severity, propOrRel);
+            propOrRel, severity, propOrRel, customMsg);
 
         //ADD constraint to the list
         vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -275,13 +295,13 @@ public class SHACLValidator {
         addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
             getRangeIRIKindViolationQuery(false), getRangeIRIKindViolationQuery(true), focusLabel,
             propOrRel,
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
+            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg);
       } else if (theConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue())) {
         addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
             getRangeLiteralKindViolationQuery(false), getRangeLiteralKindViolationQuery(true),
             focusLabel,
             propOrRel,
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel);
+            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg);
       }
 
       //ADD constraint to the list
@@ -300,13 +320,13 @@ public class SHACLValidator {
           propOrRel,
           translateUri((String) theConstraint.get("rangeType"), tx, gc),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
-          translateUri((String) theConstraint.get("rangeType"), tx, gc));
+          translateUri((String) theConstraint.get("rangeType"), tx, gc), customMsg);
       addCypherToValidationScripts(vc, new ArrayList<String>(
               Arrays.asList(focusLabel, translateUri((String) theConstraint.get("rangeType"), tx, gc))),
           getRangeType2ViolationQuery(false), getRangeType2ViolationQuery(true), focusLabel,
           propOrRel,
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity,
-          propOrRel);
+          propOrRel ,customMsg);
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -326,7 +346,7 @@ public class SHACLValidator {
             getInLiteralsViolationQuery(false), getInLiteralsViolationQuery(true),
             paramSetId, focusLabel,
             propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-            propOrRel, severity, propOrRel);
+            propOrRel, severity, propOrRel, customMsg);
 
         //ADD constraint to the list
         vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -346,7 +366,7 @@ public class SHACLValidator {
           if(typesAsLabels()) {
             addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
                     getTypeAsLabelInUrisViolationQuery(false), getTypeAsLabelInUrisViolationQuery(true),
-                    paramSetId, focusLabel, focusLabel, (String) theConstraint.get("propShapeUid"), severity);
+                    paramSetId, focusLabel, focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg);
             params.put("theInTypeTranslatedUris", translateUriList(valueUriList));
           }
           //this is not an if/else because both can coexist
@@ -355,7 +375,7 @@ public class SHACLValidator {
                     getTypeAsNodeInUrisViolationQuery(false), getTypeAsNodeInUrisViolationQuery(true), paramSetId,
                     focusLabel,
                     propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                    propOrRel, severity, propOrRel);
+                    propOrRel, severity, propOrRel, customMsg);
             params.put("theInTypeUris", valueUriList);
           }
         } else {
@@ -363,7 +383,7 @@ public class SHACLValidator {
                   getInUrisViolationQuery(false), getInUrisViolationQuery(true),
                   paramSetId, focusLabel,
                   propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                  propOrRel, severity, propOrRel);
+                  propOrRel, severity, propOrRel, customMsg);
           params.put("theInUris", valueUriList);
         }
       }
@@ -382,7 +402,7 @@ public class SHACLValidator {
       addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
           getRegexViolationQuery(false), getRegexViolationQuery(true), paramSetId,
           focusLabel, propOrRel, propOrRel, focusLabel,
-          (String) theConstraint.get("propShapeUid"), propOrRel, severity);
+          (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -403,7 +423,7 @@ public class SHACLValidator {
             addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
                     getTypeAsLabelMinCardinalityViolationQuery(false), getTypeAsLabelMinCardinalityViolationQuery(true),
                     paramSetId, focusLabel, " toInteger(params.minCount) <= ",
-                    focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity);
+                    focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
           }
           //this is not an if/else because both can coexist
           if(typesAsRelToNodes()){
@@ -411,7 +431,7 @@ public class SHACLValidator {
                     getTypeAsNodeMinCardinalityViolationQuery(false), getTypeAsNodeMinCardinalityViolationQuery(true), paramSetId, focusLabel,
                     " toInteger(params.minCount) <= ", propOrRel,
                     focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                    severity);
+                    severity, customMsg);
           }
         } else {
           addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
@@ -420,7 +440,7 @@ public class SHACLValidator {
                   " toInteger(params.minCount) <= ",
                   propOrRel, propOrRel,
                   focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
-                  severity);
+                  severity, customMsg);
         }
       } else {
         // multivalued attributes not checked for cardinality in the case of inverse??
@@ -432,7 +452,7 @@ public class SHACLValidator {
             " toInteger(params.minCount) <= ",
             propOrRel,
             focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-            severity);
+            severity, customMsg);
       }
 
 
@@ -454,7 +474,7 @@ public class SHACLValidator {
             addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
                     getTypeAsLabelMaxCardinalityViolationQuery(false), getTypeAsLabelMaxCardinalityViolationQuery(true),
                     paramSetId, focusLabel, " <= toInteger(params.maxCount) ", focusLabel,
-                    (String) theConstraint.get("propShapeUid"), propOrRel, severity);
+                    (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
           }
           //this is not an if/else because both can coexist
           if(typesAsRelToNodes()){
@@ -462,7 +482,7 @@ public class SHACLValidator {
                     getTypeAsNodeMaxCardinalityViolationQuery(false), getTypeAsNodeMaxCardinalityViolationQuery(true), paramSetId, focusLabel,
                     propOrRel, " <= toInteger(params.maxCount) ",
                     focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                    severity);
+                    severity, customMsg);
           }
         } else {
           addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
@@ -471,7 +491,7 @@ public class SHACLValidator {
                   propOrRel, propOrRel,
                   " <= toInteger(params.maxCount) ",
                   focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
-                  severity);
+                  severity, customMsg);
         }
       } else {
         // multivalued attributes not checked for cardinality in the case of inverse??
@@ -483,7 +503,7 @@ public class SHACLValidator {
             propOrRel,
             " <= toInteger(params.maxCount) ",
             focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-            severity);
+            severity, customMsg);
       }
 
       //ADD constraint to the list
@@ -508,7 +528,7 @@ public class SHACLValidator {
           theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
           theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity);
+          severity, customMsg);
 
       //ADD constraint to the list
       if(theConstraint.get("minStrLen") != null) {
@@ -545,7 +565,7 @@ public class SHACLValidator {
           theConstraint.get("maxInc") != null ? " <= params.max "
               : (theConstraint.get("maxExc") != null ? " < params.max " : ""),
           focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity);
+          severity, customMsg);
 
       //ADD constraint to the list
       if (theConstraint.get("minInc") != null) {
@@ -593,7 +613,7 @@ public class SHACLValidator {
           getNodeStructureViolationQuery(false), getNodeStructureViolationQuery(true), paramSetId,
           focusLabel,
           focusLabel,
-          (String) theConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation");
+          (String) theConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation", customMsg);
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -610,7 +630,7 @@ public class SHACLValidator {
             getDisjointClassesViolationQuery(false), getDisjointClassesViolationQuery(true),
             focusLabel, translateUri(uri, tx, gc),focusLabel,
             (String) theConstraint.get("nodeShapeUid"), translateUri(uri, tx, gc),
-            "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc));
+            "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc), customMsg);
       }
 
       //ADD constraint to the list
@@ -681,8 +701,13 @@ public class SHACLValidator {
         } else {
           record.put("item", path.stringValue());
           record.put("inverse", next.hasBinding("invPath"));
-          record.put("appliesToCat",
-              next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+          if(!((Literal)next.getValue("targetIsQuery")).booleanValue()) {
+            record.put("appliesToCat",
+                    next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+          } else {
+            record.put("appliesToQueryResult",
+                    next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+          }
           record.put("rangeType",
               next.hasBinding("rangeClass") ? next.getValue("rangeClass").stringValue() : null);
           record.put("rangeKind",
@@ -748,6 +773,8 @@ public class SHACLValidator {
               .put("severity", next.hasBinding("severity") ? next.getValue("severity").stringValue()
                   : "http://www.w3.org/ns/shacl#Violation");
 
+          record.put("msg", next.hasBinding("msg") ? next.getValue("msg").stringValue() : "");
+
           constraints.add(record);
         }
 
@@ -781,6 +808,9 @@ public class SHACLValidator {
           }
           record.put("ignoredProps", ignoredProps);
         }
+
+        record.put("msg", next.hasBinding("msg") ? next.getValue("msg").stringValue() : "");
+
         constraints.add(record);
       }
 
@@ -794,14 +824,16 @@ public class SHACLValidator {
         record.put("appliesToCat", next.getValue("targetClass").stringValue());
         record
             .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);
-        if (next.hasBinding("class")) {
+        if (next.hasBinding("class") && !next.getValue("class").stringValue().isEmpty()) {
           record.put("reqClass",
               Arrays.asList(next.getValue("class").stringValue().split("---")));
         }
-        if (next.hasBinding("disjointclass")) {
+        if (next.hasBinding("disjointclass") && !next.getValue("disjointclass").stringValue().isEmpty()) {
           record.put("disjointClass",
               Arrays.asList(next.getValue("disjointclass").stringValue().split("---")));
         }
+        record.put("msg", next.hasBinding("msg") ? next.getValue("msg").stringValue() : "");
+
         constraints.add(record);
       }
 
@@ -997,7 +1029,7 @@ public class SHACLValidator {
         + " as propertyName, '%s' as severity,"
         + " 'property value should be of type ' + " +
         (nodesAreUriIdentified() ? " '%s' " : "n10s.rdf.getIRILocalName('%s')")
-        + " as message ";
+        + " as message , '%s' as customMsg";
   }
 
   private String CYPHER_DATATYPE2_V_SUFF() {
@@ -1010,7 +1042,8 @@ public class SHACLValidator {
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a property, instead it  is a relationship' as message ";
+        + " + ' should be a property, instead it  is a relationship' as message " +
+            " , '%s' as customMsg";
   }
 
   private String CYPHER_IRI_KIND_V_SUFF() {
@@ -1022,7 +1055,7 @@ public class SHACLValidator {
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity,"
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a property ' as message  ";
+        + " + ' should be a property ' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_LITERAL_KIND_V_SUFF() {
@@ -1034,7 +1067,7 @@ public class SHACLValidator {
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity,"
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a relationship ' as message  ";
+        + " + ' should be a relationship ' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_RANGETYPE1_V_SUFF() {
@@ -1047,7 +1080,7 @@ public class SHACLValidator {
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity,"
         + " 'value should be of type ' + " + (shallIShorten()
-        ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") + " as message  ";
+        ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") + " as message , '%s' as customMsg ";
   }
 
   private String CYPHER_RANGETYPE2_V_SUFF() {
@@ -1058,7 +1091,7 @@ public class SHACLValidator {
         + "' as propertyShape, null as offendingValue, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "'%s should be a relationship but it is a property' as message  ";
+        + "'%s should be a relationship but it is a property' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_REGEX_V_SUFF() {
@@ -1072,7 +1105,7 @@ public class SHACLValidator {
         + "' as propertyShape, offval as offendingValue, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "'the value of the property does not match the specified regular expression' as message  ";
+        + "'the value of the property does not match the specified regular expression' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF() {
@@ -1087,7 +1120,8 @@ public class SHACLValidator {
                       ", null as offendingValue, "
                       + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
                       + " as propertyName, '%s' as severity, "
-                      + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  ";
+                      + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  " +
+                      " , '%s' as customMsg";
 
   }
 
@@ -1105,7 +1139,7 @@ public class SHACLValidator {
                     + " as propertyName, '%s' as severity, "
                     + "'The required type ' + reqVal  + ' could not be found as value of relationship ' + "
                     + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-                    + " as message  ";
+                    + " as message   , '%s' as customMsg ";
   }
 
   private String CYPHER_HAS_VALUE_URI_V_SUFF() {
@@ -1121,7 +1155,7 @@ public class SHACLValidator {
             + " as propertyName, '%s' as severity, "
             + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + "
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-            + " as message  ";
+            + " as message  , '%s' as customMsg ";
   }
 
   private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
@@ -1136,7 +1170,8 @@ public class SHACLValidator {
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
             + " as propertyName, '%s' as severity, "
             + "'The required value \"'+ reqVal + '\" was not found in property ' + " + (
-            shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message  ";
+            shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
+                " , '%s' as customMsg ";
   }
 
   private String CYPHER_IN_LITERAL_V_SUFF() {
@@ -1152,7 +1187,7 @@ public class SHACLValidator {
             + " as propertyName, '%s' as severity, "
             + "'The value \"'+ val + '\" in property ' + " + (shallIShorten()
             ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-            + "+ 'is not in  the accepted list' as message  ";
+            + "+ 'is not in  the accepted list' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_IN_URI_V_SUFF() {
@@ -1170,7 +1205,7 @@ public class SHACLValidator {
             + "'The value \"'+ " + (nodesAreUriIdentified() ? " val.uri "
             : " 'node id: '  + id(val) ") + " + '\" in property ' + " + (shallIShorten()
             ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-            + "+ ' is not in  the accepted list' as message  ";
+            + "+ ' is not in  the accepted list' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_TYPE_AS_LABEL_IN_URI_V_SUFF() {
@@ -1185,7 +1220,7 @@ public class SHACLValidator {
                     + "' as propertyShape, " + "val as offendingValue, "
                     + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
                     + " as propertyName, '%s' as severity, "
-                    + "'The label \"'+ val + '\" is not in  the accepted list' as message  ";
+                    + "'The label \"'+ val + '\" is not in  the accepted list' as message , '%s' as customMsg ";
   }
 
   //paramSetId, focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel
@@ -1204,7 +1239,7 @@ public class SHACLValidator {
                     + " as propertyName, '%s' as severity, "
                     + "'The type \"'+ val.uri + '\" (node connected through property ' + " + (shallIShorten()
                     ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-                    + "+ ') is not in  the accepted list' as message  ";
+                    + "+ ') is not in  the accepted list' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_VALRANGE_V_SUFF() {
@@ -1216,7 +1251,7 @@ public class SHACLValidator {
         + "' as propertyShape, focus.`%s` as offendingValue, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "'' as message  ";
+        + "'' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
@@ -1227,7 +1262,7 @@ public class SHACLValidator {
         + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') too low'  as message, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
+        + "null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF() {
@@ -1237,7 +1272,7 @@ public class SHACLValidator {
             + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too low'  as message, "
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
             + " as propertyName, '%s' as severity, "
-            + "null as offendingValue  ";
+            + "null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF() {
@@ -1247,7 +1282,7 @@ public class SHACLValidator {
             + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too high'  as message, "
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
             + " as propertyName, '%s' as severity, "
-            + "null as offendingValue  ";
+            + "null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF() {
@@ -1262,7 +1297,7 @@ public class SHACLValidator {
             ") +') too low'  as message, "
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
             + " as propertyName, '%s' as severity, "
-            + " null as offendingValue  ";
+            + " null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF() {
@@ -1277,7 +1312,7 @@ public class SHACLValidator {
             ") + ') is too high' as message, "
             + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
             + " as propertyName, '%s' as severity, "
-            + " null as offendingValue  ";
+            + " null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
@@ -1288,7 +1323,7 @@ public class SHACLValidator {
         + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') is too high' as message, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
+        + "null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
@@ -1299,7 +1334,7 @@ public class SHACLValidator {
         + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is too low' as message, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
+        + "null as offendingValue , '%s' as customMsg ";
   }
 
   private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {   //Same as previous
@@ -1310,7 +1345,7 @@ public class SHACLValidator {
         + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) + ') is too high' as message, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "null as offendingValue  ";
+        + "null as offendingValue , '%s' as customMsg ";
   }
 
 //  private String CYPHER_MIN_CARDINALITY2_V_SUFF() {
@@ -1336,7 +1371,7 @@ public class SHACLValidator {
         + "' as propertyShape, focus.`%s` as offendingValue, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
         + " as propertyName, '%s' as severity, "
-        + "'' as message  ";
+        + "'' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_NODE_STRUCTURE_V_SUFF() {
@@ -1354,7 +1389,7 @@ public class SHACLValidator {
         + "]) | result + ', ' + x ),2) as offendingValue, "
         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm(noProp)" : " noProp ") +
         " as propertyName, '%s' as severity, "
-        + "'Closed type definition does not include this property/relationship' as message  ";
+        + "'Closed type definition does not include this property/relationship' as message , '%s' as customMsg ";
   }
 
   private String CYPHER_NODE_DISJOINT_WITH_V_SUFF() {
@@ -1364,7 +1399,7 @@ public class SHACLValidator {
         " as nodeType, '%s' as shapeId, '" + SHACL.NOT_CONSTRAINT_COMPONENT
         + "' as propertyShape, '%s' as offendingValue, "
         + " '-' as propertyName, '%s' as severity, "
-        + " 'type not allowed: ' + '%s' as message  ";
+        + " 'type not allowed: ' + '%s' as message , '%s' as customMsg ";
   }
 
 }
