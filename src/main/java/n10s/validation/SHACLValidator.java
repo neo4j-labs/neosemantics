@@ -652,6 +652,27 @@ public class SHACLValidator {
 
     }
 
+    if (theConstraint.get("reqClass") != null) {
+
+      for (String uri : (List<String>) theConstraint.get("reqClass")) {
+        //disjointClasses.add(translateUri(uri));
+        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri, tx, gc))),
+                getRequiredClassesViolationQuery(false), getRequiredClassesViolationQuery(true),
+                 focusLabel, translateUri(uri, tx, gc),focusLabel,
+                (String) theConstraint.get("nodeShapeUid"), translateUri(uri, tx, gc),
+                "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc), customMsg);
+      }
+
+      //ADD constraint to the list
+      List<String> reqClassesRaw = (List<String>) theConstraint.get("reqClass");
+      for (String x : reqClassesRaw) {
+        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+                printConstraintType(SHACL.CLASS),
+                translateUri(x, tx, gc)));
+      }
+
+    }
+
   }
 
   private String printConstraintType(IRI i) {
@@ -843,14 +864,17 @@ public class SHACLValidator {
         record.put("appliesToCat", next.getValue("targetClass").stringValue());
         record
             .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);
+
         if (next.hasBinding("class") && !next.getValue("class").stringValue().isEmpty()) {
           record.put("reqClass",
               Arrays.asList(next.getValue("class").stringValue().split("---")));
         }
+
         if (next.hasBinding("disjointclass") && !next.getValue("disjointclass").stringValue().isEmpty()) {
           record.put("disjointClass",
               Arrays.asList(next.getValue("disjointclass").stringValue().split("---")));
         }
+
         record.put("msg", next.hasBinding("msg") ? next.getValue("msg").stringValue() : "");
 
         constraints.add(record);
@@ -1021,7 +1045,9 @@ public class SHACLValidator {
     return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_NODE_DISJOINT_WITH_V_SUFF());
   }
 
-
+  private String getRequiredClassesViolationQuery(boolean tx) {
+    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_NODE_REQUIRED_WITH_V_SUFF());
+  }
 
   private boolean nodesAreUriIdentified() {
     return gc != null ;
@@ -1422,4 +1448,13 @@ public class SHACLValidator {
         + " 'type not allowed: ' + '%s' as message , '%s' as customMsg ";
   }
 
+  private String CYPHER_NODE_REQUIRED_WITH_V_SUFF() {
+    return " not focus:`%s` RETURN " + (
+            nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
+            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+            " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
+            + "' as propertyShape, 'not %s' as offendingValue, "
+            + " '-' as propertyName, '%s' as severity, "
+            + " 'type missing: ' + '%s' as message , '%s' as customMsg ";
+  }
 }

@@ -1668,10 +1668,12 @@ public class SHACLValidationProceduresTest {
       assertTrue(results.hasNext());
 
       Result result = session.run("call n10s.validation.shacl.validate()");
+      int resultcount = 0;
       while(result.hasNext()){
         System.out.println(result.next());
+        resultcount++;
       }
-      //assertFalse(result.hasNext());
+      assertTrue(resultcount==2);
     }
   }
 

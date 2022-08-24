@@ -14,6 +14,7 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
