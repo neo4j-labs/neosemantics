@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.collect(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?) :: (STRING?)
+¦n10s.rdf.collect(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?, sspo = null :: LIST? OF STRING?) :: (STRING?)
