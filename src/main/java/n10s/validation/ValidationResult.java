@@ -13,6 +13,7 @@ public class ValidationResult {
   public final String resultPath;
   public final String severity;
   public final String resultMessage;
+  public final String customMessage;
 
   public ValidationResult(Map<String, Object> map) {
     this.focusNode = map.get("nodeId");
@@ -23,10 +24,11 @@ public class ValidationResult {
     this.resultPath = (String) map.get("propertyName");
     this.severity = (String) map.get("severity");
     this.resultMessage = (String) map.get("message");
+    this.customMessage = (String) map.get("customMsg");
   }
 
   public ValidationResult(Object focusNode, String nodeType, String resultPath, String severity,
-      String constraint, String shapeId, String message, Object ov) {
+      String constraint, String shapeId, String message, String custMsg, Object ov) {
     this.focusNode = focusNode;
     this.nodeType = nodeType;
     this.resultPath = resultPath;
@@ -35,6 +37,7 @@ public class ValidationResult {
     this.propertyShape = constraint;
     this.shapeId = shapeId;
     this.resultMessage = message;
+    this.customMessage = custMsg;
   }
 
   @Override
@@ -48,6 +51,7 @@ public class ValidationResult {
         ", resultPath='" + resultPath + '\'' +
         ", resultMessage='" + resultMessage + '\'' +
         ", severity='" + severity + '\'' +
+        ", customMessage='" + customMessage + '\'' +
         '}';
   }
 }

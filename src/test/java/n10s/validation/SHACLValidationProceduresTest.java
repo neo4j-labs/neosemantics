@@ -21,6 +21,7 @@ import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.junit.Rule;
 import org.junit.Test;
 import org.neo4j.driver.*;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
@@ -1283,10 +1284,24 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite8not() throws Exception {
+    runIndividualTest("core/property", "in-not-001", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-001", null, "SHORTEN");
+    runIndividualTest("core/property", "in-not-001", null, "KEEP");
+  }
+
+  @Test
   public void testRunTestSuite8b() throws Exception {
     runIndividualTest("core/property", "in-001b", null, "IGNORE");
     runIndividualTest("core/property", "in-001b", null, "SHORTEN");
     runIndividualTest("core/property", "in-001b", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite8bnot() throws Exception {
+    runIndividualTest("core/property", "in-not-001b", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-001b", null, "SHORTEN");
+    runIndividualTest("core/property", "in-not-001b", null, "KEEP");
   }
 
 
@@ -1297,6 +1312,12 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "in-001c", null, "KEEP");
   }
 
+  @Test
+  public void testRunTestSuite8cnot() throws Exception {
+    runIndividualTest("core/property", "in-not-001c", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-001c", null, "SHORTEN");
+    runIndividualTest("core/property", "in-not-001c", null, "KEEP");
+  }
 
   @Test
   public void testRunTestSuite9() throws Exception {
@@ -1408,10 +1429,11 @@ public class SHACLValidationProceduresTest {
         String message = validationResult.get("message").isNull()? "": validationResult.get("message").asList().iterator().next().toString();
         String shapeId = validationResult.get("shapeId").asString();
         Object offendingValue = validationResult.get("offendingValue").asObject();
+        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
 
         expectedResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, offendingValue));
+                shapeId, message, customMsg, offendingValue));
       }
 
       // run validation
@@ -1431,9 +1453,10 @@ public class SHACLValidationProceduresTest {
         String constraint = validationResult.get("propertyShape").asString();
         String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
+        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, offendingValue));
+                shapeId, message, customMsg, offendingValue));
       }
 
       //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
@@ -1465,9 +1488,10 @@ public class SHACLValidationProceduresTest {
         String constraint = validationResult.get("propertyShape").asString();
         String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
+        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, offendingValue));
+                shapeId, message, customMsg, offendingValue));
 
       }
 
@@ -1595,6 +1619,59 @@ public class SHACLValidationProceduresTest {
         }
       }
       assertEquals(2,count);
+    }
+  }
+
+  String SHAPES_REQUIRED_EXCLUDED_TYPES = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:womanShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Woman ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:name ;\n" +
+          "    sh:pattern \".*\" ;\n" +
+          "    sh:maxCount 1 ;\n" +
+          "    sh:datatype xsd:string ;\n" +
+          "  ];\n" +
+          "  sh:class neo4j:Person ;\n" +
+          "  sh:not [ sh:class neo4j:Man ] ;\n" +
+          ".\n" +
+          "ex:manShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Man ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:name ;\n" +
+          "    sh:pattern \".*\" ;\n" +
+          "    sh:maxCount 1 ;\n" +
+          "    sh:datatype xsd:string ;\n" +
+          "  ];\n" +
+          "  sh:class neo4j:Person ;\n" +
+          ".\n" ;
+
+  @Test
+  public void testRequiredAndExcludedTypes() throws Exception {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+      session.run("create (:Man { name: 'JB'}) ");
+      session.run("create (:Person:Woman:Man { name: 'Carol'}) ");
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline('" + SHAPES_REQUIRED_EXCLUDED_TYPES + "',\"Turtle\")");
+
+      assertTrue(results.hasNext());
+
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      while(result.hasNext()){
+        System.out.println(result.next());
+      }
+      //assertFalse(result.hasNext());
     }
   }
 

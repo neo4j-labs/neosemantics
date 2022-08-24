@@ -1,0 +1,49 @@
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix ex: <neo4j://> .
+@prefix neo: <neo4j://graph.schema#>.
+@prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sht: <http://www.w3.org/ns/shacl-test#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:ValidationResult1 rdf:type sh:ValidationReport ;
+      sh:conforms "false"^^xsd:boolean ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidInstance1 ;
+          sh:resultPath neo:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:InConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value "A" ;
+        ] ;
+.
+
+ex:ValidationResult2 rdf:type sh:ValidationReport ;
+      sh:conforms "false"^^xsd:boolean ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidInstance2 ;
+          sh:resultPath neo:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:InConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value "B" ;
+        ] ;
+.
+
+ex:ValidationResult3 rdf:type sh:ValidationReport ;
+      sh:conforms "false"^^xsd:boolean ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidInstance2 ;
+          sh:resultPath neo:property ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:InConstraintComponent ;
+          sh:sourceShape ex:ShapeClass-property ;
+          sh:value "C" ;
+        ] ;
+.
