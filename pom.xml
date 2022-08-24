@@ -5,7 +5,7 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>neosemantics</artifactId>
-  <version>4.4.0.1</version>
+  <version>4.4.0.2</version>
   <packaging>jar</packaging>
   <name>neosemantics (n10s)</name>
   <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
@@ -93,11 +93,11 @@
       <version>${sesame.version}</version>
     </dependency>
 
-    <dependency>
+    <!--dependency>
       <groupId>org.codehaus.jackson</groupId>
       <artifactId>jackson-mapper-asl</artifactId>
-      <version>1.9.7</version>
-    </dependency>
+      <version>1.9.13</version>
+    </dependency-->
 
     <dependency>
       <groupId>com.google.guava</groupId>
@@ -115,9 +115,15 @@
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
-      <artifactId>jackson-databind</artifactId>
-      <version>2.9.10.4</version>
+      <artifactId>jackson-core</artifactId>
+      <version>2.13.3</version>
       <scope>provided</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <version>2.13.3</version>
     </dependency>
 
     <dependency>
