@@ -160,6 +160,10 @@ public class ValidatorConfig {
           .get("fullNodeLabelWithDuplicates");   //the list is deduplicated later
     }
 
+
+    // we add the "empty label" to get all global and query-based constraints run too
+    labels.add("");
+
     return selectQueriesAndBatchFromTriggerList(global, new HashSet<>(labels));
   }
 

@@ -1220,6 +1220,13 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite3queryBased() throws Exception {
+    runIndividualTest("core/property", "datatype-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "datatype-query-001", null, "SHORTEN", "datatype-query-001-shorten");
+    runIndividualTest("core/property", "datatype-query-001", null, "KEEP", "datatype-query-001-keep");
+  }
+
+  @Test
   public void testRunTestSuite4() throws Exception {
     runIndividualTest("core/property", "datatype-002", null, "IGNORE");
     runIndividualTest("core/property", "datatype-002", null, "SHORTEN");
@@ -1348,7 +1355,7 @@ public class SHACLValidationProceduresTest {
   }
 
   public void runIndividualTest(String testGroupName, String testName,
-      String cypherScript, String handleVocabUris) throws Exception {
+      String cypherScript, String handleVocabUris, String ... overrideShapesFileName) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build())) {
 
@@ -1384,7 +1391,7 @@ public class SHACLValidationProceduresTest {
       Result shapesLoadResults = session
           .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
               .getClassLoader()
-              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
+              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + (overrideShapesFileName.length>0?overrideShapesFileName[0]:testName) + "-shapes.ttl")
               .toURI() + "\",\"Turtle\", {})");
 
 
@@ -1422,7 +1429,7 @@ public class SHACLValidationProceduresTest {
         Record validationResult = expectedValidationResults.next();
         Object focusNode = ((handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
             ? validationResult.get("focus").asString() : validationResult.get("focus").asString());
-        String nodeType = validationResult.get("targetClass").asString();
+        String nodeType = validationResult.get("targetClass").isNull()?"":validationResult.get("targetClass").asString();
         String propertyName = validationResult.get("path").asString();
         String severity = validationResult.get("sev").asString();
         String constraint = validationResult.get("constraint").asString();
@@ -1431,6 +1438,7 @@ public class SHACLValidationProceduresTest {
         Object offendingValue = validationResult.get("offendingValue").asObject();
         String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
 
+        //TODO: Remove this
         expectedResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, customMsg, offendingValue));
@@ -1454,6 +1462,7 @@ public class SHACLValidationProceduresTest {
         String message = validationResult.get("resultMessage").asString();
         String shapeId = validationResult.get("shapeId").asString();
         String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
+        //TODO: remove this
         actualResults
             .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
                 shapeId, message, customMsg, offendingValue));
@@ -1508,6 +1517,8 @@ public class SHACLValidationProceduresTest {
 
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
 
+    } catch (Exception e) {
+      System.out.println(e.getMessage());
     }
 
 
@@ -1686,9 +1697,18 @@ public class SHACLValidationProceduresTest {
   }
 
   private boolean equivalentValidationResult(ValidationResult x, ValidationResult res) {
-    return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) && x.nodeType
-        .equals(res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
+    return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) &&
+            equivalentNodeTypes(x.nodeType,res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
         .equals(res.resultPath) && equivalentOffendingValues(x.offendingValue, res.offendingValue);
+  }
+
+  private boolean equivalentNodeTypes(String a, String b) {
+    if ((a.equals("[all nodes]") || a.equals("[query-based selection]")) && b.equals("")) {
+      return true ;
+    } else if ((b.equals("[all nodes]") || b.equals("[query-based selection]")) && a.equals("")){
+      return true;
+    }
+    return false;
   }
 
   private boolean equivalentOffendingValues(Object a, Object b) {

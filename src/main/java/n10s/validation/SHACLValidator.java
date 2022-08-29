@@ -39,9 +39,14 @@ public class SHACLValidator {
   private static final String CYPHER_TX_INFIX = " focus in $touchedNodes AND ";
 
   private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
+  private static final String CYPHER_MATCH_ALL_WHERE = "MATCH (focus) WHERE ";
   private static final String CYPHER_MATCH_REL_WHERE = "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
+  private static final String CYPHER_MATCH_ALL_REL_WHERE = "MATCH (focus)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
   private static final String BNODE_PREFIX = "bnode://id/";
+  private static final int GLOBAL_CONSTRAINT = 0;
+  private static final int CLASS_BASED_CONSTRAINT = 1;
+  private static final int QUERY_BASED_CONSTRAINT = 2;
 
   String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
           "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
@@ -192,7 +197,25 @@ public class SHACLValidator {
   protected void processConstraint(Map<String, Object> theConstraint, ValidatorConfig vc)
       throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
-    String focusLabel = translateUri((String) theConstraint.get("appliesToCat"), tx, gc);
+    int constraintType;
+    String focusLabel = "";
+    String whereClause = "";
+    if (theConstraint.containsKey("appliesToCat") ) {
+      if (((String) theConstraint.get("appliesToCat")).equals("")){
+        //it's a global constraint
+        constraintType = GLOBAL_CONSTRAINT;
+      } else {
+        //it's a class based constraint
+        focusLabel = translateUri((String) theConstraint.get("appliesToCat"), tx, gc);
+        constraintType = CLASS_BASED_CONSTRAINT;
+      }
+    } else if (theConstraint.containsKey("appliesToQueryResult") ){
+      //it's a query based constraint
+      whereClause = (String) theConstraint.get("appliesToQueryResult");
+      constraintType = QUERY_BASED_CONSTRAINT;
+    } else {
+      throw new SHACLValidationException("invalid constraint config");
+    }
 
     boolean isConstraintOnType = theConstraint.containsKey("item") &&
             theConstraint.get("item").equals("http://www.w3.org/1999/02/22-rdf-syntax-ns#type");
@@ -207,21 +230,71 @@ public class SHACLValidator {
             : "";
 
     if (theConstraint.get("dataType") != null && !isConstraintOnType) {
-      //TODO: would this be safer via APOC? maybe exclude some of them? and log the ignored ones?
-      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-          getDataTypeViolationQuery(false), getDataTypeViolationQuery(true), focusLabel,
-          propOrRel,
-          getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
-          getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
-          focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity, (String) theConstraint.get("dataType"), customMsg);
+
+      /// new
+
+      List<String> argsAsList = new ArrayList<>();
+
+      argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+              Arrays.asList(focusLabel, propOrRel,
+                      getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+                      getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+                      focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                      severity, (String) theConstraint.get("dataType"), customMsg) :
+              Arrays.asList(propOrRel,
+                      getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+                      getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+                      (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                      severity, (String) theConstraint.get("dataType"), customMsg) ;
+
+      String[] args = new String[argsAsList.size()];
+      argsAsList.toArray(args);
+
+      vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
+              getViolationQuery("DataType",false, whereClause, constraintType, args),
+              getViolationQuery("DataType",true, whereClause, constraintType, args),
+              new ArrayList<String>(Arrays.asList(focusLabel)));
+
+
+      argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+              Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
+                      severity, propOrRel, customMsg) :
+              Arrays.asList( propOrRel, (String) theConstraint.get("propShapeUid"), propOrRel,
+                      severity, propOrRel, customMsg) ;
+
+      args = new String[argsAsList.size()];
+      argsAsList.toArray(args);
+
+      vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
+              getViolationQuery("DataType2",false, whereClause, constraintType, args),
+              getViolationQuery("DataType2",true, whereClause, constraintType, args),
+              new ArrayList<String>(Arrays.asList(focusLabel)));
+              /// end new
+
+//      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+//          getViolationQuery("DataType",false, whereClause, constraintType,
+//                  focusLabel, propOrRel,
+//                  getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+//                  getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+//                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+//                  severity, (String) theConstraint.get("dataType"), customMsg),
+//          getViolationQuery("DataType",true, whereClause, constraintType,
+//                  focusLabel, propOrRel,
+//                  getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+//                  getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+//                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+//                  severity, (String) theConstraint.get("dataType"), customMsg));
+
 
       // Check that a property for which a datatype constraint has been defined
       // is not being used as a relationship
-      addCypherToValidationScripts(vc, Arrays.asList(focusLabel), getDataTypeViolationQuery2(false),
-          getDataTypeViolationQuery2(true), focusLabel,
-          propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
-          severity, propOrRel, customMsg);
+//      addCypherToValidationScripts(vc, Arrays.asList(focusLabel),
+//              getViolationQuery("DataType2",false, whereClause, constraintType, focusLabel,
+//                      propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
+//                      severity, propOrRel, customMsg),
+//              getViolationQuery("DataType2",true, whereClause, constraintType, focusLabel,
+//                      propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
+//                      severity, propOrRel, customMsg));
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -936,117 +1009,160 @@ public class SHACLValidator {
         String.format(querystrGlobal, args), String.format(querystrOnNodeset, args), triggers);
   }
 
-  private String getDataTypeViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_DATATYPE_V_SUFF());
+  private String getViolationQuery(String queryId, boolean tx, String customWhere, int constraintType,
+                                   String ... args ){
+    String query = "";
+    String nodeIdFragment = (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, ";
+    String nodeTypeFragment = "'[all nodes]' as nodeType, ";
+    if (constraintType == CLASS_BASED_CONSTRAINT) {
+      nodeTypeFragment = (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") + " as nodeType, ";
+    } else if (constraintType == QUERY_BASED_CONSTRAINT){
+      nodeTypeFragment = "'[query-based selection]' as nodeType, ";
+    }
+    String shapeIdFragment = " '%s' as shapeId, " ;
+    String propertyNameFragment = (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") + " as propertyName, ";
+    String severityFragment = " '%s' as severity,";
+    String customMsgFragment = " '%s' as customMsg";
+    switch (queryId) {
+      case "DataType":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE), tx,
+                (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " +
+                        nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+                        + "' as propertyShape, focus.`%s` as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + " 'property value should be of type ' + " +
+                        (nodesAreUriIdentified() ? " '%s' " : "n10s.rdf.getIRILocalName('%s')")
+                        + " as message , " + customMsgFragment);
+        break;
+      case "DataType2":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_REL_WHERE : CYPHER_MATCH_ALL_REL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " true RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+                        + "' as propertyShape, " + (nodesAreUriIdentified() ? " x.uri " : " 'node id: ' + id(x) ")
+                        + "as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+                        + " + ' should be a property, instead it  is a relationship' as message " +
+                        " , " + customMsgFragment);
+        break;
+    }
+    return String.format(query, args);
   }
 
-  private String getDataTypeViolationQuery2(boolean tx) {
-    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_DATATYPE2_V_SUFF());
-  }
+//  private String getDataTypeViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_DATATYPE_V_SUFF());
+//  }
+
+//  private String getDataTypeViolationQuery2(boolean tx) {
+//    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_DATATYPE2_V_SUFF());
+//  }
 
   private String getRangeIRIKindViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_IRI_KIND_V_SUFF());
+    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_IRI_KIND_V_SUFF());
   }
 
   private String getRangeLiteralKindViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_LITERAL_KIND_V_SUFF());
+    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_LITERAL_KIND_V_SUFF());
   }
 
   private String getRangeType1ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_RANGETYPE1_V_SUFF());
+    return getQuery(CYPHER_MATCH_REL_WHERE, tx, "", CYPHER_RANGETYPE1_V_SUFF());
   }
 
   private String getRangeType2ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_RANGETYPE2_V_SUFF());
+    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_RANGETYPE2_V_SUFF());
   }
 
   private String getRegexViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_REGEX_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_REGEX_V_SUFF());
   }
 
   private String getHasValueOnTypeAsLabelViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
   }
 
   private String getHasValueOnTypeAsNodeViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF());
   }
 
   private String getHasValueUriViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_URI_V_SUFF());
   }
 
 
   private String getHasValueLiteralViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_HAS_VALUE_LITERAL_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_LITERAL_V_SUFF());
   }
 
   private String getInLiteralsViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_IN_LITERAL_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_IN_LITERAL_V_SUFF());
   }
 
   private String getInUrisViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_IN_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_IN_URI_V_SUFF());
   }
 
   private String getTypeAsLabelInUrisViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_LABEL_IN_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_IN_URI_V_SUFF());
   }
 
   private String getTypeAsNodeInUrisViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_NODE_IN_URI_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_IN_URI_V_SUFF());
   }
 
   private String getMinCardinality1ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MIN_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_V_SUFF());
   }
 
   private String getTypeAsLabelMinCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF());
   }
 
   private String getTypeAsNodeMinCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF());
   }
 
   private String getMinCardinality1InverseViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
   }
 
   private String getMaxCardinality1ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_V_SUFF());
   }
 
   private String getTypeAsLabelMaxCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF());
   }
 
   private String getTypeAsNodeMaxCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF());
   }
 
   private String getMaxCardinality1InverseViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF());
   }
 
   private String getStrLenViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_STRLEN_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_STRLEN_V_SUFF());
   }
 
   private String getValueRangeViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_VALRANGE_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_VALRANGE_V_SUFF());
   }
 
   private String getNodeStructureViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, CYPHER_NODE_STRUCTURE_V_SUFF());
+    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_NODE_STRUCTURE_V_SUFF());
   }
 
   private String getDisjointClassesViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_NODE_DISJOINT_WITH_V_SUFF());
+    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_NODE_DISJOINT_WITH_V_SUFF());
   }
 
   private String getRequiredClassesViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_NODE_REQUIRED_WITH_V_SUFF());
+    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_NODE_REQUIRED_WITH_V_SUFF());
   }
 
   private boolean nodesAreUriIdentified() {
@@ -1060,36 +1176,36 @@ public class SHACLValidator {
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP);
   }
 
-  private String getQuery(String pref, boolean tx, String suff) {
-    return pref + (tx ? CYPHER_TX_INFIX : "") + suff;
+  private String getQuery(String pref, boolean tx, String queryConstraintWhere, String suff) {
+    return pref + (tx ? CYPHER_TX_INFIX : "") + queryConstraintWhere + suff;
   }
 
-  private String CYPHER_DATATYPE_V_SUFF() {
-    return " NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " +
-        (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
-        + "' as propertyShape, focus.`%s` as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity,"
-        + " 'property value should be of type ' + " +
-        (nodesAreUriIdentified() ? " '%s' " : "n10s.rdf.getIRILocalName('%s')")
-        + " as message , '%s' as customMsg";
-  }
+//  private String CYPHER_DATATYPE_V_SUFF(int constraintType) {
+//    return " NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " +
+//        (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+//        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, focus.`%s` as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity,"
+//        + " 'property value should be of type ' + " +
+//        (nodesAreUriIdentified() ? " '%s' " : "n10s.rdf.getIRILocalName('%s')")
+//        + " as message , '%s' as customMsg";
+//  }
 
-  private String CYPHER_DATATYPE2_V_SUFF() {
-    return " true RETURN " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ")
-        + " as nodeId, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
-        + "' as propertyShape, " + (nodesAreUriIdentified() ? " x.uri " : " 'node id: ' + id(x) ")
-        + "as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a property, instead it  is a relationship' as message " +
-            " , '%s' as customMsg";
-  }
+//  private String CYPHER_DATATYPE2_V_SUFF() {
+//    return " true RETURN " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ")
+//        + " as nodeId, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+//        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, " + (nodesAreUriIdentified() ? " x.uri " : " 'node id: ' + id(x) ")
+//        + "as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " + ' should be a property, instead it  is a relationship' as message " +
+//            " , '%s' as customMsg";
+//  }
 
   private String CYPHER_IRI_KIND_V_SUFF() {
     return " (focus)-[:`%s`]->() RETURN " + (nodesAreUriIdentified() ? " focus.uri "
