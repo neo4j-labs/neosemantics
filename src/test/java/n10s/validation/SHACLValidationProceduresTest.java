@@ -1269,11 +1269,26 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite7QueryBased() throws Exception {
+    runIndividualTest("core/property", "hasValue-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-query-001", null, "SHORTEN", "hasValue-query-001-shorten");
+    runIndividualTest("core/property", "hasValue-query-001", null, "KEEP","hasValue-query-001-keep");
+  }
+
+  @Test
   public void testRunTestSuite7b() throws Exception {
     // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
     runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
     runIndividualTest("core/property", "hasValue-001b", null, "SHORTEN");
     runIndividualTest("core/property", "hasValue-001b", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite7bQueryBased() throws Exception {
+    // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
+    runIndividualTest("core/property", "hasValue-query-001b", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-query-001b", null, "SHORTEN", "hasValue-query-001b-shorten");
+    runIndividualTest("core/property", "hasValue-query-001b", null, "KEEP", "hasValue-query-001b-keep");
   }
 
   @Test
@@ -1518,7 +1533,7 @@ public class SHACLValidationProceduresTest {
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
 
     } catch (Exception e) {
-      System.out.println(e.getMessage());
+      System.out.println("Exception:" + e.getMessage());
     }
 
 
@@ -1681,7 +1696,7 @@ public class SHACLValidationProceduresTest {
       Result result = session.run("call n10s.validation.shacl.validate()");
       int resultcount = 0;
       while(result.hasNext()){
-        System.out.println(result.next());
+        //System.out.println(result.next());
         resultcount++;
       }
       assertTrue(resultcount==2);
@@ -1708,7 +1723,7 @@ public class SHACLValidationProceduresTest {
     } else if ((b.equals("[all nodes]") || b.equals("[query-based selection]")) && a.equals("")){
       return true;
     }
-    return false;
+    return a.equals(b);
   }
 
   private boolean equivalentOffendingValues(Object a, Object b) {

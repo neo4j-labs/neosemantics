@@ -43,6 +43,7 @@ public class SHACLValidator {
   private static final String CYPHER_MATCH_REL_WHERE = "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_MATCH_ALL_REL_WHERE = "MATCH (focus)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
+  private static final String CYPHER_WITH_PARAMS_MATCH_ALL_WHERE = "WITH $`%s` as params MATCH (focus) WHERE ";
   private static final String BNODE_PREFIX = "bnode://id/";
   private static final int GLOBAL_CONSTRAINT = 0;
   private static final int CLASS_BASED_CONSTRAINT = 1;
@@ -231,8 +232,6 @@ public class SHACLValidator {
 
     if (theConstraint.get("dataType") != null && !isConstraintOnType) {
 
-      /// new
-
       List<String> argsAsList = new ArrayList<>();
 
       argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
@@ -250,11 +249,7 @@ public class SHACLValidator {
       String[] args = new String[argsAsList.size()];
       argsAsList.toArray(args);
 
-      vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
-              getViolationQuery("DataType",false, whereClause, constraintType, args),
-              getViolationQuery("DataType",true, whereClause, constraintType, args),
-              new ArrayList<String>(Arrays.asList(focusLabel)));
-
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "DataType", whereClause, constraintType, args);
 
       argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
               Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
@@ -265,36 +260,7 @@ public class SHACLValidator {
       args = new String[argsAsList.size()];
       argsAsList.toArray(args);
 
-      vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
-              getViolationQuery("DataType2",false, whereClause, constraintType, args),
-              getViolationQuery("DataType2",true, whereClause, constraintType, args),
-              new ArrayList<String>(Arrays.asList(focusLabel)));
-              /// end new
-
-//      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-//          getViolationQuery("DataType",false, whereClause, constraintType,
-//                  focusLabel, propOrRel,
-//                  getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
-//                  getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
-//                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-//                  severity, (String) theConstraint.get("dataType"), customMsg),
-//          getViolationQuery("DataType",true, whereClause, constraintType,
-//                  focusLabel, propOrRel,
-//                  getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
-//                  getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
-//                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-//                  severity, (String) theConstraint.get("dataType"), customMsg));
-
-
-      // Check that a property for which a datatype constraint has been defined
-      // is not being used as a relationship
-//      addCypherToValidationScripts(vc, Arrays.asList(focusLabel),
-//              getViolationQuery("DataType2",false, whereClause, constraintType, focusLabel,
-//                      propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
-//                      severity, propOrRel, customMsg),
-//              getViolationQuery("DataType2",true, whereClause, constraintType, focusLabel,
-//                      propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
-//                      severity, propOrRel, customMsg));
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "DataType2", whereClause, constraintType, args);
 
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -314,29 +280,61 @@ public class SHACLValidator {
             theConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
 
+        List<String> argsAsList = new ArrayList<>();
+
         if (isConstraintOnType){
+
           if(typesAsLabels()) {
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getHasValueOnTypeAsLabelViolationQuery(false), getHasValueOnTypeAsLabelViolationQuery(true), paramSetId,
-                    focusLabel,
-                    focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg);
+
+            argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+                    Arrays.asList(paramSetId,
+                            focusLabel,
+                            focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg):
+                    Arrays.asList(paramSetId,
+                            (String) theConstraint.get("propShapeUid"), severity, customMsg);
+
+            String[] args = new String[argsAsList.size()];
+            argsAsList.toArray(args);
+
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueOnTypeAsLabel", whereClause, constraintType, args);
+
             params.put("theHasTypeTranslatedUris", translateUriList(valueUriList));
           }
           // not an if/else because both can coexist when NODES_AND_LABELS
           if(typesAsRelToNodes()){
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getHasValueOnTypeAsNodeViolationQuery(false), getHasValueOnTypeAsNodeViolationQuery(true), paramSetId,
-                    focusLabel,
-                    propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                    propOrRel, severity, propOrRel, customMsg);
+
+            argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+                    Arrays.asList(paramSetId,
+                            focusLabel,
+                            propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                            propOrRel, severity, propOrRel, customMsg):
+                    Arrays.asList(paramSetId,
+                            propOrRel, (String) theConstraint.get("propShapeUid"),
+                            propOrRel, severity, propOrRel, customMsg);
+
+            String[] args = new String[argsAsList.size()];
+            argsAsList.toArray(args);
+
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueOnTypeAsNode", whereClause, constraintType, args);
+
             params.put("theHasTypeUris", valueUriList);
           }
         } else {
-          addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                  getHasValueUriViolationQuery(false), getHasValueUriViolationQuery(true), paramSetId,
-                  focusLabel,
-                  propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                  propOrRel, severity, propOrRel, customMsg);
+
+          argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+                  Arrays.asList(paramSetId,
+                          focusLabel,
+                          propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                          propOrRel, severity, propOrRel, customMsg):
+                  Arrays.asList(paramSetId,
+                          propOrRel, (String) theConstraint.get("propShapeUid"),
+                          propOrRel, severity, propOrRel, customMsg);
+
+          String[] args = new String[argsAsList.size()];
+          argsAsList.toArray(args);
+
+          addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueUri", whereClause, constraintType, args);
+
           params.put("theHasValueUri", valueUriList);
         }
 
@@ -344,6 +342,7 @@ public class SHACLValidator {
         vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
                 printConstraintType(SHACL.HAS_VALUE),
                 (isConstraintOnType&&typesAsLabels()?translateUriList(valueUriList):valueUriList)));
+
       }
     }
 
@@ -748,6 +747,14 @@ public class SHACLValidator {
 
   }
 
+
+  public void addQueriesForTrigger(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause, int constraintType, String[] args) {
+    vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
+            getViolationQuery(queryId,false, whereClause, constraintType, args),
+            getViolationQuery(queryId,true, whereClause, constraintType, args),
+            triggers);
+  }
+
   private String printConstraintType(IRI i) {
     return (gc != null && gc.getGraphMode() == GRAPHCONF_MODE_RDF) ? "sh:" + i.getLocalName()
                       : i.getLocalName();
@@ -954,7 +961,7 @@ public class SHACLValidator {
       }
 
     } catch (Exception e){
-      System.out.println(e.getMessage());
+      log.error(e.getMessage());
     }
     return constraints.iterator();
   }
@@ -1048,7 +1055,47 @@ public class SHACLValidator {
                         + " + ' should be a property, instead it  is a relationship' as message " +
                         " , " + customMsgFragment);
         break;
+      case "HasValueOnTypeAsLabel":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " true with params, focus unwind params.theHasTypeTranslatedUris as reqVal " +
+                        " with focus, reqVal where not reqVal in labels(focus) "
+                        + "RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT + "' as propertyShape" +
+                        ", null as offendingValue, "
+                        + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
+                        + " as propertyName, " + severityFragment
+                        + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  " +
+                        " ," + customMsgFragment);
+
+        break;
+      case "HasValueOnTypeAsNode":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " true with params, focus unwind params.theHasTypeUris as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
+                        + "RETURN "
+                        + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT + "' as propertyShape, null as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + "'The required type ' + reqVal  + ' could not be found as value of relationship ' + "
+                        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
+                        + " as message   , " + customMsgFragment);
+        break;
+
+      case "HasValueUri":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " true with params, focus unwind params.theHasValueUri as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
+                + "RETURN "
+                + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT + "' as propertyShape, null as offendingValue, "
+                + propertyNameFragment + severityFragment
+                + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + "
+                + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
+                + " as message  ," + customMsgFragment);
+        break;
     }
+
     return String.format(query, args);
   }
 
@@ -1080,17 +1127,17 @@ public class SHACLValidator {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_REGEX_V_SUFF());
   }
 
-  private String getHasValueOnTypeAsLabelViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
-  }
+//  private String getHasValueOnTypeAsLabelViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
+//  }
 
-  private String getHasValueOnTypeAsNodeViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF());
-  }
+//  private String getHasValueOnTypeAsNodeViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF());
+//  }
 
-  private String getHasValueUriViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_URI_V_SUFF());
-  }
+//  private String getHasValueUriViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_URI_V_SUFF());
+//  }
 
 
   private String getHasValueLiteralViolationQuery(boolean tx) {
@@ -1269,55 +1316,55 @@ public class SHACLValidator {
         + "'the value of the property does not match the specified regular expression' as message , '%s' as customMsg ";
   }
 
-  private String CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF() {
-    return
-              " true with params, focus unwind params.theHasTypeTranslatedUris as reqVal " +
-                      " with focus, reqVal where not reqVal in labels(focus) "
-                      + "RETURN "
-                      + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-                      + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-                      + "as nodeType, '%s' as shapeId, '"
-                      + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT.stringValue() + "' as propertyShape" +
-                      ", null as offendingValue, "
-                      + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
-                      + " as propertyName, '%s' as severity, "
-                      + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  " +
-                      " , '%s' as customMsg";
+//  private String CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF() {
+//    return
+//              " true with params, focus unwind params.theHasTypeTranslatedUris as reqVal " +
+//                      " with focus, reqVal where not reqVal in labels(focus) "
+//                      + "RETURN "
+//                      + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//                      + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//                      + "as nodeType, '%s' as shapeId, '"
+//                      + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT.stringValue() + "' as propertyShape" +
+//                      ", null as offendingValue, "
+//                      + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
+//                      + " as propertyName, '%s' as severity, "
+//                      + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  " +
+//                      " , '%s' as customMsg";
+//
+//  }
 
-  }
+//  private String CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF() {
+//
+//    return
+//            " true with params, focus unwind params.theHasTypeUris as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
+//                    + "RETURN "
+//                    + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//                    + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
+//                    .stringValue()
+//                    + "' as propertyShape, null as offendingValue, "
+//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//                    + " as propertyName, '%s' as severity, "
+//                    + "'The required type ' + reqVal  + ' could not be found as value of relationship ' + "
+//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
+//                    + " as message   , '%s' as customMsg ";
+//  }
 
-  private String CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF() {
-
-    return
-            " true with params, focus unwind params.theHasTypeUris as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
-                    + "RETURN "
-                    + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-                    + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-                    .stringValue()
-                    + "' as propertyShape, null as offendingValue, "
-                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-                    + " as propertyName, '%s' as severity, "
-                    + "'The required type ' + reqVal  + ' could not be found as value of relationship ' + "
-                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-                    + " as message   , '%s' as customMsg ";
-  }
-
-  private String CYPHER_HAS_VALUE_URI_V_SUFF() {
-    return                                                                                      //not reqVal in [(focus)-[:`%s`]->(v) | v.uri ]
-        " true with params, focus unwind params.theHasValueUri as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
-            + "RETURN "
-            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-            .stringValue()
-            + "' as propertyShape, null as offendingValue, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as propertyName, '%s' as severity, "
-            + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-            + " as message  , '%s' as customMsg ";
-  }
+//  private String CYPHER_HAS_VALUE_URI_V_SUFF() {
+//    return                                                                                      //not reqVal in [(focus)-[:`%s`]->(v) | v.uri ]
+//        " true with params, focus unwind params.theHasValueUri as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
+//            + "RETURN "
+//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
+//            .stringValue()
+//            + "' as propertyShape, null as offendingValue, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as propertyName, '%s' as severity, "
+//            + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
+//            + " as message  , '%s' as customMsg ";
+//  }
 
   private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
     return
