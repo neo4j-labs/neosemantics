@@ -354,11 +354,31 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theHasValueLiteral", valueLiteralList);
 
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-            getHasValueLiteralViolationQuery(false), getHasValueLiteralViolationQuery(true),
-            paramSetId, focusLabel,
-            propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-            propOrRel, severity, propOrRel, customMsg);
+
+        List<String> argsAsList = new ArrayList<>();
+
+        argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
+                Arrays.asList(paramSetId, focusLabel,
+                        propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                        propOrRel, severity, propOrRel, customMsg) :
+                Arrays.asList(paramSetId,
+                        propOrRel, (String) theConstraint.get("propShapeUid"),
+                        propOrRel, severity, propOrRel, customMsg) ;
+
+        String[] args = new String[argsAsList.size()];
+        argsAsList.toArray(args);
+
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueLiteral", whereClause, constraintType, args);
+
+
+        //old
+//        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+//            getHasValueLiteralViolationQuery(false), getHasValueLiteralViolationQuery(true),
+//            paramSetId, focusLabel,
+//            propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+//            propOrRel, severity, propOrRel, customMsg);
+        // end old
+
 
         //ADD constraint to the list
         vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
@@ -1094,6 +1114,18 @@ public class SHACLValidator {
                 + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
                 + " as message  ," + customMsgFragment);
         break;
+      case "HasValueLiteral":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " true with params, focus unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
+                        + "RETURN "
+                        + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT + "' as propertyShape, null as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + "'The required value \"'+ reqVal + '\" was not found in property ' + " + (
+                        shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
+                        " ," + customMsgFragment);
+        break;
     }
 
     return String.format(query, args);
@@ -1140,9 +1172,9 @@ public class SHACLValidator {
 //  }
 
 
-  private String getHasValueLiteralViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_LITERAL_V_SUFF());
-  }
+//  private String getHasValueLiteralViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_LITERAL_V_SUFF());
+//  }
 
   private String getInLiteralsViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_IN_LITERAL_V_SUFF());
@@ -1366,21 +1398,21 @@ public class SHACLValidator {
 //            + " as message  , '%s' as customMsg ";
 //  }
 
-  private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
-    return
-        " true with params, focus unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
-            + "RETURN "
-            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-            .stringValue()
-            + "' as propertyShape, null as offendingValue, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as propertyName, '%s' as severity, "
-            + "'The required value \"'+ reqVal + '\" was not found in property ' + " + (
-            shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
-                " , '%s' as customMsg ";
-  }
+//  private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
+//    return
+//        " true with params, focus unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
+//            + "RETURN "
+//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
+//            .stringValue()
+//            + "' as propertyShape, null as offendingValue, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as propertyName, '%s' as severity, "
+//            + "'The required value \"'+ reqVal + '\" was not found in property ' + " + (
+//            shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
+//                " , '%s' as customMsg ";
+//  }
 
   private String CYPHER_IN_LITERAL_V_SUFF() {
     return
