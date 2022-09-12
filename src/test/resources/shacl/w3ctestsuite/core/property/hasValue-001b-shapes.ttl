@@ -18,6 +18,6 @@ ex:PersonShape
 ex:PersonShape-gender
   sh:path neo:gender ;
   rdfs:label "gender" ;
-  sh:nodeKind sh:BlankNodeOrIRI;
+  sh:nodeKind sh:IRI;
   sh:hasValue neo:Male ;
 .

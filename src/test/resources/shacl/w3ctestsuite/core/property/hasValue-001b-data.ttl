@@ -27,5 +27,6 @@ ex:ValidMalePerson2
   rdf:type neo:MalePerson ;
   neo:gender neo:Female ;
   neo:gender neo:Male ;
+  neo:gender "Male (invalid because literal)" ;
 .
 

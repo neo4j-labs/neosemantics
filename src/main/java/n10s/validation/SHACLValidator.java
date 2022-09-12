@@ -232,38 +232,30 @@ public class SHACLValidator {
 
     if (theConstraint.get("dataType") != null && !isConstraintOnType) {
 
-      List<String> argsAsList = new ArrayList<>();
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "DataType", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(focusLabel, propOrRel,
+                              getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+                              getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+                              focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                              severity, (String) theConstraint.get("dataType"), customMsg) ,
+                      Arrays.asList(propOrRel,
+                              getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
+                              getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
+                              (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                              severity, (String) theConstraint.get("dataType"), customMsg)));
 
-      argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-              Arrays.asList(focusLabel, propOrRel,
-                      getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
-                      getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
-                      focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                      severity, (String) theConstraint.get("dataType"), customMsg) :
-              Arrays.asList(propOrRel,
-                      getDatatypeCastExpressionPref((String) theConstraint.get("dataType")),
-                      getDatatypeCastExpressionSuff((String) theConstraint.get("dataType")),
-                      (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                      severity, (String) theConstraint.get("dataType"), customMsg) ;
-
-      String[] args = new String[argsAsList.size()];
-      argsAsList.toArray(args);
-
-      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "DataType", whereClause, constraintType, args);
-
-      argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-              Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel,
-                      severity, propOrRel, customMsg) :
-              Arrays.asList( propOrRel, (String) theConstraint.get("propShapeUid"), propOrRel,
-                      severity, propOrRel, customMsg) ;
-
-      args = new String[argsAsList.size()];
-      argsAsList.toArray(args);
-
-      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "DataType2", whereClause, constraintType, args);
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "DataType2", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                          propOrRel,severity, propOrRel, customMsg),
+                      Arrays.asList( propOrRel, (String) theConstraint.get("propShapeUid"), propOrRel,
+                          severity, propOrRel, customMsg)));
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.DATATYPE),
               (gc != null && gc.getGraphMode() == GRAPHCONF_MODE_RDF) ? theConstraint.get("dataType")
                       : ((String) theConstraint.get("dataType"))
@@ -280,66 +272,53 @@ public class SHACLValidator {
             theConstraint.get("propShapeUid") + "_" + SHACL.HAS_VALUE.stringValue();
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
 
-        List<String> argsAsList = new ArrayList<>();
-
         if (isConstraintOnType){
 
           if(typesAsLabels()) {
 
-            argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-                    Arrays.asList(paramSetId,
-                            focusLabel,
-                            focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg):
-                    Arrays.asList(paramSetId,
-                            (String) theConstraint.get("propShapeUid"), severity, customMsg);
-
-            String[] args = new String[argsAsList.size()];
-            argsAsList.toArray(args);
-
-            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueOnTypeAsLabel", whereClause, constraintType, args);
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                    "HasValueOnTypeAsLabel", whereClause, constraintType,
+                    buildArgArray(constraintType,
+                            Arrays.asList(paramSetId, focusLabel,
+                                  focusLabel, (String) theConstraint.get("propShapeUid"), severity, customMsg),
+                            Arrays.asList(paramSetId, (String) theConstraint.get("propShapeUid"), severity,
+                                    customMsg)));
 
             params.put("theHasTypeTranslatedUris", translateUriList(valueUriList));
           }
           // not an if/else because both can coexist when NODES_AND_LABELS
           if(typesAsRelToNodes()){
 
-            argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-                    Arrays.asList(paramSetId,
-                            focusLabel,
-                            propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                            propOrRel, severity, propOrRel, customMsg):
-                    Arrays.asList(paramSetId,
-                            propOrRel, (String) theConstraint.get("propShapeUid"),
-                            propOrRel, severity, propOrRel, customMsg);
-
-            String[] args = new String[argsAsList.size()];
-            argsAsList.toArray(args);
-
-            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueOnTypeAsNode", whereClause, constraintType, args);
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                    "HasValueOnTypeAsNode", whereClause, constraintType,
+                    buildArgArray(constraintType,
+                            Arrays.asList(paramSetId,
+                                    focusLabel,
+                                    propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                                    propOrRel, severity, propOrRel, customMsg),
+                            Arrays.asList(paramSetId,
+                                    propOrRel, (String) theConstraint.get("propShapeUid"),
+                                    propOrRel, severity, propOrRel, customMsg)));
 
             params.put("theHasTypeUris", valueUriList);
           }
         } else {
-
-          argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-                  Arrays.asList(paramSetId,
-                          focusLabel,
-                          propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                          propOrRel, severity, propOrRel, customMsg):
-                  Arrays.asList(paramSetId,
-                          propOrRel, (String) theConstraint.get("propShapeUid"),
-                          propOrRel, severity, propOrRel, customMsg);
-
-          String[] args = new String[argsAsList.size()];
-          argsAsList.toArray(args);
-
-          addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueUri", whereClause, constraintType, args);
+          addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                  "HasValueUri", whereClause, constraintType,
+                  buildArgArray(constraintType,
+                          Arrays.asList(paramSetId,
+                                  focusLabel,
+                                  propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                                  propOrRel, severity, propOrRel, customMsg),
+                          Arrays.asList(paramSetId,
+                                  propOrRel, (String) theConstraint.get("propShapeUid"),
+                                  propOrRel, severity, propOrRel, customMsg)));
 
           params.put("theHasValueUri", valueUriList);
         }
 
         //ADD constraint to the list
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.HAS_VALUE),
                 (isConstraintOnType&&typesAsLabels()?translateUriList(valueUriList):valueUriList)));
 
@@ -354,34 +333,18 @@ public class SHACLValidator {
         Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
         params.put("theHasValueLiteral", valueLiteralList);
 
-
-        List<String> argsAsList = new ArrayList<>();
-
-        argsAsList = constraintType == CLASS_BASED_CONSTRAINT ?
-                Arrays.asList(paramSetId, focusLabel,
-                        propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                        propOrRel, severity, propOrRel, customMsg) :
-                Arrays.asList(paramSetId,
-                        propOrRel, (String) theConstraint.get("propShapeUid"),
-                        propOrRel, severity, propOrRel, customMsg) ;
-
-        String[] args = new String[argsAsList.size()];
-        argsAsList.toArray(args);
-
-        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)), "HasValueLiteral", whereClause, constraintType, args);
-
-
-        //old
-//        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-//            getHasValueLiteralViolationQuery(false), getHasValueLiteralViolationQuery(true),
-//            paramSetId, focusLabel,
-//            propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-//            propOrRel, severity, propOrRel, customMsg);
-        // end old
-
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "HasValueLiteral", whereClause, constraintType,
+                buildArgArray(constraintType,
+                        Arrays.asList(paramSetId, focusLabel,
+                                propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg) ,
+                        Arrays.asList(paramSetId,
+                                propOrRel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg)));
 
         //ADD constraint to the list
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.HAS_VALUE),
                 (List<String>) theConstraint.get("hasValueLiteral")));
       }
@@ -389,16 +352,23 @@ public class SHACLValidator {
 
     if (theConstraint.get("rangeKind") != null && !isConstraintOnType) {
       if (theConstraint.get("rangeKind").equals(SHACL.LITERAL.stringValue())) {
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-            getRangeIRIKindViolationQuery(false), getRangeIRIKindViolationQuery(true), focusLabel,
-            propOrRel,
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg);
-      } else if (theConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue())) {
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-            getRangeLiteralKindViolationQuery(false), getRangeLiteralKindViolationQuery(true),
-            focusLabel,
-            propOrRel,
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg);
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "GetRangeIRIKind", whereClause, constraintType,
+                buildArgArray(constraintType,
+                        Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg),
+                        Arrays.asList(propOrRel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg)));
+
+      } else if (theConstraint.get("rangeKind").equals(SHACL.BLANK_NODE_OR_IRI.stringValue()) ||
+              theConstraint.get("rangeKind").equals(SHACL.IRI.stringValue())) {
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "GetRangeLiteralKind", whereClause, constraintType,
+                buildArgArray(constraintType,
+                        Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg),
+                        Arrays.asList(propOrRel, (String) theConstraint.get("propShapeUid"),
+                                propOrRel, severity, propOrRel, customMsg)));
       }
 
       //ADD constraint to the list
@@ -767,8 +737,33 @@ public class SHACLValidator {
 
   }
 
+  private String[] buildArgArray(int constraintType, List<String> classBasedParamList, List<String> queryBasedParamList) {
+    List<String> argsAsList = new ArrayList<>();
+    argsAsList = constraintType == CLASS_BASED_CONSTRAINT ? classBasedParamList : queryBasedParamList;
+    String[] argsAsArray = new String[argsAsList.size()];
+    argsAsList.toArray(argsAsArray);
+    return argsAsArray;
+  }
 
-  public void addQueriesForTrigger(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause, int constraintType, String[] args) {
+  private String getTargetForList(int constraintType, String focusLabel, String whereClause) {
+    String target = "";
+    switch (constraintType) {
+      case CLASS_BASED_CONSTRAINT:
+        target = focusLabel;
+      break;
+      case QUERY_BASED_CONSTRAINT:
+        target = whereClause;
+      break;
+      case GLOBAL_CONSTRAINT:
+        target = "[Global]";
+      break;
+    }
+    return target;
+  }
+
+
+  public void addQueriesForTrigger(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause,
+                                   int constraintType, String[] args) {
     vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
             getViolationQuery(queryId,false, whereClause, constraintType, args),
             getViolationQuery(queryId,true, whereClause, constraintType, args),
@@ -1126,6 +1121,27 @@ public class SHACLValidator {
                         shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
                         " ," + customMsgFragment);
         break;
+
+      case "GetRangeIRIKind":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " (focus)-[:`%s`]->() RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+                        + "' as propertyShape, null as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+                        + " + ' should be a property ' as message , " + customMsgFragment);
+        break;
+      case "GetRangeLiteralKind":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                " exists(focus.`%s`) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+                        + "' as propertyShape, null as offendingValue, "
+                        + propertyNameFragment + severityFragment
+                        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+                        + " + ' should be a relationship ' as message , " + customMsgFragment
+        );
     }
 
     return String.format(query, args);
@@ -1139,13 +1155,13 @@ public class SHACLValidator {
 //    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_DATATYPE2_V_SUFF());
 //  }
 
-  private String getRangeIRIKindViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_IRI_KIND_V_SUFF());
-  }
+//  private String getRangeIRIKindViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_IRI_KIND_V_SUFF());
+//  }
 
-  private String getRangeLiteralKindViolationQuery(boolean tx) {
-    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_LITERAL_KIND_V_SUFF());
-  }
+//  private String getRangeLiteralKindViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_LITERAL_KIND_V_SUFF());
+//  }
 
   private String getRangeType1ViolationQuery(boolean tx) {
     return getQuery(CYPHER_MATCH_REL_WHERE, tx, "", CYPHER_RANGETYPE1_V_SUFF());
@@ -1286,29 +1302,29 @@ public class SHACLValidator {
 //            " , '%s' as customMsg";
 //  }
 
-  private String CYPHER_IRI_KIND_V_SUFF() {
-    return " (focus)-[:`%s`]->() RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-        : " id(focus) ") + " as nodeId, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
-        + "' as propertyShape, null as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity,"
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a property ' as message , '%s' as customMsg ";
-  }
+//  private String CYPHER_IRI_KIND_V_SUFF() {
+//    return " (focus)-[:`%s`]->() RETURN " + (nodesAreUriIdentified() ? " focus.uri "
+//        : " id(focus) ") + " as nodeId, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+//        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, null as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity,"
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " + ' should be a property ' as message , '%s' as customMsg ";
+//  }
 
-  private String CYPHER_LITERAL_KIND_V_SUFF() {
-    return " exists(focus.`%s`) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-        : " id(focus) ") + " as nodeId, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
-        + "' as propertyShape, null as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity,"
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " + ' should be a relationship ' as message , '%s' as customMsg ";
-  }
+//  private String CYPHER_LITERAL_KIND_V_SUFF() {
+//    return " exists(focus.`%s`) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
+//        : " id(focus) ") + " as nodeId, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+//        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, null as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity,"
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " + ' should be a relationship ' as message , '%s' as customMsg ";
+//  }
 
   private String CYPHER_RANGETYPE1_V_SUFF() {
     return "NOT x:`%s` RETURN " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ")

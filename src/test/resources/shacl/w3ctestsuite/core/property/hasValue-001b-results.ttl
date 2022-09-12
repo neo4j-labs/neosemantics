@@ -19,4 +19,12 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
           sh:sourceConstraintComponent sh:HasValueConstraintComponent ;
           sh:sourceShape ex:PersonShape-gender ;
         ] ;
+        sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:ValidMalePerson2 ;
+          sh:resultPath neo:gender ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:NodeKindConstraintComponent ;
+          sh:sourceShape ex:PersonShape-gender ;
+        ] ;
 .
