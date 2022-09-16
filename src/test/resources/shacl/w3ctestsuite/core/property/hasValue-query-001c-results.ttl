@@ -1,0 +1,31 @@
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix ex: <neo4j://#> .
+@prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sht: <http://www.w3.org/ns/shacl-test#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:ValReport1 rdf:type sh:ValidationReport ;
+      sh:conforms "false"^^xsd:boolean ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidMalePerson ;
+          sh:resultPath rdf:type ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:HasValueConstraintComponent ;
+          sh:sourceShape ex:PersonShape-gender ;
+          sh:resultMessage "one for the link to type"
+        ] ;
+      sh:result [
+          rdf:type sh:ValidationResult ;
+          sh:focusNode ex:InvalidMalePerson ;
+          sh:resultPath rdf:type ;
+          sh:resultSeverity sh:Violation ;
+          sh:sourceConstraintComponent sh:HasValueConstraintComponent ;
+          sh:sourceShape ex:PersonShape-gender ;
+          sh:resultMessage "one for the label"
+        ] ;
+.

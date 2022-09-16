@@ -1299,6 +1299,13 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite7cQueryBased() throws Exception {
+    runIndividualTest("core/property", "hasValue-query-001c", null, "IGNORE");
+    runIndividualTest("core/property", "hasValue-query-001c", null, "SHORTEN", "hasValue-query-001c-shorten");
+    runIndividualTest("core/property", "hasValue-query-001c", null, "KEEP", "hasValue-query-001c-keep");
+  }
+
+  @Test
   public void testRunTestSuite8() throws Exception {
     runIndividualTest("core/property", "in-001", null, "IGNORE");
     runIndividualTest("core/property", "in-001", null, "SHORTEN");
