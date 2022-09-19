@@ -11,6 +11,11 @@ You can either download a prebuilt jar from the https://github.com/jbarrasa/neos
 ----
 dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
 ----
++
+[NOTE]
+----
+When the property `dbms.security.procedures.allowlist` is set, then it must include `n10s.*`` too.
+----
 3. Restart the server.
 4. Check that the installation went well by running
 [source,cypher]
