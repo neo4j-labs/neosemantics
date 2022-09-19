@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.stream.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?)
+¦n10s.rdf.stream.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?, subjectSPO :: LIST? OF STRING?)
