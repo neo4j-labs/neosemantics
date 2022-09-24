@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.export.cypher(cypher :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?)
+¦n10s.rdf.export.cypher(cypher :: STRING?, params = {} :: MAP?) :: (subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?, subjectSPO :: LIST? OF STRING?)
