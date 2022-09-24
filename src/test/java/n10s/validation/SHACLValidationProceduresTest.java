@@ -1199,10 +1199,24 @@ public class SHACLValidationProceduresTest {
 
 
   @Test
-  public void testRunTestSuite1() throws Exception {
+  public void testRunTestSuite0() throws Exception {
     runIndividualTest("core/complex", "personexample", null, "IGNORE");
     runIndividualTest("core/complex", "personexample", null, "SHORTEN");
     runIndividualTest("core/complex", "personexample", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite1() throws Exception {
+    runIndividualTest("core/other", "rangeType-001", null, "IGNORE");
+    runIndividualTest("core/other", "rangeType-001", null, "SHORTEN");
+    runIndividualTest("core/other", "rangeType-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite1b() throws Exception {
+    runIndividualTest("core/other", "rangeType-query-001", null, "IGNORE");
+    runIndividualTest("core/other", "rangeType-query-001", null, "SHORTEN", "rangeType-query-001-shorten");
+    runIndividualTest("core/other", "rangeType-query-001", null, "KEEP","rangeType-query-001-keep");
   }
 
   @Test
@@ -1703,7 +1717,8 @@ public class SHACLValidationProceduresTest {
       Result result = session.run("call n10s.validation.shacl.validate()");
       int resultcount = 0;
       while(result.hasNext()){
-        //System.out.println(result.next());
+        //System.out.println(
+        result.next();
         resultcount++;
       }
       assertTrue(resultcount==2);

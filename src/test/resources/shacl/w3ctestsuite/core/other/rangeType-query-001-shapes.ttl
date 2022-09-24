@@ -1,0 +1,11 @@
+@prefix neo4j: <neo4j://graph.schema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+neo4j:PersonShape
+	a sh:NodeShape ;
+	sh:targetQuery " exists { (focus)-[:connected_to]-(y) where 3 in focus.prop and (5 in y.prop or 4 in y.prop) } " ;
+    sh:property [
+    		sh:path neo4j:actedIn ;
+    		sh:class neo4j:Movie
+    	] .
+

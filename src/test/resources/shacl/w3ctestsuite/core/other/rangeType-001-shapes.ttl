@@ -1,0 +1,11 @@
+@prefix neo4j: <neo4j://graph.schema#>.
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+neo4j:PersonShape
+	a sh:NodeShape ;
+	sh:targetClass neo4j:Person ;
+    sh:property [
+    		sh:path neo4j:actedIn ;
+    		sh:class neo4j:Movie
+    	] .
+

@@ -399,9 +399,9 @@ public class SHACLValidator {
               "GetRangeType2", whereClause, constraintType,
               buildArgArray(constraintType,
                       Arrays.asList(focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),
-                              propOrRel, severity, propOrRel ,customMsg),
+                              propOrRel,propOrRel, severity, propOrRel ,customMsg),
                       Arrays.asList(propOrRel, (String) theConstraint.get("propShapeUid"),
-                              propOrRel, severity, propOrRel ,customMsg)));
+                              propOrRel,propOrRel, severity, propOrRel ,customMsg)));
 
       //HERE!!!!!!!!!!
 
@@ -1164,12 +1164,12 @@ public class SHACLValidator {
                         + "' as propertyShape, null as offendingValue, "
                         + propertyNameFragment + severityFragment
                         + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-                        + " + ' should be a relationship ' as message , " + customMsgFragment
+                        + " + ' should be a relationship but it is a property' as message , " + customMsgFragment
         );
         break;
 
       case "GetRangeType1":
-        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_REL_WHERE : CYPHER_MATCH_ALL_REL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
                 "NOT x:`%s` RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                         + "'" + SHACL.CLASS_CONSTRAINT_COMPONENT
@@ -1186,7 +1186,7 @@ public class SHACLValidator {
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
                 "exists(focus.`%s`) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                         + "'" + SHACL.CLASS_CONSTRAINT_COMPONENT
-                        + "' as propertyShape, null as offendingValue, "
+                        + "' as propertyShape, focus.`%s` as offendingValue, "
                         + propertyNameFragment + severityFragment
                         + "'%s should be a relationship but it is a property' as message , '%s' as customMsg "
         );
