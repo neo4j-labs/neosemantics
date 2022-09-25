@@ -10,22 +10,27 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ex:InvalidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "D" ;
+  neo:connected [ a neo:Thing ] ;
+  neo:theproperty neo:D ;
   rdfs:label "Invalid instance1" ;
 .
 
+ex:IgnoredInstance1
+  neo:connected [ a neo:Person ] ;
+  neo:theproperty neo:D ;
+  rdfs:label "Ignored instance1" ;
+.
+
 ex:ValidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
+  neo:connected [ a neo:Thing ] ;
+  neo:theproperty neo:C, neo:F;
   rdfs:label "Valid instance1" ;
 .
+
 ex:ValidInstance2
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
-  neo:property "B" ;
-  neo:property "C" ;
-  # known limitation: at the moment uris (wrong kind) not detected
-  neo:property ex:A ;
+  neo:connected [ a neo:Thing ] ;
+  # known limitation: at the moment literals (wrong kind) not detected.
+  # workaround: additional constraint on rel kind (it's a URI)
+  neo:theproperty neo:A , neo:B , "C" ;
   rdfs:label "Valid instance2" ;
 .

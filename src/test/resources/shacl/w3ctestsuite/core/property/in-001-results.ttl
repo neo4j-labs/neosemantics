@@ -20,4 +20,15 @@ ex:ValidationResult1 rdf:type sh:ValidationReport ;
           sh:sourceShape ex:ShapeClass-property ;
           sh:value "D" ;
         ] ;
+     # this is here because of the datatype constraint
+     sh:result [
+       rdf:type sh:ValidationResult ;
+       sh:focusNode ex:ValidInstance2 ;
+       sh:resultPath neo:property ;
+       sh:resultSeverity sh:Violation ;
+       sh:sourceConstraintComponent sh:DatatypeConstraintComponent ;
+       sh:sourceShape ex:ShapeClass-property ;
+       sh:value ex:A ;
+           ] ;
+
 .

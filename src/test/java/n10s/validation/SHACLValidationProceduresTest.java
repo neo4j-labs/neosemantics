@@ -1327,10 +1327,24 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite8QueryBased() throws Exception {
+    runIndividualTest("core/property", "in-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "in-query-001", null, "SHORTEN", "in-query-001-shorten");
+    runIndividualTest("core/property", "in-query-001", null, "KEEP", "in-query-001-keep");
+  }
+
+  @Test
   public void testRunTestSuite8not() throws Exception {
     runIndividualTest("core/property", "in-not-001", null, "IGNORE");
     runIndividualTest("core/property", "in-not-001", null, "SHORTEN");
     runIndividualTest("core/property", "in-not-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite8notQueryBased() throws Exception {
+    runIndividualTest("core/property", "in-not-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-query-001", null, "SHORTEN","in-not-query-001-shorten");
+    runIndividualTest("core/property", "in-not-query-001", null, "KEEP","in-not-query-001-keep");
   }
 
   @Test
@@ -1341,12 +1355,25 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite8bQueryBased() throws Exception {
+    runIndividualTest("core/property", "in-query-001b", null, "IGNORE");
+    runIndividualTest("core/property", "in-query-001b", null, "SHORTEN","in-query-001b-shorten");
+    runIndividualTest("core/property", "in-query-001b", null, "KEEP", "in-query-001b-keep");
+  }
+
+  @Test
   public void testRunTestSuite8bnot() throws Exception {
     runIndividualTest("core/property", "in-not-001b", null, "IGNORE");
     runIndividualTest("core/property", "in-not-001b", null, "SHORTEN");
     runIndividualTest("core/property", "in-not-001b", null, "KEEP");
   }
 
+  @Test
+  public void testRunTestSuite8bnotQueryBased() throws Exception {
+    runIndividualTest("core/property", "in-not-query-001b", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-query-001b", null, "SHORTEN","in-not-query-001b-shorten");
+    runIndividualTest("core/property", "in-not-query-001b", null, "KEEP", "in-not-query-001b-keep");
+  }
 
   @Test
   public void testRunTestSuite8c() throws Exception {
@@ -1356,10 +1383,25 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite8cQueryBased() throws Exception {
+    runIndividualTest("core/property", "in-query-001c", null, "IGNORE");
+    runIndividualTest("core/property", "in-query-001c", null, "SHORTEN", "in-query-001c-shorten");
+    runIndividualTest("core/property", "in-query-001c", null, "KEEP","in-query-001c-keep");
+  }
+
+
+  @Test
   public void testRunTestSuite8cnot() throws Exception {
     runIndividualTest("core/property", "in-not-001c", null, "IGNORE");
     runIndividualTest("core/property", "in-not-001c", null, "SHORTEN");
     runIndividualTest("core/property", "in-not-001c", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite8cnotQueryBased() throws Exception {
+    runIndividualTest("core/property", "in-not-query-001c", null, "IGNORE");
+    runIndividualTest("core/property", "in-not-query-001c", null, "SHORTEN", "in-not-query-001c-shorten");
+    runIndividualTest("core/property", "in-not-query-001c", null, "KEEP","in-not-query-001c-keep");
   }
 
   @Test
@@ -1554,7 +1596,7 @@ public class SHACLValidationProceduresTest {
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
 
     } catch (Exception e) {
-      System.out.println("Exception:" + e.getMessage());
+      assertTrue("Failure due to exception raised: " + e.getMessage(), false);
     }
 
 

@@ -10,22 +10,19 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 ex:InvalidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "D" ;
-  rdfs:label "Invalid instance1" ;
-.
-
-ex:ValidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
+  neo:link ex:Sth ;
+  rdf:type neo:D ;
   rdfs:label "Valid instance1" ;
 .
-ex:ValidInstance2
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
-  neo:property "B" ;
-  neo:property "C" ;
-  # known limitation: at the moment uris (wrong kind) not detected
-  neo:property ex:A ;
+
+ex:InvalidInstance2
+  rdf:type neo:C, neo:F;
+  neo:link ex:Sth ;
+  rdfs:label "Valid instance1" ;
+.
+
+ex:InvalidInstance3
+  rdf:type neo:A , neo:B , "C" ;
+  neo:link ex:Sth ;
   rdfs:label "Valid instance2" ;
 .

@@ -9,23 +9,26 @@
 @prefix sht: <http://www.w3.org/ns/shacl-test#> .
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
+ex:IgnoredInstance1
+  rdf:type neo:D ;
+  neo:rel ex:A , ex:B ;
+  rdfs:label "Ignored instance1" ;
+.
+
 ex:InvalidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "D" ;
+  rdf:type neo:D ;
+  neo:rel ex:A , ex:B, ex:C, ex:D ;
   rdfs:label "Invalid instance1" ;
 .
 
-ex:ValidInstance1
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
+ex:InvalidInstance2
+  rdf:type neo:C, neo:F;
+  neo:rel ex:A , ex:B, ex:C, ex:D ;
   rdfs:label "Valid instance1" ;
 .
-ex:ValidInstance2
-  rdf:type neo:ShapeClass ;
-  neo:property "A" ;
-  neo:property "B" ;
-  neo:property "C" ;
-  # known limitation: at the moment uris (wrong kind) not detected
-  neo:property ex:A ;
+
+ex:InvalidInstance3
+  rdf:type neo:A , neo:B ;
+  neo:rel ex:A , ex:B, ex:C, ex:D ;
   rdfs:label "Valid instance2" ;
 .

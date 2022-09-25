@@ -14,6 +14,9 @@ neo:ShapeClass
   rdf:type sh:NodeShape ;
   sh:property ex:ShapeClass-property ;
 .
+
+# this is weird. mixing string datatype and enumerated set of uris...
+
 ex:ShapeClass-property
   sh:path neo:property ;
   sh:datatype xsd:string ;
