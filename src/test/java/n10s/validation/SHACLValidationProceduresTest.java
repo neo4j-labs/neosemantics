@@ -1405,6 +1405,13 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuite12() throws Exception {
+    runIndividualTest("core/property", "pattern-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "pattern-query-001", null, "SHORTEN","pattern-query-001-shorten");
+    runIndividualTest("core/property", "pattern-query-001", null, "KEEP","pattern-query-001-keep");
+  }
+
+  @Test
   public void testRunTestSuite9() throws Exception {
     runIndividualTest("core/property", "maxLength-001", null, "IGNORE");
     runIndividualTest("core/property", "maxLength-001", null, "SHORTEN");

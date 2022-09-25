@@ -1,0 +1,22 @@
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix ex: <http://datashapes.org/sh/tests/core/property/maxLength-001.test#> .
+@prefix neo: <neo4j://graph.schema#>.
+@prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sht: <http://www.w3.org/ns/shacl-test#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+neo:TestShape
+  rdf:type sh:NodeShape ;
+  sh:targetQuery " (focus)-[:ns0__worksFor]->(:ns0__GraphCompany) ";
+  rdfs:label "Test shape" ;
+  sh:property ex:TestShape-testProperty ;
+.
+ex:TestShape-testProperty
+  sh:path neo:testProperty ;
+  sh:datatype xsd:string ;
+  sh:pattern ".*Jonny.*" ;
+.

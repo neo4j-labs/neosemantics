@@ -480,7 +480,7 @@ public class SHACLValidator {
                                   propOrRel, severity, propOrRel, customMsg) ,
                           Arrays.asList(paramSetId, propOrRel, (theConstraint.containsKey("inUris")?"not":"") ,
                                   (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg)));
-          
+
           params.put("theInUris", valueUriList);
         }
       }
@@ -497,11 +497,16 @@ public class SHACLValidator {
           theConstraint.get("propShapeUid") + "_" + SHACL.PATTERN.stringValue();
       Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
       params.put("theRegex", (String) theConstraint.get("pattern"));
-      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-          getRegexViolationQuery(false), getRegexViolationQuery(true), paramSetId,
-          focusLabel, propOrRel, propOrRel, focusLabel,
-          (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
 
+
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "Regex", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(paramSetId, focusLabel, propOrRel, propOrRel, focusLabel,
+                              (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg) ,
+                      Arrays.asList(paramSetId, propOrRel, propOrRel,
+                              (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg)));
+      
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
               printConstraintType(SHACL.PATTERN),
@@ -1240,13 +1245,22 @@ public class SHACLValidator {
                 " true with params, focus unwind [(focus)-[:`%s`]->(x) | x ] as val with focus, val where %s val.uri in params.theInUris "
                 + "RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                 + "'" + SHACL.IN_CONSTRAINT_COMPONENT
-                .stringValue()
                 + "' as propertyShape, " + (nodesAreUriIdentified() ? "val.uri" : "id(val)")
                 + " as offendingValue, " + propertyNameFragment + severityFragment
                 + "'The value \"'+ " + (nodesAreUriIdentified() ? " val.uri "
                 : " 'node id: '  + id(val) ") + " + '\" in property ' + " + (shallIShorten()
                 ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
                 + "+ ' is not in  the accepted list' as message , " + customMsgFragment);
+        break;
+      case "Regex":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT all(x in [] +  coalesce(focus.`%s`,[]) where toString(x) =~ params.theRegex )  "
+                + " UNWIND [x in [] +  coalesce(focus.`%s`,[]) where not toString(x) =~ params.theRegex ]  as offval "
+                + "RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'" + SHACL.PATTERN_CONSTRAINT_COMPONENT
+                + "' as propertyShape, offval as offendingValue, " + propertyNameFragment + severityFragment
+                + "'The value of the property does not match the specified regular expression' as message , " + customMsgFragment);
         break;
     }
 
@@ -1278,9 +1292,9 @@ public class SHACLValidator {
 //    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_RANGETYPE2_V_SUFF());
 //  }
 
-  private String getRegexViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_REGEX_V_SUFF());
-  }
+//  private String getRegexViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_REGEX_V_SUFF());
+//  }
 
 //  private String getHasValueOnTypeAsLabelViolationQuery(boolean tx) {
 //    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
@@ -1457,19 +1471,19 @@ public class SHACLValidator {
 //        + "'%s should be a relationship but it is a property' as message , '%s' as customMsg ";
 //  }
 
-  private String CYPHER_REGEX_V_SUFF() {
-    return "NOT all(x in [] +  coalesce(focus.`%s`,[]) where toString(x) =~ params.theRegex )  "
-        + " UNWIND [x in [] +  coalesce(focus.`%s`,[]) where not toString(x) =~ params.theRegex ]  as offval "
-        + "RETURN "
-        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
-        .stringValue()
-        + "' as propertyShape, offval as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + "'the value of the property does not match the specified regular expression' as message , '%s' as customMsg ";
-  }
+//  private String CYPHER_REGEX_V_SUFF() {
+//    return "NOT all(x in [] +  coalesce(focus.`%s`,[]) where toString(x) =~ params.theRegex )  "
+//        + " UNWIND [x in [] +  coalesce(focus.`%s`,[]) where not toString(x) =~ params.theRegex ]  as offval "
+//        + "RETURN "
+//        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
+//        .stringValue()
+//        + "' as propertyShape, offval as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + "'the value of the property does not match the specified regular expression' as message , '%s' as customMsg ";
+//  }
 
 //  private String CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF() {
 //    return
