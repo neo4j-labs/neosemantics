@@ -2,6 +2,7 @@ package n10s.validation;
 
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
+import static n10s.validation.SHACLValidator.SHACL_COUNT_CONSTRAINT_COMPONENT;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
@@ -225,7 +226,9 @@ public class SHACLValidationProceduresTest {
       while (result.hasNext()) {
         Record next = result.next();
         if (next.get("propertyShape").asString()
-            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
+            .equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())||
+                next.get("propertyShape").asString()
+                        .equals(SHACL_COUNT_CONSTRAINT_COMPONENT)) {
           minCountCount++;
         }
         if (next.get("propertyShape").asString()
@@ -683,7 +686,9 @@ public class SHACLValidationProceduresTest {
           datatypeConstCount++;
         }
         if (next.get("propertyShape").asString()
-            .equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())) {
+            .equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())||
+                next.get("propertyShape").asString()
+                        .equals(SHACL_COUNT_CONSTRAINT_COMPONENT)) {
           assertEquals("http://stardog.com/tutorial/date",next.get("resultPath").asString());
           maxCountCount++;
         }
@@ -1433,6 +1438,13 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testRunTestSuiteCountQueryBased() throws Exception {
+    runIndividualTest("core/property", "count-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "count-query-001", null, "SHORTEN", "count-query-001-shorten");
+    runIndividualTest("core/property", "count-query-001", null, "KEEP", "count-query-001-keep");
+  }
+
+  @Test
   public void testRunTestSuite11() throws Exception {
     runIndividualTest("core/property", "nodeKind-001", null, "IGNORE");
     runIndividualTest("core/property", "nodeKind-001", null, "SHORTEN");
@@ -1706,10 +1718,8 @@ public class SHACLValidationProceduresTest {
       while (validationResults.hasNext()) {
         Record next = validationResults.next();
         count++;
-        if(next.get("propertyShape").asString().equals(SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue())){
-            assertEquals(next.get("focusNode").asLong(), tooFew);
-        } else if(next.get("propertyShape").asString().equals(SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue())){
-            assertEquals(next.get("focusNode").asLong(), tooMany);
+        if(next.get("propertyShape").asString().equals(SHACL_COUNT_CONSTRAINT_COMPONENT)){
+            assertTrue(next.get("focusNode").asLong() == tooFew || next.get("focusNode").asLong() == tooMany);
         } else {
           assertFalse(true); //there should not be violations of other types
         }

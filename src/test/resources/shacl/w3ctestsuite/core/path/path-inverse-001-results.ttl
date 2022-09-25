@@ -20,7 +20,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
               sh:inversePath neo:child ;
             ] ;
           sh:resultSeverity sh:Violation ;
-          sh:sourceConstraintComponent sh:MinCountConstraintComponent ;
+          sh:sourceConstraintComponent sh:CountConstraintComponent ;
           sh:sourceShape ex:TestShape-P ;
         ] ;
 
@@ -31,7 +31,7 @@ ex:ValReport1 rdf:type sh:ValidationReport ;
               sh:inversePath neo:child ;
             ] ;
           sh:resultSeverity sh:Violation ;
-          sh:sourceConstraintComponent sh:MaxCountConstraintComponent ;
+          sh:sourceConstraintComponent sh:CountConstraintComponent ;
           sh:sourceShape ex:TestShape-P ;
         ] ;
 .

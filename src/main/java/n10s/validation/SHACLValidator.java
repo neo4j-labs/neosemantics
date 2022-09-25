@@ -48,6 +48,7 @@ public class SHACLValidator {
   private static final int GLOBAL_CONSTRAINT = 0;
   private static final int CLASS_BASED_CONSTRAINT = 1;
   private static final int QUERY_BASED_CONSTRAINT = 2;
+  public static final String SHACL_COUNT_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#CountConstraintComponent";
 
   String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
           "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
@@ -506,7 +507,7 @@ public class SHACLValidator {
                               (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg) ,
                       Arrays.asList(paramSetId, propOrRel, propOrRel,
                               (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg)));
-      
+
       //ADD constraint to the list
       vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
               printConstraintType(SHACL.PATTERN),
@@ -514,105 +515,118 @@ public class SHACLValidator {
 
     }
 
-    if (theConstraint.get("minCount") != null) {
+    if (theConstraint.get("minCount")!=null || theConstraint.get("maxCount")!=null) {
       String paramSetId =
-          theConstraint.get("propShapeUid") + "_" + SHACL.MIN_COUNT.stringValue();
+              theConstraint.get("propShapeUid") + "_" + SHACL.MIN_COUNT.stringValue();
       Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
       params.put("minCount", theConstraint.get("minCount"));
+      params.put("maxCount", theConstraint.get("maxCount"));
+
+      String constraintSHACLType = (theConstraint.get("minCount")!=null&&theConstraint.get("maxCount")!=null?
+              SHACL_COUNT_CONSTRAINT_COMPONENT:
+              (theConstraint.get("minCount")!=null?SHACL.MIN_COUNT_CONSTRAINT_COMPONENT.stringValue():
+                      SHACL.MAX_COUNT_CONSTRAINT_COMPONENT.stringValue()));
 
       if (!(boolean) theConstraint.get("inverse")) {
         if (isConstraintOnType){
           if(typesAsLabels()) {
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getTypeAsLabelMinCardinalityViolationQuery(false), getTypeAsLabelMinCardinalityViolationQuery(true),
-                    paramSetId, focusLabel, " toInteger(params.minCount) <= ",
-                    focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                    "TypeAsLabelMinCardinality", whereClause, constraintType,
+                    buildArgArray(constraintType,
+                            Arrays.asList(paramSetId, focusLabel,
+                                    (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                    (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                    focusLabel, (String) theConstraint.get("propShapeUid"),
+                                    constraintSHACLType,
+                                    propOrRel, severity, customMsg) ,
+                            Arrays.asList(paramSetId,
+                                    (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                    (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                    (String) theConstraint.get("propShapeUid"),
+                                    constraintSHACLType,
+                                    propOrRel, severity, customMsg)));
+
           }
           //this is not an if/else because both can coexist
           if(typesAsRelToNodes()){
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getTypeAsNodeMinCardinalityViolationQuery(false), getTypeAsNodeMinCardinalityViolationQuery(true), paramSetId, focusLabel,
-                    " toInteger(params.minCount) <= ", propOrRel,
-                    focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                    severity, customMsg);
+
+            addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                    "TypeAsNodeMinCardinality", whereClause, constraintType,
+                    buildArgArray(constraintType,
+                            Arrays.asList(paramSetId, focusLabel,
+                                    (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                    propOrRel,
+                                    (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                    focusLabel, (String) theConstraint.get("propShapeUid"),
+                                    constraintSHACLType, propOrRel,
+                                    propOrRel,
+                                    severity, customMsg) ,
+                            Arrays.asList(paramSetId,
+                                    (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                    propOrRel,
+                                    (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                    (String) theConstraint.get("propShapeUid"),
+                                    constraintSHACLType, propOrRel,
+                                    propOrRel,
+                                    severity, customMsg)));
+
           }
         } else {
-          addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                  getMinCardinality1ViolationQuery(false), getMinCardinality1ViolationQuery(true),
-                  paramSetId, focusLabel,
-                  " toInteger(params.minCount) <= ",
-                  propOrRel, propOrRel,
-                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
-                  severity, customMsg);
+
+          addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                  "MinCardinality1", whereClause, constraintType,
+                  buildArgArray(constraintType,
+                          Arrays.asList(paramSetId, focusLabel,
+                                  (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                  propOrRel, propOrRel,
+                                  (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                  focusLabel, (String) theConstraint.get("propShapeUid"),
+                                  constraintSHACLType, propOrRel, propOrRel,
+                                  propOrRel,
+                                  severity, customMsg) ,
+                          Arrays.asList(paramSetId,
+                                  (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                  propOrRel,propOrRel,
+                                  (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                  (String) theConstraint.get("propShapeUid"),
+                                  constraintSHACLType, propOrRel, propOrRel,
+                                  propOrRel,
+                                  severity, customMsg)));
+
         }
       } else {
         // multivalued attributes not checked for cardinality in the case of inverse??
         // does not make sense in an LPG for properties but yes for rels
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-            getMinCardinality1InverseViolationQuery(false),
-            getMinCardinality1InverseViolationQuery(true),
-            paramSetId, focusLabel,
-            " toInteger(params.minCount) <= ",
-            propOrRel,
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-            severity, customMsg);
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "MinCardinality1Inverse", whereClause, constraintType,
+                buildArgArray(constraintType,
+                        Arrays.asList(paramSetId, focusLabel,
+                                (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                propOrRel,
+                                (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                focusLabel, (String) theConstraint.get("propShapeUid"),
+                                constraintSHACLType,
+                                propOrRel, propOrRel, severity, customMsg) ,
+                        Arrays.asList(paramSetId,
+                                (theConstraint.get("minCount")!=null?" toInteger(params.minCount) <= ":""),
+                                propOrRel,
+                                (theConstraint.get("maxCount")!=null?" <= toInteger(params.maxCount) ":""),
+                                (String) theConstraint.get("propShapeUid"),
+                                constraintSHACLType,
+                                propOrRel, propOrRel, severity, customMsg)));
+
       }
 
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-              printConstraintType(SHACL.MIN_COUNT),
-              theConstraint.get("minCount")));
-    }
-
-    if (theConstraint.get("maxCount") != null) {
-      String paramSetId =
-          theConstraint.get("propShapeUid") + "_" + SHACL.MAX_COUNT.stringValue();
-      Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
-      params.put("maxCount", theConstraint.get("maxCount"));
-
-      if (!(boolean) theConstraint.get("inverse")) {
-        if (isConstraintOnType){
-          if(typesAsLabels()) {
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getTypeAsLabelMaxCardinalityViolationQuery(false), getTypeAsLabelMaxCardinalityViolationQuery(true),
-                    paramSetId, focusLabel, " <= toInteger(params.maxCount) ", focusLabel,
-                    (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg);
-          }
-          //this is not an if/else because both can coexist
-          if(typesAsRelToNodes()){
-            addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                    getTypeAsNodeMaxCardinalityViolationQuery(false), getTypeAsNodeMaxCardinalityViolationQuery(true), paramSetId, focusLabel,
-                    propOrRel, " <= toInteger(params.maxCount) ",
-                    focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                    severity, customMsg);
-          }
-        } else {
-          addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                  getMaxCardinality1ViolationQuery(false), getMaxCardinality1ViolationQuery(true),
-                  paramSetId, focusLabel,
-                  propOrRel, propOrRel,
-                  " <= toInteger(params.maxCount) ",
-                  focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel, propOrRel,
-                  severity, customMsg);
-        }
-      } else {
-        // multivalued attributes not checked for cardinality in the case of inverse??
-        // does not make sense in an LPG
-        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-            getMaxCardinality1InverseViolationQuery(false),
-            getMaxCardinality1InverseViolationQuery(true),
-            paramSetId, focusLabel,
-            propOrRel,
-            " <= toInteger(params.maxCount) ",
-            focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-            severity, customMsg);
+      if(theConstraint.get("maxCount")!=null) {
+        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+                printConstraintType(SHACL.MAX_COUNT), theConstraint.get("maxCount")));
       }
-
-      //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
-              printConstraintType(SHACL.MAX_COUNT),
-              theConstraint.get("maxCount")));
+      if(theConstraint.get("minCount")!=null) {
+        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+                printConstraintType(SHACL.MIN_COUNT), theConstraint.get("minCount")));
+      }
     }
 
     if ((theConstraint.get("minStrLen") != null || theConstraint.get("maxStrLen") != null)
@@ -624,14 +638,22 @@ public class SHACLValidator {
       params.put("minStrLen", theConstraint.get("minStrLen"));
       params.put("maxStrLen", theConstraint.get("maxStrLen"));
 
-      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-          getStrLenViolationQuery(false), getStrLenViolationQuery(true), paramSetId,
-          focusLabel,
-          propOrRel,
-          theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
-          theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
-          focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity, customMsg);
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "StrLen", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(paramSetId,
+                              focusLabel,
+                              propOrRel,
+                              theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
+                              theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
+                              focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                              severity, customMsg) ,
+                      Arrays.asList(paramSetId,
+                              propOrRel,
+                              theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
+                              theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
+                              (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+                              severity, customMsg)));
 
       //ADD constraint to the list
       if(theConstraint.get("minStrLen") != null) {
@@ -1262,6 +1284,52 @@ public class SHACLValidator {
                 + "' as propertyShape, offval as offendingValue, " + propertyNameFragment + severityFragment
                 + "'The value of the property does not match the specified regular expression' as message , " + customMsgFragment);
         break;
+      case "TypeAsLabelMinCardinality":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s size("
+                + (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) " )
+                + ") %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'number of labels (' + size(" +
+                (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ") +
+                ") +') is outside the defined min-max limits'  as message, " + propertyNameFragment + severityFragment
+                + " null as offendingValue , "  + customMsgFragment);
+        break;
+      case "TypeAsNodeMinCardinality":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s ( size((focus)-[:`%s`]->())) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is outside the defined min-max limits'  as message, "
+                + propertyNameFragment + severityFragment
+                + " null as offendingValue , " + customMsgFragment);
+        break;
+      case "MinCardinality1":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) ) %s RETURN "
+                + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') is outside the defined min-max limits'  as message, "
+                + propertyNameFragment + severityFragment
+                + "null as offendingValue , " + customMsgFragment);
+        break;
+      case "MinCardinality1Inverse":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s size((focus)<-[:`%s`]-()) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is outside the defined min-max limits' as message, "
+                + propertyNameFragment + severityFragment
+                + "null as offendingValue , " + customMsgFragment);
+        break;
+      case "StrLen":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN "
+                + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT
+                + "' as propertyShape, focus.`%s` as offendingValue, "
+                + propertyNameFragment + severityFragment
+                + "'' as message , " + customMsgFragment);
+        break;
     }
 
     return String.format(query, args);
@@ -1329,21 +1397,21 @@ public class SHACLValidator {
 //    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_IN_URI_V_SUFF());
 //  }
 
-  private String getMinCardinality1ViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_V_SUFF());
-  }
+//  private String getMinCardinality1ViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_V_SUFF());
+//  }
 
-  private String getTypeAsLabelMinCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF());
-  }
+//  private String getTypeAsLabelMinCardinalityViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF());
+//  }
 
-  private String getTypeAsNodeMinCardinalityViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF());
-  }
+//  private String getTypeAsNodeMinCardinalityViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF());
+//  }
 
-  private String getMinCardinality1InverseViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
-  }
+//  private String getMinCardinality1InverseViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
+//  }
 
   private String getMaxCardinality1ViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_V_SUFF());
@@ -1361,9 +1429,9 @@ public class SHACLValidator {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF());
   }
 
-  private String getStrLenViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_STRLEN_V_SUFF());
-  }
+//  private String getStrLenViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_STRLEN_V_SUFF());
+//  }
 
   private String getValueRangeViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_VALRANGE_V_SUFF());
@@ -1632,26 +1700,26 @@ public class SHACLValidator {
         + "'' as message , '%s' as customMsg ";
   }
 
-  private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN "
-        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') too low'  as message, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + "null as offendingValue , '%s' as customMsg ";
-  }
+//  private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
+//    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN "
+//        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
+//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+//        + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') too low'  as message, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + "null as offendingValue , '%s' as customMsg ";
+//  }
 
-  private String CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s ( size((focus)-[:`%s`]->()))  RETURN "
-            + " focus.uri as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-            + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too low'  as message, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as propertyName, '%s' as severity, "
-            + "null as offendingValue , '%s' as customMsg ";
-  }
+//  private String CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF() {
+//    return "NOT %s ( size((focus)-[:`%s`]->()))  RETURN "
+//            + " focus.uri as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+//            + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too low'  as message, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as propertyName, '%s' as severity, "
+//            + "null as offendingValue , '%s' as customMsg ";
+//  }
 
   private String CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF() {
     return "NOT ( size((focus)-[:`%s`]->())) %s  RETURN "
@@ -1663,20 +1731,20 @@ public class SHACLValidator {
             + "null as offendingValue , '%s' as customMsg ";
   }
 
-  private String CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF() {
-    return "NOT %s size("
-            + (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) " )
-            + ")  RETURN "
-            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-            + "' as propertyShape,  'number of labels (' + size(" +
-            (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ") +
-            ") +') too low'  as message, "
-            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-            + " as propertyName, '%s' as severity, "
-            + " null as offendingValue , '%s' as customMsg ";
-  }
+//  private String CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF() {
+//    return "NOT %s size("
+//            + (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) " )
+//            + ")  RETURN "
+//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
+//            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+//            + "' as propertyShape,  'number of labels (' + size(" +
+//            (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ") +
+//            ") +') too low'  as message, "
+//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//            + " as propertyName, '%s' as severity, "
+//            + " null as offendingValue , '%s' as customMsg ";
+//  }
 
   private String CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF() {
     return "NOT size("
@@ -1704,16 +1772,16 @@ public class SHACLValidator {
         + "null as offendingValue , '%s' as customMsg ";
   }
 
-  private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
-    return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-        : " id(focus) ") +
-        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-        + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is too low' as message, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + "null as offendingValue , '%s' as customMsg ";
-  }
+//  private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
+//    return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
+//        : " id(focus) ") +
+//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
+//        + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is too low' as message, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + "null as offendingValue , '%s' as customMsg ";
+//  }
 
   private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {   //Same as previous
     return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (nodesAreUriIdentified() ? " focus.uri "
@@ -1741,16 +1809,16 @@ public class SHACLValidator {
 //        + "null as offendingValue  ";
 //  }
 
-  private String CYPHER_STRLEN_V_SUFF() {
-    return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (
-        nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-        " as nodeType, '%s' as shapeId, '" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT
-        + "' as propertyShape, focus.`%s` as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + "'' as message , '%s' as customMsg ";
-  }
+//  private String CYPHER_STRLEN_V_SUFF() {
+//    return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (
+//        nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
+//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
+//        " as nodeType, '%s' as shapeId, '" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT
+//        + "' as propertyShape, focus.`%s` as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + "'' as message , '%s' as customMsg ";
+//  }
 
   private String CYPHER_NODE_STRUCTURE_V_SUFF() {
     return " true \n" +
