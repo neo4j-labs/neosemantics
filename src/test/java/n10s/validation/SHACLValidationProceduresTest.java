@@ -742,7 +742,7 @@ public class SHACLValidationProceduresTest {
               next.get("propertyShape").asString());
         } else if (next.get("nodeType").asString().equals("Movie")) {
           assertEquals(1993, next.get("offendingValue").asInt());
-          assertEquals("http://www.w3.org/ns/shacl#MinExclusiveConstraintComponent",
+          assertEquals("http://www.w3.org/ns/shacl#ValueRangeConstraintComponent",
               next.get("propertyShape").asString());
         }
       }
@@ -1278,6 +1278,13 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "minExclussive-001", null, "IGNORE");
     runIndividualTest("core/property", "minExclussive-001", null, "SHORTEN");
     runIndividualTest("core/property", "minExclussive-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite6QueryBased() throws Exception {
+    runIndividualTest("core/property", "minMax-query-001", null, "IGNORE");
+    runIndividualTest("core/property", "minMax-query-001", null, "SHORTEN", "minMax-query-001-shorten");
+    runIndividualTest("core/property", "minMax-query-001", null, "KEEP","minMax-query-001-keep");
   }
 
   @Test

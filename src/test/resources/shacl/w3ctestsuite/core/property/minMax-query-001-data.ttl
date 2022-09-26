@@ -1,0 +1,38 @@
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix ex: <http://datashapes.org/sh/tests/core/property/minExclusive-001.test#> .
+@prefix neo: <neo4j://graph.schema#>.
+@prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sht: <http://www.w3.org/ns/shacl-test#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:InvalidInstance1
+  neo:linkedTo ex:someone ;
+  neo:min40inc 39 ;
+.
+
+ex:IgnoredInvalidInstance1
+  neo:min40inc 38 ;
+.
+
+ex:InvalidInstance2
+  neo:linkedTo ex:someone ;
+  neo:max20inc 21 ;
+.
+
+ex:IgnoredInvalidInstance2
+  neo:max20inc 39 ;
+.
+
+ex:ValidInstance1
+  neo:linkedTo ex:someone ;
+  neo:min10Exmax20Ex 11 ;
+.
+
+ex:InvalidInstance3
+  neo:linkedTo ex:someone ;
+  neo:min10Exmax20Ex 20 ;
+.

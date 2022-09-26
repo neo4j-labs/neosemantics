@@ -49,6 +49,8 @@ public class SHACLValidator {
   private static final int CLASS_BASED_CONSTRAINT = 1;
   private static final int QUERY_BASED_CONSTRAINT = 2;
   public static final String SHACL_COUNT_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#CountConstraintComponent";
+  public static final String SHACL_VALUE_RANGE_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#ValueRangeConstraintComponent";
+  public static final String SHACL_LENGTH_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#LengthConstraintComponent";
 
   String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
           "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
@@ -638,6 +640,11 @@ public class SHACLValidator {
       params.put("minStrLen", theConstraint.get("minStrLen"));
       params.put("maxStrLen", theConstraint.get("maxStrLen"));
 
+      String constraintSHACLType = (theConstraint.get("minStrLen")!=null&&theConstraint.get("maxStrLen")!=null?
+              SHACL_LENGTH_CONSTRAINT_COMPONENT:
+              (theConstraint.get("minStrLen")!=null?SHACL.MIN_LENGTH_CONSTRAINT_COMPONENT.stringValue():
+                      SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT.stringValue()));
+
       addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
               "StrLen", whereClause, constraintType,
               buildArgArray(constraintType,
@@ -646,14 +653,14 @@ public class SHACLValidator {
                               propOrRel,
                               theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
                               theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
-                              focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                              severity, customMsg) ,
+                              focusLabel, (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, propOrRel, severity, customMsg) ,
                       Arrays.asList(paramSetId,
                               propOrRel,
                               theConstraint.get("minStrLen") != null ? " params.minStrLen <= " : "",
                               theConstraint.get("maxStrLen") != null ? " <= params.maxStrLen " : "",
-                              (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-                              severity, customMsg)));
+                              (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, propOrRel, severity, customMsg)));
 
       //ADD constraint to the list
       if(theConstraint.get("minStrLen") != null) {
@@ -682,15 +689,50 @@ public class SHACLValidator {
           theConstraint.get("maxInc") != null ? theConstraint.get("maxInc")
               : theConstraint.get("maxExc"));
 
-      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-          getValueRangeViolationQuery(false), getValueRangeViolationQuery(true), paramSetId,
-          focusLabel, propOrRel,
-          theConstraint.get("minInc") != null ? " params.min <="
-              : (theConstraint.get("minExc") != null ? " params.min < " : ""),
-          theConstraint.get("maxInc") != null ? " <= params.max "
-              : (theConstraint.get("maxExc") != null ? " < params.max " : ""),
-          focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
-          severity, customMsg);
+      String constraintSHACLType = SHACL_VALUE_RANGE_CONSTRAINT_COMPONENT;
+      if ((theConstraint.get("minExc") != null || theConstraint.get("minInc") != null ) &&
+              (theConstraint.get("maxExc") != null || theConstraint.get("maxInc") != null )){
+        constraintSHACLType = SHACL_VALUE_RANGE_CONSTRAINT_COMPONENT;
+      } else if (theConstraint.get("minExc") != null){
+        constraintSHACLType = SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT.stringValue();
+      }else if (theConstraint.get("minInc") != null){
+        constraintSHACLType = SHACL.MIN_INCLUSIVE_CONSTRAINT_COMPONENT.stringValue();
+      }else if (theConstraint.get("maxExc") != null){
+        constraintSHACLType = SHACL.MAX_EXCLUSIVE_CONSTRAINT_COMPONENT.stringValue();
+      }else if (theConstraint.get("maxInc") != null){
+        constraintSHACLType = SHACL.MAX_INCLUSIVE_CONSTRAINT_COMPONENT.stringValue();
+      }
+
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "ValueRange", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(paramSetId,
+                              focusLabel, propOrRel,
+                              theConstraint.get("minInc") != null ? " params.min <="
+                                      : (theConstraint.get("minExc") != null ? " params.min < " : ""),
+                              theConstraint.get("maxInc") != null ? " <= params.max "
+                                      : (theConstraint.get("maxExc") != null ? " < params.max " : ""),
+                              focusLabel, (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, propOrRel, severity, customMsg) ,
+                      Arrays.asList(paramSetId,
+                              propOrRel,
+                              theConstraint.get("minInc") != null ? " params.min <="
+                                      : (theConstraint.get("minExc") != null ? " params.min < " : ""),
+                              theConstraint.get("maxInc") != null ? " <= params.max "
+                                      : (theConstraint.get("maxExc") != null ? " < params.max " : ""),
+                              (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, propOrRel, severity, customMsg)));
+
+
+//      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+//          getValueRangeViolationQuery(false), getValueRangeViolationQuery(true), paramSetId,
+//          focusLabel, propOrRel,
+//          theConstraint.get("minInc") != null ? " params.min <="
+//              : (theConstraint.get("minExc") != null ? " params.min < " : ""),
+//          theConstraint.get("maxInc") != null ? " <= params.max "
+//              : (theConstraint.get("maxExc") != null ? " < params.max " : ""),
+//          focusLabel, (String) theConstraint.get("propShapeUid"), propOrRel, propOrRel,
+//          severity, customMsg);
 
       //ADD constraint to the list
       if (theConstraint.get("minInc") != null) {
@@ -1325,8 +1367,15 @@ public class SHACLValidator {
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
                 "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN "
                 + nodeIdFragment + nodeTypeFragment + shapeIdFragment
-                + "'" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT
-                + "' as propertyShape, focus.`%s` as offendingValue, "
+                + "'%s' as propertyShape, focus.`%s` as offendingValue, "
+                + propertyNameFragment + severityFragment
+                + "'' as message , " + customMsgFragment);
+        break;
+      case "ValueRange":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape, focus.`%s` as offendingValue, "
                 + propertyNameFragment + severityFragment
                 + "'' as message , " + customMsgFragment);
         break;
@@ -1433,9 +1482,9 @@ public class SHACLValidator {
 //    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_STRLEN_V_SUFF());
 //  }
 
-  private String getValueRangeViolationQuery(boolean tx) {
-    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_VALRANGE_V_SUFF());
-  }
+//  private String getValueRangeViolationQuery(boolean tx) {
+//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_VALRANGE_V_SUFF());
+//  }
 
   private String getNodeStructureViolationQuery(boolean tx) {
     return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_NODE_STRUCTURE_V_SUFF());
@@ -1688,17 +1737,17 @@ public class SHACLValidator {
 //                    + "+ ') is not in  the accepted list' as message , '%s' as customMsg ";
 //  }
 
-  private String CYPHER_VALRANGE_V_SUFF() {
-    return "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + (nodesAreUriIdentified()
-        ? " focus.uri " : " id(focus) ") +
-        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
-        .stringValue()
-        + "' as propertyShape, focus.`%s` as offendingValue, "
-        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-        + " as propertyName, '%s' as severity, "
-        + "'' as message , '%s' as customMsg ";
-  }
+//  private String CYPHER_VALRANGE_V_SUFF() {
+//    return "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + (nodesAreUriIdentified()
+//        ? " focus.uri " : " id(focus) ") +
+//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
+//        .stringValue()
+//        + "' as propertyShape, focus.`%s` as offendingValue, "
+//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
+//        + " as propertyName, '%s' as severity, "
+//        + "'' as message , '%s' as customMsg ";
+//  }
 
 //  private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
 //    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN "
