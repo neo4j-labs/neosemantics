@@ -1845,6 +1845,64 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+  String SHAPES_BAD_QUERY_1 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:daughter_of]->(y) \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
+
+  String SHAPES_BAD_QUERY_2 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" true return count(*); create (:HelloThere) ; \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
+
+  String SHAPES_BAD_QUERY_3 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" where existis(focus.prop)  \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
+
+  @Test
+  public void testBadQueriesInConstraint() throws Exception {
+    verifyBadCypher(SHAPES_BAD_QUERY_1);
+    verifyBadCypher(SHAPES_BAD_QUERY_2);
+    verifyBadCypher(SHAPES_BAD_QUERY_3);
+  }
+
+  private void verifyBadCypher(String query) {
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+
+      Result results = session
+              .run("CALL n10s.validation.shacl.import.inline('" + query + "',\"Turtle\")");
+
+      results.hasNext();
+
+      //should never get here
+      assertTrue(false);
+
+    } catch (Exception e){
+      assertTrue(e.getMessage().contains("The cypher fragment in a sh:targetQuery element " +
+              "should form a valid query when embeeded in the following template"));
+    }
+  }
+
   private boolean contains(Set<ValidationResult> set, ValidationResult res) {
     boolean contained = false;
     for (ValidationResult vr : set) {

@@ -22,6 +22,7 @@ import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.logging.Log;
 
@@ -29,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static n10s.graphconfig.GraphConfig.*;
 import static n10s.graphconfig.Params.WKTLITERAL_URI;
@@ -51,6 +53,7 @@ public class SHACLValidator {
   public static final String SHACL_COUNT_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#CountConstraintComponent";
   public static final String SHACL_VALUE_RANGE_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#ValueRangeConstraintComponent";
   public static final String SHACL_LENGTH_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#LengthConstraintComponent";
+
 
   String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
           "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
@@ -169,12 +172,15 @@ public class SHACLValidator {
           "} group by ?ns ?nmsg ?targetClass ?targetIsQuery";
 
   private Transaction tx;
+  private GraphDatabaseService db;
   private Log log;
   private GraphConfig gc;
 
-  public SHACLValidator(Transaction transaction, Log l) {
+  public SHACLValidator(GraphDatabaseService db, Transaction transaction, Log l) {
     this.tx = transaction;
     this.log = l;
+    this.db = db;
+
     try {
       this.gc = new GraphConfig(tx);
     } catch (GraphConfigNotFound graphConfigNotFound) {
@@ -186,7 +192,7 @@ public class SHACLValidator {
 
 
   protected ValidatorConfig compileValidations(Iterator<Map<String, Object>> constraints)
-      throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
+          throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     ValidatorConfig vc = new ValidatorConfig();
 
@@ -206,7 +212,7 @@ public class SHACLValidator {
   }
 
   protected void processConstraint(Map<String, Object> theConstraint, ValidatorConfig vc)
-      throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
+          throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
 
     int constraintType;
     String focusLabel = "";
@@ -223,6 +229,7 @@ public class SHACLValidator {
     } else if (theConstraint.containsKey("appliesToQueryResult") ){
       //it's a query based constraint
       whereClause = (String) theConstraint.get("appliesToQueryResult");
+      validateWhereClause(whereClause);
       constraintType = QUERY_BASED_CONSTRAINT;
     } else {
       throw new SHACLValidationException("invalid constraint config");
@@ -839,6 +846,18 @@ public class SHACLValidator {
                 translateUri(x, tx, gc)));
       }
 
+    }
+
+  }
+
+  private void validateWhereClause(String whereClause)  {
+    try (Transaction tempTransaction = db.beginTx(50, TimeUnit.MILLISECONDS)) {
+
+      tempTransaction.execute("explain " + "match (focus) where " + whereClause + " return focus limit 1 ");
+    } catch (Exception e){
+      throw new SHACLValidationException("Invalid cypher expression: \"" + whereClause + "\". The cypher fragment " +
+              "in a sh:targetQuery element should form a valid query when embeeded in the following template: " +
+              " \"match (focus) where <your cypher> return focus\"");
     }
 
   }

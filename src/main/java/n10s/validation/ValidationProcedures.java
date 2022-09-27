@@ -59,7 +59,8 @@ public class ValidationProcedures extends CommonProcedures {
   public Stream<ConstraintComponent> importInlineSHACL(@Name("rdf") String rdfFragment,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
+          throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix
+  {
 
     return doLoad(format, null, rdfFragment, props).stream();
   }
@@ -69,7 +70,8 @@ public class ValidationProcedures extends CommonProcedures {
   public Stream<ConstraintComponent> importSHACLFromURL(@Name("url") String url,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
-      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
+          throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix
+  {
 
     return doLoad(format, url, null, props).stream();
 
@@ -77,7 +79,8 @@ public class ValidationProcedures extends CommonProcedures {
 
   private List<ConstraintComponent> doLoad(String format, String url, String rdfFragment,
       Map<String, Object> props)
-      throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
+          throws IOException, RDFImportBadParams, InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix
+  {
 
     InputStream is;
     if (rdfFragment != null) {
@@ -86,7 +89,7 @@ public class ValidationProcedures extends CommonProcedures {
       is = getInputStream(url, props);
     }
 
-    SHACLValidator validator = new SHACLValidator(tx, log);
+    SHACLValidator validator = new SHACLValidator(db, tx, log);
     ValidatorConfig validatorConfig = validator
         .compileValidations(validator.parseConstraints(is, getFormat(format), props));
 
