@@ -1786,12 +1786,12 @@ public class SHACLValidationProceduresTest {
           "ex:womanShape a sh:NodeShape ;\n" +
           "  sh:targetQuery \" (focus)-[:daughter_of]->() \" ;\n" +
           "  sh:class neo4j:Woman ;\n" +
-          "  sh:not [ sh:class neo4j:Man ] ;\n" +
+          "  sh:class [ sh:not neo4j:Man ] ;\n" +
           ".\n" +
           "ex:manShape a sh:NodeShape ;\n" +
           "  sh:targetQuery \" (focus)-[:son_of]->() \" ;\n" +
           "  sh:class neo4j:Man ;\n" +
-          "  sh:not [ sh:class neo4j:Woman ] ;\n" +
+          "  sh:class [ sh:not neo4j:Woman ] ;\n" +
           ".\n" ;
 
   @Test
