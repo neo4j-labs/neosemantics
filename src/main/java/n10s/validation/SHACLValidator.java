@@ -1438,8 +1438,7 @@ public class SHACLValidator {
   //TODO: not convinced about the GRAPHCONF_VOC_URI_MAP case below. Unit tests please.
   private boolean shallIShorten() {
     return gc != null && (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
-        gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT ||
-        gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_MAP);
+        gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT );
   }
 
   private String getQuery(String pref, boolean tx, String queryConstraintWhere, String suff) {
