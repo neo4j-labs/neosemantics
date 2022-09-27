@@ -1,0 +1,26 @@
+@prefix dash: <http://datashapes.org/dash#> .
+@prefix ex: <http://example/> .
+@prefix neo: <neo4j://graph.schema#>.
+@prefix mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix sht: <http://www.w3.org/ns/shacl-test#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Alice
+  rdf:type neo:Citizen , neo:OrphanNode, neo:Single, neo:Villager ;
+  neo:name "Alice" ;
+  neo:lives_in [ neo:name "London"; a neo:City ] ;
+.
+
+ex:Bob
+    neo:name "Bob" ;
+    neo:married_to [ a neo:Married ] ;
+.
+
+ex:Calvin
+  rdf:type neo:Orphan, neo:Villager ;
+    neo:name "Calvin" ;
+.

@@ -1458,6 +1458,20 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/property", "nodeKind-001", null, "KEEP");
   }
 
+  @Test
+  public void testRunTestSuite13() throws Exception {
+    runIndividualTest("core/other", "closed-shape-query-001", null, "IGNORE");
+    runIndividualTest("core/other", "closed-shape-query-001", null, "SHORTEN","closed-shape-query-001-shorten");
+    runIndividualTest("core/other", "closed-shape-query-001", null, "KEEP","closed-shape-query-001-keep");
+  }
+
+  @Test
+  public void testRunTestSuite14() throws Exception {
+    runIndividualTest("core/other", "required-excluded-query-001", null, "IGNORE");
+    runIndividualTest("core/other", "required-excluded-query-001", null, "SHORTEN","required-excluded-query-001-shorten");
+    runIndividualTest("core/other", "required-excluded-query-001", null, "KEEP","required-excluded-query-001-keep");
+  }
+
   public void runIndividualTest(String testGroupName, String testName,
       String cypherScript, String handleVocabUris, String ... overrideShapesFileName) throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -1763,6 +1777,23 @@ public class SHACLValidationProceduresTest {
           "  sh:class neo4j:Person ;\n" +
           ".\n" ;
 
+  String SHAPES_REQUIRED_EXCLUDED_TYPES_QUERY = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:womanShape a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:daughter_of]->() \" ;\n" +
+          "  sh:class neo4j:Woman ;\n" +
+          "  sh:not [ sh:class neo4j:Man ] ;\n" +
+          ".\n" +
+          "ex:manShape a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:son_of]->() \" ;\n" +
+          "  sh:class neo4j:Man ;\n" +
+          "  sh:not [ sh:class neo4j:Woman ] ;\n" +
+          ".\n" ;
+
   @Test
   public void testRequiredAndExcludedTypes() throws Exception {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
@@ -1770,7 +1801,6 @@ public class SHACLValidationProceduresTest {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       session.run("create (:Man { name: 'JB'}) ");
       session.run("create (:Person:Woman:Man { name: 'Carol'}) ");
-
     }
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
@@ -1783,11 +1813,35 @@ public class SHACLValidationProceduresTest {
       Result result = session.run("call n10s.validation.shacl.validate()");
       int resultcount = 0;
       while(result.hasNext()){
-        //System.out.println(
         result.next();
         resultcount++;
       }
       assertTrue(resultcount==2);
+
+      results = session
+              .run("CALL n10s.validation.shacl.import.inline('" + SHAPES_REQUIRED_EXCLUDED_TYPES_QUERY + "',\"Turtle\")");
+
+      assertTrue(results.hasNext());
+
+      assertFalse(session.run("call n10s.validation.shacl.validate()").hasNext());
+
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      session.run("create (:Woman { name: 'Bill'})-[:son_of]->() ");
+      session.run("create (:Man:Woman { name: 'Kat'})-[:daughter_of]->() ");
+    }
+    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      
+      Result result = session.run("call n10s.validation.shacl.validate()");
+      int resultcount = 0;
+      while(result.hasNext()){
+        result.next();
+        resultcount++;
+      }
+      assertTrue(resultcount==3);
+
     }
   }
 

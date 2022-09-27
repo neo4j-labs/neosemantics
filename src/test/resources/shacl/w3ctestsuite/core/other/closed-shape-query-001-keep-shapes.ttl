@@ -1,0 +1,9 @@
+@prefix ex: <http://example/> .
+@prefix neo4j: <neo4j://graph.schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:PersonShape
+	a sh:NodeShape ;
+	sh:targetQuery " (focus)-[:`neo4j://graph.schema#lives_in`]-(:`neo4j://graph.schema#City`) " ;
+	sh:closed true ;
+	sh:ignoredProperties ( rdf:type neo4j:born neo4j:lives_in neo4j:name ) .

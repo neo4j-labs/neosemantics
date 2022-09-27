@@ -142,24 +142,31 @@ public class SHACLValidator {
   //the sh:class at the node shape level is not used (consider removing)
   String NODE_ADDITIONAL_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
           "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
-          "SELECT ?ns (coalesce(?nmsg,\"\") as ?msg) ?targetClass (GROUP_CONCAT (distinct ?class; separator=\"---\") AS ?class)\n" +
+          "SELECT ?ns (coalesce(?nmsg,\"\") as ?msg) ?targetClass ?targetIsQuery (GROUP_CONCAT (distinct ?class; separator=\"---\") AS ?class)\n" +
           "(GROUP_CONCAT (distinct ?disjointclass; separator=\"---\") AS ?disjointclass)\n" +
           "{ ?ns a sh:NodeShape .\n" +
           "  \n" +
           "  { \n" +
           "    { \n" +
-          "     ?ns sh:targetClass  ?targetClass \n" +
+          "     ?ns sh:targetClass  ?targetClass .\n" +
+          "        bind( false as ?targetIsQuery )\n" +
           "    }\n" +
           "    union \n" +
           "    { \n" +
-          "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns)\n" +
+          "     ?targetClass a rdfs:Class . filter(?targetClass = ?ns) .\n" +
+          "      bind( false as ?targetIsQuery )\n" +
+          "    }\n" +
+          "    union\n" +
+          "    {\n" +
+          "    ?ns sh:targetQuery  ?targetClass .\n" +
+          "      bind( true as ?targetIsQuery )\n" +
           "    }\n" +
           "  }\n" +
           "  optional { ?ns sh:message ?nmsg }\n" +
-          "  optional { ?ns sh:not [ sh:class ?disjointclass ].  filter(isIRI(?disjointclass)) }\n" +
+          "  optional { ?ns sh:class [ sh:not ?disjointclass ].  filter(isIRI(?disjointclass)) }\n" +
           "  optional { ?ns sh:class ?class .  filter(isIRI(?class)) }\n" +
           "  filter(bound(?disjointclass) || bound(?class))\n" +
-          "} group by ?ns ?nmsg ?targetClass";
+          "} group by ?ns ?nmsg ?targetClass ?targetIsQuery";
 
   private Transaction tx;
   private Log log;
@@ -375,7 +382,7 @@ public class SHACLValidator {
       }
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.NODE_KIND),
               (gc != null && gc.getGraphMode() == GRAPHCONF_MODE_RDF) ? theConstraint.get("rangeKind") :
                       ((String) theConstraint.get("rangeKind"))
@@ -407,7 +414,7 @@ public class SHACLValidator {
                               propOrRel,propOrRel, severity, propOrRel ,customMsg)));
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.CLASS),
               translateUri((String) theConstraint.get("rangeType"), tx, gc)));
     }
@@ -433,7 +440,7 @@ public class SHACLValidator {
                                 (String) theConstraint.get("propShapeUid"), propOrRel, severity, propOrRel, customMsg)));
 
         //ADD constraint to the list
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.IN),
                 (theConstraint.containsKey("inLiterals")?valueLiteralList:"not " + valueLiteralList.toString())));
       }
@@ -489,7 +496,7 @@ public class SHACLValidator {
       }
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.IN),
               (theConstraint.containsKey("inUris")?(isConstraintOnType&&typesAsLabels()?translateUriList(valueUriList):valueUriList):
                       "not " + (isConstraintOnType&&typesAsLabels()?translateUriList(valueUriList):valueUriList))));
@@ -511,7 +518,7 @@ public class SHACLValidator {
                               (String) theConstraint.get("propShapeUid"), propOrRel, severity, customMsg)));
 
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.PATTERN),
               theConstraint.get("pattern")));
 
@@ -622,11 +629,11 @@ public class SHACLValidator {
 
       //ADD constraint to the list
       if(theConstraint.get("maxCount")!=null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MAX_COUNT), theConstraint.get("maxCount")));
       }
       if(theConstraint.get("minCount")!=null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MIN_COUNT), theConstraint.get("minCount")));
       }
     }
@@ -664,12 +671,12 @@ public class SHACLValidator {
 
       //ADD constraint to the list
       if(theConstraint.get("minStrLen") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MIN_LENGTH),
                 theConstraint.get("minStrLen")));
       }
       if(theConstraint.get("maxStrLen") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MAX_LENGTH),
                 theConstraint.get("maxStrLen")));
       }
@@ -725,22 +732,22 @@ public class SHACLValidator {
 
       //ADD constraint to the list
       if (theConstraint.get("minInc") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MIN_INCLUSIVE),
                 theConstraint.get("minInc")));
       }
       if (theConstraint.get("maxInc") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MAX_INCLUSIVE),
                 theConstraint.get("maxInc")));
       }
       if (theConstraint.get("minExc") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MIN_EXCLUSIVE),
                 theConstraint.get("minExc")));
       }
       if (theConstraint.get("maxExc") != null) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.MAX_EXCLUSIVE),
                 theConstraint.get("maxExc")));
       }
@@ -774,15 +781,8 @@ public class SHACLValidator {
                       Arrays.asList(paramSetId,
                        (String) theConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation", customMsg)));
 
-
-//      addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-//          getNodeStructureViolationQuery(false), getNodeStructureViolationQuery(true), paramSetId,
-//          focusLabel,
-//          focusLabel,
-//          (String) theConstraint.get("nodeShapeUid"), "http://www.w3.org/ns/shacl#Violation", customMsg);
-
       //ADD constraint to the list
-      vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+      vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
               printConstraintType(SHACL.IGNORED_PROPERTIES),
               translateUriList((List<String>) theConstraint.get("ignoredProps"))));
 
@@ -802,17 +802,12 @@ public class SHACLValidator {
                         (String) theConstraint.get("nodeShapeUid"), SHACL.NOT_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
                         "http://www.w3.org/ns/shacl#Violation", "not allowed", translateUri(uri, tx, gc), customMsg)));
 
-//        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri, tx, gc))),
-//            getDisjointClassesViolationQuery(false), getDisjointClassesViolationQuery(true),
-//            focusLabel, translateUri(uri, tx, gc),focusLabel,
-//            (String) theConstraint.get("nodeShapeUid"), translateUri(uri, tx, gc),
-//            "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc), customMsg);
       }
 
       //ADD constraint to the list
       List<String> disjointClassesRaw = (List<String>) theConstraint.get("disjointClass");
       for (String x : disjointClassesRaw) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.NOT),
                 translateUri(x, tx, gc)));
       }
@@ -830,21 +825,16 @@ public class SHACLValidator {
                 Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),focusLabel,
                         (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
                         "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg) ,
-                Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),
+                Arrays.asList("not", translateUri(uri, tx, gc),
                         (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
                         "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg)));
 
-/*        addCypherToValidationScripts(vc, new ArrayList<String>(Arrays.asList(focusLabel, translateUri(uri, tx, gc))),
-                getRequiredClassesViolationQuery(false), getRequiredClassesViolationQuery(true),
-                 focusLabel, translateUri(uri, tx, gc),focusLabel,
-                (String) theConstraint.get("nodeShapeUid"), translateUri(uri, tx, gc),
-                "http://www.w3.org/ns/shacl#Violation", translateUri(uri, tx, gc), customMsg);*/
       }
 
       //ADD constraint to the list
       List<String> reqClassesRaw = (List<String>) theConstraint.get("reqClass");
       for (String x : reqClassesRaw) {
-        vc.addConstraintToList(new ConstraintComponent(focusLabel, propOrRel,
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.CLASS),
                 translateUri(x, tx, gc)));
       }
@@ -1038,7 +1028,13 @@ public class SHACLValidator {
         Map<String, Object> record = new HashMap<>();
         BindingSet next = queryResult.next();
         record.put("constraintType","closedDefinitionPropList");
-        record.put("appliesToCat", next.getValue("targetClass").stringValue());
+        if(!((Literal)next.getValue("targetIsQuery")).booleanValue()) {
+          record.put("appliesToCat",
+                  next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+        } else {
+          record.put("appliesToQueryResult",
+                  next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+        }
         record
             .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);
         if (next.hasBinding("definedProps")) {
@@ -1072,7 +1068,13 @@ public class SHACLValidator {
       while (queryResult.hasNext()) {
         Map<String, Object> record = new HashMap<>();
         BindingSet next = queryResult.next();
-        record.put("appliesToCat", next.getValue("targetClass").stringValue());
+        if(!((Literal)next.getValue("targetIsQuery")).booleanValue()) {
+          record.put("appliesToCat",
+                  next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+        } else {
+          record.put("appliesToQueryResult",
+                  next.hasBinding("targetClass") ? next.getValue("targetClass").stringValue() : null);
+        }
         record
             .put("nodeShapeUid", next.hasBinding("ns") ? next.getValue("ns").stringValue() : null);
 
@@ -1420,7 +1422,7 @@ public class SHACLValidator {
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
                 " %s focus:`%s` RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment +
                 "'%s' as propertyShape, '%s' as offendingValue, "
-                + " '-' as propertyName, " + severityFragment
+                + "'" + (gc !=null && gc.getHandleVocabUris() != GRAPHCONF_VOC_URI_IGNORE ? RDF.TYPE : "type") + "' as propertyName, " + severityFragment
                 + " 'type %s: %s' as message , " + customMsgFragment);
         break;
     }
@@ -1428,119 +1430,6 @@ public class SHACLValidator {
     return String.format(query, args);
 
   }
-
-//  private String getDataTypeViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, CYPHER_DATATYPE_V_SUFF());
-//  }
-
-//  private String getDataTypeViolationQuery2(boolean tx) {
-//    return getQuery(CYPHER_MATCH_REL_WHERE, tx, CYPHER_DATATYPE2_V_SUFF());
-//  }
-
-//  private String getRangeIRIKindViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_IRI_KIND_V_SUFF());
-//  }
-
-//  private String getRangeLiteralKindViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_LITERAL_KIND_V_SUFF());
-//  }
-
-//  private String getRangeType1ViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_REL_WHERE, tx, "", CYPHER_RANGETYPE1_V_SUFF());
-//  }
-
-//  private String getRangeType2ViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_RANGETYPE2_V_SUFF());
-//  }
-
-//  private String getRegexViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_REGEX_V_SUFF());
-//  }
-
-//  private String getHasValueOnTypeAsLabelViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF());
-//  }
-
-//  private String getHasValueOnTypeAsNodeViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF());
-//  }
-
-//  private String getHasValueUriViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_URI_V_SUFF());
-//  }
-
-
-//  private String getHasValueLiteralViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_HAS_VALUE_LITERAL_V_SUFF());
-//  }
-
-//  private String getInLiteralsViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_IN_LITERAL_V_SUFF());
-//  }
-
-//  private String getInUrisViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_IN_URI_V_SUFF());
-//  }
-
-//  private String getTypeAsLabelInUrisViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_IN_URI_V_SUFF());
-//  }
-
-//  private String getTypeAsNodeInUrisViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_IN_URI_V_SUFF());
-//  }
-
-//  private String getMinCardinality1ViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_V_SUFF());
-//  }
-
-//  private String getTypeAsLabelMinCardinalityViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF());
-//  }
-
-//  private String getTypeAsNodeMinCardinalityViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF());
-//  }
-
-//  private String getMinCardinality1InverseViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF());
-//  }
-
-//  private String getMaxCardinality1ViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_V_SUFF());
-//  }
-//
-//  private String getTypeAsLabelMaxCardinalityViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF());
-//  }
-//
-//  private String getTypeAsNodeMaxCardinalityViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF());
-//  }
-//
-//  private String getMaxCardinality1InverseViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF());
-//  }
-
-//  private String getStrLenViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_STRLEN_V_SUFF());
-//  }
-
-//  private String getValueRangeViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_VALRANGE_V_SUFF());
-//  }
-
-//  private String getNodeStructureViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_WITH_PARAMS_MATCH_WHERE, tx, "", CYPHER_NODE_STRUCTURE_V_SUFF());
-//  }
-
-//  private String getDisjointClassesViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_NODE_DISJOINT_WITH_V_SUFF());
-//  }
-
-//  private String getRequiredClassesViolationQuery(boolean tx) {
-//    return getQuery(CYPHER_MATCH_WHERE, tx, "", CYPHER_NODE_REQUIRED_WITH_V_SUFF());
-//  }
 
   private boolean nodesAreUriIdentified() {
     return gc != null ;
@@ -1557,397 +1446,4 @@ public class SHACLValidator {
     return pref + (tx ? CYPHER_TX_INFIX : "") + queryConstraintWhere + suff;
   }
 
-//  private String CYPHER_DATATYPE_V_SUFF(int constraintType) {
-//    return " NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " +
-//        (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, focus.`%s` as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity,"
-//        + " 'property value should be of type ' + " +
-//        (nodesAreUriIdentified() ? " '%s' " : "n10s.rdf.getIRILocalName('%s')")
-//        + " as message , '%s' as customMsg";
-//  }
-
-//  private String CYPHER_DATATYPE2_V_SUFF() {
-//    return " true RETURN " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ")
-//        + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.DATATYPE_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, " + (nodesAreUriIdentified() ? " x.uri " : " 'node id: ' + id(x) ")
-//        + "as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " + ' should be a property, instead it  is a relationship' as message " +
-//            " , '%s' as customMsg";
-//  }
-
-//  private String CYPHER_IRI_KIND_V_SUFF() {
-//    return " (focus)-[:`%s`]->() RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-//        : " id(focus) ") + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, null as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity,"
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " + ' should be a property ' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_LITERAL_KIND_V_SUFF() {
-//    return " exists(focus.`%s`) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-//        : " id(focus) ") + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, null as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity,"
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " + ' should be a relationship ' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_RANGETYPE1_V_SUFF() {
-//    return "NOT x:`%s` RETURN " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ")
-//        + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, " + (nodesAreUriIdentified() ? " x.uri " : " id(x) ")
-//        + " as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity,"
-//        + " 'value should be of type ' + " + (shallIShorten()
-//        ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") + " as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_RANGETYPE2_V_SUFF() {
-//    return "exists(focus.`%s`) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-//        : " id(focus) ") + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, null as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "'%s should be a relationship but it is a property' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_REGEX_V_SUFF() {
-//    return "NOT all(x in [] +  coalesce(focus.`%s`,[]) where toString(x) =~ params.theRegex )  "
-//        + " UNWIND [x in [] +  coalesce(focus.`%s`,[]) where not toString(x) =~ params.theRegex ]  as offval "
-//        + "RETURN "
-//        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.PATTERN_CONSTRAINT_COMPONENT
-//        .stringValue()
-//        + "' as propertyShape, offval as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "'the value of the property does not match the specified regular expression' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_HAS_VALUE_ON_TYPE_AS_LABEL_V_SUFF() {
-//    return
-//              " true with params, focus unwind params.theHasTypeTranslatedUris as reqVal " +
-//                      " with focus, reqVal where not reqVal in labels(focus) "
-//                      + "RETURN "
-//                      + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//                      + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                      + "as nodeType, '%s' as shapeId, '"
-//                      + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT.stringValue() + "' as propertyShape" +
-//                      ", null as offendingValue, "
-//                      + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
-//                      + " as propertyName, '%s' as severity, "
-//                      + "'The required type ' + reqVal + ' could not be found as a label of the focus node ' as message  " +
-//                      " , '%s' as customMsg";
-//
-//  }
-
-//  private String CYPHER_HAS_VALUE_ON_TYPE_AS_NODE_V_SUFF() {
-//
-//    return
-//            " true with params, focus unwind params.theHasTypeUris as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
-//                    + "RETURN "
-//                    + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                    + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-//                    .stringValue()
-//                    + "' as propertyShape, null as offendingValue, "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                    + " as propertyName, '%s' as severity, "
-//                    + "'The required type ' + reqVal  + ' could not be found as value of relationship ' + "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-//                    + " as message   , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_HAS_VALUE_URI_V_SUFF() {
-//    return                                                                                      //not reqVal in [(focus)-[:`%s`]->(v) | v.uri ]
-//        " true with params, focus unwind params.theHasValueUri as reqVal with focus, reqVal where not (focus)-[:`%s`]->({uri: reqVal}) "
-//            + "RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-//            .stringValue()
-//            + "' as propertyShape, null as offendingValue, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "'The required value ' + reqVal  + ' could not be found as value of relationship ' + "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ")
-//            + " as message  , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_HAS_VALUE_LITERAL_V_SUFF() {
-//    return
-//        " true with params, focus unwind params.theHasValueLiteral as  reqVal with focus, reqVal where not reqVal in [] + focus.`%s` "
-//            + "RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.HAS_VALUE_CONSTRAINT_COMPONENT
-//            .stringValue()
-//            + "' as propertyShape, null as offendingValue, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "'The required value \"'+ reqVal + '\" was not found in property ' + " + (
-//            shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s' ") + " as message " +
-//                " , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_IN_LITERAL_V_SUFF() {
-//    return
-//        " true with params, focus unwind [] + focus.`%s` as val with focus, val where %s val in params.theInLiterals "
-//            + "RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
-//            .stringValue()
-//            + "' as propertyShape, val as offendingValue, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "'The value \"'+ val + '\" in property ' + " + (shallIShorten()
-//            ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-//            + "+ 'is not in  the accepted list' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_IN_URI_V_SUFF() {
-//    return
-//        " true with params, focus unwind [(focus)-[:`%s`]->(x) | x ] as val with focus, val where %s val.uri in params.theInUris "
-//            + "RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
-//            .stringValue()
-//            + "' as propertyShape, " + (nodesAreUriIdentified() ? "val.uri" : "id(val)")
-//            + " as offendingValue, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "'The value \"'+ " + (nodesAreUriIdentified() ? " val.uri "
-//            : " 'node id: '  + id(val) ") + " + '\" in property ' + " + (shallIShorten()
-//            ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-//            + "+ ' is not in  the accepted list' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_TYPE_AS_LABEL_IN_URI_V_SUFF() {
-//    // TODO: this query could be optimised by unfolding all the values in the list and checking focus:Type1 and focus:Type2 ... instead of using unwind.
-//    return
-//            " true with params, focus unwind labels(focus) as val with focus, val " +
-//                    " where val <> 'Resource' and %s val in params.theInTypeTranslatedUris "
-//                    + "RETURN "
-//                    + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                    + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
-//                    .stringValue()
-//                    + "' as propertyShape, " + "val as offendingValue, "
-//                    + ((gc == null || gc.getGraphMode() == GRAPHCONF_MODE_LPG) ? " 'type' " : " '" + RDF.TYPE.stringValue() +"' ")
-//                    + " as propertyName, '%s' as severity, "
-//                    + "'The label \"'+ val + '\" is not in  the accepted list' as message , '%s' as customMsg ";
-//  }
-
-  //paramSetId, focusLabel, propOrRel, focusLabel, (String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel
-
-//  private String CYPHER_TYPE_AS_NODE_IN_URI_V_SUFF() {
-//    return
-//            " true with params, focus unwind [(focus)-[:`%s`]->(x) | x ] as val with focus, val where %s val.uri in params.theInTypeUris "
-//                    + "RETURN "
-//                    + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                    + " as nodeType, '%s' as shapeId, '" + SHACL.IN_CONSTRAINT_COMPONENT
-//                    .stringValue()
-//                    + "' as propertyShape, " + (nodesAreUriIdentified() ? "val.uri" : "id(val)")
-//                    + " as offendingValue, "
-//                    + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//                    + " as propertyName, '%s' as severity, "
-//                    + "'The type \"'+ val.uri + '\" (node connected through property ' + " + (shallIShorten()
-//                    ? "n10s.rdf.fullUriFromShortForm('%s') " : " '%s'")
-//                    + "+ ') is not in  the accepted list' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_VALRANGE_V_SUFF() {
-//    return "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + (nodesAreUriIdentified()
-//        ? " focus.uri " : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_EXCLUSIVE_CONSTRAINT_COMPONENT
-//        .stringValue()
-//        + "' as propertyShape, focus.`%s` as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "'' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_MIN_CARDINALITY1_V_SUFF() {
-//    return "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) )  RETURN "
-//        + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') too low'  as message, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_TYPE_AS_NODE_MIN_CARDINALITY1_V_SUFF() {
-//    return "NOT %s ( size((focus)-[:`%s`]->()))  RETURN "
-//            + " focus.uri as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-//            + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too low'  as message, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_TYPE_AS_NODE_MAX_CARDINALITY1_V_SUFF() {
-//    return "NOT ( size((focus)-[:`%s`]->())) %s  RETURN "
-//            + " focus.uri as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-//            + "' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is too high'  as message, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_TYPE_AS_LABEL_MIN_CARDINALITY1_V_SUFF() {
-//    return "NOT %s size("
-//            + (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) " )
-//            + ")  RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-//            + "' as propertyShape,  'number of labels (' + size(" +
-//            (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ") +
-//            ") +') too low'  as message, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + " null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_TYPE_AS_LABEL_MAX_CARDINALITY1_V_SUFF() {
-//    return "NOT size("
-//            + (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ")
-//            + ")  %s   RETURN "
-//            + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-//            + "' as propertyShape,  'number of labels (' + size(" +
-//            (nodesAreUriIdentified() ? " [x in labels(focus) where x <> 'Resource' ] " : " labels(focus) ") +
-//            ") + ') is too high' as message, "
-//            + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//            + " as propertyName, '%s' as severity, "
-//            + " null as offendingValue , '%s' as customMsg ";
-//  }
-//
-//  private String CYPHER_MAX_CARDINALITY1_V_SUFF() {
-//    return "NOT (size((focus)-[:`%s`]->()) + size([] + coalesce(focus.`%s`,[]))) %s  RETURN " + (
-//        nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') is too high' as message, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_MIN_CARDINALITY1_INVERSE_V_SUFF() {   //This will need fixing, the coalesce in first line + the changes to cardinality
-//    return "NOT %s size((focus)<-[:`%s`]-()) RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-//        : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is too low' as message, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_MAX_CARDINALITY1_INVERSE_V_SUFF() {   //Same as previous
-//    return "NOT size((focus)<-[:`%s`]-()) %s RETURN " + (nodesAreUriIdentified() ? " focus.uri "
-//        : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) + ') is too high' as message, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_MIN_CARDINALITY2_V_SUFF() {
-//    return " NOT %s size([] + focus.`%s`) RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
-//    "as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MIN_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, 'unacceptable cardinality: ' + size([] + focus.`%s`) as message, "
-//        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue  ";
-//  }
-//  private String CYPHER_MAX_CARDINALITY2_V_SUFF() {
-//    return " NOT size([] + focus.`%s`) %s RETURN "  + (shallIUseUriInsteadOfId()?" focus.uri ":" id(focus) ") +
-//    " as nodeId, " + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as nodeType, '%s' as shapeId, '" + SHACL.MAX_COUNT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, 'unacceptable cardinality: ' + size([] + focus.`%s`) as message, "
-//        + (shallIShorten()?"n10s.rdf.fullUriFromShortForm('%s')": " '%s' ") + " as propertyName, '%s' as severity, "
-//        + "null as offendingValue  ";
-//  }
-
-//  private String CYPHER_STRLEN_V_SUFF() {
-//    return "NOT all(x in [] +  focus.`%s` where %s size(toString(x)) %s ) RETURN " + (
-//        nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.MAX_LENGTH_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, focus.`%s` as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as propertyName, '%s' as severity, "
-//        + "'' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_NODE_STRUCTURE_V_SUFF() {
-//    return " true \n" +
-//        "UNWIND [ x in [(focus)-[r]->()| type(r)] where not x in params.allAllowedProps] + [ x in keys(focus) where "
-//        +
-//        (nodesAreUriIdentified() ? " x <> 'uri' and " : "")
-//        + " not x in params.allAllowedProps] as noProp\n"
-//        + "RETURN  " + (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//        " as nodeId , " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ")
-//        + " as nodeType, '%s' as shapeId, '"
-//        + SHACL.CLOSED_CONSTRAINT_COMPONENT.stringValue()
-//        + "' as propertyShape, substring(reduce(result='', x in [] + coalesce(focus[noProp],[(focus)-[r]-(x) where type(r)=noProp | "
-//        + (nodesAreUriIdentified() ? " x.uri " : " id(x) ")
-//        + "]) | result + ', ' + x ),2) as offendingValue, "
-//        + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm(noProp)" : " noProp ") +
-//        " as propertyName, '%s' as severity, "
-//        + "'Closed type definition does not include this property/relationship' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_NODE_DISJOINT_WITH_V_SUFF() {
-//    return " focus:`%s` RETURN " + (
-//        nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//        " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//        " as nodeType, '%s' as shapeId, '" + SHACL.NOT_CONSTRAINT_COMPONENT
-//        + "' as propertyShape, '%s' as offendingValue, "
-//        + " '-' as propertyName, '%s' as severity, "
-//        + " 'type not allowed: ' + '%s' as message , '%s' as customMsg ";
-//  }
-
-//  private String CYPHER_NODE_REQUIRED_WITH_V_SUFF() {
-//    return " not focus:`%s` RETURN " + (
-//            nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") +
-//            " as nodeId, " + (shallIShorten() ? "n10s.rdf.fullUriFromShortForm('%s')" : " '%s' ") +
-//            " as nodeType, '%s' as shapeId, '" + SHACL.CLASS_CONSTRAINT_COMPONENT
-//            + "' as propertyShape, 'not %s' as offendingValue, "
-//            + " '-' as propertyName, '%s' as severity, "
-//            + " 'type missing: ' + '%s' as message , '%s' as customMsg ";
-//  }
 }

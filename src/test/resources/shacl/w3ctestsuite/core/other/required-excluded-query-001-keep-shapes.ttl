@@ -1,0 +1,23 @@
+@prefix ex: <http://example/> .
+@prefix neo: <neo4j://graph.schema#> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+
+ex:shape_1
+	a sh:NodeShape ;
+	sh:targetQuery " (focus)-[:`neo4j://graph.schema#lives_in`]-(:`neo4j://graph.schema#City`) " ;
+	sh:class neo:Citizen ;
+	sh:class [ sh:not neo:Villager ] ;
+.
+
+ex:shape_2
+	a sh:NodeShape ;
+	sh:targetQuery " (focus)-[:`neo4j://graph.schema#married_to`]-() " ;
+	sh:class neo:Married ;
+	sh:class [ sh:not neo:Single ] ;
+.
+
+ex:shape_3
+	a sh:NodeShape ;
+	sh:targetQuery " (focus)--() " ;
+	sh:class [ sh:not neo:OrphanNode ] ;
+.
