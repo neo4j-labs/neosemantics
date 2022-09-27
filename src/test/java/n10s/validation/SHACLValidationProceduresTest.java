@@ -1764,7 +1764,7 @@ public class SHACLValidationProceduresTest {
           "    sh:datatype xsd:string ;\n" +
           "  ];\n" +
           "  sh:class neo4j:Person ;\n" +
-          "  sh:not [ sh:class neo4j:Man ] ;\n" +
+          "  sh:class [ sh:not neo4j:Man ] ;\n" +
           ".\n" +
           "ex:manShape a sh:NodeShape ;\n" +
           "  sh:targetClass neo4j:Man ;\n" +
