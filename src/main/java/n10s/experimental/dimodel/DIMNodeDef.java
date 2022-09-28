@@ -52,7 +52,7 @@ public class DIMNodeDef {
         props.forEach( (k, v) -> {
             Map<String, Object> prop = new HashMap<>();
             prop.put("property", k.getLocalName());
-            prop.put("type", v!=null?v.getLocalName():"string");
+            prop.put("type", v!=null?convertToDIDataType(v):"string");
             prop.put("identifier", k.stringValue());
             properties.add(prop);
         });
@@ -62,6 +62,22 @@ public class DIMNodeDef {
         key.put("name","");
 
         return map;
+    }
+
+    private String convertToDIDataType(IRI datatype) {
+        if (datatype.equals(XSD.INTEGER)||datatype.equals(XSD.INT)||datatype.equals(XSD.POSITIVE_INTEGER)||
+                datatype.equals(XSD.NEGATIVE_INTEGER)||datatype.equals(XSD.NON_POSITIVE_INTEGER)||
+                datatype.equals(XSD.NON_NEGATIVE_INTEGER)||datatype.equals(XSD.LONG)||datatype.equals(XSD.SHORT)||
+                datatype.equals(XSD.UNSIGNED_LONG)||datatype.equals(XSD.UNSIGNED_SHORT)){
+            return "integer";
+        } else if (datatype.equals(XSD.DECIMAL)||datatype.equals(XSD.FLOAT)||datatype.equals(XSD.DOUBLE)) {
+            return "float";
+        } else if (datatype.equals(XSD.BOOLEAN)){
+            return "boolean";
+        } else {
+            return "string";
+        }
+
     }
 
     public Map<String, Object> getRelSchemasAsJsonObject(){
