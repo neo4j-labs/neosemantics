@@ -2746,8 +2746,7 @@ public class RDFProceduresTest {
 
     }
   }
-
-  @Ignore
+  
   @Test
   public void testLargerFileManyTransactions() throws Exception {
     try (Session session = driver.session()) {
