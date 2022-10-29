@@ -1272,7 +1272,7 @@ public class SHACLValidator {
       case "GetRangeLiteralKind":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                " exists(focus.`%s`) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                " focus.`%s` is not null RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                         + "'" + SHACL.NODE_KIND_CONSTRAINT_COMPONENT
                         + "' as propertyShape, null as offendingValue, "
                         + propertyNameFragment + severityFragment
@@ -1297,7 +1297,7 @@ public class SHACLValidator {
       case "GetRangeType2":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                "exists(focus.`%s`) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                " focus.`%s` is not null RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                         + "'" + SHACL.CLASS_CONSTRAINT_COMPONENT
                         + "' as propertyShape, focus.`%s` as offendingValue, "
                         + propertyNameFragment + severityFragment
@@ -1381,25 +1381,25 @@ public class SHACLValidator {
       case "TypeAsNodeMinCardinality":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                "NOT %s ( size((focus)-[:`%s`]->())) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
-                + "'%s' as propertyShape,  'type cardinality (' + coalesce(size((focus)-[:`%s`]->()),0) + ') is outside the defined min-max limits'  as message, "
+                "NOT %s ( size([(focus)-[rel:`%s`]->() | rel ])) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'type cardinality (' + coalesce(size([(focus)-[rel:`%s`]->() | rel ]),0) + ') is outside the defined min-max limits'  as message, "
                 + propertyNameFragment + severityFragment
                 + " null as offendingValue , " + customMsgFragment);
         break;
       case "MinCardinality1":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                "NOT %s ( size((focus)-[:`%s`]->()) +  size([] + coalesce(focus.`%s`, [])) ) %s RETURN "
+                "NOT %s ( size([(focus)-[rel:`%s`]->()| rel ]) +  size([] + coalesce(focus.`%s`, [])) ) %s RETURN "
                 + nodeIdFragment + nodeTypeFragment + shapeIdFragment
-                + "'%s' as propertyShape,  'cardinality (' + (coalesce(size((focus)-[:`%s`]->()),0) + coalesce(size([] + focus.`%s`),0)) + ') is outside the defined min-max limits'  as message, "
+                + "'%s' as propertyShape,  'cardinality (' + (coalesce(size([(focus)-[rel:`%s`]->()| rel ]),0) + coalesce(size([] + focus.`%s`),0)) + ') is outside the defined min-max limits'  as message, "
                 + propertyNameFragment + severityFragment
                 + "null as offendingValue , " + customMsgFragment);
         break;
       case "MinCardinality1Inverse":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                "NOT %s size((focus)<-[:`%s`]-()) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
-                + "'%s' as propertyShape,  'incoming cardinality (' + coalesce(size((focus)<-[:`%s`]-()),0) +') is outside the defined min-max limits' as message, "
+                "NOT %s size([(focus)<-[rel:`%s`]-() | rel ]) %s RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape,  'incoming cardinality (' + coalesce(size([ (focus)<-[rel:`%s`]-()| rel ]),0) +') is outside the defined min-max limits' as message, "
                 + propertyNameFragment + severityFragment
                 + "null as offendingValue , " + customMsgFragment);
         break;

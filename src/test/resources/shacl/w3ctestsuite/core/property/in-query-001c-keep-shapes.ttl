@@ -10,7 +10,7 @@
 @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 neo:ShapeClass
-  sh:targetQuery " size((focus)-[:`neo4j://graph.schema#rel`]-()) > 3 " ;
+  sh:targetQuery " size([(focus)-[r:`neo4j://graph.schema#rel`]-() | id(r)]) > 3 " ;
   rdf:type sh:NodeShape ;
   sh:property ex:ShapeClass-property ;
 .

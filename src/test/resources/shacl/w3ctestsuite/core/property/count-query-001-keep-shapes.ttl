@@ -12,7 +12,7 @@
 ex:PersonShape
   rdf:type sh:NodeShape ;
   sh:property ex:PersonShape-pob ;
-  sh:targetQuery " exists (focus.`neo4j://graph.schema#hasPob`)  " ;
+  sh:targetQuery " focus.`neo4j://graph.schema#hasPob` is not null  " ;
 .
 
 ex:PersonShape-pob

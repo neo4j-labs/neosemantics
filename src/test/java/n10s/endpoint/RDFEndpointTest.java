@@ -1206,7 +1206,7 @@ public class RDFEndpointTest {
     }
 
     Map<String, Object> map = new HashMap<>();
-    map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
+    map.put("cypher", "MATCH (n:Category)--(:Category) RETURN distinct n LIMIT 4");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
@@ -2382,7 +2382,7 @@ public class RDFEndpointTest {
   public void testCypherOnQuadRDFSerializeAsTriG() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2419,7 +2419,7 @@ public class RDFEndpointTest {
   public void testCypherOnQuadRDFSerializeAsNQuads() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2456,7 +2456,7 @@ public class RDFEndpointTest {
   public void testNodeByUriOnQuadRDF() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2490,7 +2490,7 @@ public class RDFEndpointTest {
   public void testNodeByUriWithGraphUriOnQuadRDFTrig() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2531,7 +2531,7 @@ public class RDFEndpointTest {
   public void testNodeByUriWithGraphUriOnQuadRDFNQuads() throws Exception {
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2570,7 +2570,7 @@ public class RDFEndpointTest {
     // Given
     final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("create index for (n:Resource) on (n.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2639,7 +2639,7 @@ public class RDFEndpointTest {
     //  check data is  correctly loaded
     Long id;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("match (n:ConceptScheme) return properties(n) as n, size((n)--()) as deg");
+      Result result = tx.execute("match (n:ConceptScheme) return properties(n) as n, size([(n)-[r]-()| r]) as deg");
       Map<String, Object> next = result.next();
       Map<String,Object> n = (Map<String,Object>)next.get("n");
       long[] tcVals = (long[])n.get("topConcepts");

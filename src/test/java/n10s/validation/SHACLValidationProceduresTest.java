@@ -300,7 +300,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE ");
       session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
       session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
       session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
@@ -324,7 +324,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
       session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
       session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
@@ -377,7 +377,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
@@ -434,7 +434,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
@@ -510,7 +510,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
@@ -591,7 +591,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
@@ -640,7 +640,7 @@ public class SHACLValidationProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init( { handleMultival: 'ARRAY', "
           + "multivalPropList: [ 'http://stardog.com/tutorial/date'] })");
       session.run("CALL n10s.nsprefixes.add('tut','http://stardog.com/tutorial/')");
@@ -723,7 +723,7 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
@@ -825,7 +825,7 @@ public class SHACLValidationProceduresTest {
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       Result result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -898,7 +898,7 @@ public class SHACLValidationProceduresTest {
       session.run("MATCH (n) DETACH DELETE n");
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       //RDF SHORTEN GRAPH
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
       session.run("CALL n10s.graphconfig.init()");
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://graph.schema#')");
       session.run("CALL n10s.nsprefixes.add('ex','http://example/')");
@@ -1029,7 +1029,7 @@ public class SHACLValidationProceduresTest {
 
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
 
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
@@ -1090,7 +1090,7 @@ public class SHACLValidationProceduresTest {
 
       session.run("CALL n10s.graphconfig.init()");
 
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE resource.uri IS UNIQUE  ");
 
       String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
           + "@prefix neo4j: <neo4j://graph.schema#> .\n"
@@ -1175,7 +1175,7 @@ public class SHACLValidationProceduresTest {
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
       session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      assertTrue(session.run("call db.schemaStatements").hasNext());
+      assertTrue(session.run("show unique constraints yield name").hasNext());
 
       Result loadShapesResult = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -1479,14 +1479,14 @@ public class SHACLValidationProceduresTest {
 
       Session session = driver.session();
       Result getschemastatementsResults = session
-          .run("call db.schemaStatements() yield name return name");
+          .run("show unique constraints yield name");
       if (getschemastatementsResults.hasNext() &&
           getschemastatementsResults.next().get("name").asString()
               .equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
         //constraint exists. do nothing.
       } else {
         session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-        assertTrue(session.run("call db.schemaStatements").hasNext());
+        assertTrue(session.run("show unique constraints yield name").hasNext());
       }
 
       //db is empty

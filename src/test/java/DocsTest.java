@@ -80,7 +80,7 @@ public class DocsTest {
     List<Row> rows = new ArrayList<>();
 
     List<Row> procedureRows = db.defaultDatabaseService().executeTransactionally(
-        "CALL dbms.procedures() YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'procedure' AS type, name, description, signature ORDER BY signature",
+        "show procedures YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'procedure' AS type, name, description, signature ORDER BY signature",
         Collections.emptyMap(),
         result -> result.stream().map(record -> new Row(
             record.get("type").toString(),
@@ -91,7 +91,7 @@ public class DocsTest {
     rows.addAll(procedureRows);
 
     List<Row> functionRows = db.defaultDatabaseService().executeTransactionally(
-        "CALL dbms.functions() YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'function' AS type, name, description, signature ORDER BY signature",
+        "show functions YIELD signature, name, description WHERE name STARTS WITH 'n10s' RETURN 'function' AS type, name, description, signature ORDER BY signature",
         Collections.emptyMap(),
         result -> result.stream().map(record -> new Row(
             record.get("type").toString(),

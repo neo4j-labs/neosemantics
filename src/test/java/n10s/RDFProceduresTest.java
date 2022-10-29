@@ -376,8 +376,7 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      session.run("CALL db.index.fulltext.createNodeIndex(\"multiLabelIndex\","
-          + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
+      session.run("CREATE FULLTEXT INDEX titlesAndDescriptions FOR (n:Movie|Book) ON EACH [n.title, n.description]");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
@@ -398,7 +397,7 @@ public class RDFProceduresTest {
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
         Config.builder().withoutEncryption().build()); Session session = driver.session()) {
 
-      session.run("CREATE INDEX ON :Person(age, country)");
+      session.run("CREATE INDEX FOR (p:Person) ON (p.age, p.country)");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
@@ -459,7 +458,7 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
       assertEquals(1L,
           session.run(
-              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              "MATCH (n) WHERE n.`http://xmlns.com/foaf/0.1/modified` is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
   }
@@ -838,7 +837,7 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
       assertEquals(1L,
           session.run(
-              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              "MATCH (n) WHERE n.`http://xmlns.com/foaf/0.1/modified` is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
   }
@@ -911,8 +910,8 @@ public class RDFProceduresTest {
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
               .next().get("uri").asString());
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.ns0" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
 
       assertEquals("ns0",
@@ -933,8 +932,8 @@ public class RDFProceduresTest {
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
               .next().get("uri").asString());
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.ns0" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
 
       assertEquals("ns0",
@@ -993,8 +992,8 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
 
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.one" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.one" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
 
@@ -3796,7 +3795,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3817,14 +3816,14 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
@@ -3872,7 +3871,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3893,14 +3892,14 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`ns0__friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`ns0__knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
@@ -3944,7 +3943,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3965,14 +3964,14 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
@@ -4087,7 +4086,7 @@ public class RDFProceduresTest {
   }
 
   private void initialiseGraphDBForQuads(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally("create index for (n:Resource) on (n.uri)");
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }

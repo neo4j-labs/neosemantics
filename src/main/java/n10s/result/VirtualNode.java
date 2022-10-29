@@ -11,11 +11,7 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import n10s.Util;
-import org.neo4j.graphdb.Direction;
-import org.neo4j.graphdb.Label;
-import org.neo4j.graphdb.Node;
-import org.neo4j.graphdb.Relationship;
-import org.neo4j.graphdb.RelationshipType;
+import org.neo4j.graphdb.*;
 import org.neo4j.internal.helpers.collection.FilteringIterable;
 import org.neo4j.internal.helpers.collection.Iterables;
 
@@ -62,6 +58,12 @@ public class VirtualNode implements Node {
   }
 
   @Override
+  public String getElementId()
+  {
+    return String.valueOf( id );
+  }
+
+  @Override
   public void delete() {
     for (Relationship rel : rels) {
       rel.delete();
@@ -69,8 +71,8 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Iterable<Relationship> getRelationships() {
-    return rels;
+  public ResourceIterable<Relationship> getRelationships() {
+    return Iterables.asResourceIterable(rels);
   }
 
   @Override
@@ -79,8 +81,8 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(RelationshipType... relationshipTypes) {
-    return new FilteringIterable<>(rels, (r) -> isType(r, relationshipTypes));
+  public ResourceIterable<Relationship> getRelationships(RelationshipType... relationshipTypes) {
+    return Iterables.asResourceIterable(new FilteringIterable<>(rels, (r) -> isType(r, relationshipTypes)));
   }
 
   private boolean isType(Relationship r, RelationshipType... relationshipTypes) {
@@ -93,10 +95,10 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(Direction direction,
+  public ResourceIterable<Relationship> getRelationships(Direction direction,
       RelationshipType... relationshipTypes) {
-    return new FilteringIterable<>(rels,
-        (r) -> isType(r, relationshipTypes) && isDirection(r, direction));
+    return Iterables.asResourceIterable(new FilteringIterable<>(rels,
+        (r) -> isType(r, relationshipTypes) && isDirection(r, direction)));
   }
 
   private boolean isDirection(Relationship r, Direction direction) {
@@ -115,8 +117,8 @@ public class VirtualNode implements Node {
   }
 
   @Override
-  public Iterable<Relationship> getRelationships(Direction direction) {
-    return new FilteringIterable<>(rels, (r) -> isDirection(r, direction));
+  public ResourceIterable<Relationship> getRelationships(Direction direction) {
+    return Iterables.asResourceIterable(new FilteringIterable<>(rels, (r) -> isDirection(r, direction)));
   }
 
   @Override
