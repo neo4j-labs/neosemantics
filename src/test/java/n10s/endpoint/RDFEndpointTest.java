@@ -144,21 +144,28 @@ public class RDFEndpointTest {
       assertNotNull(id);
     }
 
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return n.name as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
             + id.toString());
 
-    String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#5\",\n"
+    String expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
         + "  \"neo4j://graph.schema#FRIEND_OF\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#7\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%2$s\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Critic\" ],\n"
         + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
         + "  } ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -167,7 +174,11 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Hugo Weaving\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]",
+            nameToId.get("Carrie-Anne Moss"),
+            nameToId.get("Hugo Weaving"),
+            nameToId.get("Andy Wachowski")
+            );
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
@@ -684,20 +695,20 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
             + id3.toString());
 
-    String expected = MessageFormat.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
+    String expected = String.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "@prefix neovoc: <neo4j://graph.schema#> .\n"
         + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
         + "\n"
-        + "neoind:{3} a neovoc:Critic;\n"
-        + "  neovoc:WORKS_WITH neoind:{4};\n"
+        + "neoind:%2$s a neovoc:Critic;\n"
+        + "  neovoc:WORKS_WITH neoind:%3$s;\n"
         + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
         + "  neovoc:name \"Hugo Weaving\" .\n"
         + "\n"
-        + "<<neoind:{1} neovoc:FRIEND_OF neoind:{3}>> neovoc:since \"the early days\" .\n"
+        + "<<neoind:%1$s neovoc:FRIEND_OF neoind:%2$s>> neovoc:since \"the early days\" .\n"
         + "\n"
-        + "<<neoind:{3} neovoc:WORKS_WITH neoind:{4}>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<<neoind:%2$s neovoc:WORKS_WITH neoind:%3$s>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
         + "\n"
-        + "neoind:{1} neovoc:FRIEND_OF neoind:{3} .",  null,id1, null, id3, id4);
+        + "neoind:%1$s neovoc:FRIEND_OF neoind:%2$s .", id1, id3, id4);
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
@@ -1056,8 +1067,8 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Director/name/Laurence%20Fishburne");
 
-    expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+    expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1066,7 +1077,7 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]", id.toString());
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
@@ -1076,8 +1087,16 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Actor/born/1964?valType=INTEGER");
 
-    expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#4\",\n"
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return n.name as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
+    expected = String.format(
+  "[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1087,12 +1106,12 @@ public class RDFEndpointTest {
         + "    \"@value\" : \"Keanu Reeves\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
         + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#8\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%3$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1101,7 +1120,12 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Andy Wachowski\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]",
+          nameToId.get("Keanu Reeves"),   //0
+          nameToId.get("Hugo Weaving"),   //1
+          nameToId.get("Andy Wachowski") //2
+
+    );
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
