@@ -1,18 +1,20 @@
 package n10s;
 
+import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
+import n10s.rdf.RDFProcedures;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -32,20 +34,33 @@ import static n10s.graphconfig.Params.*;
 import static org.junit.Assert.*;
 
 public class RDFExportTest {
+  public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(RDFExportProcedures.class)
-      .withProcedure(MappingUtils.class)
-      .withProcedure(RDFLoadProcedures.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(RDFExportProcedures.class)
+          .withProcedure(MappingUtils.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+  }
+
 
 
   @Test
   public void testExportFromCypherOnLPG() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       session
           .run(
@@ -80,8 +95,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnLPGPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       session
               .run(
@@ -119,11 +133,7 @@ public class RDFExportTest {
 
   @Test
   public void testCypherOnRDFGraphPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
@@ -133,11 +143,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
               RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                       .toURI() + "','Turtle-star')");
@@ -145,11 +151,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ') ");
@@ -177,37 +179,23 @@ public class RDFExportTest {
 
   @Test
   public void testSPOExportOnRDFGraphPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
       session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
 
       assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
-
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
               RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                       .toURI() + "','Turtle-star')");
       assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
-
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result res
               = session.run(" CALL n10s.rdf.export.spo(null,null,null)");
 
@@ -229,13 +217,11 @@ public class RDFExportTest {
       }
       assertEquals(resultCount, expected.size());
     }
-
   }
 
   @Test
   public void testExportFromCypherOnLPGWithMappings() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       session
               .run(
@@ -280,17 +266,13 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnRDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
+    try (Session session = driver.session();) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN' } ");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
               jsonLdFragment + "','JSON-LD')");
@@ -358,11 +340,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternNoGraphConfig() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Transaction tx = session.beginTransaction();
       tx.run(Files.readString(Paths.get(
               RDFExportTest.class.getClassLoader().getResource("movies.cypher").getPath())));
@@ -377,11 +355,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " {} ");
 
@@ -391,16 +365,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenMultival() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleMultival: 'ARRAY'} ");
 
@@ -410,16 +379,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(2);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleRDFTypes: 'NODES'} ");
 
@@ -429,16 +393,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphKeepDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'KEEP' } ");
 
@@ -452,11 +411,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenDefaultWithMappings() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
@@ -465,11 +420,7 @@ public class RDFExportTest {
       assertEquals(2L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
               jsonLdFragment + "','JSON-LD')");
       assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
@@ -481,11 +432,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes2() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleRDFTypes: 'LABELS_AND_NODES'} ");
 
@@ -495,11 +442,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       String expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
               "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
               "\n" +
@@ -544,11 +487,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphIgnoreDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'IGNORE' } ");
 
@@ -558,16 +497,11 @@ public class RDFExportTest {
 
     }
     allTriplePatternsIgnore(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphIgnoreDefaultMultivalued() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'IGNORE' , handleMultival: 'ARRAY'} ");
 
@@ -577,14 +511,10 @@ public class RDFExportTest {
 
     }
     allTriplePatternsIgnore(2);
-
   }
 
   private void allTriplePatternsOnLPG() throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-
+    try (Session session = driver.session()) {
       //getting a node's assigned uri
       long emilId = session
               .run("MATCH (n:Person) WHERE n.name = \"Emil Eifrem\" RETURN id(n) as id ").next().get("id").asLong();
@@ -859,8 +789,7 @@ public class RDFExportTest {
 
 
   private void allTriplePatterns( int mode) throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       //getting a bnode's assigned uri
       String bnodeUri = session
@@ -1183,8 +1112,7 @@ public class RDFExportTest {
 
 
   private void allTriplePatternsIgnore( int mode) throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       //getting a bnode's assigned uri
       String bnodeUri = session
@@ -1562,8 +1490,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnLPGPointTypeProperties() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       session.run("CREATE (n:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222})  })");
 

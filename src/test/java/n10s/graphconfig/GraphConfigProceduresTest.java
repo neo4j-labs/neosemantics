@@ -28,7 +28,7 @@ public class GraphConfigProceduresTest {
       @Before
       public void cleanDatabase() {
           driver.session().run("match (n) detach delete n").consume();
-          driver.session().run("drop constraint n10s_unique_uri if exists");
+          driver.session().run("drop constraint n10s_unique_uri if exists").consume();
       }
 
   @Test

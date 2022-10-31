@@ -1026,7 +1026,7 @@ public class RDFEndpointTest {
     }
     Long id = null;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
+      Result result = tx.execute("MATCH (n:Director {name:'Laurence Fishburne'}) RETURN id(n) AS id ");
       id = (Long) result.next().get("id");
       assertNotNull(id);
     }
