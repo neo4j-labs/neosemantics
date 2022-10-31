@@ -17,16 +17,17 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.internal.value.NodeValue;
+import org.neo4j.driver.types.Node;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
@@ -62,9 +63,13 @@ public class RDFExportTest {
   public void testExportFromCypherOnLPG() throws Exception {
     try (Session session = driver.session()) {
 
-      session
-          .run(
-              "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       Result res
           = session
@@ -73,13 +78,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
@@ -97,10 +102,14 @@ public class RDFExportTest {
   public void testExportFromCypherOnLPGPropsOnRels() throws Exception {
     try (Session session = driver.session()) {
 
-      session
-              .run(
-                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO" +
-                              " { since: 12345 , kind: 'principal' }]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO" +
+                       " { since: 12345 , kind: 'principal' }]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       Result res
               = session
@@ -109,16 +118,16 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L)),
-              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L)),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
                       vf.createIRI(DEFAULT_BASE_SCH_NS + "since"), vf.createLiteral(12345L)),
-              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
                       vf.createIRI(DEFAULT_BASE_SCH_NS + "kind"), vf.createLiteral("principal"))));
 
       int resultCount = 0;
@@ -223,9 +232,13 @@ public class RDFExportTest {
   public void testExportFromCypherOnLPGWithMappings() throws Exception {
     try (Session session = driver.session()) {
 
-      session
-              .run(
-                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       session.run("call n10s.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
       session.run("call n10s.nsprefixes.add('myv','http://myvoc.org/testing#')");
@@ -246,13 +259,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propB"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://xmlns.com/foaf/0.1/linkedTo"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://myvoc.org/testing#propB"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://xmlns.com/foaf/0.1/linkedTo"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
@@ -1492,8 +1505,15 @@ public class RDFExportTest {
   public void testExportFromCypherOnLPGPointTypeProperties() throws Exception {
     try (Session session = driver.session()) {
 
-      session.run("CREATE (n:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222})  })");
+      Map<String, String> idMap = new HashMap<>();
+      {
+        Record record = session
+                .run("CREATE (n0:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222}) }) return n0")
+                .next();
 
+
+        idMap.put("0", String.valueOf(((NodeValue) record.get("n0")).asNode().id()));
+      }
       Result res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing) RETURN n ', {}) ");
@@ -1501,9 +1521,9 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
                       vf.createLiteral("Point(-0.1275 51.507222222)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
 
       int resultCount = 0;
@@ -1514,18 +1534,22 @@ public class RDFExportTest {
       }
       assertEquals(resultCount,expectedStatememts.size());
 
+      {
+        Record record = session
+                .run("CREATE (n1:GeoLocatedThing3D { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222, z: 34.0 })}) return n1")
+                .next();
 
-      session.run("CREATE (n:GeoLocatedThing3D { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222, z: 34.0 })  })");
-
+        idMap.put("1", String.valueOf(((NodeValue) record.get("n1")).asNode().id()));
+      }
       res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing3D) RETURN n ', {}) ");
       assertTrue(res.hasNext());
 
       expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing3D")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing3D")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
                       vf.createLiteral("Point(-0.1275 51.507222222 34.0)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
 
       resultCount = 0;
