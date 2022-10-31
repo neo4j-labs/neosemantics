@@ -14,6 +14,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.*;
 
 import n10s.ModelTestUtils;
@@ -24,15 +25,16 @@ import n10s.onto.load.OntoLoadProcedures;
 import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
 import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
+import n10s.rdf.aggregate.CollectTriples;
 import n10s.rdf.delete.RDFDeleteProcedures;
 import n10s.rdf.export.ExportProcessor;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -51,23 +53,52 @@ import org.neo4j.test.server.HTTP.Response;
  */
 public class RDFEndpointTest {
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
-      .withProcedure(RDFLoadProcedures.class)
-      .withProcedure(QuadRDFLoadProcedures.class)
-      .withProcedure(QuadRDFDeleteProcedures.class)
-      .withFunction(RDFProcedures.class)
-      .withProcedure(MappingUtils.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withProcedure(RDFDeleteProcedures.class)
-      .withProcedure(OntoLoadProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(ValidationProcedures.class)
-      .withProcedure(RDFExportProcedures.class);
+  public static Driver driver;
+  public static GraphDatabaseService graphDatabaseService;
+  public static GraphDatabaseService tempGDBs;
+  public static Driver tempDriver;
 
-  @Rule
-  public Neo4jRule temp = new Neo4jRule().withProcedure(RDFLoadProcedures.class)
-      .withProcedure(GraphConfigProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(QuadRDFLoadProcedures.class)
+          .withProcedure(QuadRDFDeleteProcedures.class)
+          .withFunction(RDFProcedures.class)
+          .withProcedure(MappingUtils.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(RDFDeleteProcedures.class)
+          .withProcedure(OntoLoadProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class)
+          .withProcedure(ValidationProcedures.class)
+          .withProcedure(RDFExportProcedures.class);
+
+    @ClassRule
+    public static Neo4jRule temp = new Neo4jRule()
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(GraphConfigProcedures.class);
+    @BeforeClass
+    public static void init() {
+        driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build());
+
+        tempDriver = GraphDatabase.driver(temp.boltURI(),
+                Config.builder().withoutEncryption().build());
+    }
+    @Before
+    public void cleanDatabase() {
+        driver.session().run("match (n) detach delete n").consume();
+        driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+        driver.session().run("drop index uri_index if exists").consume();
+
+
+        tempDriver.session().run("match (n) detach delete n").consume();
+        tempDriver.session().run("drop constraint n10s_unique_uri if exists").consume();
+        tempDriver.session().run("drop index uri_index if exists").consume();
+
+        graphDatabaseService = neo4j.defaultDatabaseService();
+        tempGDBs = temp.defaultDatabaseService();
+    }
+
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -83,7 +114,6 @@ public class RDFEndpointTest {
   @Test
   public void testGetNodeById() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -104,7 +134,6 @@ public class RDFEndpointTest {
           "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
-
     }
 
     // When
@@ -112,7 +141,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
       id = (Long) result.next().get("id");
-      assertEquals(Long.valueOf(7), id);
+      assertNotNull(id);
     }
 
     // When
@@ -173,7 +202,6 @@ public class RDFEndpointTest {
   @Test
   public void testGetNodeByIdFromRDFizedLPG() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String configCreation = "CALL n10s.graphconfig.init({handleVocabUris:'IGNORE'}) ";
@@ -242,7 +270,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherCgnt() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("UNWIND RANGE(1,5,1) as id\n" +
@@ -409,7 +436,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherReturnsList() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
@@ -418,11 +444,11 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-        String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-            "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-            "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-            "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-            "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+        String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://person#1', name:'Keanu Reeves', born:1964})\n" +
+            "CREATE (Carrie:Director {uri:'neo4j://person#2', name:'Carrie-Anne Moss', born:1967})\n" +
+            "CREATE (Laurence:Director {uri:'neo4j://person#3', name:'Laurence Fishburne', born:1961})\n" +
+            "CREATE (Hugo:Critic {uri:'neo4j://person#4', name:'Hugo Weaving', born:1960})\n" +
+            "CREATE (AndyW:Actor {uri:'neo4j://person#5', name:'Andy Wachowski', born:1967})\n" +
             "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
             "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
         tx.execute(dataInsertion);
@@ -439,31 +465,33 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
-        + "<neo4j://graph.individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
-        + "<neo4j://graph.individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
-        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
-        + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
-        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
+    String expected = "<neo4j://person#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://person#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
+        + "<neo4j://person#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
+        + "<neo4j://person#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://person#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
+        + "<neo4j://person#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
+        + "<neo4j://person#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://person#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://person#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
+        + "<neo4j://person#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
     assertEquals(200, response.status());
+
+    String responseString = response.rawContent();
+
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+        .compareModels(expected, RDFFormat.TURTLE, responseString, RDFFormat.TURTLE));
 
   }
 
   @Test
   public void testPrefixwithHyphen() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -529,7 +557,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherOnMovieDBReturnsList() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
@@ -589,7 +616,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherReturnsListOnRDFGraph() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -628,7 +654,6 @@ public class RDFEndpointTest {
   @Test
   public void testGetNodeByIdRDFStar() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
@@ -642,35 +667,37 @@ public class RDFEndpointTest {
       tx.commit();
 
     }
-    Long id;
+    Long id1;
+    Long id4;
+    Long id3;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("MATCH (n:Critic)-[fo:FRIEND_OF]-() RETURN id(n) as id, "
-          + " fo.since AS since ");
+      Result result = tx.execute("MATCH (n3:Critic), (n4:Actor {name:'Andy Wachowski'}), (n1:Director {name:'Carrie-Anne Moss'}) " +
+              "return id(n1) as id1, id(n4) as id4, id(n3) as id3");
       Map<String, Object> next = result.next();
-      String since = (String) next.get("since");
-      assertEquals("the early days", since);
-      id = (Long) next.get("id");
+      id1 = (Long) next.get("id1");
+      id4 = (Long) next.get("id4");
+      id3 = (Long) next.get("id3");
     }
 
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
-            + id.toString());
+            + id3.toString());
 
-    String expected = "@prefix neoind: <neo4j://graph.individuals#> .\n"
+    String expected = MessageFormat.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "@prefix neovoc: <neo4j://graph.schema#> .\n"
         + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
         + "\n"
-        + "neoind:3 a neovoc:Critic;\n"
-        + "  neovoc:WORKS_WITH neoind:4;\n"
+        + "neoind:{3} a neovoc:Critic;\n"
+        + "  neovoc:WORKS_WITH neoind:{4};\n"
         + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
         + "  neovoc:name \"Hugo Weaving\" .\n"
         + "\n"
-        + "<<neoind:1 neovoc:FRIEND_OF neoind:3>> neovoc:since \"the early days\" .\n"
+        + "<<neoind:{1} neovoc:FRIEND_OF neoind:{3}>> neovoc:since \"the early days\" .\n"
         + "\n"
-        + "<<neoind:3 neovoc:WORKS_WITH neoind:4>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<<neoind:{3} neovoc:WORKS_WITH neoind:{4}>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
         + "\n"
-        + "neoind:1 neovoc:FRIEND_OF neoind:3 .";
+        + "neoind:{1} neovoc:FRIEND_OF neoind:{3} .",  null,id1, null, id3, id4);
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
@@ -680,7 +707,6 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetNodeById() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -708,19 +734,17 @@ public class RDFEndpointTest {
 
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
       id = (Long) result.next().get("id");
-      assertEquals(7, id);
+      assertNotNull(id);
     }
 
-    try (Driver driver = GraphDatabase.driver(temp.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      session
-          .run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
-      org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.import.fetch('" +
-          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
-          + id +
-          "','Turtle')");
+    Session session = tempDriver.session();
+    session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
+    session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
+    org.neo4j.driver.Result importResults
+        = session.run("CALL n10s.rdf.import.fetch('" +
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+        + id +
+        "','Turtle')");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -740,14 +764,12 @@ public class RDFEndpointTest {
         assertEquals("neo4j://graph.individuals#" + criticPreImport.get("id"),
             criticPostImport.get("uri").asString());
       }
-    }
   }
 
 
   @Test
   public void ImportGetNodeByIdOnImportedOnto() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -797,7 +819,6 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetNodeByUriOnImportedOntoShorten() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -862,7 +883,6 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetNodeByUriOnImportedOntoIgnore() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -925,9 +945,6 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetCypher() throws Exception {
 
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-    final GraphDatabaseService tempGDBs = temp.defaultDatabaseService();
-
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
           "MERGE (a:Category {catName: 'Actor'})\n" +
@@ -955,21 +972,20 @@ public class RDFEndpointTest {
           "MATCH (n:Critic) RETURN n.born AS born, n.name AS name , n.uri as uri, id(n) as id");
       preImport = result.next();
       assertEquals(1960L, preImport.get("born"));
-      assertEquals(7L, preImport.get("id"));
+      assertNotNull(preImport.get("id"));
       assertEquals("Hugo Weaving", preImport.get("name"));
       //no uri pre-import
       assertNull(preImport.get("uri"));
     }
 
-    try (Driver driver = GraphDatabase.driver(temp.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
-      org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.import.fetch('" +
-          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher" +
-          "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
-          + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
+    Session session = tempDriver.session();
+    session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
+    session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
+    org.neo4j.driver.Result importResults
+        = session.run("CALL n10s.rdf.import.fetch('" +
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher" +
+        "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
+        + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -982,14 +998,11 @@ public class RDFEndpointTest {
       assertEquals(preImport.get("born"), criticPostImport.get("born").asLong());
       assertEquals("neo4j://graph.individuals#" + preImport.get("id"),
           criticPostImport.get("uri").asString());
-    }
-
   }
+
 
   @Test
   public void testFindNodeByLabelAndProperty() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -1011,18 +1024,19 @@ public class RDFEndpointTest {
       tx.execute(dataInsertion);
       tx.commit();
     }
-
+    Long id = null;
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
-      assertEquals(7L, result.next().get("id"));
+      id = (Long) result.next().get("id");
+      assertNotNull(id);
     }
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Director/born/1961?valType=INTEGER");
 
-    String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+    String expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1031,7 +1045,7 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]", id.toString());
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -1141,7 +1155,7 @@ public class RDFEndpointTest {
     assertEquals("[ ]", response.rawContent());
     assertEquals(200, response.status());
 
-    try (Transaction tx = neo4j.defaultDatabaseService().beginTx()) {
+    try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.commit();
     }
@@ -1177,8 +1191,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnLPG() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
@@ -1247,7 +1259,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherOnLPGMappingsAndQueryParams() throws Exception {
 
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
       tx.commit();
@@ -1255,12 +1266,12 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-      String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967}) "
-          + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
+      String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://graph.individuals#1', name:'Keanu Reeves', born:1964})\n" +
+          "CREATE (Carrie:Director {uri:'neo4j://graph.individuals#2', name:'Carrie-Anne Moss', born:1967})\n" +
+          "CREATE (Laurence:Director {uri:'neo4j://graph.individuals#3', name:'Laurence Fishburne', born:1961})\n" +
+          "CREATE (Hugo:Critic {uri:'neo4j://graph.individuals#4', name:'Hugo Weaving', born:1960})\n" +
+          "CREATE (AndyW:Actor {uri:'neo4j://graph.individuals#5', name:'Andy Wachowski', born:1967}) "
+          + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {uri:'neo4j://graph.individuals#6', title: 'The Matrix'})";
       tx.execute(dataInsertion);
 
       tx.execute("CALL n10s.mapping.add('http://schema.org/Person','Actor')");
@@ -1319,7 +1330,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testontoOnLPG() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String dataInsertion =
           "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
@@ -1390,7 +1400,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testontoOnRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
@@ -1458,7 +1467,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUri() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
@@ -1511,7 +1519,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImport() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1562,8 +1569,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriMissingNamespaceDefinition() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1638,7 +1643,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultilang() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1673,7 +1677,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherWithUrisSerializeAsJsonLd() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
@@ -1727,7 +1730,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testOneNodeCypherWithUrisSerializeAsJsonLd() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
@@ -1768,7 +1770,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherWithBNodesSerializeAsRDFXML() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
@@ -1834,7 +1835,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithCustomDTKeepUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1878,7 +1878,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithCustomDTShortenURIs() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1923,7 +1922,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultiCustomDTKeepUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1967,7 +1965,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultiCustomDTShortenUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2013,7 +2010,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherAfterImportWithCustomDTKeepURIsSerializeAsTurtle() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2062,7 +2058,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherDatesAndDatetimes() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2102,7 +2097,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherErrorWhereModelIsNotRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     String cypherCreate = " CREATE (r:Resource { uri: 'neo4j://explicit_uri#123' , name: 'the name' }) ";
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2171,7 +2165,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2220,7 +2213,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithMultiCustomDTKeepURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -2270,7 +2262,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithMultiCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2318,7 +2309,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherAfterDeleteRDFBNodes() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
 
@@ -2380,9 +2370,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnQuadRDFSerializeAsTriG() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2417,9 +2406,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnQuadRDFSerializeAsNQuads() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2454,9 +2442,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriOnQuadRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2488,9 +2475,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriWithGraphUriOnQuadRDFTrig() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2529,9 +2515,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriWithGraphUriOnQuadRDFNQuads() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2568,9 +2553,8 @@ public class RDFEndpointTest {
   @Test
   public void testCypherOnQuadRDFAfterDeleteRDFBNodes() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("create index for (n:Resource) on (n.uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2618,7 +2602,6 @@ public class RDFEndpointTest {
   @Test
   public void testTicket13061() throws Exception {
     // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     //create constraint
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
