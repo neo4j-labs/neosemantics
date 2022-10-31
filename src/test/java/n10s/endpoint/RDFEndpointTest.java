@@ -33,6 +33,7 @@ import n10s.rdf.load.RDFLoadProcedures;
 import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.query.algebra.Str;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.junit.*;
 import org.neo4j.driver.Config;
@@ -597,6 +598,13 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return case n:Movie when true then n.title else n.name end as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n:Movie { title: \"That Thing You Do\"})--(x) "
         + "RETURN collect(distinct n) + collect(distinct x)");
@@ -604,19 +612,25 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://graph.individuals#86> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
-        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
-        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#72> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#86> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
-        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
-        + "<neo4j://graph.individuals#87> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#13> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#86> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
-        + "<neo4j://graph.individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
-        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
+    String expected = String.format(
+          "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
+        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
+        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%4$s> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
+        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
+        + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+        + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .",
+            nameToId.get("Charlize Theron"),
+            nameToId.get("Liv Tyler"),
+            nameToId.get("Tom Hanks"),
+            nameToId.get("That Thing You Do")
+            );
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -1235,6 +1249,13 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n:Category) return n.catName as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
@@ -1248,14 +1269,20 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expected =
-        "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#3> <neo4j://graph.schema#catName> \"Critic\" .\n"
-            + "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#0> <neo4j://graph.schema#catName> \"Person\" .\n"
-            + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#2> <neo4j://graph.schema#catName> \"Director\" .\n"
-            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#1> <neo4j://graph.schema#catName> \"Actor\" .\n";
+        String.format(
+              "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#catName> \"Critic\" .\n"
+            + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#catName> \"Person\" .\n"
+            + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#catName> \"Director\" .\n"
+            + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#catName> \"Actor\" .\n",
+                nameToId.get("Critic"),
+                nameToId.get("Person"),
+                nameToId.get("Director"),
+                nameToId.get("Actor")
+        );
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
