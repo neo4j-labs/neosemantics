@@ -1,6 +1,7 @@
 # neosemantics (n10s)
 ![n10s Logo](https://guides.neo4j.com/rdf/n10s.png) neosemantics is a plugin that enables the **use of RDF in Neo4j**. [RDF is a W3C standard model](https://www.w3.org/RDF/) for data interchange. Some key features of n10s are:
 
+
 * **Store RDF data in Neo4j** in a
 lossless manner (imported RDF can subsequently be exported without losing a single triple in the process).
 * On-demand **export property graph data** from Neo4j *as RDF*.
