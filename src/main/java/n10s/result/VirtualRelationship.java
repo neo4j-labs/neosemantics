@@ -55,6 +55,12 @@ public class VirtualRelationship implements Relationship {
   }
 
   @Override
+  public String getElementId()
+  {
+    return String.valueOf( id );
+  }
+
+  @Override
   public void delete() {
     if (getStartNode() instanceof VirtualNode) {
       ((VirtualNode) getStartNode()).delete(this);

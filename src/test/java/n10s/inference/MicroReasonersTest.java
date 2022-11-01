@@ -6,9 +6,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
 
+import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -19,14 +19,28 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MicroReasonersTest {
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(MicroReasoners.class).withFunction(MicroReasoners.class).withProcedure(GraphConfigProcedures.class);
+  public static Driver driver;
+
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(MicroReasoners.class)
+          .withFunction(MicroReasoners.class)
+          .withProcedure(GraphConfigProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists");
+  }
 
   @Test
   public void testGetNodesNoOnto() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
       session.run("CREATE (b:B {id:'iamb'}) CREATE (a:A {id: 'iama' }) ");
@@ -53,13 +67,10 @@ public class MicroReasonersTest {
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(1L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
-    }
   }
 
   @Test
   public void testGetNodesDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
       session.run("call n10s.graphconfig.init({classLabel: 'Label', subClassOfRel: 'SLO'})");
@@ -76,13 +87,10 @@ public class MicroReasonersTest {
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(2L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
-    }
   }
 
   @Test
   public void testGetNodesCustomHierarchy() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -98,14 +106,10 @@ public class MicroReasonersTest {
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(2L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
-    }
   }
 
   @Test
   public void testGetNodesLinkedTo() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run("CREATE (b:Thing {id:'iamb'}) CREATE (a:Thing {id: 'iama' }) ");
@@ -196,15 +200,11 @@ public class MicroReasonersTest {
       assertEquals(2L, next.get("ct").asLong());
       assertEquals(false, results.hasNext());
 
-    }
   }
 
 
   @Test
   public void testGetNodesLinkedToOnModelWithUriNames() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session
@@ -216,15 +216,10 @@ public class MicroReasonersTest {
               + "subCatRel:'http://www.w3.org/2000/01/rdf-schema#subClassOf'}) yield node return node");
       //just checking syntax is valid, no results expected.
       assertEquals(false, results.hasNext());
-
-    }
   }
 
   @Test
   public void testGetRelsNoOnto() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run(
@@ -241,14 +236,10 @@ public class MicroReasonersTest {
       assertEquals(false, session.run(
           "MATCH (b:B) CALL n10s.inference.getRels(b,'GENERIC',{ relLabel: 'Something', subRelRel: 'Something'}) YIELD rel, node RETURN b.id as source, type(rel) as relType, rel.prop as propVal, node.id as target")
           .hasNext());
-    }
   }
 
   @Test
   public void testGetRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run(
@@ -294,14 +285,10 @@ public class MicroReasonersTest {
       assertEquals(123L, next.get("propVal").asLong());
       assertEquals("iama", next.get("target").asString());
       assertEquals(false, results.hasNext());
-    }
   }
 
   @Test
   public void testGetRelsCustom() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run("call n10s.graphconfig.init({ objectPropertyLabel: 'ObjectProperty', " +
@@ -320,14 +307,10 @@ public class MicroReasonersTest {
       assertEquals(123L, next.get("propVal").asLong());
       assertEquals("iama", next.get("target").asString());
       assertEquals(false, results.hasNext());
-    }
   }
 
   @Test
   public void testHasLabelNoOnto() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session
@@ -355,14 +338,10 @@ public class MicroReasonersTest {
       assertEquals(false, results.hasNext());
       assertEquals(false,
           session.run("MATCH (n:A) WHERE n10s.inference.hasLabel(n,'C', { catLabel: 'something', catNameProp : 'something', subCatRel: 'something'}) RETURN *").hasNext());
-    }
   }
 
   @Test
   public void testHasLabel() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session
@@ -401,14 +380,10 @@ public class MicroReasonersTest {
       expectedNodeIds.add("iamB1");
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(3L, next.get("ct").asLong());
-    }
   }
 
   @Test
   public void testHasLabelCustom() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session
@@ -425,14 +400,10 @@ public class MicroReasonersTest {
       expectedNodeIds.add("iamB1");
       assertEquals(expectedNodeIds, new HashSet<>(next.get("nodes").asList()));
       assertEquals(3L, next.get("ct").asLong());
-    }
   }
 
   @Test
   public void testInCategory() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run("CREATE (b:Thing {id:'iamb'}) CREATE (a:Thing {id: 'iama' }) ");
@@ -499,7 +470,6 @@ public class MicroReasonersTest {
 //            assertEquals(expectedNodeIds,new HashSet<>(next.get("nodes").asList()));
 //            assertEquals(2L, next.get("ct").asLong());
 //            assertEquals(false, results.hasNext());
-    }
   }
 
   //TODO: test modifying the ontology

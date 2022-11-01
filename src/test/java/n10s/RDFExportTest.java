@@ -1,30 +1,33 @@
 package n10s;
 
+import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
+import n10s.rdf.RDFProcedures;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
+import org.neo4j.driver.internal.value.NodeValue;
+import org.neo4j.driver.types.Node;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
@@ -32,24 +35,41 @@ import static n10s.graphconfig.Params.*;
 import static org.junit.Assert.*;
 
 public class RDFExportTest {
+  public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(RDFExportProcedures.class)
-      .withProcedure(MappingUtils.class)
-      .withProcedure(RDFLoadProcedures.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(RDFExportProcedures.class)
+          .withProcedure(MappingUtils.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+  }
+
 
 
   @Test
   public void testExportFromCypherOnLPG() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
-      session
-          .run(
-              "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       Result res
           = session
@@ -58,13 +78,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
@@ -80,13 +100,16 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnLPGPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
-      session
-              .run(
-                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO" +
-                              " { since: 12345 , kind: 'principal' }]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO" +
+                       " { since: 12345 , kind: 'principal' }]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       Result res
               = session
@@ -95,16 +118,16 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L)),
-              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "Node")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "a"), vf.createLiteral(2L)),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
                       vf.createIRI(DEFAULT_BASE_SCH_NS + "since"), vf.createLiteral(12345L)),
-              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + "1")),
+              vf.createStatement(vf.createTriple(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "CONNECTED_TO"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
                       vf.createIRI(DEFAULT_BASE_SCH_NS + "kind"), vf.createLiteral("principal"))));
 
       int resultCount = 0;
@@ -119,11 +142,7 @@ public class RDFExportTest {
 
   @Test
   public void testCypherOnRDFGraphPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
@@ -133,11 +152,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
               RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                       .toURI() + "','Turtle-star')");
@@ -145,11 +160,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH path = (n)-[r]->(m) RETURN path ') ");
@@ -177,37 +188,23 @@ public class RDFExportTest {
 
   @Test
   public void testSPOExportOnRDFGraphPropsOnRels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
       session.run("call n10s.nsprefixes.add('msc','http://neo4j.com/voc/music#')");
 
       assertEquals(1L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
-
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
               RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                       .toURI() + "','Turtle-star')");
       assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
-
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result res
               = session.run(" CALL n10s.rdf.export.spo(null,null,null)");
 
@@ -229,17 +226,19 @@ public class RDFExportTest {
       }
       assertEquals(resultCount, expected.size());
     }
-
   }
 
   @Test
   public void testExportFromCypherOnLPGWithMappings() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
-      session
-              .run(
-                      "CREATE (n:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(:Node {  a:2, b2:'bye@en'})");
+      Record record = session
+              .run("CREATE (n0:Node { a: 1, b: 'hello' })-[:CONNECTED_TO]->(n1:Node {  a:2, b2:'bye@en'}) return n0, n1")
+              .next();
+
+      Map<String, String> idMap = new HashMap<>();
+      idMap.put( "0", String.valueOf( ((NodeValue) record.get("n0")).asNode().id() ));
+      idMap.put( "1", String.valueOf( ((NodeValue) record.get("n1")).asNode().id() ));
 
       session.run("call n10s.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
       session.run("call n10s.nsprefixes.add('myv','http://myvoc.org/testing#')");
@@ -260,13 +259,13 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(1L)),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://myvoc.org/testing#propB"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI("http://xmlns.com/foaf/0.1/linkedTo"), vf.createIRI(BASE_INDIV_NS + "1")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(2L))));
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(1L)),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://myvoc.org/testing#propB"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI("http://xmlns.com/foaf/0.1/linkedTo"), vf.createIRI(BASE_INDIV_NS + idMap.get("1"))),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI("http://xmlns.com/foaf/0.1/Thang")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "b2"), vf.createLiteral("bye","en")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI("http://myvoc.org/testing#propA"), vf.createLiteral(2L))));
 
       int resultCount = 0;
       while (res.hasNext()) {
@@ -280,17 +279,13 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnRDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
+    try (Session session = driver.session();) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN' } ");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
               jsonLdFragment + "','JSON-LD')");
@@ -358,11 +353,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternNoGraphConfig() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Transaction tx = session.beginTransaction();
       tx.run(Files.readString(Paths.get(
               RDFExportTest.class.getClassLoader().getResource("movies.cypher").getPath())));
@@ -377,11 +368,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " {} ");
 
@@ -391,16 +378,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenMultival() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleMultival: 'ARRAY'} ");
 
@@ -410,16 +392,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(2);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleRDFTypes: 'NODES'} ");
 
@@ -429,16 +406,11 @@ public class RDFExportTest {
 
     }
     allTriplePatterns(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphKeepDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'KEEP' } ");
 
@@ -452,11 +424,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenDefaultWithMappings() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN_STRICT' } ");
 
@@ -465,11 +433,7 @@ public class RDFExportTest {
       assertEquals(2L, session.run("call n10s.nsprefixes.list() yield prefix return count(*) as ct").next().get("ct").asLong());
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
               jsonLdFragment + "','JSON-LD')");
       assertEquals(11L, importResults1.single().get("triplesLoaded").asLong());
@@ -481,11 +445,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphShortenTypesAsNodes2() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleRDFTypes: 'LABELS_AND_NODES'} ");
 
@@ -495,11 +455,7 @@ public class RDFExportTest {
 
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       String expected = "@prefix neo4voc: <http://neo4j.org/vocab/sw#> .\n" +
               "@prefix neo4ind: <http://neo4j.org/ind#> .\n" +
               "\n" +
@@ -544,11 +500,7 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphIgnoreDefault() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'IGNORE' } ");
 
@@ -558,16 +510,11 @@ public class RDFExportTest {
 
     }
     allTriplePatternsIgnore(1);
-
   }
 
   @Test
   public void testExportFromTriplePatternOnRDFGraphIgnoreDefaultMultivalued() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'IGNORE' , handleMultival: 'ARRAY'} ");
 
@@ -577,14 +524,10 @@ public class RDFExportTest {
 
     }
     allTriplePatternsIgnore(2);
-
   }
 
   private void allTriplePatternsOnLPG() throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-
+    try (Session session = driver.session()) {
       //getting a node's assigned uri
       long emilId = session
               .run("MATCH (n:Person) WHERE n.name = \"Emil Eifrem\" RETURN id(n) as id ").next().get("id").asLong();
@@ -614,10 +557,10 @@ public class RDFExportTest {
                       getNTriplesGraphFromSPOPattern(session,"http://base/about#nonexistingresource",DEFAULT_BASE_SCH_NS + "name", "MS", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"@type\" : \"n4sch:Person\",\n" +
               "  \"n4sch:ACTED_IN\" : {\n" +
-              "    \"@id\" : \"n4ind:0\"\n" +
+              "    \"@id\" : \"n4ind:" + theMatrixId + "\"\n" +
               "  },\n" +
               "  \"n4sch:born\" : {\n" +
               "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
@@ -635,7 +578,7 @@ public class RDFExportTest {
                       getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,null, null, false, null, null), RDFFormat.NTRIPLES));
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"n4sch:name\" : \"Emil Eifrem\",\n" +
               "  \"@context\" : {\n" +
               "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
@@ -649,7 +592,7 @@ public class RDFExportTest {
 
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"@type\" : \"n4sch:Person\",\n" +
               "  \"@context\" : {\n" +
               "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
@@ -664,7 +607,7 @@ public class RDFExportTest {
 
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"n4sch:name\" : \"Emil Eifrem\",\n" +
               "  \"@context\" : {\n" +
               "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
@@ -677,7 +620,7 @@ public class RDFExportTest {
                       getNTriplesGraphFromSPOPattern(session,BASE_INDIV_NS + emilId,DEFAULT_BASE_SCH_NS + "name", "Emil Eifrem", true, "http://www.w3.org/2001/XMLSchema#string", null), RDFFormat.NTRIPLES));
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"n4sch:born\" : {\n" +
               "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
               "    \"@value\" : \"1978\"\n" +
@@ -702,7 +645,7 @@ public class RDFExportTest {
 
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"@type\" : \"n4sch:Person\",\n" +
               "  \"@context\" : {\n" +
               "    \"n4sch\" : \"neo4j://graph.schema#\",\n" +
@@ -740,55 +683,20 @@ public class RDFExportTest {
               .compareModels("{}", RDFFormat.JSONLD,
                       getNTriplesGraphFromSPOPattern(session,null,"http://undefinedvoc.org/name", null, false, null, null), RDFFormat.NTRIPLES));
 
-
-      // if we hardcode the ids here what's the point of getting them at the beginning for Emil, Renier and The Matrix?
-      //TODO: do this right
-      String titleTriples = "<neo4j://graph.individuals#0> <neo4j://graph.schema#title> \"The Matrix\" .\n" +
-              "<neo4j://graph.individuals#9> <neo4j://graph.schema#title> \"The Matrix Reloaded\" .\n" +
-              "<neo4j://graph.individuals#10> <neo4j://graph.schema#title> \"The Matrix Revolutions\" .\n" +
-              "<neo4j://graph.individuals#11> <neo4j://graph.schema#title> \"The Devil's Advocate\" .\n" +
-              "<neo4j://graph.individuals#15> <neo4j://graph.schema#title> \"A Few Good Men\" .\n" +
-              "<neo4j://graph.individuals#29> <neo4j://graph.schema#title> \"Top Gun\" .\n" +
-              "<neo4j://graph.individuals#37> <neo4j://graph.schema#title> \"Jerry Maguire\" .\n" +
-              "<neo4j://graph.individuals#46> <neo4j://graph.schema#title> \"Stand By Me\" .\n" +
-              "<neo4j://graph.individuals#52> <neo4j://graph.schema#title> \"As Good as It Gets\" .\n" +
-              "<neo4j://graph.individuals#56> <neo4j://graph.schema#title> \"What Dreams May Come\" .\n" +
-              "<neo4j://graph.individuals#62> <neo4j://graph.schema#title> \"Snow Falling on Cedars\" .\n" +
-              "<neo4j://graph.individuals#67> <neo4j://graph.schema#title> \"You've Got Mail\" .\n" +
-              "<neo4j://graph.individuals#73> <neo4j://graph.schema#title> \"Sleepless in Seattle\" .\n" +
-              "<neo4j://graph.individuals#78> <neo4j://graph.schema#title> \"Joe Versus the Volcano\" .\n" +
-              "<neo4j://graph.individuals#81> <neo4j://graph.schema#title> \"When Harry Met Sally\" .\n" +
-              "<neo4j://graph.individuals#85> <neo4j://graph.schema#title> \"That Thing You Do\" .\n" +
-              "<neo4j://graph.individuals#87> <neo4j://graph.schema#title> \"The Replacements\" .\n" +
-              "<neo4j://graph.individuals#92> <neo4j://graph.schema#title> \"RescueDawn\" .\n" +
-              "<neo4j://graph.individuals#95> <neo4j://graph.schema#title> \"The Birdcage\" .\n" +
-              "<neo4j://graph.individuals#97> <neo4j://graph.schema#title> \"Unforgiven\" .\n" +
-              "<neo4j://graph.individuals#100> <neo4j://graph.schema#title> \"Johnny Mnemonic\" .\n" +
-              "<neo4j://graph.individuals#105> <neo4j://graph.schema#title> \"Cloud Atlas\" .\n" +
-              "<neo4j://graph.individuals#111> <neo4j://graph.schema#title> \"The Da Vinci Code\" .\n" +
-              "<neo4j://graph.individuals#116> <neo4j://graph.schema#title> \"V for Vendetta\" .\n" +
-              "<neo4j://graph.individuals#121> <neo4j://graph.schema#title> \"Speed Racer\" .\n" +
-              "<neo4j://graph.individuals#128> <neo4j://graph.schema#title> \"Ninja Assassin\" .\n" +
-              "<neo4j://graph.individuals#130> <neo4j://graph.schema#title> \"The Green Mile\" .\n" +
-              "<neo4j://graph.individuals#137> <neo4j://graph.schema#title> \"Frost/Nixon\" .\n" +
-              "<neo4j://graph.individuals#141> <neo4j://graph.schema#title> \"Hoffa\" .\n" +
-              "<neo4j://graph.individuals#144> <neo4j://graph.schema#title> \"Apollo 13\" .\n" +
-              "<neo4j://graph.individuals#147> <neo4j://graph.schema#title> \"Twister\" .\n" +
-              "<neo4j://graph.individuals#150> <neo4j://graph.schema#title> \"Cast Away\" .\n" +
-              "<neo4j://graph.individuals#152> <neo4j://graph.schema#title> \"One Flew Over the Cuckoo's Nest\" .\n" +
-              "<neo4j://graph.individuals#154> <neo4j://graph.schema#title> \"Something's Gotta Give\" .\n" +
-              "<neo4j://graph.individuals#157> <neo4j://graph.schema#title> \"Bicentennial Man\" .\n" +
-              "<neo4j://graph.individuals#159> <neo4j://graph.schema#title> \"Charlie Wilson's War\" .\n" +
-              "<neo4j://graph.individuals#161> <neo4j://graph.schema#title> \"The Polar Express\" .\n" +
-              "<neo4j://graph.individuals#162> <neo4j://graph.schema#title> \"A League of Their Own\" .";
-
+      StringBuilder titleTriplesSb = new StringBuilder();
+      Result titlesQueryResult = session.run("MATCH (n:Movie) RETURN id(n) as id, n.title as title ");
+      while(titlesQueryResult.hasNext()){
+        Record movie = titlesQueryResult.next();
+        titleTriplesSb.append("<neo4j://graph.individuals#").append(movie.get("id").asLong()).append("> <neo4j://graph.schema#title> \"")
+                .append(movie.get("title").asString()).append("\" .\n");
+      }
 
       assertTrue(ModelTestUtils
-              .compareModels(titleTriples, RDFFormat.NTRIPLES,
+              .compareModels(titleTriplesSb.toString(), RDFFormat.NTRIPLES,
                       getNTriplesGraphFromSPOPattern(session,null,DEFAULT_BASE_SCH_NS + "title", null, false, null, null), RDFFormat.NTRIPLES));
 
       expected = "{\n" +
-              "  \"@id\" : \"n4ind:8\",\n" +
+              "  \"@id\" : \"n4ind:" + emilId + "\",\n" +
               "  \"n4sch:born\" : {\n" +
               "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
               "    \"@value\" : \"1978\"\n" +
@@ -826,19 +734,17 @@ public class RDFExportTest {
         { criticTypesTriples.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Critic> .\n");
           criticTypesTriples.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Person> .\n");} );
 
-      String someMovies = "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#9> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#10> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#11> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#15> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#29> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#37> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#46> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" +
-              "<neo4j://graph.individuals#52> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n" ;
+      StringBuilder someMoviesSb = new StringBuilder();
+      Result someMoviesQueryResult = session.run("MATCH (n:Movie) RETURN id(n) as id skip 30 limit 10");
+      while(someMoviesQueryResult.hasNext()){
+        Record movie = someMoviesQueryResult.next();
+        someMoviesSb.append("<neo4j://graph.individuals#").append(movie.get("id").asLong())
+                .append("> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n");
+      }
 
       assertTrue(ModelTestUtils
               .modelContains(getNTriplesGraphFromSPOPattern(session,null,"http://www.w3.org/1999/02/22-rdf-syntax-ns#type", null, false, null, null), RDFFormat.NTRIPLES,
-              criticTypesTriples.toString() + someMovies, RDFFormat.NTRIPLES));
+              criticTypesTriples.toString() + someMoviesSb.toString(), RDFFormat.NTRIPLES));
 
       StringBuilder criticTypesTriples2  = new StringBuilder();
       critics.forEach(id-> criticTypesTriples2.append("<" + BASE_INDIV_NS + id + "> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <" + DEFAULT_BASE_SCH_NS +  "Critic> .\n") );
@@ -849,7 +755,7 @@ public class RDFExportTest {
 
       String allGraphAsNTriples = getNTriplesGraphFromSPOPattern(session, null, null, null, false, null, null);
       assertTrue(ModelTestUtils.modelContains(allGraphAsNTriples, RDFFormat.NTRIPLES,
-                      criticTypesTriples.toString() + someMovies + titleTriples, RDFFormat.NTRIPLES ));
+                      criticTypesTriples.toString() + someMoviesSb.toString() + titleTriplesSb.toString(), RDFFormat.NTRIPLES ));
 
       assertFalse(ModelTestUtils.modelContains(allGraphAsNTriples, RDFFormat.NTRIPLES,
               "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#AwesomeMovie> ." , RDFFormat.NTRIPLES ));
@@ -859,8 +765,7 @@ public class RDFExportTest {
 
 
   private void allTriplePatterns( int mode) throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       //getting a bnode's assigned uri
       String bnodeUri = session
@@ -1183,8 +1088,7 @@ public class RDFExportTest {
 
 
   private void allTriplePatternsIgnore( int mode) throws IOException {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       //getting a bnode's assigned uri
       String bnodeUri = session
@@ -1562,11 +1466,17 @@ public class RDFExportTest {
 
   @Test
   public void testExportFromCypherOnLPGPointTypeProperties() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
-      session.run("CREATE (n:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222})  })");
+      Map<String, String> idMap = new HashMap<>();
+      {
+        Record record = session
+                .run("CREATE (n0:GeoLocatedThing { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222}) }) return n0")
+                .next();
 
+
+        idMap.put("0", String.valueOf(((NodeValue) record.get("n0")).asNode().id()));
+      }
       Result res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing) RETURN n ', {}) ");
@@ -1574,9 +1484,9 @@ public class RDFExportTest {
 
       final ValueFactory vf = SimpleValueFactory.getInstance();
       Set<Statement> expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "0"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("0")), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
                       vf.createLiteral("Point(-0.1275 51.507222222)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
 
       int resultCount = 0;
@@ -1587,18 +1497,22 @@ public class RDFExportTest {
       }
       assertEquals(resultCount,expectedStatememts.size());
 
+      {
+        Record record = session
+                .run("CREATE (n1:GeoLocatedThing3D { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222, z: 34.0 })}) return n1")
+                .next();
 
-      session.run("CREATE (n:GeoLocatedThing3D { hi: 'hello' , where: point({x: -0.1275, y: 51.507222222, z: 34.0 })  })");
-
+        idMap.put("1", String.valueOf(((NodeValue) record.get("n1")).asNode().id()));
+      }
       res
               = session
               .run(" CALL n10s.rdf.export.cypher(' MATCH (n:GeoLocatedThing3D) RETURN n ', {}) ");
       assertTrue(res.hasNext());
 
       expectedStatememts = new HashSet<>(Arrays.asList(
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing3D")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
-              vf.createStatement(vf.createIRI(BASE_INDIV_NS + "1"), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), RDF.TYPE, vf.createIRI(DEFAULT_BASE_SCH_NS + "GeoLocatedThing3D")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "hi"), vf.createLiteral("hello")),
+              vf.createStatement(vf.createIRI(BASE_INDIV_NS + idMap.get("1")), vf.createIRI(DEFAULT_BASE_SCH_NS + "where"),
                       vf.createLiteral("Point(-0.1275 51.507222222 34.0)",vf.createIRI(GEOSPARQL_NS + WKTLITERAL)))));
 
       resultCount = 0;

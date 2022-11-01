@@ -106,7 +106,7 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
       cypher.append("AND n.graphUri = $graphUri ");
       params.put("graphUri", graphUri);
     } else {
-      cypher.append("AND NOT EXISTS(n.graphUri) ");
+      cypher.append("AND n.graphUri is null ");
     }
     cypher.append("RETURN n");
     return cypher.toString();

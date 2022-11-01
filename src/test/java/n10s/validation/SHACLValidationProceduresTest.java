@@ -15,12 +15,13 @@ import java.util.*;
 import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
+import n10s.onto.load.OntoLoadProcedures;
+import n10s.onto.preview.OntoPreviewProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
@@ -64,18 +65,33 @@ public class SHACLValidationProceduresTest {
           + "       toString(([(vr)-[:`http://www.w3.org/ns/shacl#value`]->(x)| x.uri] + ([] + coalesce(vr.`http://www.w3.org/ns/shacl#value`,[])))[0]) as offendingValue, "
           + "      vr.`http://www.w3.org/ns/shacl#resultMessage` as message";
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(ValidationProcedures.class).withProcedure(GraphConfigProcedures.class)
-      .withProcedure(RDFLoadProcedures.class).withFunction(RDFProcedures.class).withProcedure(
-          NsPrefixDefProcedures.class).withFunction(AuxProcedures.class);
+  public static Driver driver;
 
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(ValidationProcedures.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withFunction(RDFProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class)
+          .withFunction(AuxProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+  }
+
+  final String CREATE_N10S_CONSTRAINT = "CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE (resource.uri) IS UNIQUE";
 
   @Test
   public void testCompiledValidatorIsPersisted() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -151,15 +167,11 @@ public class SHACLValidationProceduresTest {
 
       Result loadCompiled = session.run("call n10s.validation.shacl.validate()");
       assertTrue(loadCompiled.hasNext());
-    }
   }
 
 
   @Test
   public void testUriWithWhitespaces() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       String SHACL_URI_WHITESPACES = "@prefix neo4j: <neo4j://graph.schema#> .\n" +
@@ -190,14 +202,10 @@ public class SHACLValidationProceduresTest {
       List<Object> targetClasses = results.next().get("t").asList();
       assertTrue(targetClasses.size()==1);
       assertEquals("Soccer Player", targetClasses.get(0));
-    }
   }
 
   @Test
   public void testLargeShapesFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -238,7 +246,6 @@ public class SHACLValidationProceduresTest {
       }
       assertEquals(3, minCountCount);
       assertEquals(3, datatypeConstCount);
-    }
   }
 
   String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
@@ -297,17 +304,15 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testClosedShapeIgnore() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
       session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
       session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_NO_EXCLUSION + "\",\"Turtle\")");
@@ -321,17 +326,15 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testClosedShapeNoExclusion() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("call n10s.graphconfig.init({handleRDFTypes:\"LABELS_AND_NODES\",handleMultival:\"ARRAY\"});\n");
       session.run("call n10s.nsprefixes.add(\"ex\", \"http://www.example.com/device#\");");
       session.run("CALL n10s.rdf.import.inline('" + SHAPES_CLOSED_DATA + "',\"RDF/XML\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline(\"" + SHAPES_CLOSED_NO_EXCLUSION + "\",\"Turtle\")");
@@ -374,18 +377,16 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testDataTypeShape() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
       session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_1 + "',\"N-Triples\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT + "\",\"Turtle\", {})");
@@ -431,18 +432,16 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testDataTypeShapeDataTypeRestrictedPropUsedAsRel() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
       session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_WHERE_PROP_IS_USED_AS_REL + "',\"N-Triples\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline(\"" + DATE_TYPE_CONSTRAINT + "\",\"Turtle\", {})");
@@ -507,18 +506,16 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testDataTypeShapeDataPointAndDate() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
       session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_POINT_AND_TYPE + "',\"N-Triples\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
 
       Result results = session
@@ -588,18 +585,16 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testDataTypeShapeAnyUri() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       session.run("call n10s.nsprefixes.add(\"o1\",\"http://adaptive.accenture.com/ontologies/o1#\")");
       session.run("call n10s.nsprefixes.add(\"ind\",\"http://adaptive.accenture.com/ind#\")");
       session.run("CALL n10s.rdf.import.inline('" + DATE_DATA_ANYURI + "',\"N-Triples\")");
 
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
 
       Result results = session
@@ -637,18 +632,16 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testMusicExample() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init( { handleMultival: 'ARRAY', "
           + "multivalPropList: [ 'http://stardog.com/tutorial/date'] })");
       session.run("CALL n10s.nsprefixes.add('tut','http://stardog.com/tutorial/')");
       session.close();
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-          Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result loadShapes = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -701,9 +694,6 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testRegexValidationOnMovieDB() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -723,7 +713,7 @@ public class SHACLValidationProceduresTest {
               "  (RosieO)-[:ACTED_IN {roles:['Becky']}]->(SleeplessInSeattle),\n" +
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
@@ -746,15 +736,10 @@ public class SHACLValidationProceduresTest {
               next.get("propertyShape").asString());
         }
       }
-
-    }
   }
 
   @Test
   public void testBug213() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -811,21 +796,14 @@ public class SHACLValidationProceduresTest {
               next.get("resultMessage").asString());
 
       assertEquals(false, validationResults.hasNext());
-
-    }
-
-
   }
 
     @Test
     public void testValidationBeforeNsDefined() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       Result result = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -847,14 +825,10 @@ public class SHACLValidationProceduresTest {
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
       assertTrue(result.hasNext());
-    }
   }
 
   @Test
   public void testLoadShapesOutput() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -898,7 +872,7 @@ public class SHACLValidationProceduresTest {
       session.run("MATCH (n) DETACH DELETE n");
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       //RDF SHORTEN GRAPH
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://graph.schema#')");
       session.run("CALL n10s.nsprefixes.add('ex','http://example/')");
@@ -1017,19 +991,14 @@ public class SHACLValidationProceduresTest {
         }
       }
       assertEquals(4, matches);
-    }
   }
 
   @Test
   public void testListAndDropShapesInRDFIgnoreGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
-
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      session.run(CREATE_N10S_CONSTRAINT);
 
       session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
           .getClassLoader()
@@ -1076,21 +1045,15 @@ public class SHACLValidationProceduresTest {
         //Expected
         assertTrue(e.getMessage().contains("n10s.validation.SHACLValidationException: No shapes compiled"));
       }
-
-
-    }
   }
 
   @Test
   public void testListShapesInRDFShortenGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run("CALL n10s.graphconfig.init()");
-
-      session.run("CREATE CONSTRAINT ON ( resource:Resource ) ASSERT (resource.uri) IS UNIQUE ");
+      
+      session.run(CREATE_N10S_CONSTRAINT);
 
       String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
           + "@prefix neo4j: <neo4j://graph.schema#> .\n"
@@ -1145,16 +1108,10 @@ public class SHACLValidationProceduresTest {
         //Expected
         assertTrue(e.getMessage().contains("n10s.validation.SHACLValidationException: No shapes compiled"));
       }
-
-
-    }
   }
   
   @Test
   public void testTxTriggerValidation() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -1175,7 +1132,7 @@ public class SHACLValidationProceduresTest {
               "  (NoraE)-[:DIRECTED]->(SleeplessInSeattle) ");
 
       session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      assertTrue(session.run("call db.schemaStatements").hasNext());
+      assertTrue(session.run("show unique constraints yield name").hasNext());
 
       Result loadShapesResult = session.run(
           "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
@@ -1198,8 +1155,6 @@ public class SHACLValidationProceduresTest {
         //This is expected
         assertTrue(e.getMessage().contains("SHACLValidationException"));
       }
-
-    }
   }
 
 
@@ -1474,19 +1429,17 @@ public class SHACLValidationProceduresTest {
 
   public void runIndividualTest(String testGroupName, String testName,
       String cypherScript, String handleVocabUris, String ... overrideShapesFileName) throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
       Result getschemastatementsResults = session
-          .run("call db.schemaStatements() yield name return name");
+          .run("show unique constraints yield name");
       if (getschemastatementsResults.hasNext() &&
           getschemastatementsResults.next().get("name").asString()
               .equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
         //constraint exists. do nothing.
       } else {
         session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-        assertTrue(session.run("call db.schemaStatements").hasNext());
+        assertTrue(session.run("show unique constraints yield name").hasNext());
       }
 
       //db is empty
@@ -1634,12 +1587,6 @@ public class SHACLValidationProceduresTest {
       }
 
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
-
-    } catch (Exception e) {
-      assertTrue("Failure due to exception raised: " + e.getMessage(), false);
-    }
-
-
   }
 
   private String selectQuery(String handleVocabUris) {
@@ -1656,9 +1603,6 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testHasTypeValidationOnMovieDB() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
@@ -1746,7 +1690,6 @@ public class SHACLValidationProceduresTest {
         }
       }
       assertEquals(2,count);
-    }
   }
 
   String SHAPES_REQUIRED_EXCLUDED_TYPES = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
@@ -1796,14 +1739,12 @@ public class SHACLValidationProceduresTest {
 
   @Test
   public void testRequiredAndExcludedTypes() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertFalse(session.run("MATCH (n) RETURN n").hasNext());
       session.run("create (:Man { name: 'JB'}) ");
       session.run("create (:Person:Woman:Man { name: 'Carol'}) ");
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline('" + SHAPES_REQUIRED_EXCLUDED_TYPES + "',\"Turtle\")");
@@ -1886,8 +1827,7 @@ public class SHACLValidationProceduresTest {
   }
 
   private void verifyBadCypher(String query) {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result results = session
               .run("CALL n10s.validation.shacl.import.inline('" + query + "',\"Turtle\")");

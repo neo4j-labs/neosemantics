@@ -161,19 +161,19 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     params.put("uri", uri);
     if (graphId == null || graphId.equals("")) {
       queryWithContext = "MATCH (x:Resource {uri:$uri}) " +
-          "WHERE NOT EXISTS(x.graphUri)\n" +
+          "WHERE x.graphUri is null \n" +
           "OPTIONAL MATCH (x)-[r]-(val:Resource) " +
-          "WHERE exists(val.uri)\n" +
-          "AND NOT EXISTS(val.graphUri)\n" +
+          "WHERE val.uri is not null \n" +
+          "AND val.graphUri is null \n" +
           "RETURN x, r, val.uri AS value";
 
       queryNoContext = "MATCH (x:Resource {uri:$uri}) " +
-          "WHERE NOT EXISTS(x.graphUri)\n" +
+          "WHERE x.graphUri is null \n" +
           "RETURN x, null AS r, null AS value";
     } else {
       queryWithContext = "MATCH (x:Resource {uri:$uri, graphUri:$graphUri}) " +
           "OPTIONAL MATCH (x)-[r]-(val:Resource {graphUri:$graphUri}) " +
-          "WHERE exists(val.uri)\n" +
+          "WHERE val.uri is not null \n" +
           "RETURN x, r, val.uri AS value";
 
       queryNoContext = "MATCH (x:Resource {uri:$uri, graphUri:$graphUri}) " +
@@ -441,7 +441,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
             result = tx.execute("MATCH (r:Resource) WHERE size(labels(r))>1 RETURN r");
           }  else {
             result = tx.execute(String
-                .format("MATCH (r:Resource) WHERE exists(r.`%s`) RETURN r\n"
+                .format("MATCH (r:Resource) WHERE r.`%s` is not null RETURN r\n"
                         + "UNION \n"
                         + "MATCH (:Resource)-[r:`%s`]->() RETURN r",
                     predicate, predicate));

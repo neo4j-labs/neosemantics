@@ -400,7 +400,7 @@ public class LPGToRDFProcesssor extends ExportProcessor {
             //CHECK IF predicate is <NONE>, in which case there's no point in running the query
             if (!predicate.equals(NOT_MATCHING_NS)) {
               result = tx.execute(String
-                      .format("MATCH (s) WHERE exists(s.`%s`) RETURN s, s.`%s` as o\n"
+                      .format("MATCH (s) WHERE s.`%s` is not null RETURN s, s.`%s` as o\n"
                                       + "UNION \n"
                                       + "MATCH (s)-[:`%s`]->(o) RETURN s, o",
                               predicate, predicate, predicate));

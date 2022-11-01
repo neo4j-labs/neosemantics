@@ -30,13 +30,13 @@ import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
 import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.delete.RDFDeleteProcedures;
+import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import n10s.rdf.preview.RDFPreviewProcedures;
 import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.skos.load.SKOSLoadProcedures;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -56,21 +56,37 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
  * Created by jbarrasa on 21/03/2016.
  */
 public class RDFProceduresTest {
+  public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(RDFLoadProcedures.class)
-      .withProcedure(RDFDeleteProcedures.class)
-      .withProcedure(RDFPreviewProcedures.class)
-      .withProcedure(RDFStreamProcedures.class)
-      .withFunction(RDFProcedures.class)
-      .withProcedure(QuadRDFLoadProcedures.class)
-      .withProcedure(QuadRDFDeleteProcedures.class)
-      .withProcedure(MappingUtils.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(ExperimentalImports.class)
-      .withProcedure(SKOSLoadProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(RDFDeleteProcedures.class)
+          .withProcedure(RDFPreviewProcedures.class)
+          .withProcedure(RDFStreamProcedures.class)
+          .withFunction(RDFProcedures.class)
+          .withProcedure(QuadRDFLoadProcedures.class)
+          .withProcedure(QuadRDFDeleteProcedures.class)
+          .withProcedure(MappingUtils.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class)
+          .withProcedure(ExperimentalImports.class)
+          .withProcedure(SKOSLoadProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+    driver.session().run("drop index uri_index if exists").consume();
+  }
+
+  final String CREATE_URI_INDEX = "CREATE INDEX uri_index FOR (n:Resource) ON (n.uri)";
 
   private String jsonLdFragment = "{\n" +
       "  \"@context\": {\n" +
@@ -352,8 +368,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testAbortIfNoIndices() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
@@ -373,11 +388,9 @@ public class RDFProceduresTest {
 
   @Test
   public void testFullTextIndexesPresent() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
-      session.run("CALL db.index.fulltext.createNodeIndex(\"multiLabelIndex\","
-          + "[\"Movie\", \"Book\"],[\"title\", \"description\"])");
+      session.run("CREATE FULLTEXT INDEX titlesAndDescriptions FOR (n:Movie|Book) ON EACH [n.title, n.description]");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
@@ -395,10 +408,8 @@ public class RDFProceduresTest {
 
   @Test
   public void testCompositeIndexesPresent() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
-      session.run("CREATE INDEX ON :Person(age, country)");
+    try (Session session = driver.session()) {
+      session.run("CREATE INDEX IF NOT EXISTS FOR (n:Person) ON (n.age, n.country)");
 
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('file:///fileDoesnotExist.txt','JSON-LD',{})");
@@ -417,10 +428,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testAbortIfNoIndicesImportSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
+    try (Session session = driver.session();) {
 
       Result importResults1 = session.run("CALL n10s.rdf.import.inline('" +
           turtleFragment +
@@ -438,8 +446,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportJSONLD() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -459,7 +466,7 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
       assertEquals(1L,
           session.run(
-              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              "MATCH (n) WHERE n.`http://xmlns.com/foaf/0.1/modified` is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
   }
@@ -467,8 +474,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testInvalidSerialisationFormat() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -525,8 +531,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportZippedSingleFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -606,8 +611,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportZippedMultiFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -640,8 +644,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportSKOSInline() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'IGNORE', handleMultival: 'ARRAY' }");
@@ -665,8 +668,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportSKOSFetchWithParams() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{}");
@@ -696,8 +698,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportSKOSFetchWithParamsCustomSchemaNs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ baseSchemaNamespace: 'http://baseschema.mine/voc1#' , " +
@@ -728,8 +729,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFStar () throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'IGNORE' }");
@@ -755,8 +755,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFStarWithArrayMultiVal () throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'IGNORE' , " +
@@ -786,8 +785,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportSKOSFetchMultivalArray() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'ARRAY', keepLangTag: true }");
@@ -820,11 +818,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportJSONLDImportSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS'} ");
 
@@ -838,18 +832,14 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
       assertEquals(1L,
           session.run(
-              "MATCH (n) WHERE exists(n.`http://xmlns.com/foaf/0.1/modified`) RETURN count(n) AS count")
+              "MATCH (n) WHERE n.`http://xmlns.com/foaf/0.1/modified` is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
   }
 
   @Test
   public void testImportTurtleSnippetWithPoints() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { handleVocabUris: 'SHORTEN' } ");
 
@@ -892,8 +882,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportJSONLDShortening() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
@@ -911,8 +900,8 @@ public class RDFProceduresTest {
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
               .next().get("uri").asString());
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.ns0" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
 
       assertEquals("ns0",
@@ -933,8 +922,8 @@ public class RDFProceduresTest {
               "MATCH (n{ns0" + PREFIX_SEPARATOR + "name : 'Markus Lanthaler'}) RETURN n.uri AS uri")
               .next().get("uri").asString());
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.ns0" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.ns0" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
 
       assertEquals("ns0",
@@ -949,14 +938,12 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportJSONLDShorteningStrict() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session();) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN_STRICT', handleRDFTypes: 'LABELS' }");
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       Result importResults
           = session.run("CALL n10s.rdf.import.fetch('" +
           RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
@@ -973,8 +960,7 @@ public class RDFProceduresTest {
           + "namespace <http://xmlns.com/foaf/0.1/> and 'handleVocabUris' is set "
           + "to 'SHORTEN_STRICT'", e.getMessage());
     }
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       assertEquals("one",
           session.run("call n10s.nsprefixes.add('one','http://xmlns.com/foaf/0.1/')").next()
               .get("prefix").asString());
@@ -993,8 +979,8 @@ public class RDFProceduresTest {
               .next().get("uri").asString());
 
       assertEquals(1L,
-          session.run("MATCH (n) WHERE exists(n.one" + PREFIX_SEPARATOR
-              + "modified) RETURN count(n) AS count")
+          session.run("MATCH (n) WHERE n.one" + PREFIX_SEPARATOR
+              + "modified is not null RETURN count(n) AS count")
               .next().get("count").asLong());
     }
 
@@ -1002,8 +988,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFXML() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -1033,8 +1018,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFXMLShortening() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -1069,8 +1053,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinition() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       session.run("call n10s.nsprefixes.add('dct','http://purl.org/dc/terms/')");
@@ -1111,8 +1094,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFXMLShorteningWithPrefixPreDefinitionOneTriple() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
@@ -1138,8 +1120,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportBadUrisTtl() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
@@ -1162,8 +1143,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportTtlBadUrisException() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -1187,8 +1167,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportRDFXMLBadUris() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
@@ -1209,8 +1188,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportLangFilter() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -1281,8 +1259,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportMultivalLangTag() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ keepLangTag : true, handleMultival: 'ARRAY'}");
@@ -1310,8 +1287,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportMultivalWithMultivalList() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'ARRAY', " +
@@ -1349,8 +1325,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportMultivalWithExclusionList() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'ARRAY' }");
@@ -1384,8 +1359,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportTurtle() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -1419,8 +1393,7 @@ public class RDFProceduresTest {
    */
   @Test
   public void testImportTurtle02() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       session.run("call n10s.nsprefixes.add('ex','http://www.example.com/ontology/1.0.0#')");
@@ -1444,8 +1417,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromSnippetPassWrongUri() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{handleVocabUris: 'KEEP', handleRDFTypes: 'NODES' }");
@@ -1465,8 +1437,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromSnippetFailWrongUri() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1489,8 +1460,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1509,8 +1479,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromSnippetLimit() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1543,8 +1512,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromFileLimit() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1581,8 +1549,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewRDFStarFromSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{handleVocabUris: 'IGNORE'}");
@@ -1604,8 +1571,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testRDFStarWithTriplesAsObjectFromSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleVocabUris: 'IGNORE'}");
@@ -1625,8 +1591,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadFromSnippetCreateNodes() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1651,8 +1616,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadFromSnippetCreateNodesAndLabels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS_AND_NODES'}");
@@ -1677,8 +1641,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromSnippetLangFilter() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES' }");
@@ -1713,8 +1676,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPointDatatype() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleVocabUris: 'IGNORE'}");
@@ -1756,8 +1718,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPointDatatypeInMars() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleVocabUris: 'IGNORE'}");
@@ -1778,8 +1739,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES' }");
@@ -1800,8 +1760,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromBadUriFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -1822,8 +1781,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromBadUriFileFail() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES'}");
@@ -1847,8 +1805,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testPreviewFromFileLangFilter() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'NODES', keepLangTag : false }");
@@ -1879,14 +1836,12 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportFromFileWithMapping() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       session.run("call n10s.nsprefixes.add('voc','http://neo4j.com/voc/')");
       session.run("call n10s.nsprefixes.add('cats','http://neo4j.com/category/')");
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'MAP'}");
 
@@ -1917,8 +1872,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportFromFileIgnoreNs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE'}");
 
@@ -1947,8 +1901,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportFromFileIgnoreNsApplyNeoNaming() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true }");
@@ -1979,14 +1932,12 @@ public class RDFProceduresTest {
   @Test
   public void testImportFromFileWithPredFilter() throws Exception {
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       session.run("call n10s.nsprefixes.add('sch','http://schema.org/')");
       session.run("call n10s.nsprefixes.add('cats','http://neo4j.com/category/')");
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),"{ handleVocabUris: 'MAP'}");
 
@@ -2023,8 +1974,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
@@ -2043,8 +1993,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromFileWithLimit() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
@@ -2059,8 +2008,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromFileWithExclusionList() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       String filteredPred = "http://schema.org/image";
 
@@ -2103,8 +2051,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromString() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       String rdf = "<rdf:RDF xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n"
           + "         xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n"
@@ -2130,8 +2077,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromBadUriFile() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults
           = session.run("CALL n10s.rdf.stream.fetch('" +
@@ -2150,8 +2096,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromBadUriString() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       String rdf = "@prefix pr: <http://example.org/vocab/show/> .\n"
           + "pr:ent\n"
@@ -2173,8 +2118,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamFromBadUriFileFail() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       try {
         Result importResults
@@ -2191,8 +2135,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testStreamRDFStarFromSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       Result importResults
               = session
@@ -2233,8 +2176,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testGetLangValUDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2297,8 +2239,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testGetLangTagUDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2335,8 +2276,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testHasLangTagUDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2375,8 +2315,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testGetUriFromShortAndShortFromUri() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
@@ -2403,8 +2342,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testGetDataType() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2448,8 +2386,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testGetValue() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2475,8 +2412,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testCustomDataTypesKeepURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ keepLangTag: true, handleMultival: 'ARRAY',  " +
@@ -2512,8 +2448,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testCustomDataTypesShortenURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " { keepLangTag: true, handleMultival: 'ARRAY',  " +
@@ -2554,8 +2489,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportMultiValAfterImportSingelVal() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleMultival: 'OVERWRITE', handleVocabUris: 'KEEP'  }");
@@ -2594,8 +2528,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testReificationImport() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
@@ -2629,8 +2562,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testIncrementalLoadMultivaluesInArray() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleMultival: 'ARRAY' }");
 
@@ -2661,8 +2593,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testIncrementalLoadNamespaces() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2707,8 +2638,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadNamespacesWithCustomPredefined() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2745,8 +2675,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testIncrementalLoadArrayOnPreviouslyAtomicValue() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2792,8 +2721,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testIncrementalLoadAtomicValueOnPreviouslyArray() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2818,11 +2746,10 @@ public class RDFProceduresTest {
 
     }
   }
-
+  
   @Test
   public void testLargerFileManyTransactions() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -2838,8 +2765,7 @@ public class RDFProceduresTest {
 
   @Test
   public void dbpediaFragmentTest() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
 
@@ -2877,8 +2803,7 @@ public class RDFProceduresTest {
 
   @Test
   public void multivalMultitypeSamePartialTx() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
 
@@ -2953,8 +2878,7 @@ public class RDFProceduresTest {
 
   @Test
   public void homogeneousMultivalAcrossPartialCommits() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{handleMultival:'ARRAY', handleRDFTypes: 'NODES'}");
 
@@ -2994,8 +2918,7 @@ public class RDFProceduresTest {
 
   @Test
   public void heterogeneousMultivalAcrossPartialCommits() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleMultival:'ARRAY', handleRDFTypes: 'NODES', keepCustomDataTypes: true}");
@@ -3122,8 +3045,7 @@ public class RDFProceduresTest {
 
   @Test
   public void heterogeneousMultivalAcrossPartialCommitsWithKeepURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleMultival:'ARRAY', handleVocabUris: 'KEEP', keepCustomDataTypes: true}");
@@ -3158,8 +3080,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testTypesOnlySeparateTx() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{handleMultival:'ARRAY', keepCustomDataTypes: true}");
@@ -3185,8 +3106,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteRelationshipKeepURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
@@ -3227,8 +3147,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteRelationshipShortenURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -3269,8 +3188,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteRelationshipShortenURIsFromString() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -3335,8 +3253,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteLiteralKeepURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', " +
@@ -3372,8 +3289,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteLiteralShortenURIs() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', " +
@@ -3409,8 +3325,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteLiteralShortenURIsFromString() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
@@ -3471,8 +3386,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteTypeFromResource() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -3507,8 +3421,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteAllTriplesRelatedToResource() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -3538,8 +3451,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteMultiLiteral() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, " +
@@ -3594,8 +3506,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteSubjectNode() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -3629,8 +3540,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testRepetitiveDeletion() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "" +
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
@@ -3668,11 +3578,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportDatesAndTimes() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
@@ -3692,11 +3598,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportDatesAndTimes2() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
-
+    try (Session session = driver.session();) {
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
       Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
@@ -3716,10 +3618,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportDatesAndTimesMultivalued() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      Session session = driver.session();
+    try (Session session = driver.session();) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleMultival: 'ARRAY' }");
 
@@ -3759,8 +3658,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testImportQuadRDFTriG() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
@@ -3796,7 +3694,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3817,27 +3715,25 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
 
   @Test
   public void testImportInlineQuadRDFTriG() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
       session.run("call n10s.nsprefixes.add('ns0','http://www.example.org/vocabulary#')");
     }
 
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
@@ -3872,7 +3768,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3893,22 +3789,21 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`ns0__friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`ns0__knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
 
   @Test
   public void testImportQuadRDFNQuads() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
@@ -3944,7 +3839,7 @@ public class RDFProceduresTest {
       assertEquals(LocalDateTime.parse("2019-06-07T10:15:30"),
           result.next().get("created").asList().get(0));
       result = session.run("MATCH (n {uri: 'http://www.example.org/exampleDocument#Monica'})"
-          + "WHERE NOT EXISTS(n.graphUri)"
+          + "WHERE n.graphUri is null "
           + "RETURN labels(n) AS labels");
       Record record = result.next();
       assertEquals("Resource",
@@ -3965,22 +3860,21 @@ public class RDFProceduresTest {
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#friendOf`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertTrue(result.next().get("result").asBoolean());
       result = session
           .run(
               "MATCH (n:Resource)"
                   + "-[:`http://www.example.org/vocabulary#knows`]->"
                   + "(m:Resource)"
-                  + "RETURN NOT EXISTS(n.graphUri) AND NOT EXISTS(m.graphUri) AS result");
+                  + "RETURN n.graphUri is null AND m.graphUri is null AS result");
       assertFalse(result.next().get("result").asBoolean());
     }
   }
 
   @Test
   public void testDeleteQuadRDFTriG() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' }");
@@ -4011,8 +3905,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testDeleteQuadRDFNQuads() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           " { handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY' } ");
@@ -4043,8 +3936,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testRepetitiveDeletionQuadRDF() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDBForQuads(neo4j.defaultDatabaseService(),
           "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS', keepCustomDataTypes: true, handleMultival: 'ARRAY'}");
@@ -4087,7 +3979,7 @@ public class RDFProceduresTest {
   }
 
   private void initialiseGraphDBForQuads(GraphDatabaseService db, String graphConfigParams) {
-    db.executeTransactionally("CREATE INDEX ON :Resource(uri)");
+    db.executeTransactionally(CREATE_URI_INDEX);
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }
@@ -4095,8 +3987,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTreeEmptyJSON() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
 
@@ -4111,8 +4002,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTreeListAtRoot() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
 
@@ -4150,8 +4040,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTree() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
 
@@ -4186,8 +4075,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTreeWithUrisAndContext() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
 
@@ -4241,8 +4129,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTree2() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
 
@@ -4296,8 +4183,7 @@ public class RDFProceduresTest {
 
   @Test
   public void testLoadJSONAsTree3() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    try (Session session = driver.session()) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
 

@@ -14,6 +14,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.MessageFormat;
 import java.util.*;
 
 import n10s.ModelTestUtils;
@@ -24,15 +25,17 @@ import n10s.onto.load.OntoLoadProcedures;
 import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
 import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
+import n10s.rdf.aggregate.CollectTriples;
 import n10s.rdf.delete.RDFDeleteProcedures;
 import n10s.rdf.export.ExportProcessor;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
+import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
+import org.eclipse.rdf4j.query.algebra.Str;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -51,23 +54,52 @@ import org.neo4j.test.server.HTTP.Response;
  */
 public class RDFEndpointTest {
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
-      .withProcedure(RDFLoadProcedures.class)
-      .withProcedure(QuadRDFLoadProcedures.class)
-      .withProcedure(QuadRDFDeleteProcedures.class)
-      .withFunction(RDFProcedures.class)
-      .withProcedure(MappingUtils.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withProcedure(RDFDeleteProcedures.class)
-      .withProcedure(OntoLoadProcedures.class)
-      .withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(ValidationProcedures.class)
-      .withProcedure(RDFExportProcedures.class);
+  public static Driver driver;
+  public static GraphDatabaseService graphDatabaseService;
+  public static GraphDatabaseService tempGDBs;
+  public static Driver tempDriver;
 
-  @Rule
-  public Neo4jRule temp = new Neo4jRule().withProcedure(RDFLoadProcedures.class)
-      .withProcedure(GraphConfigProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(QuadRDFLoadProcedures.class)
+          .withProcedure(QuadRDFDeleteProcedures.class)
+          .withFunction(RDFProcedures.class)
+          .withProcedure(MappingUtils.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(RDFDeleteProcedures.class)
+          .withProcedure(OntoLoadProcedures.class)
+          .withProcedure(NsPrefixDefProcedures.class)
+          .withProcedure(ValidationProcedures.class)
+          .withProcedure(RDFExportProcedures.class);
+
+    @ClassRule
+    public static Neo4jRule temp = new Neo4jRule()
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(GraphConfigProcedures.class);
+    @BeforeClass
+    public static void init() {
+        driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build());
+
+        tempDriver = GraphDatabase.driver(temp.boltURI(),
+                Config.builder().withoutEncryption().build());
+    }
+    @Before
+    public void cleanDatabase() {
+        driver.session().run("match (n) detach delete n").consume();
+        driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+        driver.session().run("drop index uri_index if exists").consume();
+
+
+        tempDriver.session().run("match (n) detach delete n").consume();
+        tempDriver.session().run("drop constraint n10s_unique_uri if exists").consume();
+        tempDriver.session().run("drop index uri_index if exists").consume();
+
+        graphDatabaseService = neo4j.defaultDatabaseService();
+        tempGDBs = temp.defaultDatabaseService();
+    }
+
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
@@ -82,8 +114,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testGetNodeById() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -104,7 +134,6 @@ public class RDFEndpointTest {
           "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
-
     }
 
     // When
@@ -112,7 +141,14 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
       id = (Long) result.next().get("id");
-      assertEquals(Long.valueOf(7), id);
+      assertNotNull(id);
+    }
+
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return n.name as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
     }
 
     // When
@@ -120,16 +156,16 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
             + id.toString());
 
-    String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#5\",\n"
+    String expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
         + "  \"neo4j://graph.schema#FRIEND_OF\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#7\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%2$s\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Critic\" ],\n"
         + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
         + "  } ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -138,7 +174,11 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Hugo Weaving\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]",
+            nameToId.get("Carrie-Anne Moss"),
+            nameToId.get("Hugo Weaving"),
+            nameToId.get("Andy Wachowski")
+            );
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
@@ -172,8 +212,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testGetNodeByIdFromRDFizedLPG() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String configCreation = "CALL n10s.graphconfig.init({handleVocabUris:'IGNORE'}) ";
@@ -241,8 +279,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherCgnt() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("UNWIND RANGE(1,5,1) as id\n" +
@@ -259,8 +295,18 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
+    String cableid;
+    String crpid;
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("match (c:Cable{ id: 4 })--(crp:CableRoutingPoint{id: 2 }) " +
+              " return id(c) as cableid, id(crp) as crpid ");
+      Map<String, Object> record = result.next();
+      cableid = record.get("cableid").toString();
+      crpid = record.get("crpid").toString();
+    }
+
     Map<String, Object> map = new HashMap<>();
-    map.put("cypher", "MATCH s = ()--() RETURN s");
+    map.put("cypher", "MATCH s = (:Cable{id: 4 })--(:CableRoutingPoint{id: 2 }) RETURN s");
     map.put("format", "Turtle-star");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
@@ -269,136 +315,21 @@ public class RDFEndpointTest {
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
             "\n" +
-            "n4ind:3 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:typeCodes \"C\", \"B\", \"A\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "n4ind:0 a n4sch:Cable;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:3, n4ind:1;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:name \"cable_1\" .\n" +
-            "\n" +
-            "<<n4ind:0 n4sch:HAS_ROUTING_POINT n4ind:3>> n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:labels \"bar\", \"foo\" .\n" +
-            "\n" +
-            "n4ind:1 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
-            "  n4sch:typeCodes \"A\", \"B\", \"C\" .\n" +
-            "\n" +
-            "<<n4ind:0 n4sch:HAS_ROUTING_POINT n4ind:1>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "<<n4ind:2 n4sch:HAS_ROUTING_POINT n4ind:6>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:6 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
-            "  n4sch:typeCodes \"B\", \"A\", \"C\";\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
-            "\n" +
-            "n4ind:2 a n4sch:Cable;\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:6, n4ind:4;\n" +
-            "  n4sch:name \"cable_2\" .\n" +
-            "\n" +
-            "n4ind:4 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:typeCodes \"C\", \"A\", \"B\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "<<n4ind:2 n4sch:HAS_ROUTING_POINT n4ind:4>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:7 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:typeCodes \"A\", \"C\", \"B\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral>;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
-            "\n" +
-            "<<n4ind:5 n4sch:HAS_ROUTING_POINT n4ind:7>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:5 a n4sch:Cable;\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:7, n4ind:9;\n" +
-            "  n4sch:id \"3\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:name \"cable_3\" .\n" +
-            "\n" +
-            "<<n4ind:5 n4sch:HAS_ROUTING_POINT n4ind:9>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:9 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "n4ind:8 a n4sch:Cable;\n" +
+            "n4ind:" + cableid + " a n4sch:Cable;\n" +
             "  n4sch:name \"cable_4\";\n" +
             "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"4\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:12, n4ind:10 .\n" +
+            "  n4sch:HAS_ROUTING_POINT n4ind:" + crpid + " .\n" +
             "\n" +
-            "n4ind:12 a n4sch:CableRoutingPoint;\n" +
+            "n4ind:" + crpid + " a n4sch:CableRoutingPoint;\n" +
             "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
             "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
             "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
             "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
             "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "<<n4ind:8 n4sch:HAS_ROUTING_POINT n4ind:12>> n4sch:labels \"bar\", \"foo\";\n" +
+            "<<n4ind:" + cableid + " n4sch:HAS_ROUTING_POINT n4ind:" + crpid + ">> n4sch:labels \"bar\", \"foo\";\n" +
             "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:10 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:typeCodes \"A\", \"C\", \"B\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "<<n4ind:8 n4sch:HAS_ROUTING_POINT n4ind:10>> n4sch:labels \"bar\", \"foo\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:13 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:id \"1\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:typeCodes \"A\", \"B\", \"C\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "n4ind:11 a n4sch:Cable;\n" +
-            "  n4sch:id \"5\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:HAS_ROUTING_POINT n4ind:13, n4ind:14;\n" +
-            "  n4sch:name \"cable_5\";\n" +
-            "  n4sch:createdAt \"2017-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:13>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n" +
-            "n4ind:14 a n4sch:CableRoutingPoint;\n" +
-            "  n4sch:inspectionDates \"2019-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>,\n" +
-            "    \"2020-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>, \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n" +
-            "  n4sch:id \"2\"^^<http://www.w3.org/2001/XMLSchema#long>;\n" +
-            "  n4sch:typeCodes \"C\", \"B\", \"A\";\n" +
-            "  n4sch:location \"Point(-0.1275 51.507222222)\"^^<http://www.opengis.net/ont/geosparql#wktLiteral> .\n" +
-            "\n" +
-            "<<n4ind:11 n4sch:HAS_ROUTING_POINT n4ind:14>> n4sch:labels \"foo\", \"bar\";\n" +
-            "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
-            "\n";
+            "\n" ;
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -408,8 +339,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherReturnsList() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
@@ -418,11 +347,11 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-        String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-            "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-            "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-            "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-            "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+        String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://person#1', name:'Keanu Reeves', born:1964})\n" +
+            "CREATE (Carrie:Director {uri:'neo4j://person#2', name:'Carrie-Anne Moss', born:1967})\n" +
+            "CREATE (Laurence:Director {uri:'neo4j://person#3', name:'Laurence Fishburne', born:1961})\n" +
+            "CREATE (Hugo:Critic {uri:'neo4j://person#4', name:'Hugo Weaving', born:1960})\n" +
+            "CREATE (AndyW:Actor {uri:'neo4j://person#5', name:'Andy Wachowski', born:1967})\n" +
             "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
             "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
         tx.execute(dataInsertion);
@@ -439,31 +368,32 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
-        + "<neo4j://graph.individuals#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
-        + "<neo4j://graph.individuals#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
-        + "<neo4j://graph.individuals#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
-        + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://graph.individuals#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
-        + "<neo4j://graph.individuals#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
+    String expected = "<neo4j://person#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://person#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
+        + "<neo4j://person#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
+        + "<neo4j://person#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+        + "<neo4j://person#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://person#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
+        + "<neo4j://person#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
+        + "<neo4j://person#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://person#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+        + "<neo4j://person#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
+        + "<neo4j://person#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
     assertEquals(200, response.status());
+
+    String responseString = response.rawContent();
+
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+        .compareModels(expected, RDFFormat.TURTLE, responseString, RDFFormat.TURTLE));
 
   }
 
   @Test
   public void testPrefixwithHyphen() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -528,8 +458,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnMovieDBReturnsList() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
@@ -559,6 +487,13 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return case n:Movie when true then n.title else n.name end as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n:Movie { title: \"That Thing You Do\"})--(x) "
         + "RETURN collect(distinct n) + collect(distinct x)");
@@ -566,19 +501,25 @@ public class RDFEndpointTest {
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
-    String expected = "<neo4j://graph.individuals#86> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
-        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
-        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#72> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#86> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
-        + "<neo4j://graph.individuals#87> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
-        + "<neo4j://graph.individuals#87> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#13> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals#72> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals#86> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
-        + "<neo4j://graph.individuals#86> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
-        + "<neo4j://graph.individuals#13> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .";
+    String expected = String.format(
+          "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
+        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
+        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%4$s> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
+        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
+        + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+        + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .",
+            nameToId.get("Charlize Theron"),
+            nameToId.get("Liv Tyler"),
+            nameToId.get("Tom Hanks"),
+            nameToId.get("That Thing You Do")
+            );
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -588,8 +529,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherReturnsListOnRDFGraph() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -627,8 +566,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testGetNodeByIdRDFStar() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
@@ -642,35 +579,37 @@ public class RDFEndpointTest {
       tx.commit();
 
     }
-    Long id;
+    Long id1;
+    Long id4;
+    Long id3;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("MATCH (n:Critic)-[fo:FRIEND_OF]-() RETURN id(n) as id, "
-          + " fo.since AS since ");
+      Result result = tx.execute("MATCH (n3:Critic), (n4:Actor {name:'Andy Wachowski'}), (n1:Director {name:'Carrie-Anne Moss'}) " +
+              "return id(n1) as id1, id(n4) as id4, id(n3) as id3");
       Map<String, Object> next = result.next();
-      String since = (String) next.get("since");
-      assertEquals("the early days", since);
-      id = (Long) next.get("id");
+      id1 = (Long) next.get("id1");
+      id4 = (Long) next.get("id4");
+      id3 = (Long) next.get("id3");
     }
 
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
-            + id.toString());
+            + id3.toString());
 
-    String expected = "@prefix neoind: <neo4j://graph.individuals#> .\n"
+    String expected = String.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
         + "@prefix neovoc: <neo4j://graph.schema#> .\n"
         + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
         + "\n"
-        + "neoind:3 a neovoc:Critic;\n"
-        + "  neovoc:WORKS_WITH neoind:4;\n"
+        + "neoind:%2$s a neovoc:Critic;\n"
+        + "  neovoc:WORKS_WITH neoind:%3$s;\n"
         + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
         + "  neovoc:name \"Hugo Weaving\" .\n"
         + "\n"
-        + "<<neoind:1 neovoc:FRIEND_OF neoind:3>> neovoc:since \"the early days\" .\n"
+        + "<<neoind:%1$s neovoc:FRIEND_OF neoind:%2$s>> neovoc:since \"the early days\" .\n"
         + "\n"
-        + "<<neoind:3 neovoc:WORKS_WITH neoind:4>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+        + "<<neoind:%2$s neovoc:WORKS_WITH neoind:%3$s>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
         + "\n"
-        + "neoind:1 neovoc:FRIEND_OF neoind:3 .";
+        + "neoind:%1$s neovoc:FRIEND_OF neoind:%2$s .", id1, id3, id4);
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
@@ -679,8 +618,6 @@ public class RDFEndpointTest {
 
   @Test
   public void ImportGetNodeById() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -708,19 +645,17 @@ public class RDFEndpointTest {
 
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
       id = (Long) result.next().get("id");
-      assertEquals(7, id);
+      assertNotNull(id);
     }
 
-    try (Driver driver = GraphDatabase.driver(temp.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      session
-          .run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
-      org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.import.fetch('" +
-          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
-          + id +
-          "','Turtle')");
+    Session session = tempDriver.session();
+    session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
+    session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
+    org.neo4j.driver.Result importResults
+        = session.run("CALL n10s.rdf.import.fetch('" +
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+        + id +
+        "','Turtle')");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -740,14 +675,11 @@ public class RDFEndpointTest {
         assertEquals("neo4j://graph.individuals#" + criticPreImport.get("id"),
             criticPostImport.get("uri").asString());
       }
-    }
   }
 
 
   @Test
   public void ImportGetNodeByIdOnImportedOnto() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -796,8 +728,6 @@ public class RDFEndpointTest {
 
   @Test
   public void ImportGetNodeByUriOnImportedOntoShorten() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -861,8 +791,6 @@ public class RDFEndpointTest {
 
   @Test
   public void ImportGetNodeByUriOnImportedOntoIgnore() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     //first import onto
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -925,9 +853,6 @@ public class RDFEndpointTest {
   @Test
   public void ImportGetCypher() throws Exception {
 
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
-    final GraphDatabaseService tempGDBs = temp.defaultDatabaseService();
-
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
           "MERGE (a:Category {catName: 'Actor'})\n" +
@@ -955,21 +880,20 @@ public class RDFEndpointTest {
           "MATCH (n:Critic) RETURN n.born AS born, n.name AS name , n.uri as uri, id(n) as id");
       preImport = result.next();
       assertEquals(1960L, preImport.get("born"));
-      assertEquals(7L, preImport.get("id"));
+      assertNotNull(preImport.get("id"));
       assertEquals("Hugo Weaving", preImport.get("name"));
       //no uri pre-import
       assertNull(preImport.get("uri"));
     }
 
-    try (Driver driver = GraphDatabase.driver(temp.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-      session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
-      org.neo4j.driver.Result importResults
-          = session.run("CALL n10s.rdf.import.fetch('" +
-          HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher" +
-          "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
-          + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
+    Session session = tempDriver.session();
+    session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
+    session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
+    org.neo4j.driver.Result importResults
+        = session.run("CALL n10s.rdf.import.fetch('" +
+        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher" +
+        "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
+        + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
       Map<String, Object> singleResult = importResults
           .single().asMap();
@@ -982,14 +906,11 @@ public class RDFEndpointTest {
       assertEquals(preImport.get("born"), criticPostImport.get("born").asLong());
       assertEquals("neo4j://graph.individuals#" + preImport.get("id"),
           criticPostImport.get("uri").asString());
-    }
-
   }
+
 
   @Test
   public void testFindNodeByLabelAndProperty() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
@@ -1011,18 +932,19 @@ public class RDFEndpointTest {
       tx.execute(dataInsertion);
       tx.commit();
     }
-
+    Long id = null;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
-      assertEquals(7L, result.next().get("id"));
+      Result result = tx.execute("MATCH (n:Director {name:'Laurence Fishburne'}) RETURN id(n) AS id ");
+      id = (Long) result.next().get("id");
+      assertNotNull(id);
     }
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Director/born/1961?valType=INTEGER");
 
-    String expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+    String expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1031,7 +953,7 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]", id.toString());
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -1042,8 +964,8 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Director/name/Laurence%20Fishburne");
 
-    expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#6\",\n"
+    expected = String.format("[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1052,7 +974,7 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Laurence Fishburne\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]", id.toString());
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
@@ -1062,8 +984,16 @@ public class RDFEndpointTest {
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
             + "neo4j/describe/find/Actor/born/1964?valType=INTEGER");
 
-    expected = "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#4\",\n"
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n) return n.name as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
+    expected = String.format(
+  "[ {\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1073,12 +1003,12 @@ public class RDFEndpointTest {
         + "    \"@value\" : \"Keanu Reeves\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#7\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
         + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals#8\"\n"
+        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
         + "  } ]\n"
         + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#8\",\n"
+        + "  \"@id\" : \"neo4j://graph.individuals%3$s\",\n"
         + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
         + "  \"neo4j://graph.schema#born\" : [ {\n"
         + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
@@ -1087,7 +1017,12 @@ public class RDFEndpointTest {
         + "  \"neo4j://graph.schema#name\" : [ {\n"
         + "    \"@value\" : \"Andy Wachowski\"\n"
         + "  } ]\n"
-        + "} ]";
+        + "} ]",
+          nameToId.get("Keanu Reeves"),   //0
+          nameToId.get("Hugo Weaving"),   //1
+          nameToId.get("Andy Wachowski") //2
+
+    );
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
         .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
@@ -1141,7 +1076,7 @@ public class RDFEndpointTest {
     assertEquals("[ ]", response.rawContent());
     assertEquals(200, response.status());
 
-    try (Transaction tx = neo4j.defaultDatabaseService().beginTx()) {
+    try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.commit();
     }
@@ -1166,7 +1101,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testPing() throws Exception {
-    // Given
     HTTP.Response response = HTTP.GET(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "ping");
 
@@ -1177,8 +1111,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnLPG() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
@@ -1199,6 +1131,13 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
+    Map<String,String> nameToId = new HashMap<>();
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("match (n:Category) return n.catName as name, id(n) as id")
+              .stream()
+              .forEach(r -> nameToId.put((String) r.get("name"), String.format("#%s", (Long)r.get("id")) ));
+    }
+
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
@@ -1206,20 +1145,26 @@ public class RDFEndpointTest {
     }
 
     Map<String, Object> map = new HashMap<>();
-    map.put("cypher", "MATCH (n:Category)--(m:Category) RETURN n,m LIMIT 4");
+    map.put("cypher", "MATCH (n:Category)--(:Category) RETURN distinct n LIMIT 4");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
         HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
 
     String expected =
-        "<neo4j://graph.individuals#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#3> <neo4j://graph.schema#catName> \"Critic\" .\n"
-            + "<neo4j://graph.individuals#0> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#0> <neo4j://graph.schema#catName> \"Person\" .\n"
-            + "<neo4j://graph.individuals#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#2> <neo4j://graph.schema#catName> \"Director\" .\n"
-            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals#1> <neo4j://graph.schema#catName> \"Actor\" .\n";
+        String.format(
+              "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#catName> \"Critic\" .\n"
+            + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#catName> \"Person\" .\n"
+            + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#catName> \"Director\" .\n"
+            + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+            + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#catName> \"Actor\" .\n",
+                nameToId.get("Critic"),
+                nameToId.get("Person"),
+                nameToId.get("Director"),
+                nameToId.get("Actor")
+        );
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -1247,7 +1192,6 @@ public class RDFEndpointTest {
   @Test
   public void testCypherOnLPGMappingsAndQueryParams() throws Exception {
 
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("call n10s.nsprefixes.add('sch','http://schema.org/')");
       tx.commit();
@@ -1255,12 +1199,12 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-      String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967}) "
-          + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {title: 'The Matrix'})";
+      String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://graph.individuals#1', name:'Keanu Reeves', born:1964})\n" +
+          "CREATE (Carrie:Director {uri:'neo4j://graph.individuals#2', name:'Carrie-Anne Moss', born:1967})\n" +
+          "CREATE (Laurence:Director {uri:'neo4j://graph.individuals#3', name:'Laurence Fishburne', born:1961})\n" +
+          "CREATE (Hugo:Critic {uri:'neo4j://graph.individuals#4', name:'Hugo Weaving', born:1960})\n" +
+          "CREATE (AndyW:Actor {uri:'neo4j://graph.individuals#5', name:'Andy Wachowski', born:1967}) "
+          + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {uri:'neo4j://graph.individuals#6', title: 'The Matrix'})";
       tx.execute(dataInsertion);
 
       tx.execute("CALL n10s.mapping.add('http://schema.org/Person','Actor')");
@@ -1319,7 +1263,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testontoOnLPG() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String dataInsertion =
           "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
@@ -1390,7 +1333,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testontoOnRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
@@ -1458,7 +1400,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUri() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
@@ -1511,7 +1452,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImport() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1562,8 +1502,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriMissingNamespaceDefinition() throws Exception {
-
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1638,7 +1576,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultilang() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1673,7 +1610,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherWithUrisSerializeAsJsonLd() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
@@ -1727,7 +1663,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testOneNodeCypherWithUrisSerializeAsJsonLd() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
@@ -1768,7 +1703,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherWithBNodesSerializeAsRDFXML() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
@@ -1834,7 +1768,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithCustomDTKeepUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1878,7 +1811,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithCustomDTShortenURIs() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1923,7 +1855,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultiCustomDTKeepUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -1967,7 +1898,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriAfterImportWithMultiCustomDTShortenUris() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2013,7 +1943,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherAfterImportWithCustomDTKeepURIsSerializeAsTurtle() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2062,7 +1991,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherDatesAndDatetimes() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2102,7 +2030,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherErrorWhereModelIsNotRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     String cypherCreate = " CREATE (r:Resource { uri: 'neo4j://explicit_uri#123' , name: 'the name' }) ";
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2171,7 +2098,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2220,7 +2146,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithMultiCustomDTKeepURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -2270,7 +2195,6 @@ public class RDFEndpointTest {
   @Test
   public void testcypherAfterImportWithMultiCustomDTShortenURIsSerializeAsTurtle()
       throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
@@ -2318,7 +2242,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testcypherAfterDeleteRDFBNodes() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
 
@@ -2380,9 +2303,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnQuadRDFSerializeAsTriG() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2417,9 +2339,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnQuadRDFSerializeAsNQuads() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2454,9 +2375,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriOnQuadRDF() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2488,9 +2408,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriWithGraphUriOnQuadRDFTrig() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2529,9 +2448,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testNodeByUriWithGraphUriOnQuadRDFNQuads() throws Exception {
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2567,10 +2485,8 @@ public class RDFEndpointTest {
 
   @Test
   public void testCypherOnQuadRDFAfterDeleteRDFBNodes() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      tx.execute("CREATE INDEX ON :Resource(uri)");
+      tx.execute("CREATE INDEX uri_index FOR (r:Resource) ON (r.uri)");
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2617,8 +2533,6 @@ public class RDFEndpointTest {
 
   @Test
   public void testTicket13061() throws Exception {
-    // Given
-    final GraphDatabaseService graphDatabaseService = neo4j.defaultDatabaseService();
     //create constraint
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -2639,7 +2553,7 @@ public class RDFEndpointTest {
     //  check data is  correctly loaded
     Long id;
     try (Transaction tx = graphDatabaseService.beginTx()) {
-      Result result = tx.execute("match (n:ConceptScheme) return properties(n) as n, size((n)--()) as deg");
+      Result result = tx.execute("match (n:ConceptScheme) return properties(n) as n, size([(n)-[r]-()| r]) as deg");
       Map<String, Object> next = result.next();
       Map<String,Object> n = (Map<String,Object>)next.get("n");
       long[] tcVals = (long[])n.get("topConcepts");

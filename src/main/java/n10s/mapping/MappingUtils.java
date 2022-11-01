@@ -65,7 +65,7 @@ public class MappingUtils {
         + "DETACH DELETE oldmd";
 
     String cleanOrphansIfAny = "MATCH (oldns:`_MapNs`)\n"
-        + " WHERE size((oldns)<-[:_IN]-())=0\n"
+        + " WHERE not (oldns)<-[:_IN]-() \n"
         + " DELETE oldns";
 
     String createNewMapping = "MERGE (newmns:`_MapNs` { _ns: $namespace, _prefix: $prefix }) \n"
@@ -105,7 +105,7 @@ public class MappingUtils {
   public Stream<StringOutput> drop(@Name("graphElementName") String gElem)
       throws MappingDefinitionException {
     String cypher = "MATCH (mapns)<-[:_IN]-(elem:_MapDef { _key : $local }) DETACH DELETE elem "
-        + "RETURN count(elem) AS deletecount, size((mapns)<-[:_IN]-()) AS remaining, mapns ";
+        + "RETURN count(elem) AS deletecount, size([(mapns)<-[r:_IN]-() | r ]) AS remaining, mapns ";
     Map<String, Object> params = new HashMap<>();
     params.put("local", gElem);
     Result queryResult = tx.execute(cypher, params);

@@ -37,7 +37,6 @@ import org.neo4j.dbms.api.DatabaseManagementService;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.NotFoundException;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.logging.Log;
 
 /**
  * Created by jbarrasa on 08/09/2016.
@@ -69,10 +68,6 @@ public class RDFEndpoint {
   private static RDFFormat[] availableParsers = new RDFFormat[]{RDFFormat.RDFXML, RDFFormat.JSONLD,
       RDFFormat.TURTLE, RDFFormat.NTRIPLES, RDFFormat.TRIG, RDFFormat.NQUADS, RDFFormat.TURTLESTAR,
       RDFFormat.TRIGSTAR};
-
-  @Context
-  public Log log;
-
 
   @GET
   @Path("/ping")
@@ -321,26 +316,20 @@ public class RDFEndpoint {
   private RDFFormat getFormat(String mimetype, String formatParam) {
     // format request param overrides the one defined in the accept header param
     if (formatParam != null) {
-      log.debug("serialization from param in request: " + formatParam);
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().contains(formatParam)) {
-          log.debug("parser to be used: " + parser.getDefaultMIMEType());
           return parser;
         }
       }
     } else {
       if (mimetype != null) {
-        log.debug("serialization from media type in request: " + mimetype);
         for (RDFFormat parser : availableParsers) {
           if (parser.getMIMETypes().contains(mimetype)) {
-            log.debug("parser to be used: " + parser.getDefaultMIMEType());
             return parser;
           }
         }
       }
     }
-
-    log.debug("Unrecognized or undefined serialization. Defaulting to Turtle serialization");
 
     return RDFFormat.TURTLE;
 

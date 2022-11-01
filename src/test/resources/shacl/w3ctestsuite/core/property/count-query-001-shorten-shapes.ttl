@@ -12,7 +12,7 @@
 ex:PersonShape
   rdf:type sh:NodeShape ;
   sh:property ex:PersonShape-pob ;
-  sh:targetQuery " exists (focus.ns0__hasPob)  " ;
+  sh:targetQuery " focus.ns0__hasPob is not null  " ;
 .
 
 ex:PersonShape-pob

@@ -1,11 +1,12 @@
 package n10s.onto;
 
 import n10s.graphconfig.GraphConfigProcedures;
+import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.onto.load.OntoLoadProcedures;
 import n10s.onto.preview.OntoPreviewProcedures;
 import n10s.rdf.RDFProcedures;
-import org.junit.Rule;
-import org.junit.Test;
+import n10s.rdf.load.RDFLoadProcedures;
+import org.junit.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
 import org.neo4j.graphdb.GraphDatabaseService;
@@ -27,13 +28,26 @@ import static org.junit.Assert.*;
  * Created by jbarrasa on 21/03/2016.
  */
 public class OntoProceduresTest {
+  public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(OntoLoadProcedures.class)
-      .withProcedure(OntoPreviewProcedures.class)
-      .withProcedure(GraphConfigProcedures.class)
-      .withFunction(RDFProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(OntoLoadProcedures.class)
+          .withProcedure(OntoPreviewProcedures.class)
+          .withProcedure(GraphConfigProcedures.class)
+          .withFunction(RDFProcedures.class);
+
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+  }
 
 
   private String turtleOntology = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n"
@@ -320,8 +334,7 @@ public class OntoProceduresTest {
 
   @Test
   public void testOntoPreviewFromSnippet() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{}");
@@ -338,13 +351,11 @@ public class OntoProceduresTest {
       assertEquals(14, nodes.size());
       final List<Relationship> rels = (List<Relationship>) next.get("relationships");
       assertEquals(17, rels.size());
-    }
   }
 
   @Test
   public void testOntoPreviewFromSnippetLimit() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{}");
@@ -372,13 +383,11 @@ public class OntoProceduresTest {
       assertEquals(5, nodes.size());
       rels = (List<Relationship>) next.get("relationships");
       assertEquals(1, rels.size());
-    }
   }
 
   @Test
   public void testOntoPreviewFromSnippetWithRestrictions() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{}");
@@ -395,13 +404,11 @@ public class OntoProceduresTest {
       assertEquals(5, nodes.size());
       final List<Relationship> rels = (List<Relationship>) next.get("relationships");
       assertEquals(2, rels.size());
-    }
   }
 
   @Test
   public void testOntoPreviewFromSnippetWithRestrictionsAndOtherElements() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'IGNORE'}");
@@ -451,13 +458,11 @@ public class OntoProceduresTest {
         }
 
       }
-    }
   }
 
   @Test
   public void testOntoPreviewFromSnippetWithCardinalityRestrictions() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'IGNORE'}");
@@ -498,13 +503,11 @@ public class OntoProceduresTest {
           assertEquals("hasUnit", nodeAsMap.get("name"));
         }
       }
-    }
   }
 
   @Test
   public void testOntoPreviewFromFileLimit() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{}");
@@ -533,15 +536,11 @@ public class OntoProceduresTest {
       assertEquals(2, nodes.size());
       rels = (List<Relationship>) next.get("relationships");
       assertEquals(0, rels.size());
-    }
   }
 
 
   @Test
   public void ontoImportTest() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ baseSchemaNamespace : 'http://basenamespace#' }");
       Session session = driver.session();
 
@@ -561,14 +560,10 @@ public class OntoProceduresTest {
       assertEquals(6L,
           session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
-    }
-
   }
 
   @Test
   public void ontoImportTestWithRelCharacteristicsMultival() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
 
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ baseSchemaNamespace : 'http://basenamespace#' , handleMultival: 'ARRAY'}");
@@ -601,15 +596,11 @@ public class OntoProceduresTest {
       assertTrue(propCharsForReviewed.contains("InverseFunctional"));
       assertTrue(propCharsForReviewed.contains("Functional"));
       assertTrue(propCharsForReviewed.size() == 2);
-    }
 
   }
 
   @Test
   public void ontoImportTestWithRelCharacteristicsOverwrite() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{}");
       Session session = driver.session();
 
@@ -623,16 +614,10 @@ public class OntoProceduresTest {
 
       assertEquals("Functional",session.run("MATCH (n:n4sch__Relationship { n4sch__name: 'REVIEWED'} ) " +
               "RETURN n.n4sch__propCharacteristics AS pc").next().get("pc").asString());
-
-    }
-
   }
 
   @Test
   public void ontoSnippetImportTest() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
@@ -655,15 +640,10 @@ public class OntoProceduresTest {
       assertEquals(6L,
           session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
-    }
-
   }
 
   @Test
   public void ontoImportWithCustomNames() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           " { classLabel : 'Category', objectPropertyLabel: 'Rel', " +
                   "dataTypePropertyLabel: 'Prop', baseSchemaNamespace: 'http://base.org/voc#'}");
@@ -702,16 +682,10 @@ public class OntoProceduresTest {
       assertEquals(13L,
           session.run("MATCH (n:Resource) RETURN count(distinct n.n4sch__comment) AS count")
               .next().get("count").asLong());
-
-    }
-
   }
 
   @Test
   public void ontoImportWithCustomNamesIgnoreMode() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               " { classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop', handleVocabUris: 'IGNORE'}");
       Session session = driver.session();
@@ -749,17 +723,11 @@ public class OntoProceduresTest {
       assertEquals(13L,
               session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
                       .next().get("count").asLong());
-
-    }
-
   }
 
 
   @Test
   public void ontoSnippetImportWithCustomNames() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ classLabel : 'Category', objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop', handleVocabUris: 'IGNORE'}");
       Session session = driver.session();
@@ -799,16 +767,10 @@ public class OntoProceduresTest {
       assertEquals(13L,
           session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
               .next().get("count").asLong());
-
-    }
-
   }
 
   @Test
   public void ontoImportWithCustomNamesFilterLabels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ classLabel : 'Category', "
           + "objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' , handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
@@ -850,16 +812,10 @@ public class OntoProceduresTest {
       assertEquals(0L,
           session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
               .next().get("count").asLong());
-
-    }
-
   }
 
   @Test
   public void ontoSnippetImportWithCustomNamesFilterLabels() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ classLabel : 'Category', "
           + " objectPropertyLabel: 'Rel', dataTypePropertyLabel: 'Prop' , handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
@@ -903,16 +859,10 @@ public class OntoProceduresTest {
       assertEquals(0L,
           session.run("MATCH (n:Resource) RETURN count(distinct n.comment) AS count")
               .next().get("count").asLong());
-
-    }
-
   }
 
   @Test
   public void ontoImportSchemaOrg() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
@@ -939,15 +889,10 @@ public class OntoProceduresTest {
           session.run("MATCH (n:n4sch__Relationship) RETURN count(n) AS count").next().get("count")
               .asLong());
       session.close();
-    }
-
   }
 
   @Test
   public void ontoImportClassHierarchy() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Session session = driver.session();
 
@@ -962,14 +907,10 @@ public class OntoProceduresTest {
           session.run("MATCH p=(:n4sch__Class{ n4sch__name:'Code'})-[:n4sch__SCO]->(:n4sch__Class{ n4sch__name:'Intangible'})" +
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
-    }
   }
 
   @Test
   public void ontoImportPropHierarchy() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(), " { baseSchemaPrefix : 'basevoc' }");
       Session session = driver.session();
 
@@ -981,15 +922,11 @@ public class OntoProceduresTest {
           session.run("MATCH p=(:basevoc__Property { basevoc__name:'prop1'})-[:basevoc__SPO]->(:basevoc__Property{ basevoc__name:'superprop'})" +
               " RETURN count(p) AS count").next().get("count").asLong());
       session.close();
-    }
   }
 
   @Test
   public void ontoImportMultilabel() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
+    initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ keepLangTag: true, handleMultival: 'ARRAY' , handleVocabUris: 'MAP' } "); //, handleVocabUris: 'IGNORE'
       Session session = driver.session();
 
@@ -1057,17 +994,11 @@ public class OntoProceduresTest {
       assertEquals("titulo", singleRecord.get("label_es").asString());
       assertEquals("The title of a film", singleRecord.get("comment_en").asString());
       assertEquals("El titulo de una pelicula", singleRecord.get("comment_es").asString());
-
-    }
-
   }
 
 
   @Test
   public void ontoSnippetImportMultilabel() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
           "{ keepLangTag: true, handleMultival: 'ARRAY', handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
@@ -1137,17 +1068,11 @@ public class OntoProceduresTest {
       assertEquals("titulo", singleRecord.get("label_es").asString());
       assertEquals("The title of a film", singleRecord.get("comment_en").asString());
       assertEquals("El titulo de una pelicula", singleRecord.get("comment_es").asString());
-
-    }
-
   }
 
 
   @Test
   public void ontoSnippetImportRestrictions() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
@@ -1228,17 +1153,10 @@ public class OntoProceduresTest {
       assertEquals(1L,
               session.run("MATCH ()-[r:SCO_RESTRICTION { restrictionType:'ALL'}]->() RETURN count(r) AS count").next().get("count")
                       .asLong());
-
-
-    }
-
   }
 
   @Test
   public void ontoSnippetImportRestrictionsImplicitClass() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       initialiseGraphDB(neo4j.defaultDatabaseService(),
               "{ handleVocabUris: 'IGNORE' }");
       Session session = driver.session();
@@ -1254,7 +1172,6 @@ public class OntoProceduresTest {
       assertEquals(8L, next.get("triplesLoaded").asLong());
 
       assertEquals(8L, next.get("triplesParsed").asLong());
-    }
   }
 
 //  @Test
@@ -1293,6 +1210,4 @@ public class OntoProceduresTest {
     db.executeTransactionally("CALL n10s.graphconfig.init(" +
         (graphConfigParams != null ? graphConfigParams : "{}") + ")");
   }
-
-
 }
