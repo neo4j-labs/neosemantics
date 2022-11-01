@@ -2,11 +2,11 @@ package n10s.load;
 
 import n10s.RDFProceduresTest;
 import n10s.graphconfig.GraphConfigProcedures;
+import n10s.inference.MicroReasoners;
 import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.rdf.load.AddProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.*;
 import org.neo4j.driver.types.Node;
 import org.neo4j.driver.types.Point;
@@ -20,22 +20,32 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 public class AddProceduresTest {
+    public static Driver driver;
 
-    @Rule
-    public Neo4jRule neo4j = new Neo4jRule()
+    @ClassRule
+    public static Neo4jRule neo4j = new Neo4jRule()
             .withProcedure(RDFLoadProcedures.class)
             .withProcedure(GraphConfigProcedures.class)
             .withProcedure(NsPrefixDefProcedures.class)
             .withProcedure(AddProcedures.class);
 
+    @BeforeClass
+    public static void init() {
+        driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build());
+    }
+
+    @Before
+    public void cleanDatabase() {
+        driver.session().run("match (n) detach delete n").consume();
+        driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+    }
+
 
     @Test
     public void testAddNodeAfterImport() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-
             initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleRDFTypes: 'LABELS_AND_NODES'}");
-
+            Session session = driver.session();
             Result importResults
                     = session.run("CALL n10s.rdf.import.fetch('" +
                     RDFProceduresTest.class.getClassLoader()
@@ -113,7 +123,6 @@ public class AddProceduresTest {
             assertEquals(7203, thepoint.srid());
             assertEquals(idOf1234,rel.startNodeId());
             assertEquals(idOf5678,rel.endNodeId());
-        }
     }
 
     private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {

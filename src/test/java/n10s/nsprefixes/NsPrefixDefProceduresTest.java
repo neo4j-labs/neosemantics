@@ -10,9 +10,9 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import n10s.graphconfig.GraphConfigProcedures;
+import n10s.rdf.load.AddProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
@@ -26,16 +26,29 @@ import org.neo4j.harness.junit.rule.Neo4jRule;
  * Created by jbarrasa on 21/03/2016.
  */
 public class NsPrefixDefProceduresTest {
+  public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule().withProcedure(NsPrefixDefProcedures.class)
-      .withProcedure(RDFLoadProcedures.class).withProcedure(GraphConfigProcedures.class);
+  @ClassRule
+  public static Neo4jRule neo4j = new Neo4jRule()
+          .withProcedure(NsPrefixDefProcedures.class)
+          .withProcedure(RDFLoadProcedures.class)
+          .withProcedure(GraphConfigProcedures.class);
 
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+  }
 
   @Test
   public void testAddNamespacePrefixInitial() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      Session session = driver.session();
 
       Result res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc#')");
       assertTrue(res.hasNext());
@@ -52,13 +65,11 @@ public class NsPrefixDefProceduresTest {
       next = res.next();
       assertEquals("abc", next.get("prefix").asString());
       assertEquals("http://myvoc2#", next.get("namespace").asString());
-    }
   }
 
   @Test
   public void testAddNamespacePrefixInUse() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      Session session = driver.session();
 
       Result res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
       assertTrue(res.hasNext());
@@ -78,13 +89,11 @@ public class NsPrefixDefProceduresTest {
       }
       res = session.run("CALL n10s.nsprefixes.add('abc','http://myvoc2#')");
       assertTrue(res.hasNext());
-    }
   }
 
   @Test
   public void testAddNamespaceWithPopulatedGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+      Session session = driver.session();
 
       initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Result res1 = session.run("CALL n10s.rdf.import.fetch('" +
@@ -104,15 +113,13 @@ public class NsPrefixDefProceduresTest {
       keys.removeAll(preAddition.keySet());
       assertEquals(1, keys.size());
       assertEquals(ns_prefix, keys.iterator().next());
-    }
   }
 
   @Test
   public void testDeleteNamespaceWithPopulatedGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
-      initialiseGraphDB(neo4j.defaultDatabaseService(), null);
+    initialiseGraphDB(neo4j.defaultDatabaseService(), null);
       Result res1 = session.run("CALL n10s.rdf.import.fetch('" +
           NsPrefixDefProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI()
           + "','JSON-LD')");
@@ -137,15 +144,13 @@ public class NsPrefixDefProceduresTest {
             + "NsPrefixOperationNotAllowed: Namespace prefix definitions cannot be removed "
             + "when the graph is non-empty."));
       }
-    }
   }
 
   @Test
   public void testAddNamespacePrefixFromText() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
-      String turtle = "@prefix tr-common: <http://permid.org/ontology/common/> . \n"
+    String turtle = "@prefix tr-common: <http://permid.org/ontology/common/> . \n"
           + "@prefix fibo-be-le-cb: <http://www.omg.org/spec/EDMC-FIBO/BE/LegalEntities/CorporateBodies/> . \n"
           + "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> . \n"
           + "@prefix vcard: <http://www.w3.org/2006/vcard/ns#> . \n"
@@ -220,8 +225,6 @@ public class NsPrefixDefProceduresTest {
       validPairs.put("prop", "http://dbpedia.org/property/");
 
       checkValidPrefixesCreated(session, validPairs, sparql);
-
-    }
   }
 
   private void checkValidPrefixesCreated(Session session, Map<String, String> validPairs,
@@ -246,10 +249,9 @@ public class NsPrefixDefProceduresTest {
 
   @Test
   public void testRemoveAllNamespaces() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build()); Session session = driver.session()) {
+    Session session = driver.session();
 
-      session.run("CALL n10s.nsprefixes.add('a1','http://myvoc1#')");
+    session.run("CALL n10s.nsprefixes.add('a1','http://myvoc1#')");
       session.run("CALL n10s.nsprefixes.add('a2','http://myvoc2#')");
       session.run("CALL n10s.nsprefixes.add('a3','http://myvoc3#')");
       Result res = session.run("CALL n10s.nsprefixes.add('a4','http://myvoc4#') yield prefix "
@@ -264,8 +266,6 @@ public class NsPrefixDefProceduresTest {
 
       res = session.run("MATCH (nspd:_NsPrefDef) return nspd");
       assertFalse(res.hasNext());
-
-    }
   }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {

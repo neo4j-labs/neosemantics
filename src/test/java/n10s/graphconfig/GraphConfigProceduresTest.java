@@ -6,22 +6,33 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import n10s.rdf.load.RDFLoadProcedures;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
+import org.junit.jupiter.api.BeforeEach;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class GraphConfigProceduresTest {
+      public static Driver driver;
 
-  @Rule
-  public Neo4jRule neo4j = new Neo4jRule()
-      .withProcedure(GraphConfigProcedures.class).withProcedure(RDFLoadProcedures.class);
+      @ClassRule
+      public static Neo4jRule neo4j = new Neo4jRule()
+              .withProcedure(GraphConfigProcedures.class).withProcedure(RDFLoadProcedures.class);
+
+      @BeforeClass
+      public static void init() {
+          driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build());
+      }
+
+      @Before
+      public void cleanDatabase() {
+          driver.session().run("match (n) detach delete n").consume();
+          driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+      }
 
   @Test
   public void testInitGraphConfig() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
 
       Session session = driver.session();
 
@@ -66,15 +77,10 @@ public class GraphConfigProceduresTest {
               + " with param, value where param = 'baseSchemaNamespace' return param, value ");
       assertEquals(true, results.hasNext());
       assertEquals("http://base#", results.next().get("value").asString());
-
-    }
   }
 
   @Test
   public void testModifyGraphConfigWhenDataInGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -95,16 +101,10 @@ public class GraphConfigProceduresTest {
         assertTrue(e.getMessage().contains("n10s.graphconfig.GraphConfigProcedures$"
             + "GraphConfigException: The graph is non-empty. Config cannot be changed."));
       }
-
-
-    }
   }
 
   @Test
   public void testForceModifyGraphConfigWhenDataInGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-            Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -136,18 +136,11 @@ public class GraphConfigProceduresTest {
         if(paramVal.get("param").equals("handleMultival")){
           assertEquals("ARRAY",paramVal.get("value"));
         }
-      }
-
-
-
     }
   }
 
   @Test
   public void testDropGraph() throws Exception {
-    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-        Config.builder().withoutEncryption().build())) {
-
       Session session = driver.session();
 
       Result results = session.run("CALL n10s.graphconfig.init() yield param, value "
@@ -158,8 +151,5 @@ public class GraphConfigProceduresTest {
 
       results = session.run("MATCH (gc:_GraphConfig) return gc");
       assertFalse(results.hasNext());
-
-
-    }
   }
 }

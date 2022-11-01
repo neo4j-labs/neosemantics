@@ -10,9 +10,9 @@ import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import n10s.rdf.stream.RDFStreamProcedures;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.*;
 import org.neo4j.driver.*;
+import org.neo4j.driver.exceptions.DatabaseException;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
@@ -63,8 +63,10 @@ public class CollectTriplesTest {
             "  skos:prefLabel \"Business Administration and Finance Theory\" ;\n" +
             "  a <http://permid.org/ontology/person/Major> .";
 
-    @Rule
-    public Neo4jRule neo4j = new Neo4jRule()
+    public static Driver driver;
+
+    @ClassRule
+    public static Neo4jRule neo4j = new Neo4jRule()
             .withProcedure(RDFStreamProcedures.class)
             .withProcedure(RDFLoadProcedures.class)
             .withProcedure(GraphConfigProcedures.class)
@@ -72,97 +74,88 @@ public class CollectTriplesTest {
             .withProcedure(NsPrefixDefProcedures.class)
             .withAggregationFunction(CollectTriples.class);
 
+    @BeforeClass
+    public static void init() {
+        driver = GraphDatabase.driver(neo4j.boltURI(),
+                Config.builder().withoutEncryption().build());
+    }
+
+    @Before
+    public void cleanDatabase() {
+        driver.session().run("match (n) detach delete n").consume();
+        driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+    }
+
     @Test
     public void testCollectTriplesBasic() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build())) {
-
-            Session session = driver.session();
-            Result results = session.run("CALL n10s.rdf.stream.inline('"+ TURTLE_FRAGMENT +"', 'Turtle') " +
-                    " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
-            assertEquals(true, results.hasNext());
-            assertTrue(ModelTestUtils
-                    .compareModels(results.next().get("rdf").asString(),
-                            RDFFormat.NTRIPLES,TURTLE_FRAGMENT,RDFFormat.TURTLE));
-
-
-
-        }
+        Session session = driver.session();
+        Result results = session.run("CALL n10s.rdf.stream.inline('"+ TURTLE_FRAGMENT +"', 'Turtle') " +
+                " yield subject, predicate, object, isLiteral, literalType, literalLang "
+                + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+        assertEquals(true, results.hasNext());
+        assertTrue(ModelTestUtils
+                .compareModels(results.next().get("rdf").asString(),
+                        RDFFormat.NTRIPLES,TURTLE_FRAGMENT,RDFFormat.TURTLE));
     }
 
     @Test
     public void testCollectTriplesPostFilter() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build())) {
-
-            Session session = driver.session();
-            Result results = session.run(
-                "call n10s.rdf.stream.fetch('" + CollectTriplesTest.class.getClassLoader()
-                    .getResource("100k.nt")
-                    .toURI() + "',\"N-Triples\" ,{ limit: 999999}) yield subject, predicate, object\n" +
-                    "where predicate = \"http://www.w3.org/2004/02/skos/core#prefLabel\" and " +
-                    "object contains \"Business Administration and Finance\"\n" +
-                    "with collect(subject) as indivList    \n" +
-                    "call n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
-                    .getResource("100k.nt")
-                    .toURI() + "',\"N-Triples\" ,{ limit: 999999}) yield subject, predicate, object, isLiteral, literalType, literalLang\n" +
-                    "where subject in indivList\n" +
-                    "return n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
-            assertEquals(true, results.hasNext());
-            assertTrue(ModelTestUtils
-                    .compareModels(results.next().get("rdf").asString(),
-                            RDFFormat.NTRIPLES,TURTLE_FRAGMENT_2,RDFFormat.TURTLE));
-
-
-
-        }
+        Session session = driver.session();
+        Result results = session.run(
+            "call n10s.rdf.stream.fetch('" + CollectTriplesTest.class.getClassLoader()
+                .getResource("100k.nt")
+                .toURI() + "',\"N-Triples\" ,{ limit: 999999}) yield subject, predicate, object\n" +
+                "where predicate = \"http://www.w3.org/2004/02/skos/core#prefLabel\" and " +
+                "object contains \"Business Administration and Finance\"\n" +
+                "with collect(subject) as indivList    \n" +
+                "call n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
+                .getResource("100k.nt")
+                .toURI() + "',\"N-Triples\" ,{ limit: 999999}) yield subject, predicate, object, isLiteral, literalType, literalLang\n" +
+                "where subject in indivList\n" +
+                "return n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+        assertEquals(true, results.hasNext());
+        assertTrue(ModelTestUtils
+                .compareModels(results.next().get("rdf").asString(),
+                        RDFFormat.NTRIPLES,TURTLE_FRAGMENT_2,RDFFormat.TURTLE));
     }
 
     @Test
     public void testCollectTriplesDataTypes() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build())) {
-
-            Session session = driver.session();
-            Result results = session.run("CALL n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
-                    .getResource("datetime/datetime-and-other.ttl")
-                    .toURI() +"', 'Turtle') " +
-                    " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
-            assertEquals(true, results.hasNext());
+        Session session = driver.session();
+        Result results = session.run("CALL n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
+                .getResource("datetime/datetime-and-other.ttl")
+                .toURI() +"', 'Turtle') " +
+                " yield subject, predicate, object, isLiteral, literalType, literalLang "
+                + " return  n10s.rdf.collect(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+        assertEquals(true, results.hasNext());
 
 
-            String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
-                    .getResource("datetime/datetime-and-other.ttl").toURI()) ) );
+        String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
+                .getResource("datetime/datetime-and-other.ttl").toURI()) ) );
 
-            assertTrue(ModelTestUtils
-                    .compareModels(results.next().get("rdf").asString(),
-                            RDFFormat.NTRIPLES, fileAsString,RDFFormat.TURTLE));
-        }
-    }
+        assertTrue(ModelTestUtils
+                .compareModels(results.next().get("rdf").asString(),
+                        RDFFormat.NTRIPLES, fileAsString,RDFFormat.TURTLE));
+}
 
     @Test
     public void testCollectTriplesDataTypesTurtle() throws Exception {
-        try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build())) {
-
-            Session session = driver.session();
-            Result results = session.run("CALL n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
-                    .getResource("datetime/datetime-and-other.ttl")
-                    .toURI() +"', 'Turtle') " +
-                    " yield subject, predicate, object, isLiteral, literalType, literalLang "
-                    + " return  n10s.rdf.collect.ttl(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
-            assertEquals(true, results.hasNext());
+        Session session = driver.session();
+        Result results = session.run("CALL n10s.rdf.stream.fetch('"+ CollectTriplesTest.class.getClassLoader()
+                .getResource("datetime/datetime-and-other.ttl")
+                .toURI() +"', 'Turtle') " +
+                " yield subject, predicate, object, isLiteral, literalType, literalLang "
+                + " return  n10s.rdf.collect.ttl(subject, predicate, object, isLiteral, literalType, literalLang) as rdf");
+        assertEquals(true, results.hasNext());
 
 
-            String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
-                    .getResource("datetime/datetime-and-other.ttl").toURI()) ) );
+        String fileAsString = new String ( Files.readAllBytes( Paths.get(CollectTriplesTest.class.getClassLoader()
+                .getResource("datetime/datetime-and-other.ttl").toURI()) ) );
 
-            assertTrue(ModelTestUtils
-                    .compareModels(results.next().get("rdf").asString(),
-                            RDFFormat.TURTLE, fileAsString,RDFFormat.TURTLE));
-        }
+        assertTrue(ModelTestUtils
+                .compareModels(results.next().get("rdf").asString(),
+                        RDFFormat.TURTLE, fileAsString,RDFFormat.TURTLE));
+
     }
 
     @Test
