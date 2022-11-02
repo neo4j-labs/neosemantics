@@ -54,11 +54,6 @@ public class VirtualRelationship implements Relationship {
     return id;
   }
 
-  @Override
-  public String getElementId()
-  {
-    return String.valueOf( id );
-  }
 
   @Override
   public void delete() {

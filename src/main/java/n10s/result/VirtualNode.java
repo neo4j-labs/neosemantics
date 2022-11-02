@@ -57,11 +57,6 @@ public class VirtualNode implements Node {
     return id;
   }
 
-  @Override
-  public String getElementId()
-  {
-    return String.valueOf( id );
-  }
 
   @Override
   public void delete() {
