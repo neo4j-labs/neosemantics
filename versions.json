@@ -2,12 +2,12 @@
     {
         "neo4j": "4.4.12",
         "neo4jVersion": "4.4.12",
-        "n10s": "4.4.0.2",
-        "version": "4.4.0.2",
-        "url": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.2",
-        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.2",
-        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.2/neosemantics-4.4.0.2.jar",
-        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.2/neosemantics-4.4.0.2.jar",
+        "n10s": "5.1.0.0",
+        "version": "5.1.0.0",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/5.1.0.0",
+        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/5.1.0.0",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/5.1.0.0/neosemantics-5.1.0.0.jar",
+        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/5.1.0.0/neosemantics-5.1.0.0.jar",
         "config": {
             "+:dbms.security.procedures.unrestricted": [
                 "n10s.*"
