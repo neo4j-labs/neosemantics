@@ -116,7 +116,8 @@ task versions {
         }
     }
 
-    def versionsFile = new File("build/versions.json")
+    def versionsFile = new File(projectDir,"versions.json")
+    println(versionsFile.getAbsolutePath())
 
     versionsFile.write(JsonOutput.prettyPrint(JsonOutput.toJson(versions)))
 }
