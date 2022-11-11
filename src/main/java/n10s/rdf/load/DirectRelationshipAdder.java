@@ -17,7 +17,7 @@ public class DirectRelationshipAdder extends DirectStatementLoader {
     private Statement relStatement;
 
     public DirectRelationshipAdder(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
-        super(db, tx, conf, l);
+        super(db, tx, conf, l, false);
     }
 
     public RelationshipResult returnRel() {

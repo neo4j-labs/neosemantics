@@ -30,9 +30,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
   private Cache<String, Node> nodeCache;
 
   public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
-      Log l) {
+      Log l, boolean reuseTx ) {
 
-    super(db, tx, conf, l);
+    super(db, tx, conf, l, reuseTx);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();

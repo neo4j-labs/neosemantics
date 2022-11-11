@@ -16,7 +16,7 @@ public class DirectNodeAdder extends DirectStatementLoader {
     private String nodeUri;
 
     public DirectNodeAdder(GraphDatabaseService db, Transaction tx, RDFParserConfig conf, Log l) {
-        super(db, tx, conf, l);
+        super(db, tx, conf, l, false);
     }
 
     public NodeResult returnNode() {

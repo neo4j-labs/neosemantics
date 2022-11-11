@@ -40,7 +40,7 @@ abstract class RDFQuadToLPGStatementProcessor extends RDFToLPGStatementProcessor
 
   RDFQuadToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
       Log l) {
-    super(db, tx, conf, l);
+    super(db, tx, conf, l, false);
     resourceProps = new HashMap<>();
     resourceLabels = new HashMap<>();
   }

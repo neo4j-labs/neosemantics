@@ -52,7 +52,7 @@ public class OntologyImporter extends RDFToLPGStatementProcessor {
 
   public OntologyImporter(GraphDatabaseService db, Transaction tx,
       RDFParserConfig conf, Log l) {
-    super(db, tx, conf, l);
+    super(db, tx, conf, l, false);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
