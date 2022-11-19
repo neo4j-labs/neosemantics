@@ -30,7 +30,7 @@ public class StatementPreviewer extends RDFToLPGStatementProcessor {
   public StatementPreviewer(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
       Map<String, Node> virtualNodes,
       List<Relationship> virtualRels, Log l) {
-    super(db, tx, conf, l, false);
+    super(db, tx, conf, l);
     vNodes = virtualNodes;
     vRels = virtualRels;
   }

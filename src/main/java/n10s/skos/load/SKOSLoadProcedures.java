@@ -25,7 +25,7 @@ public class SKOSLoadProcedures extends RDFProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    return Stream.of(doSkosImport(format, url, null, props));
+    return Stream.of(doSkosImport(format, url, null, props, false));
 
   }
 
@@ -36,13 +36,13 @@ public class SKOSLoadProcedures extends RDFProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws RDFImportException {
 
-    return Stream.of(doSkosImport(format, null, skosFragment, props));
+    return Stream.of(doSkosImport(format, null, skosFragment, props, true));
 
   }
 
 
   private ImportResults doSkosImport(String format, String url,
-      String rdfFragment, Map<String, Object> props) throws RDFImportException {
+      String rdfFragment, Map<String, Object> props, boolean reuseCurrentTx) throws RDFImportException {
 
     SkosImporter skosImporter = null;
     RDFParserConfig conf = null;
@@ -50,6 +50,9 @@ public class SKOSLoadProcedures extends RDFProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
+      if(!props.containsKey("singleTx")){
+        props.put("singleTx", reuseCurrentTx);
+      }
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       skosImporter = new SkosImporter(db, tx, conf, log);

@@ -53,7 +53,6 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
   protected NsPrefixMap namespaces;
   protected Set<Statement> statements = new HashSet<>();
   protected Map<String, Map<String, Object>> resourceProps = new HashMap<>();
-  protected boolean reuseTx;
   protected Map<Statement, Map<String, Object>> relProps = new HashMap<>();
   protected Map<String, Set<String>> resourceLabels = new HashMap<>();
   public long totalTriplesParsed = 0;
@@ -65,12 +64,12 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
 
   public RDFToLPGStatementProcessor(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
-      Log l, boolean reuseTx) {
+      Log l) {
     this.graphdb = db;
     this.tx = tx;
     this.parserConfig = conf;
-    this.reuseTx = reuseTx;
     log = l;
+
     //initialise vocMappings  if needed
     if (this.parserConfig.getGraphConf().getHandleVocabUris()
         == GraphConfig.GRAPHCONF_VOC_URI_MAP) {
@@ -460,7 +459,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     }
     totalTriplesParsed++;
 
-    if (!reuseTx && parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter != 0
+    if (!parserConfig.isUseSingleTx() && parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter != 0
         && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }

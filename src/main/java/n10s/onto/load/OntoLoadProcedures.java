@@ -20,7 +20,7 @@ public class OntoLoadProcedures extends OntoProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws GraphConfigNotFound, InvalidParamException {
 
-    return Stream.of(doOntoImport(format, url, null, props));
+    return Stream.of(doOntoImport(format, url, null, props, false));
 
   }
 
@@ -31,7 +31,7 @@ public class OntoLoadProcedures extends OntoProcedures {
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props)
       throws GraphConfigNotFound, InvalidParamException {
 
-    return Stream.of(doOntoImport(format, null, rdf, props));
+    return Stream.of(doOntoImport(format, null, rdf, props, true));
 
   }
 

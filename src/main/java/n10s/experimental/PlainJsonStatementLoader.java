@@ -11,7 +11,7 @@ public class PlainJsonStatementLoader extends DirectStatementLoader {
 
   PlainJsonStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
       Log l) {
-    super(db, tx, conf, l, false);
+    super(db, tx, conf, l);
   }
 
   @Override

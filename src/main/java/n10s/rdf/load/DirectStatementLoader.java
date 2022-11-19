@@ -30,9 +30,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
   private Cache<String, Node> nodeCache;
 
   public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
-      Log l, boolean reuseTx ) {
+      Log l) {
 
-    super(db, tx, conf, l, reuseTx);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();
@@ -40,9 +40,12 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
   @Override
   public void endRDF() throws RDFHandlerException {
-    if(reuseTx){
-      namespaces.partialRefresh(tx);
-      log.debug("namespace prefixes synced: " + namespaces.toString());
+    if(parserConfig.isUseSingleTx()){
+      if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+        namespaces.partialRefresh(tx);
+        log.debug("namespace prefixes synced: " + namespaces.toString());
+      }
+      
       this.runPartialTx(tx);
       log.debug("rdf import commit: " + mappedTripleCounter + " triples ingested.");
       //not sure this is needed here

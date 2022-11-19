@@ -42,7 +42,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   protected SkosImporter(GraphDatabaseService db, Transaction tx,
       RDFParserConfig conf, Log l) {
-    super(db, tx, conf, l, false);
+    super(db, tx, conf, l);
     nodeCache = CacheBuilder.newBuilder()
         .maximumSize(conf.getNodeCacheSize())
         .build();

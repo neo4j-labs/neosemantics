@@ -1,5 +1,7 @@
 package n10s.graphconfig;
 
+import n10s.RDFImportException;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +26,8 @@ public class RDFParserConfig {
   private GraphConfig graphConf;
   private boolean strictDataTypeCheck;
 
+  private boolean singleTx;
+
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
 
@@ -45,6 +49,8 @@ public class RDFParserConfig {
             .get("abortOnError") : true;
     strictDataTypeCheck = props.containsKey("strictDataTypeCheck") ? (Boolean) props
             .get("strictDataTypeCheck") : true;
+    singleTx = props.containsKey("singleTx") ? (Boolean) props
+              .get("singleTx") : false;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -53,6 +59,10 @@ public class RDFParserConfig {
 
   public boolean isVerifyUriSyntax() {
     return verifyUriSyntax;
+  }
+
+  public boolean isUseSingleTx() {
+    return singleTx;
   }
 
   public long getCommitSize() {
@@ -116,4 +126,5 @@ public class RDFParserConfig {
 
     return summary;
   }
+
 }
