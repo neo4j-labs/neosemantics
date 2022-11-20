@@ -176,7 +176,7 @@ public class SHACLValidationProceduresTest {
 
       String SHACL_URI_WHITESPACES = "@prefix neo4j: <neo4j://graph.schema#> .\n" +
               "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-              "  @prefix xsd: <http://www.w3.org/2001/XMLSchema> .\n" +
+              "  @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
               "  @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
               " @prefix sp: <neo4j://graph.schema#Soccer > .\n" +
               "\n" +
@@ -796,6 +796,81 @@ public class SHACLValidationProceduresTest {
               next.get("resultMessage").asString());
 
       assertEquals(false, validationResults.hasNext());
+  }
+
+  @Test
+  public void testBugCredSui() throws Exception {
+    Session session = driver.session();
+
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+    session.run(CREATE_N10S_CONSTRAINT);
+    session.run("call n10s.graphconfig.init()");
+
+    Record dataImportSummary = session.run("call n10s.rdf.import.inline('\n" +
+            "@prefix cs_dso:\t<http://schemas.csintra.net/com/cs/wm/DataServicesOntology#> .\n" +
+            "@prefix ex: \t   <http://example.org/stuff/1.0/> .\n" +
+            "@prefix rdf:   \t<http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+            "@prefix rdfs:  \t<http://www.w3.org/2000/01/rdf-schema#> .\n" +
+            "@prefix schema:\t<http://schema.org/> .\n" +
+            "@prefix sh:    \t<http://www.w3.org/ns/shacl#> .\n" +
+            "@prefix xsd:   \t<http://www.w3.org/2001/XMLSchema#> .\n" +
+            "@prefix dbr:   \t<http://dbpedia.org/resource/> .\n" +
+            "@prefix skos:  \t<http://www.w3.org/2004/02/skos/core#> .\n" +
+            " \n" +
+            " \n" +
+            "ex:IT00001\n" +
+            "\ta cs_dso:ItCapacity ;\n" +
+            "    cs_dso:devFte \"1.0\"^^xsd:decimal ;\n" +
+            "\tcs_dso:baFte  \"2.0\"^^xsd:decimal ;\n" +
+            "\tcs_dso:pmFte  \"3.0\"^^xsd:decimal ;\n" +
+            "    cs_dso:otherFte \"4.0\"^^xsd:decimal ;\n" +
+            ".\n" +
+            "','Turtle')").next();
+
+    try {
+      session.run("call n10s.validation.shacl.import.inline('\n" +
+              "@prefix cs_dso:\t<http://schemas.csintra.net/com/cs/wm/DataServicesOntology#> .\n" +
+              "@prefix ex: \t   <http://example.org/stuff/1.0/> .\n" +
+              "@prefix rdf:   \t<http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+              "@prefix rdfs:  \t<http://www.w3.org/2000/01/rdf-schema#> .\n" +
+              "@prefix schema:\t<http://schema.org/> .\n" +
+              "@prefix owl:   \t<http://www.w3.org/2002/07/owl#> .\n" +
+              "@prefix sh:    \t<http://www.w3.org/ns/shacl#> .\n" +
+              "@prefix foaf:  \t<http://xmlns.com/foaf/0.1/> .\n" +
+              "@prefix xsd:   \t<http://www.w3.org/2001/XMLSchema#> .\n" +
+              "@prefix dbr:\t   <http://dbpedia.org/resource/> .\n" +
+              "@prefix skos:  \t<http://www.w3.org/2004/02/skos/core#> .\n" +
+              "@prefix adms:  \t<http://www.w3.org/ns/adms#> .\n" +
+              "@prefix dct:   \t<http://purl.org/dc/terms/> .\n" +
+              " \n" +
+              " \n" +
+              "cs_dso:ItCapacity\n" +
+              "    \trdf:type    \trdfs:Class , sh:NodeShape ;\n" +
+              "    \trdfs:comment\t\"Describes the IT capacity allocated to a Product.\" ;\n" +
+              "    \tsh:property \tcs_dso:devFte ,\n" +
+              "                    \tcs_dso:baFte ,\n" +
+              "                    \tcs_dso:pmFte ,\n" +
+              "                    \tcs_dso:otherFte ;\n" +
+              ".\n" +
+              " \n" +
+              " \n" +
+              "cs_dso:devFte\n" +
+              "    \trdf:type            \trdf:Property ;\n" +
+              "    \trdfs:comment        \t\"Number of FTE developers.\" ;\n" +
+              "    \tschema:domainIncludes   cs_dso:ItCapacity ;\n" +
+              "    \tschema:rangeIncludes\txsd:decimal ;\n" +
+              "    \tsh:path             \tcs_dso:devFte ;\n" +
+              "    \tsh:datatype         \txsd:decimal ;\n" +
+              "    \tsh:maxCount         \t1 ;\n" +
+              ".\n" +
+              "','Turtle')").hasNext();
+
+      assertTrue(false); //should never get here
+    } catch (Exception e) {
+      assertTrue(e.getMessage().contains("http://www.w3.org/2001/XMLSchema#decimal data type is not supported for sh:datatype restrictions"));
+    }
+
+
   }
 
     @Test

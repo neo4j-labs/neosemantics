@@ -1125,7 +1125,8 @@ public class SHACLValidator {
       return "coalesce(toString(";
     } else if (dataType.equals(XSD.INTEGER.stringValue())) {
       return "coalesce(toInteger(";
-    } else if (dataType.equals(XSD.FLOAT.stringValue())) {
+    } else if (dataType.equals(XSD.FLOAT.stringValue()) ||
+            dataType.equals(XSD.DECIMAL.stringValue())) {
       return "coalesce(toFloat(";
     } else if (dataType.equals(XSD.DATE.stringValue())) {
       return "n10s.aux.dt.check('" + XSD.DATE.stringValue()+ "',";
@@ -1147,7 +1148,8 @@ public class SHACLValidator {
       return ") = x , false)";
     } else if (dataType.equals(XSD.INTEGER.stringValue())) {
       return ") = x , false)";
-    } else if (dataType.equals(XSD.FLOAT.stringValue())) {
+    } else if (dataType.equals(XSD.FLOAT.stringValue())||
+            dataType.equals(XSD.DECIMAL.stringValue())) {
       return ") = x , false)";
     } else if (dataType.equals(XSD.DATE.stringValue())) {
       return ")";
@@ -1158,7 +1160,7 @@ public class SHACLValidator {
     } else if (dataType.equals(XSD.ANYURI.stringValue())) {
       return ")";
     }else {
-      return "";
+      throw new SHACLValidationException(dataType + " data type is not supported for sh:datatype restrictions ");
     }
   }
 

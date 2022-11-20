@@ -495,7 +495,7 @@ cim:Lead a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:emailBouncedDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:node cim:ContactPointAddress ;
@@ -533,7 +533,7 @@ cim:Lead a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -600,7 +600,7 @@ cim:ContactPointAddress a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -625,11 +625,11 @@ cim:ContactPoint a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:profileLastUpdatedDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:profileFirstCreatedDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:primaryFlag ;
@@ -637,11 +637,11 @@ cim:ContactPoint a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:bestTimeToContactEndTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:bestTimeToContactStartTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:activeToDate ;
@@ -665,7 +665,7 @@ cim:ContactPoint a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -731,7 +731,7 @@ cim:ContactPointPhone a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -844,7 +844,7 @@ cim:SalesOrderTax a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -879,7 +879,7 @@ cim:SalesOrderTax a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -1184,7 +1184,7 @@ cim:SalesOrder a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -1480,7 +1480,7 @@ cim:SalesOrder a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -1495,7 +1495,7 @@ cim:DeviceUserSession a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -1968,7 +1968,7 @@ cim:PaymentMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2010,7 +2010,7 @@ cim:PaymentMethodType a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2100,7 +2100,7 @@ cim:PaymentCard a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2164,7 +2164,7 @@ cim:Coupon a rdfs:Class , sh:NodeShape ;
             sh:path cim:manufacturer
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2191,7 +2191,7 @@ cim:Party a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2346,7 +2346,7 @@ cim:Account a rdfs:Class , sh:NodeShape ;
         sh:path cim:party
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2386,7 +2386,7 @@ cim:PaymentAuthorization a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -2452,12 +2452,12 @@ cim:PaymentAuthorization a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:paymentGatewayDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
         sh:path cim:requestDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -2491,7 +2491,7 @@ cim:ShipmentPackage a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2522,7 +2522,7 @@ cim:ShipmentProduct a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2562,7 +2562,7 @@ cim:BillingFrequency a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2638,7 +2638,7 @@ cim:OrderDeliveryMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -2657,7 +2657,7 @@ cim:OrderDeliveryMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2702,7 +2702,7 @@ cim:ContactPointEmail a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2780,7 +2780,7 @@ cim:AccountContact a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2846,7 +2846,7 @@ cim:PartyRole a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -2871,7 +2871,7 @@ cim:InternalBusinessUnit a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2901,7 +2901,7 @@ cim:Household a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2931,7 +2931,7 @@ cim:UncategorizedParty a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -2984,7 +2984,7 @@ cim:PartyIdentification a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -3066,7 +3066,7 @@ cim:PersonEmployment a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -3349,7 +3349,7 @@ cim:SalesOrderProduct a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -3627,7 +3627,7 @@ cim:SalesOrderProduct a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -3649,7 +3649,7 @@ cim:PersonLanguage a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -3683,7 +3683,7 @@ cim:PersonEducation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -3693,7 +3693,7 @@ cim:PersonLifeEvent a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Major events a person had in their lives e.g. graudation date, marriage date" ;
     sh:property [
         sh:path cim:personLifeEventDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -3707,7 +3707,7 @@ cim:PersonLifeEvent a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4039,7 +4039,7 @@ cim:Individual a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4381,7 +4381,7 @@ cim:PartyWebAddress a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4406,7 +4406,7 @@ cim:PartyAdditionalName a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4438,7 +4438,7 @@ cim:PartyRelatedParty a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4448,12 +4448,12 @@ cim:CustomerStatusHistory a rdfs:Class , sh:NodeShape ;
     rdfs:comment "History of when customer changed frome one status to another" ;
     sh:property [
         sh:path cim:endDateTIme ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
         sh:path cim:startDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -4467,7 +4467,7 @@ cim:CustomerStatusHistory a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4492,7 +4492,7 @@ cim:PartyRelationshipType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4613,7 +4613,7 @@ cim:Seller a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4639,7 +4639,7 @@ cim:AccountContactRole a rdfs:Class , sh:NodeShape ;
         sh:path cim:accountContact
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4760,7 +4760,7 @@ cim:Supplier a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4785,7 +4785,7 @@ cim:ProductCatalog a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4816,7 +4816,7 @@ cim:ProductCategory a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4897,7 +4897,7 @@ cim:Competitor a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4916,7 +4916,7 @@ cim:AccountPartner a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -4932,7 +4932,7 @@ cim:ContactPointApp a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4945,7 +4945,7 @@ cim:ContactPointLocation a rdfs:Class , sh:NodeShape ;
     sh:and ( cim:ContactPoint [
         sh:property [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -4988,7 +4988,7 @@ cim:ContactPointSocial a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -5009,7 +5009,7 @@ cim:ContactPointType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -5082,7 +5082,7 @@ cim:Customer a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -5098,7 +5098,7 @@ cim:PaymentGatewayAuthReversalLog a rdfs:Class , sh:NodeShape ;
             sh:path cim:paymentAuthorizationReversal
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5119,7 +5119,7 @@ cim:PaymentGatewayAuthorizationLog a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5140,7 +5140,7 @@ cim:PaymentInvoiceApplication a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5160,7 +5160,7 @@ cim:PaymentGatewayProvider a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Stores class details needed for maintaining Apex adapter." ;
     sh:property [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5207,7 +5207,7 @@ cim:RefundAllocation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5255,7 +5255,7 @@ cim:PaymentGatewayResultCode a rdfs:Class , sh:NodeShape ;
     rdfs:comment "The response from the Payment Gateway." ;
     sh:property [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5296,7 +5296,7 @@ cim:PaymentAuthorizationReversal a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5340,12 +5340,12 @@ cim:PaymentAuthorizationReversal a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:requestDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
         sh:path cim:paymentGatewayDate ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5377,7 +5377,7 @@ cim:PaymentTreatment a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5400,7 +5400,7 @@ cim:PaymentInvoiceAllocation a rdfs:Class , sh:NodeShape ;
             sh:path cim:paymentInvoiceApplication
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5438,7 +5438,7 @@ cim:PaymentGateway a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5459,7 +5459,7 @@ cim:RefundCreditMemoAllocation a rdfs:Class , sh:NodeShape ;
     sh:and ( cim:RefundAllocation [
         sh:property [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5478,7 +5478,7 @@ cim:PaymentAllocation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5497,7 +5497,7 @@ cim:PaymentGroup a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Payment Group provides a way to associate payments and payment gateway events, where the payment is not associated with a Sales Order." ;
     sh:property [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5536,7 +5536,7 @@ cim:PaymentApplication a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5607,7 +5607,7 @@ cim:PaymentGatewayInteractionLog a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5651,7 +5651,7 @@ cim:PaymentTreatmentMethod a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Represents a specific algorithm or method to apply. For example - pay for taxes first, pay for charges first, pay for oldest due invoice first etc. It can also point to a rule based on which application can be done. Treatment has a method." ;
     sh:property [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5682,7 +5682,7 @@ cim:PaymentGatewayPaymentLog a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5748,7 +5748,7 @@ cim:Payment a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5848,7 +5848,7 @@ cim:PaymentGatewayInteractionType a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Reasons for accessing the Payment Gateway, including authorization, Sale and Void." ;
     sh:property [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5874,7 +5874,7 @@ cim:RefundPaymentAllocation a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5910,7 +5910,7 @@ cim:PaymentCreditMemoAllocation a rdfs:Class , sh:NodeShape ;
     sh:and ( cim:PaymentAllocation [
         sh:property [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5940,7 +5940,7 @@ cim:PaymentPolicy a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -5962,7 +5962,7 @@ cim:PaymentCreditMemoApplication a rdfs:Class , sh:NodeShape ;
     sh:and ( cim:PaymentApplication [
         sh:property [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -5979,7 +5979,7 @@ cim:RefundPayment a rdfs:Class , sh:NodeShape ;
     sh:and ( cim:Payment [
         sh:property [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -6004,7 +6004,7 @@ cim:CreditTender a rdfs:Class , sh:NodeShape ;
             sh:path cim:account
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -6025,7 +6025,7 @@ cim:Brand a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6045,7 +6045,7 @@ cim:ProductRelationshipType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -6060,7 +6060,7 @@ cim:ProductRelationshipType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6110,7 +6110,7 @@ cim:BundleProduct a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -6247,7 +6247,7 @@ cim:GoodsProduct a rdfs:Class , sh:NodeShape ;
             sh:maxCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -6271,7 +6271,7 @@ cim:ProductImage a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6320,7 +6320,7 @@ cim:ProductRelatedProduct a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6347,7 +6347,7 @@ cim:ProductTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6391,7 +6391,7 @@ cim:ServiceProduct a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -6698,7 +6698,7 @@ cim:Product a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6717,7 +6717,7 @@ cim:ProductImageTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6758,7 +6758,7 @@ cim:PriceBookEntry a rdfs:Class , sh:NodeShape ;
         sh:path cim:product
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6781,7 +6781,7 @@ cim:AttributeValueTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6796,7 +6796,7 @@ cim:AttributeValue a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6815,7 +6815,7 @@ cim:ProductAttributeSet a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6834,7 +6834,7 @@ cim:ProductCollateral a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6849,7 +6849,7 @@ cim:AttributeTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6869,7 +6869,7 @@ cim:ProductValidityTimePeriodUOM a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6900,7 +6900,7 @@ cim:ProductAttributeValue a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6920,7 +6920,7 @@ cim:AttributeSetTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6939,7 +6939,7 @@ cim:ProductCategoryTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6958,7 +6958,7 @@ cim:ProductCatalogTranslation a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -6968,11 +6968,11 @@ cim:ProductCategoryProduct a rdfs:Class , sh:NodeShape ;
     rdfs:comment "Assignment of product to categories e.g. the Nikedas shoe assigned to shoe and running categories" ;
     sh:property [
         sh:path cim:activeToDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:activeFromDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -6985,7 +6985,7 @@ cim:ProductCategoryProduct a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7004,7 +7004,7 @@ cim:ProductCategoryAttributeSet a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7019,7 +7019,7 @@ cim:SalesOrderConfirmationStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7029,7 +7029,7 @@ cim:SalesOrderConfirmationStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7044,7 +7044,7 @@ cim:SalesOrderDeliveryStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7054,7 +7054,7 @@ cim:SalesOrderDeliveryStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7069,7 +7069,7 @@ cim:SalesOrderStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7079,7 +7079,7 @@ cim:SalesOrderStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7103,7 +7103,7 @@ cim:SalesOrderProductGroup a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7122,7 +7122,7 @@ cim:SalesOrderProductGroup a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7153,7 +7153,7 @@ cim:SalesOrderChangeLog a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7179,7 +7179,7 @@ cim:SalesOrderChangeLog a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7194,7 +7194,7 @@ cim:SalesOrderType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7204,7 +7204,7 @@ cim:SalesOrderType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7238,7 +7238,7 @@ cim:SalesChannel a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7267,7 +7267,7 @@ cim:SalesChannel a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7286,7 +7286,7 @@ cim:SalesOrderProductNote a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7300,7 +7300,7 @@ cim:SalesOrderProductNote a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7315,7 +7315,7 @@ cim:SalesOrderSegment a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7325,7 +7325,7 @@ cim:SalesOrderSegment a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7340,7 +7340,7 @@ cim:SalesOrderPriceAdjustmentType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7350,7 +7350,7 @@ cim:SalesOrderPriceAdjustmentType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7369,7 +7369,7 @@ cim:SalesOrderProductReason a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7383,7 +7383,7 @@ cim:SalesOrderProductReason a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7421,7 +7421,7 @@ cim:SalesOrderProductTax a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -7452,7 +7452,7 @@ cim:SalesOrderProductTax a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -7468,7 +7468,7 @@ cim:SalesOrderChangeType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7478,7 +7478,7 @@ cim:SalesOrderChangeType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7493,7 +7493,7 @@ cim:PriceAdjustmentMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7503,7 +7503,7 @@ cim:PriceAdjustmentMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7523,7 +7523,7 @@ cim:SalesOrderPriceAdjustment a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ] , [
@@ -7536,7 +7536,7 @@ cim:SalesOrderPriceAdjustment a rdfs:Class , sh:NodeShape ;
             sh:minCount "1"
         ] , [
             sh:path cim:id ;
-            sh:datatype cim:id ;
+            sh:datatype xsd:integer ;
             sh:maxCount "1" ;
             sh:minCount "1"
         ]
@@ -7647,7 +7647,7 @@ cim:SalesOrderDeliveryGroup a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7752,7 +7752,7 @@ cim:SalesOrderDeliveryGroup a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7767,7 +7767,7 @@ cim:SalesOrderProductReasonCategory a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7777,7 +7777,7 @@ cim:SalesOrderProductReasonCategory a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7792,7 +7792,7 @@ cim:SalesChannelType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7802,7 +7802,7 @@ cim:SalesChannelType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7817,7 +7817,7 @@ cim:SalesOrderProductStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7827,7 +7827,7 @@ cim:SalesOrderProductStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7842,7 +7842,7 @@ cim:RenewalTerm a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7852,7 +7852,7 @@ cim:RenewalTerm a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7867,7 +7867,7 @@ cim:SalesOrderProductGroupType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7877,7 +7877,7 @@ cim:SalesOrderProductGroupType a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7928,7 +7928,7 @@ cim:SalesOrderPaymentSummary a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] , [
@@ -7974,7 +7974,7 @@ cim:SalesOrderPaymentSummary a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -7998,7 +7998,7 @@ cim:ShippingMethod a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -8030,7 +8030,7 @@ cim:ShipmentProductPriceAdjustment a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -8050,7 +8050,7 @@ cim:ShipmentStatus a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -8072,15 +8072,15 @@ cim:Shipment a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:estimatedDeliveryDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:scheduledDeliveryDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:actualDeliveryDateTime ;
-        sh:datatype xsd:time ;
+        sh:datatype xsd:dateTime ;
         sh:maxCount "1"
     ] , [
         sh:path cim:shipmentDate ;
@@ -8109,7 +8109,7 @@ cim:Shipment a rdfs:Class , sh:NodeShape ;
         sh:maxCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -8123,7 +8123,7 @@ cim:ShipmentDocument a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
@@ -8142,7 +8142,7 @@ cim:ShipmentProductPriceAdjustmentTax a rdfs:Class , sh:NodeShape ;
         sh:minCount "1"
     ] , [
         sh:path cim:id ;
-        sh:datatype cim:id ;
+        sh:datatype xsd:integer ;
         sh:maxCount "1" ;
         sh:minCount "1"
     ] .
