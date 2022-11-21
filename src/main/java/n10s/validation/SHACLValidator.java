@@ -55,10 +55,14 @@ public class SHACLValidator {
   public static final String SHACL_LENGTH_CONSTRAINT_COMPONENT = "http://www.w3.org/ns/shacl#LengthConstraintComponent";
 
 
-  String PROP_CONSTRAINT_QUERY = "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
-          "SELECT distinct ?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
+  String PROP_CONSTRAINT_QUERY = "PREFIX ex: <http://example/>\n" +
+          "prefix sh: <http://www.w3.org/ns/shacl#> \n" +
+          "prefix exp: <http://www.nsmntx.org/voc/expectations#>\n" +
+          "\n" +
+          "SELECT distinct ?ns ?ps ?mostly ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
           "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen \n" +
-          "?maxStrLen (GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n" +
+          "?maxStrLen (GROUP_CONCAT (distinct ?disjointProp; separator=\"---\") AS ?disjointProps) \n" +
+          "(GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n" +
           "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) \n" +
           "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) \n" +
           "(GROUP_CONCAT (distinct ?notIn; separator=\"---\") AS ?notins) \n" +
@@ -109,10 +113,13 @@ public class SHACLValidator {
           "    optional { ?ps sh:in/rdf:first ?inFirst }\n" +
           "    optional { ?ps sh:in/sh:not/rdf:first ?notInFirst }\n" +
           "    optional { ?ps sh:minLength  ?minStrLen }\n" +
-          "  \n" +
+          "    optional { ?ps sh:disjoint  ?disjointProp }\n" +
+          "    optional { ?ps exp:mostly  ?mostly }\n" +
+          "   \n" +
           "} group by \n" +
-          "?ns ?ps ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?nmsg ?pmsg ?targetClass ?targetIsQuery " +
-          "?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen ?maxStrLen ?inFirst ?notInFirst";
+          "?ns ?ps ?path ?mostly ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?nmsg ?pmsg " +
+          "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc " +
+          "?minStrLen ?maxStrLen ?inFirst ?notInFirst";
 
   String NODE_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
           "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
@@ -363,7 +370,39 @@ public class SHACLValidator {
         //ADD constraint to the list
         vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
                 printConstraintType(SHACL.HAS_VALUE),
-                (List<String>) theConstraint.get("hasValueLiteral")));
+                valueLiteralList));
+      }
+    }
+
+    if (theConstraint.get("disjointProps") != null && !isConstraintOnType) {
+      List<String> disjointPropList = (List<String>) theConstraint.get("disjointProps");
+      if (!disjointPropList.isEmpty()) {
+
+        List<String> classBasedList = new ArrayList<>();
+        classBasedList.addAll(Arrays.asList(focusLabel,propOrRel));
+        for(String p:disjointPropList){
+          classBasedList.add(translateUri(p, tx, gc));
+        }
+        classBasedList.addAll(Arrays.asList(focusLabel,(String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel, customMsg));
+
+        List<String> queryBasedList = new ArrayList<>();
+        queryBasedList.addAll(Arrays.asList(propOrRel));
+        queryBasedList.addAll(disjointPropList);
+        queryBasedList.addAll(Arrays.asList((String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel, customMsg));
+
+        addQueriesForTriggerWithDynamicProps(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "HasOverlappingValuesinProps", whereClause, constraintType, disjointPropList,
+                buildArgArray(constraintType, classBasedList, queryBasedList));
+
+
+        addQueriesForTriggerWithDynamicProps(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "HasOverlappingValuesinRels", whereClause, constraintType, disjointPropList,
+                buildArgArray(constraintType, classBasedList, queryBasedList));
+
+        //ADD constraint to the list
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
+                printConstraintType(SHACL.HAS_VALUE),
+                disjointPropList));
       }
     }
 
@@ -823,18 +862,18 @@ public class SHACLValidator {
 
     if (theConstraint.get("reqClass") != null) {
 
-      for (String uri : (List<String>) theConstraint.get("reqClass")) {
-        //disjointClasses.add(translateUri(uri));
+      for (String uri : (List<String>) theConstraint.get("disjointProps")) {
 
-        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-                "reqAndDisjointClass", whereClause, constraintType,
-           buildArgArray(constraintType,
-                Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),focusLabel,
-                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
-                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg) ,
-                Arrays.asList("not", translateUri(uri, tx, gc),
-                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
-                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg)));
+//////// HERE <<<<<<<<<<<<<<<
+//        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+//                "reqAndDisjointClass", whereClause, constraintType,
+//           buildArgArray(constraintType,
+//                Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),focusLabel,
+//                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
+//                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg) ,
+//                Arrays.asList("not", translateUri(uri, tx, gc),
+//                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
+//                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg)));
 
       }
 
@@ -890,8 +929,16 @@ public class SHACLValidator {
   public void addQueriesForTrigger(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause,
                                    int constraintType, String[] args) {
     vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
-            getViolationQuery(queryId,false, whereClause, constraintType, args),
-            getViolationQuery(queryId,true, whereClause, constraintType, args),
+            getViolationQuery(queryId,false, whereClause, constraintType, Collections.emptyList(), args),
+            getViolationQuery(queryId,true, whereClause, constraintType, Collections.emptyList(), args),
+            triggers);
+  }
+
+  public void addQueriesForTriggerWithDynamicProps(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause,
+                                   int constraintType, List<String> propsOrRels, String[] args) {
+    vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
+            getViolationQuery(queryId,false, whereClause, constraintType, propsOrRels, args),
+            getViolationQuery(queryId,true, whereClause, constraintType, propsOrRels, args),
             triggers);
   }
 
@@ -980,6 +1027,12 @@ public class SHACLValidator {
               next.hasBinding("maxInc") ? ((Literal) next.getValue("maxInc")).intValue() : null);
           record.put("maxExc",
               next.hasBinding("maxExc") ? ((Literal) next.getValue("maxExc")).intValue() : null);
+          if (next.hasBinding("disjointProps") && !next.getValue("disjointProps").stringValue()
+                  .equals("")) {
+            List<String> disjointProps = Arrays
+                    .asList(next.getValue("disjointProps").stringValue().split("---"));
+            record.put("disjointProps", disjointProps);
+          }
 
           if (next.hasBinding("hasValueLiterals") && !next.getValue("hasValueLiterals")
               .stringValue()
@@ -1171,7 +1224,7 @@ public class SHACLValidator {
   }
 
   private String getViolationQuery(String queryId, boolean tx, String customWhere, int constraintType,
-                                   String ... args ){
+                                   List<String> propOrRelList, String ... args){
     String query = "";
     String nodeIdFragment = (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, ";
     String nodeTypeFragment = "'[all nodes]' as nodeType, ";
@@ -1396,6 +1449,40 @@ public class SHACLValidator {
                 + "'%s' as propertyShape,  'cardinality (' + (coalesce(size([(focus)-[rel:`%s`]->()| rel ]),0) + coalesce(size([] + focus.`%s`),0)) + ') is outside the defined min-max limits'  as message, "
                 + propertyNameFragment + severityFragment
                 + "null as offendingValue , " + customMsgFragment);
+        break;
+      case "HasOverlappingValuesinProps":
+        StringBuilder suffix1Props  = new StringBuilder(" true with focus , [] + coalesce(focus.`%s`, []) as __baseprop ");
+        StringBuilder suffix2Props  = new StringBuilder(" where ");
+        int pid = 0 ;
+        for (String prop:propOrRelList){
+          suffix1Props.append(", [] + coalesce(focus.`%s`, []) as __p" + pid + " ");
+          suffix2Props.append(pid>0?" or ":"").append(" any(x IN __baseprop WHERE x in __p" + pid + " ) ");
+          pid++;
+        }
+
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere : ""), //no 'and' after the customwhere because in this case is followed by a with
+                suffix1Props.toString() + suffix2Props + " RETURN "
+                        + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.DISJOINT_CONSTRAINT_COMPONENT + "' as propertyShape,  'property value overlaps with expected disjoint props'  as message, "
+                        + propertyNameFragment + severityFragment
+                        + "focus.`%s` as offendingValue , " + customMsgFragment);
+        break;
+      case "HasOverlappingValuesinRels":
+        String suffix1Rels = " true with distinct focus, x ";
+        StringBuilder suffix2Rels  = new StringBuilder(" where ");
+        int rid = 0 ;
+        for (String prop:propOrRelList){
+          suffix2Rels.append(rid>0?" or ":"").append(" (focus)-[:`%s`]->(x) ");
+          rid++;
+        }
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_REL_WHERE : CYPHER_MATCH_ALL_REL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                suffix1Rels + suffix2Rels + " RETURN "
+                        + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                        + "'" + SHACL.DISJOINT_CONSTRAINT_COMPONENT + "' as propertyShape,  'relationship target overlaps with expected disjoint rels'  as message, "
+                        + propertyNameFragment + severityFragment + (nodesAreUriIdentified() ? " x.uri " : " id(x) ")
+                        + " as offendingValue , " + customMsgFragment);
         break;
       case "MinCardinality1Inverse":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),

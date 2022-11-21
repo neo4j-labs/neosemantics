@@ -1502,6 +1502,20 @@ public class SHACLValidationProceduresTest {
     runIndividualTest("core/other", "required-excluded-query-001", null, "KEEP","required-excluded-query-001-keep");
   }
 
+  @Test
+  public void testRunTestSuite15() throws Exception {
+    runIndividualTest("core/property", "disjoint-001", null, "IGNORE");
+    runIndividualTest("core/property", "disjoint-001", null, "SHORTEN");
+    runIndividualTest("core/property", "disjoint-001", null, "KEEP");
+  }
+
+  @Test
+  public void testRunTestSuite16() throws Exception {
+    runIndividualTest("core/property", "disjoint-002", null, "IGNORE");
+    runIndividualTest("core/property", "disjoint-002", null, "SHORTEN");
+    runIndividualTest("core/property", "disjoint-002", null, "KEEP");
+  }
+
   public void runIndividualTest(String testGroupName, String testName,
       String cypherScript, String handleVocabUris, String ... overrideShapesFileName) throws Exception {
 
