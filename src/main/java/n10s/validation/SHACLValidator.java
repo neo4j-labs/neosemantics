@@ -1,5 +1,6 @@
 package n10s.validation;
 
+import com.google.common.collect.Lists;
 import n10s.graphconfig.GraphConfig;
 import n10s.graphconfig.GraphConfig.*;
 import n10s.utils.InvalidNamespacePrefixDefinitionInDB;
@@ -378,17 +379,11 @@ public class SHACLValidator {
       List<String> disjointPropList = (List<String>) theConstraint.get("disjointProps");
       if (!disjointPropList.isEmpty()) {
 
-        List<String> classBasedList = new ArrayList<>();
-        classBasedList.addAll(Arrays.asList(focusLabel,propOrRel));
-        for(String p:disjointPropList){
-          classBasedList.add(translateUri(p, tx, gc));
-        }
-        classBasedList.addAll(Arrays.asList(focusLabel,(String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel, customMsg));
+        List<String> classBasedList = Arrays.asList(focusLabel,propOrRel,focusLabel,
+                (String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel, customMsg);
 
-        List<String> queryBasedList = new ArrayList<>();
-        queryBasedList.addAll(Arrays.asList(propOrRel));
-        queryBasedList.addAll(disjointPropList);
-        queryBasedList.addAll(Arrays.asList((String) theConstraint.get("propShapeUid"),propOrRel, severity, propOrRel, customMsg));
+        List<String> queryBasedList = Arrays.asList(propOrRel,(String) theConstraint.get("propShapeUid"),
+                propOrRel, severity, propOrRel, customMsg);
 
         addQueriesForTriggerWithDynamicProps(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
                 "HasOverlappingValuesinProps", whereClause, constraintType, disjointPropList,
@@ -927,7 +922,7 @@ public class SHACLValidator {
 
 
   public void addQueriesForTrigger(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause,
-                                   int constraintType, String[] args) {
+                                   int constraintType, String[] args) throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
     vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
             getViolationQuery(queryId,false, whereClause, constraintType, Collections.emptyList(), args),
             getViolationQuery(queryId,true, whereClause, constraintType, Collections.emptyList(), args),
@@ -935,7 +930,7 @@ public class SHACLValidator {
   }
 
   public void addQueriesForTriggerWithDynamicProps(ValidatorConfig vc, ArrayList<String> triggers, String queryId, String whereClause,
-                                   int constraintType, List<String> propsOrRels, String[] args) {
+                                   int constraintType, List<String> propsOrRels, String[] args) throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
     vc.addQueryAndTriggers("Q_" + (vc.getIndividualGlobalQueries().size() + 1),
             getViolationQuery(queryId,false, whereClause, constraintType, propsOrRels, args),
             getViolationQuery(queryId,true, whereClause, constraintType, propsOrRels, args),
@@ -1224,7 +1219,7 @@ public class SHACLValidator {
   }
 
   private String getViolationQuery(String queryId, boolean tx, String customWhere, int constraintType,
-                                   List<String> propOrRelList, String ... args){
+                                   List<String> propOrRelList, String ... args) throws InvalidNamespacePrefixDefinitionInDB, UriNamespaceHasNoAssociatedPrefix {
     String query = "";
     String nodeIdFragment = (nodesAreUriIdentified() ? " focus.uri " : " id(focus) ") + " as nodeId, ";
     String nodeTypeFragment = "'[all nodes]' as nodeType, ";
@@ -1455,13 +1450,13 @@ public class SHACLValidator {
         StringBuilder suffix2Props  = new StringBuilder(" where ");
         int pid = 0 ;
         for (String prop:propOrRelList){
-          suffix1Props.append(", [] + coalesce(focus.`%s`, []) as __p" + pid + " ");
+          suffix1Props.append(", [] + coalesce(focus.`" + translateUri(prop, this.tx, gc) + "`, []) as __p" + pid + " ");
           suffix2Props.append(pid>0?" or ":"").append(" any(x IN __baseprop WHERE x in __p" + pid + " ) ");
           pid++;
         }
 
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_WHERE : CYPHER_MATCH_ALL_WHERE),
-                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere : ""), //no 'and' after the customwhere because in this case is followed by a with
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and ": ""), //no 'and' after the customwhere because in this case is followed by a with
                 suffix1Props.toString() + suffix2Props + " RETURN "
                         + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                         + "'" + SHACL.DISJOINT_CONSTRAINT_COMPONENT + "' as propertyShape,  'property value overlaps with expected disjoint props'  as message, "
@@ -1473,7 +1468,7 @@ public class SHACLValidator {
         StringBuilder suffix2Rels  = new StringBuilder(" where ");
         int rid = 0 ;
         for (String prop:propOrRelList){
-          suffix2Rels.append(rid>0?" or ":"").append(" (focus)-[:`%s`]->(x) ");
+          suffix2Rels.append(rid>0?" or ":"").append(" (focus)-[:`" + translateUri(prop, this.tx, gc) + "`]->(x) ");
           rid++;
         }
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_MATCH_REL_WHERE : CYPHER_MATCH_ALL_REL_WHERE),
