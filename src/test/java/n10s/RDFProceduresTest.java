@@ -37,12 +37,8 @@ import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.skos.load.SKOSLoadProcedures;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.junit.*;
-import org.neo4j.driver.Config;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.*;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Result;
-import org.neo4j.driver.Session;
 import org.neo4j.driver.internal.InternalRelationship;
 import org.neo4j.driver.internal.value.IntegerValue;
 import org.neo4j.driver.internal.value.ListValue;
@@ -4235,5 +4231,36 @@ public class RDFProceduresTest {
       assertEquals("View Source", queryresult.next().get("label").asString());
     }
   }
+
+
+  @Test
+  public void testSingleTransactionBaseTest() throws Exception {
+    try (Session session = driver.session();) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              " { handleVocabUris: 'IGNORE' } ");
+
+      Transaction singleTx = session.beginTransaction();
+      Result importResults1 = singleTx.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD')");
+      assertEquals(6L, importResults1.single().get("triplesLoaded").asLong());
+      singleTx.rollback();
+      assertEquals(false,
+              session.run(
+                              "MATCH (n{`http://xmlns.com/foaf/0.1/name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+                      .hasNext());
+
+      singleTx = session.beginTransaction();
+      Result importResults2 = singleTx.run("CALL n10s.rdf.import.inline('" +
+              jsonLdFragment + "','JSON-LD', { singleTx: false })");
+      assertEquals(6L, importResults2.single().get("triplesLoaded").asLong());
+      singleTx.rollback();
+      assertEquals(true,
+              session.run(
+                              "MATCH (n{`name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
+                      .hasNext());
+
+    }
+  }
+
 
 }
