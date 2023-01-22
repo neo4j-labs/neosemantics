@@ -17,7 +17,7 @@ public class RDFDeleteProcedures extends RDFProcedures {
           + "n10s.rdf.import ")
   public Stream<DeleteResults> fetch(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    return Stream.of(doDelete(format, url, null, props));
+    return Stream.of(doDelete(format, url, null, props, false));
   }
 
   @Procedure(mode = Mode.WRITE)
@@ -27,7 +27,7 @@ public class RDFDeleteProcedures extends RDFProcedures {
   public Stream<DeleteResults> inline(@Name("rdf") String rdf,
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
-    return Stream.of(doDelete(format, null, rdf, props));
+    return Stream.of(doDelete(format, null, rdf, props, true));
   }
 
 }

@@ -69,6 +69,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     this.tx = tx;
     this.parserConfig = conf;
     log = l;
+
     //initialise vocMappings  if needed
     if (this.parserConfig.getGraphConf().getHandleVocabUris()
         == GraphConfig.GRAPHCONF_VOC_URI_MAP) {
@@ -458,7 +459,7 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
     }
     totalTriplesParsed++;
 
-    if (parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter != 0
+    if (!parserConfig.isUseSingleTx() && parserConfig.getCommitSize() != Long.MAX_VALUE && mappedTripleCounter != 0
         && mappedTripleCounter % parserConfig.getCommitSize() == 0) {
       periodicOperation();
     }

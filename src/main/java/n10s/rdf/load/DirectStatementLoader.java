@@ -40,7 +40,19 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
   @Override
   public void endRDF() throws RDFHandlerException {
-    periodicOperation();
+    if(parserConfig.isUseSingleTx()){
+      if (parserConfig.getGraphConf().getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN) {
+        namespaces.partialRefresh(tx);
+        log.debug("namespace prefixes synced: " + namespaces.toString());
+      }
+      
+      this.runPartialTx(tx);
+      log.debug("rdf import commit: " + mappedTripleCounter + " triples ingested.");
+      //not sure this is needed here
+      totalTriplesMapped += mappedTripleCounter;
+    } else {
+      periodicOperation();
+    }
     log.debug("Import complete: " + totalTriplesMapped + "  triples ingested out of "
         + totalTriplesParsed + " parsed");
   }

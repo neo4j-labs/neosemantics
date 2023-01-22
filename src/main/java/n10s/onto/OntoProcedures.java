@@ -39,7 +39,7 @@ public class OntoProcedures extends CommonProcedures {
 
 
   protected ImportResults doOntoImport(String format, String url,
-      String rdfFragment, Map<String, Object> props)
+      String rdfFragment, Map<String, Object> props, boolean reuseCurrentTx)
       throws GraphConfigNotFound, InvalidParamException {
 
     OntologyImporter ontoImporter = null;
@@ -48,6 +48,9 @@ public class OntoProcedures extends CommonProcedures {
     ImportResults importResults = new ImportResults();
     try {
       checkConstraintExist();
+      if(!props.containsKey("singleTx")){
+        props.put("singleTx", reuseCurrentTx);
+      }
       conf = new RDFParserConfig(props, new GraphConfig(tx));
       rdfFormat = getFormat(format);
       ontoImporter = new OntologyImporter(db, tx, conf, log);

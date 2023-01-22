@@ -16,7 +16,7 @@ public class RDFLoadProcedures extends RDFProcedures {
   public Stream<ImportResults> fetch(@Name("url") String url, @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-    return Stream.of(doImport(format, url, null, props, null));
+    return Stream.of(doImport(format, url, null, props, false)); //check props.reusetx ?
   }
 
   @Procedure(name = "n10s.rdf.import.inline", mode = Mode.WRITE)
@@ -26,7 +26,7 @@ public class RDFLoadProcedures extends RDFProcedures {
       @Name("format") String format,
       @Name(value = "params", defaultValue = "{}") Map<String, Object> props) {
 
-    return Stream.of(doImport(format, null, rdfFragment, props, null));
+    return Stream.of(doImport(format, null, rdfFragment, props, true));
   }
 
 }
