@@ -857,19 +857,17 @@ public class SHACLValidator {
 
     if (theConstraint.get("reqClass") != null) {
 
-      for (String uri : (List<String>) theConstraint.get("disjointProps")) {
+      for (String uri : (List<String>) theConstraint.get("reqClass")) {
 
-//////// HERE <<<<<<<<<<<<<<<
-//        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
-//                "reqAndDisjointClass", whereClause, constraintType,
-//           buildArgArray(constraintType,
-//                Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),focusLabel,
-//                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
-//                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg) ,
-//                Arrays.asList("not", translateUri(uri, tx, gc),
-//                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
-//                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg)));
-
+        addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+                "reqAndDisjointClass", whereClause, constraintType,
+           buildArgArray(constraintType,
+                Arrays.asList(focusLabel, "not", translateUri(uri, tx, gc),focusLabel,
+                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
+                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg) ,
+                Arrays.asList("not", translateUri(uri, tx, gc),
+                        (String) theConstraint.get("nodeShapeUid"), SHACL.CLASS_CONSTRAINT_COMPONENT.stringValue(), translateUri(uri, tx, gc),
+                        "http://www.w3.org/ns/shacl#Violation", "missing", translateUri(uri, tx, gc), customMsg)));
       }
 
       //ADD constraint to the list
