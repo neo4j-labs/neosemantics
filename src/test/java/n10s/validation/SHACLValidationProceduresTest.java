@@ -847,10 +847,7 @@ public class SHACLValidationProceduresTest {
               "cs_dso:ItCapacity\n" +
               "    \trdf:type    \trdfs:Class , sh:NodeShape ;\n" +
               "    \trdfs:comment\t\"Describes the IT capacity allocated to a Product.\" ;\n" +
-              "    \tsh:property \tcs_dso:devFte ,\n" +
-              "                    \tcs_dso:baFte ,\n" +
-              "                    \tcs_dso:pmFte ,\n" +
-              "                    \tcs_dso:otherFte ;\n" +
+              "    \tsh:property \tcs_dso:devFte ;\n" +
               ".\n" +
               " \n" +
               " \n" +
@@ -860,14 +857,14 @@ public class SHACLValidationProceduresTest {
               "    \tschema:domainIncludes   cs_dso:ItCapacity ;\n" +
               "    \tschema:rangeIncludes\txsd:decimal ;\n" +
               "    \tsh:path             \tcs_dso:devFte ;\n" +
-              "    \tsh:datatype         \txsd:decimal ;\n" +
+              "    \tsh:datatype         \txsd:nonNegativeInteger ;\n" +
               "    \tsh:maxCount         \t1 ;\n" +
               ".\n" +
               "','Turtle')").hasNext();
 
       assertTrue(false); //should never get here
     } catch (Exception e) {
-      assertTrue(e.getMessage().contains("http://www.w3.org/2001/XMLSchema#decimal data type is not supported for sh:datatype restrictions"));
+      assertTrue(e.getMessage().contains("http://www.w3.org/2001/XMLSchema#nonNegativeInteger data type is not supported for sh:datatype restrictions"));
     }
 
 
@@ -1681,6 +1678,16 @@ public class SHACLValidationProceduresTest {
       for (ValidationResult x : actualResults) {
         assertTrue(contains(expectedResults, x));
       }
+
+    //re-run it on empty set of nodes
+    actualValidationResults = session
+            .run("MATCH (n:NonExistingNodes) with collect(n) as nodelist "
+                    + "call n10s.validation.shacl.validateSet(nodelist)"
+                    + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
+                    + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
+
+    //no results expected as running on empty set of nodes
+    assertFalse(actualValidationResults.hasNext());
 
       session.run("MATCH (n) DETACH DELETE n ").hasNext();
   }
