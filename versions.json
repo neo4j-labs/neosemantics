@@ -2743,20 +2743,5 @@
                 "semantics.*"
             ]
         }
-    },
-    {
-        "neo4j": "3.3.0-beta02",
-        "neo4jVersion": "3.3.0-beta02",
-        "n10s": "3.3.0.2",
-        "version": "3.3.0.2",
-        "url": "http://github.com/neo4j-labs/neosemantics/releases/3.3.0.2",
-        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/3.3.0.2",
-        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/3.3.0.2/neosemantics-3.3.0.2.jar",
-        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/3.3.0.2/neosemantics-3.3.0.2.jar",
-        "config": {
-            "+:dbms.security.procedures.unrestricted": [
-                "semantics.*"
-            ]
-        }
     }
 ]
