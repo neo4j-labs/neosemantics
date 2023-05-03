@@ -1,0 +1,263 @@
+@prefix : <neo4j://graph.schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@base <neo4j://graph.schema#> .
+
+<neo4j://graph.schema#> rdf:type owl:Ontology .
+
+#################################################################
+#    Object Properties
+#################################################################
+
+###  neo4j://graph.schema#ACTED_IN
+:ACTED_IN rdf:type owl:ObjectProperty ;
+          rdfs:subPropertyOf :creatorToCreation ;
+          rdfs:domain :Actor ;
+          rdfs:range :Movie ,
+                     :Play ;
+          rdfs:comment "describes a persons involvement in a movie as an actor"@en ;
+          rdfs:label "acted in"@en ,
+                     "actuó en"@es ,
+                     "joué dans"@fr .
+
+
+###  neo4j://graph.schema#DIRECTED
+:DIRECTED rdf:type owl:ObjectProperty ;
+          rdfs:subPropertyOf :creatorToCreation ;
+          rdfs:domain :Director ;
+          rdfs:range :Movie ;
+          rdfs:comment "describes a persons involvement in a movie as a director"@en ;
+          rdfs:label "directed"@en ,
+                     "dirigió"@es ,
+                     "réalisé"@fr .
+
+
+###  neo4j://graph.schema#PLACE_OF_BIRTH
+:PLACE_OF_BIRTH rdf:type owl:ObjectProperty ;
+                rdfs:domain :Person ;
+                rdfs:range :Place ;
+                rdfs:comment "connects a person to the birth location of that person"@en ;
+                rdfs:label "place of birth"@en .
+
+
+###  neo4j://graph.schema#PRODUCED
+:PRODUCED rdf:type owl:ObjectProperty ;
+          rdfs:domain :Producer ;
+          rdfs:range :Movie ;
+          rdfs:comment "describes a persons involvement in a movie as a producer"@en ;
+          rdfs:label "produced"@en ,
+                     "produit"@fr ,
+                     "produjo"@es .
+
+
+###  neo4j://graph.schema#REVIEWED
+:REVIEWED rdf:type owl:ObjectProperty ;
+          rdfs:domain :Critic ;
+          rdfs:range :Movie ;
+          rdfs:comment "describes a person rating a movie" ;
+          rdfs:label "comentó"@es ,
+                     "reviewed"@en ,
+                     "revu"@fr .
+
+
+###  neo4j://graph.schema#WROTE
+:WROTE rdf:type owl:ObjectProperty ;
+       rdfs:subPropertyOf :creatorToCreation ;
+       rdfs:domain :ScreenWriter ;
+       rdfs:range :Movie ;
+       rdfs:comment "describes a persons involvement in a movie as a screenwriter"@en ;
+       rdfs:label "escribió"@es ,
+                  "wrote"@en ,
+                  "écrit"@fr .
+
+
+###  neo4j://graph.schema#creatorToCreation
+:creatorToCreation rdf:type owl:ObjectProperty ;
+                   rdfs:domain :Person ;
+                   rdfs:range :ArticsticCreation .
+
+
+#################################################################
+#    Data properties
+#################################################################
+
+###  neo4j://graph.schema#artistBorn
+:artistBorn rdf:type owl:DatatypeProperty ;
+            rdfs:subPropertyOf :born ;
+            rdfs:domain :Artist ;
+            rdfs:range xsd:integer .
+
+
+###  neo4j://graph.schema#born
+:born rdf:type owl:DatatypeProperty ;
+      rdfs:domain :Person ;
+      rdfs:range xsd:integer ;
+      rdfs:comment "the year of birth of a person"@en ;
+      rdfs:label "born"@en ,
+                 "nacimiento"@es ,
+                 "naissance"@fr .
+
+
+###  neo4j://graph.schema#country
+:country rdf:type owl:DatatypeProperty ;
+         rdfs:domain :Place ;
+         rdfs:range xsd:string ;
+         rdfs:comment "the country part in a node of type Location"@en .
+
+
+###  neo4j://graph.schema#locaton
+:locaton rdf:type owl:DatatypeProperty ;
+         rdfs:domain :Place ;
+         rdfs:range xsd:string ;
+         rdfs:comment "the specific location (normally city) part in a node of type Location"@en .
+
+
+###  neo4j://graph.schema#name
+:name rdf:type owl:DatatypeProperty ;
+      rdfs:domain :Person ;
+      rdfs:range xsd:string ;
+      rdfs:comment "the first and last name of a person"@en ;
+      rdfs:label "name"@en ,
+                 "nom"@fr ,
+                 "nombre"@es .
+
+
+###  neo4j://graph.schema#region
+:region rdf:type owl:DatatypeProperty ;
+        rdfs:domain :Place ;
+        rdfs:range xsd:string ;
+        rdfs:comment "the region part in a node of type Location"@en .
+
+
+###  neo4j://graph.schema#released
+:released rdf:type owl:DatatypeProperty ;
+          rdfs:domain :Movie ;
+          rdfs:range xsd:integer ;
+          rdfs:comment "the year when the movie was premiered" ;
+          rdfs:label "estrenada"@es ,
+                     "première"@fr ,
+                     "released"@en .
+
+
+###  neo4j://graph.schema#tagline
+:tagline rdf:type owl:DatatypeProperty ;
+         rdfs:domain :Movie ;
+         rdfs:range xsd:string ;
+         rdfs:comment "a slogan used for a movie" ;
+         rdfs:label "eslogan"@es ,
+                    "slogan"@fr ,
+                    "tagline"@en .
+
+
+###  neo4j://graph.schema#title
+:title rdf:type owl:DatatypeProperty ;
+       rdfs:domain :Movie ;
+       rdfs:range xsd:string ;
+       rdfs:comment "the title of a movie" ;
+       rdfs:label "title"@en ,
+                  "titre"@fr ,
+                  "título"@es .
+
+
+#################################################################
+#    Classes
+#################################################################
+
+###  neo4j://graph.schema#Actor
+:Actor rdf:type owl:Class ;
+       rdfs:subClassOf :PerformingArtist ;
+       rdfs:comment "person who acts in a dramatic or comic production and works in film, television, theatre, or radio"@en .
+
+
+###  neo4j://graph.schema#ArticsticCreation
+:ArticsticCreation rdf:type owl:Class .
+
+
+###  neo4j://graph.schema#Artist
+:Artist rdf:type owl:Class ;
+        rdfs:subClassOf :Person ;
+        rdfs:comment "person who engages in any form of artistic creation or practice"@en .
+
+
+###  neo4j://graph.schema#Critic
+:Critic rdf:type owl:Class ;
+        rdfs:subClassOf :Person ;
+        rdfs:comment "professional who makes a living communicating their opinions and assessments of various forms of creative work"@en .
+
+
+###  neo4j://graph.schema#Director
+:Director rdf:type owl:Class ;
+          rdfs:subClassOf :VisualArtist ;
+          rdfs:comment "person who directs a film"@en .
+
+
+###  neo4j://graph.schema#Movie
+:Movie rdf:type owl:Class ;
+       rdfs:subClassOf :ArticsticCreation ;
+       rdfs:comment "A movie describes a feature film"@en ,
+                    "Un film décrit un long métrage"@fr ,
+                    "Una pelicula describe un largometraje"@es ;
+       rdfs:label "Film"@fr ,
+                  "Movie"@en ,
+                  "Pelicula"@es .
+
+
+###  neo4j://graph.schema#Performance
+:Performance rdf:type owl:Class ;
+             rdfs:subClassOf :ArticsticCreation .
+
+
+###  neo4j://graph.schema#PerformingArtist
+:PerformingArtist rdf:type owl:Class ;
+                  rdfs:subClassOf :Artist ;
+                  rdfs:comment "artist who participates in performing arts in front of an audience: actors, comedians, dancers, magicians, circus artists, musicians, singers"@en .
+
+
+###  neo4j://graph.schema#Person
+:Person rdf:type owl:Class ;
+        rdfs:comment "A person represents any individual in the movies dataset"@en ,
+                     "Una persona representa un individuo en el dataset Movies"@es ,
+                     "Une personne représente un individu dans lensemble de données Movies"@fr ;
+        rdfs:label "Person"@en ,
+                   "Persona"@es ,
+                   "Personne"@fr .
+
+
+###  neo4j://graph.schema#Place
+:Place rdf:type owl:Class ;
+       rdfs:comment "location of an object, structure or event"@en .
+
+
+###  neo4j://graph.schema#Play
+:Play rdf:type owl:Class ;
+      rdfs:subClassOf :ArticsticCreation .
+
+
+###  neo4j://graph.schema#Producer
+:Producer rdf:type owl:Class ;
+          rdfs:subClassOf :Person ;
+          rdfs:comment "person supervising the making of a film"@en .
+
+
+###  neo4j://graph.schema#ScreenWriter
+:ScreenWriter rdf:type owl:Class ;
+              rdfs:subClassOf :Writer ;
+              rdfs:comment "writer who writes for films, TV shows, comics and games"@en .
+
+
+###  neo4j://graph.schema#VisualArtist
+:VisualArtist rdf:type owl:Class ;
+              rdfs:subClassOf :Artist ;
+              rdfs:comment "artist involved with the visual arts"@en .
+
+
+###  neo4j://graph.schema#Writer
+:Writer rdf:type owl:Class ;
+        rdfs:subClassOf :Artist ;
+        rdfs:comment "person who uses written words to communicate ideas and to produce works of literature"@en .
+
+
+###  Generated by the OWL API (version 4.5.9.2019-02-01T07:24:44Z) https://github.com/owlcs/owlapi
