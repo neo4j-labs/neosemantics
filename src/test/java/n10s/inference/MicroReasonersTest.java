@@ -2,12 +2,12 @@ package n10s.inference;
 
 import static org.junit.Assert.*;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
+import n10s.onto.load.OntoLoadProcedures;
+import org.assertj.core.util.Lists;
 import org.junit.*;
 import org.neo4j.driver.Config;
 import org.neo4j.driver.Driver;
@@ -18,14 +18,14 @@ import org.neo4j.driver.Session;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
 public class MicroReasonersTest {
-
-  public static Driver driver;
+    public static Driver driver;
 
   @ClassRule
   public static Neo4jRule neo4j = new Neo4jRule()
           .withProcedure(MicroReasoners.class)
           .withFunction(MicroReasoners.class)
-          .withProcedure(GraphConfigProcedures.class);
+          .withProcedure(GraphConfigProcedures.class)
+          .withProcedure(OntoLoadProcedures.class);
 
   @BeforeClass
   public static void init() {
@@ -382,7 +382,74 @@ public class MicroReasonersTest {
       assertEquals(3L, next.get("ct").asLong());
   }
 
-  @Test
+    @Test
+    public void testGetOutgoingRels() throws Exception {
+        Session session = driver.session();
+
+
+        session.run("CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE");
+        session.run("call n10s.graphconfig.init({ handleVocabUris: 'IGNORE', classLabel: 'Label', " +
+                "subClassOfRel: 'SLO' })");
+        session.run("call n10s.onto.import.fetch('"+
+                MicroReasonersTest.class.getClassLoader()
+                .getResource("movies-extended.ttl")
+                .toURI()+"', 'Turtle')");
+        Result results = session.run(
+                "MATCH (c:Label { name: 'Actor'}) RETURN " +
+                        "[prop in n10s.inference.class_props(c,{ includeAll:true})| prop.name ] as props," +
+                        "[x in n10s.inference.class_outgoing_rels(c) | x.name ] as relsOut, " +
+                        "[x in n10s.inference.class_outgoing_rels(c,{ includeAll:true} ) | x.name ] as relsOutAll," +
+                        "[rel in n10s.inference.class_outgoing_rels(c) |  { rel: rel.name, others: [ target in n10s.inference.rel_target_classes(rel) | target.name ]}] as relsOutAndTargets," +
+                        "[rel in n10s.inference.class_incoming_rels(c) |  { rel: rel.name, others: [target in n10s.inference.rel_source_classes(rel) | target.name]}] as incomingWithTargets," +
+                        "[rel in n10s.inference.class_incoming_rels(c,{ includeAll:true}) |  { rel: rel.name, others: [target in n10s.inference.rel_source_classes(rel, { includeAll:true}) | target.name]}] as incomingWithTargetsIncludeall");
+        Record next = results.next();
+        assertEquals(Set.of("name","born","artistBorn"), new HashSet<>(next.get("props").asList()));
+        assertEquals(Set.of("PLACE_OF_BIRTH", "ACTED_IN"), new HashSet<>(next.get("relsOut").asList()));
+        assertEquals(Set.of("creatorToCreation", "PLACE_OF_BIRTH", "ACTED_IN"), new HashSet<>(next.get("relsOutAll").asList()));
+        List relsOutAndTargets = next.get("relsOutAndTargets").asList();
+        for (Object item:relsOutAndTargets) {
+            Map<String, Object> itemAsMap = (Map<String, Object>) item;
+            if(itemAsMap.get("rel").equals("PLACE_OF_BIRTH")){
+                assertEquals(itemAsMap.get("others"),List.of("Place"));
+            } else if(itemAsMap.get("rel").equals("ACTED_IN")) {
+                assertEquals(Set.of("Play","Movie"), new HashSet<>((List<String>)itemAsMap.get("others")));
+            } else {
+                assertTrue(false);
+            }
+        }
+        assertEquals(Collections.emptyList() , next.get("incomingWithTargets").asList());
+        assertEquals(Collections.emptyList() , next.get("incomingWithTargetsIncludeall").asList());
+    }
+
+    @Test
+    public void testGetInferredLabels() throws Exception {
+        Session session = driver.session();
+
+
+        session.run("CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE");
+        session.run("call n10s.graphconfig.init({ handleVocabUris: 'IGNORE', classLabel: 'Label', " +
+                "subClassOfRel: 'SLO' })");
+        session.run("call n10s.onto.import.fetch('"+
+                MicroReasonersTest.class.getClassLoader()
+                        .getResource("movies-extended.ttl")
+                        .toURI()+"', 'Turtle')");
+
+        session.run("create (:Actor { name: 'Keaanu Reeves', born: 1968 })" +
+                "-[:ACTED_IN]->(:Movie { title: 'The Matrix', released: 1999 })");
+
+        String queryGetInferredLabels = "call n10s.inference.labels() yield label return collect(label) as labels";
+        Set inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Actor", "PerformingArtist", "Artist", "Person", "Movie", "ArticsticCreation"), inferredLabelSet);
+        session.run("match (a:Actor { name: 'Keaanu Reeves'}) detach delete a");
+        inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Movie", "ArticsticCreation"), new HashSet<>(inferredLabelSet));
+        session.run("match (m:Movie { title: 'The Matrix'}) create (:Critic { name: 'Mr. Bean', born: 1958 })-[:REVIEWED]->(m)");
+        inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Movie", "ArticsticCreation","Person", "Critic"), inferredLabelSet);
+    }
+
+
+    @Test
   public void testHasLabelCustom() throws Exception {
       Session session = driver.session();
 

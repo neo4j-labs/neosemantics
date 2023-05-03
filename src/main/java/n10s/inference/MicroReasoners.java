@@ -2,16 +2,12 @@ package n10s.inference;
 
 import static org.neo4j.graphdb.RelationshipType.withName;
 
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import n10s.graphconfig.GraphConfig;
+import n10s.result.LabelNameResult;
 import n10s.result.NodeResult;
 import n10s.result.RelAndNodeResult;
 import org.neo4j.graphdb.Direction;
@@ -33,13 +29,14 @@ import org.neo4j.procedure.UserFunction;
 public class MicroReasoners {
 
   private static final String sloInferenceFormatReturnClassNames = "CALL db.labels() YIELD label "
-      + " WITH collect(label) as labels MATCH path = (c:`%1$s`)<-[:`%3$s`*]-(s:`%1$s`) "
-      + " WHERE s.`%2$s` in labels AND NOT (c)-[:`%3$s`]->() AND any(x in nodes (path) "
-      + " WHERE x.`%2$s` = $virtLabel ) RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
+          + " WITH collect(label) as labels MATCH path = (:`%1$s` { `%2$s` : $virtLabel } )<-[:`%3$s`*]-(s:`%1$s`) "
+          + " WHERE s.`%2$s` in labels "
+          + " RETURN COLLECT(DISTINCT s.`%2$s`) + $virtLabel  as l";
 
   private static final String subcatPathQuery =
       "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
           + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
+
   private static final String scoInferenceCypherTopDownQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
   private static final String scoInferenceCypherBottomUpQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE id(subcat) = $catId RETURN collect(DISTINCT id(cat)) AS catIds";
   private static final String sroInferenceFormatReturnRelNamesQuery = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
@@ -202,6 +199,179 @@ public class MicroReasoners {
 
   }
 
+  /*
+  TODO:
+      split procs between onto inferences and instance inferences
+      use sco instead of mappings to align with public ontologies
+      export with an ontology annotation of the type neo:Person rdfs:subClassOf sch:Person
+      add a remove-ontology method
+      add a get-class-by-name method
+      add a datatype label for xsd: elements
+      add a  n10s.inference.prop_datatype method
+   */
+
+
+  @Procedure(mode = Mode.READ)
+  @Description("n10s.inference.labels() - returns all labels in use in the graph, including inferred ones.")
+  public Stream<LabelNameResult> labels(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+    final GraphConfig gc = getGraphConfig();
+
+    if (gc == null && missingParams(props, "catLabel", "catNameProp", "subCatRel")) {
+      throw new MicroReasonerException("No GraphConfig or in-procedure params. Method cannot be run.");
+    }
+
+    String cypher = getInferredLabelsQuery((String) props.getOrDefault("catLabel",gc.getClassLabelName()),
+            (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
+            (String) props.getOrDefault("catNameProp",DEFAULT_CAT_NAME_PROP_NAME));
+
+    return tx.execute(cypher).stream().map(n -> (String) n.get("inferredlabel")).map(LabelNameResult::new);
+  }
+
+  private static final String getInferredLabelsQuery(String catLabel, String subCatRel, String catNameProp ) {
+    return "call db.labels() yield label\n" +
+            "    match hierarchy = (:`" + catLabel + "` { `" + catNameProp + "`: label })-[:`" + subCatRel + "`*0..]->(p) where size([(p)-[s:`" + subCatRel + "`]->() | s]) = 0\n" +
+            "    unwind [n in nodes(hierarchy) | n.`" + catNameProp + "` ] as inferredlabel return distinct inferredlabel";
+  }
+
+  private static final String getClassRelsFromOntoQuery(boolean outgoing, boolean includeAll, String catLabel,
+                                                    String scoRelType, String relLabel, String sroRelType,
+                                                    String domainRelLabel, String rangeRelLabel){
+
+    return " match (c) where c=$node with c match (c)-[:`" + scoRelType + "`*0..]->(hook:`" + catLabel + "`)<-[:`" + (outgoing?domainRelLabel:rangeRelLabel) + "`]-(rel:`" + relLabel + "`) " +
+                    (!includeAll?" where not (rel)<-[:`" + sroRelType + "`*]-(:`" + relLabel + "`)-[:`" + (outgoing?domainRelLabel:rangeRelLabel) + "`]->(:`" + catLabel + "`)<-[:`" + scoRelType + "`*0..]-(c)  ":"") +
+                    " return collect(distinct rel) as rels" ;
+  }
+
+  private static final String getRelDomainsOrRangesFromOntoQuery(boolean outgoing, boolean includeAll, String catLabel,
+                                                        String scoRelType, String relLabel, String sroRelType,
+                                                        String domainRelLabel, String rangeRelLabel){
+    return " match (rel) where rel=$node with rel " +
+                    " match (rel)-[:`" + sroRelType + "`*0..]->(hook:`" + relLabel + "`)-[:`" + (outgoing?rangeRelLabel:domainRelLabel) + "`]->(target) " +
+                    (!includeAll?" where not (target)<-[:`" + scoRelType + "`*]-(:`" + catLabel + "`)<-[:`" + (outgoing?rangeRelLabel:domainRelLabel) + "`]-(:`" + relLabel + "`)<-[:`" + sroRelType + "`*0..]-(rel) ":"") +
+                    " return collect(distinct target) as others " ;
+  }
+
+  private static final String getClassPropsFromOntoQuery(boolean includeAll, String catLabel,
+                                                        String scoRelType, String propLabel, String sroRelType,
+                                                        String domainRelLabel){
+
+    return " match (c) where c=$node with c match (c)-[:`" + scoRelType + "`*0..]->(hook:`" + catLabel + "`)<-[:`" + domainRelLabel + "`]-(prop:`" + propLabel + "`) " +
+            (!includeAll?" where not (prop)<-[:`" + sroRelType + "`*]-(:`" + propLabel + "`)-[:`" + domainRelLabel + "`]->(:`" + catLabel + "`)<-[:`" + scoRelType + "`*0..]-(c)  ":"") +
+            " return collect(distinct prop) as props" ;
+  }
+
+  @UserFunction
+  @Description(
+          "n10s.inference.class_out_rels(class, { includeAll: true, catLabel:''...} ) " +
+                  "- returns inferred outgoing relationships for a given class")
+  public List<Node> class_outgoing_rels(@Name("class") Node node,
+                @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    return getInferredRelsForClass(node, true, props);
+  }
+
+  @UserFunction
+  @Description(
+          "n10s.inference.class_in_rels(class, { includeAll: true, catLabel:''...} ) " +
+                  "- returns inferred incoming relationships for a given class")
+  public List<Node> class_incoming_rels(@Name("class") Node node,
+                                   @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    return getInferredRelsForClass(node, false, props);
+  }
+
+  @UserFunction
+  @Description(
+          "n10s.inference.rel_targets(rel, { includeAll: true, catLabel:''...} ) " +
+                  "- returns inferred targets (ranges) for a given relationship")
+  public List<Node> rel_target_classes(@Name("rel") Node node,
+                                  @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    return getInferredClassForRels(node, true, props);
+  }
+
+  @UserFunction
+  @Description(
+          "n10s.inference.rel_targets(rel, { includeAll: true, catLabel:''...} ) " +
+                  "- returns inferred sources (domains) for a given relationship")
+  public List<Node> rel_source_classes(@Name("rel") Node node,
+                                @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    return getInferredClassForRels(node, false, props);
+  }
+
+  @UserFunction
+  @Description(
+          "n10s.inference.class_props(class, { catLabel:''...} ) " +
+                  "- returns inferred properties for a given class")
+  public List<Node> class_props(@Name("class") Node node,
+                                   @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    return getInferredPropsForClass(node, props);
+  }
+
+  private List<Node> getInferredRelsForClass(Node node, boolean outgoing, Map<String, Object> props) throws MicroReasonerException {
+    final GraphConfig gc = getGraphConfig();
+
+    //if no graphconfig (or ontoconfig) function cannot be invoked (maybe defaults?)
+    if(gc == null){ // && missingParams(props, "catLabel", "subCatRel","relLabel","subRelRel", "domainRel", "rangeRel")
+      throw new MicroReasonerException("No GraphConfig. Method cannot be run.");
+    }
+
+    Result results = tx.execute(getClassRelsFromOntoQuery(outgoing,
+                    (Boolean) props.getOrDefault("includeAll",false),
+                    (String) props.getOrDefault("catLabel",gc.getClassLabelName()),
+                    (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
+                    (String) props.getOrDefault("relLabel",gc.getObjectPropertyLabelName()),
+                    (String) props.getOrDefault("subRelRel",gc.getSubPropertyOfRelName()),
+                    (String) props.getOrDefault("domainRel",gc.getDomainRelName()),
+                    (String) props.getOrDefault("rangeRel",gc.getRangeRelName())),
+            Map.of("node", node));
+
+      return (results.hasNext()?(List<Node>) results.next().get("rels"):Collections.emptyList());
+
+  }
+
+  private List<Node> getInferredClassForRels(Node node, boolean outgoing, Map<String, Object> props) throws MicroReasonerException {
+    final GraphConfig gc = getGraphConfig();
+
+    //if no graphconfig (or ontoconfig) function cannot be invoked (maybe defaults?)
+    if(gc == null){ // && missingParams(props, "catLabel", "subCatRel","relLabel","subRelRel", "domainRel", "rangeRel")
+      throw new MicroReasonerException("No GraphConfig. Method cannot be run.");
+    }
+
+    Result results = tx.execute(getRelDomainsOrRangesFromOntoQuery(outgoing,
+                    (Boolean) props.getOrDefault("includeAll",false),
+                    (String) props.getOrDefault("catLabel",gc.getClassLabelName()),
+                    (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
+                    (String) props.getOrDefault("relLabel",gc.getObjectPropertyLabelName()),
+                    (String) props.getOrDefault("subRelRel",gc.getSubPropertyOfRelName()),
+                    (String) props.getOrDefault("domainRel",gc.getDomainRelName()),
+                    (String) props.getOrDefault("rangeRel",gc.getRangeRelName())),
+            Map.of("node", node));
+
+    return (results.hasNext()?(List<Node>) results.next().get("others"):Collections.emptyList());
+  }
+
+  private List<Node> getInferredPropsForClass(Node node, Map<String, Object> props) throws MicroReasonerException {
+    final GraphConfig gc = getGraphConfig();
+
+    //if no graphconfig (or ontoconfig) function cannot be invoked (maybe defaults?)
+    if(gc == null){ // && missingParams(props, "catLabel", "subCatRel","relLabel","subRelRel", "domainRel", "rangeRel")
+      throw new MicroReasonerException("No GraphConfig. Method cannot be run.");
+    }
+
+    Result results = tx.execute(getClassPropsFromOntoQuery(
+                    (Boolean) props.getOrDefault("includeAll",false),
+                    (String) props.getOrDefault("catLabel",gc.getClassLabelName()),
+                    (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
+                    (String) props.getOrDefault("propLabel",gc.getDataTypePropertyLabelName()),
+                    (String) props.getOrDefault("subRelRel",gc.getSubPropertyOfRelName()),
+                    (String) props.getOrDefault("domainRel",gc.getDomainRelName())),
+            Map.of("node", node));
+
+    return (results.hasNext()?(List<Node>) results.next().get("props"):Collections.emptyList());
+  }
 
   @UserFunction
   @Description(
