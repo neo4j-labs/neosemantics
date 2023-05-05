@@ -260,6 +260,9 @@ public class VirtualNode implements Node {
     return this == o || o instanceof Node && id == ((Node) o).getId();
 
   }
+  public static VirtualNode from(Node node) {
+    return new VirtualNode(node, Iterables.asList(node.getPropertyKeys()));
+  }
 
   @Override
   public int hashCode() {

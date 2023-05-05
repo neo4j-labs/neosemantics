@@ -151,6 +151,10 @@ public class VirtualRelationship implements Relationship {
 
   }
 
+  public static Relationship from(VirtualNode start, VirtualNode end, Relationship rel) {
+    return new VirtualRelationship(start, end, rel.getType()).withProperties(rel.getAllProperties());
+  }
+
   @Override
   public int hashCode() {
     return (int) (id ^ (id >>> 32));
