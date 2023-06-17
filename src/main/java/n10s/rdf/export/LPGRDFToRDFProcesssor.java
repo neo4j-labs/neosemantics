@@ -92,6 +92,7 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     }
 
     res = tx.execute("call db.schema.nodeTypeProperties() yield nodeLabels, propertyName, propertyTypes \n" +
+            " where propertyName is not null " +
             " return [x in nodeLabels where x <> 'Resource'] as domain, propertyName as pName, " +
             " replace(propertyTypes[0],\"Array\",\"\") as range ");
 

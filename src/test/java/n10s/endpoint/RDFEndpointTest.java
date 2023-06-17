@@ -1332,6 +1332,32 @@ public class RDFEndpointTest {
   }
 
   @Test
+  public void testontoOnLPGWithPropertyLessNode() throws Exception {
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      String dataInsertion =
+              " CREATE (:PropertyLessThing) " ;
+      tx.execute(dataInsertion);
+      tx.commit();
+    }
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      Result result = tx.execute("MATCH (n:PropertyLessThing) RETURN id(n) AS id ");
+      assertEquals(1, count(result));
+    }
+
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+
+    String expected =
+            "<neo4j://graph.schema#PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://graph.schema#PropertyLessThing> <http://www.w3.org/2000/01/rdf-schema#label> \"PropertyLessThing\" .\n" ;
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+  }
+
+  @Test
   public void testontoOnRDF() throws Exception {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1397,6 +1423,34 @@ public class RDFEndpointTest {
 
   }
 
+  @Test
+  public void testontoOnRDFWithPropertyLessNodes() throws Exception {
+
+    try (Transaction tx = graphDatabaseService.beginTx()) {
+      tx.execute("CALL n10s.graphconfig.init()");
+      tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
+
+      String dataInsertion =
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "PropertyLessThing )\n" +
+              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Person { uri: 'https://permid.org/1-21523433751' })" ;
+      tx.execute(dataInsertion);
+      tx.commit();
+    }
+
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
+            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+
+    String expected =
+            "<http://permid.org/ontology/organization/Person> <http://www.w3.org/2000/01/rdf-schema#label> \"Person\" .\n" +
+            "<http://permid.org/ontology/organization/Person> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+            "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/2000/01/rdf-schema#label> \"PropertyLessThing\" .\n" +
+            "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" ;
+
+    assertEquals(200, response.status());
+    assertTrue(ModelTestUtils
+            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+
+  }
 
   @Test
   public void testNodeByUri() throws Exception {
