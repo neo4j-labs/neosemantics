@@ -1,19 +1,14 @@
 package n10s.similarity;
 
 import n10s.graphconfig.GraphConfig;
-import n10s.result.PathResult;
-import n10s.result.VirtualNode;
-import n10s.result.VirtualPath;
-import n10s.result.VirtualRelationship;
+import n10s.result.*;
 import org.neo4j.graphdb.*;
 import org.neo4j.internal.helpers.collection.Iterables;
 import org.neo4j.logging.Log;
-import org.neo4j.procedure.Context;
-import org.neo4j.procedure.Description;
-import org.neo4j.procedure.Name;
-import org.neo4j.procedure.UserFunction;
+import org.neo4j.procedure.*;
 
 import java.util.*;
+import java.util.stream.Stream;
 
 public class Similarities {
 
@@ -32,20 +27,38 @@ public class Similarities {
     private static final String SIMULATE_ROOT_PARAM = "simulateRoot";
     private static String shortestPathQuery =
             "MATCH (a),(b) where id(a) = id($a_cat) and id(b) = id($b_cat)" +
-            "MATCH sp = ((a)-[:`%1$s`*0..]->()<-[:`%1$s`*0..]-(b)) " +
-            "RETURN sp order by length(sp) desc limit 1";
+            "MATCH sp = ((a)-[:`%1$s`*0..]->(cs)<-[:`%1$s`*0..]-(b)) " +
+            "RETURN cs, sp order by length(sp) limit 1";
+
+    private static String shortestPathSearchWithMaxDepth =
+            "MATCH (a) where id(a) = id($a_cat) \n" +
+                    "MATCH sp = ((a:`%1$s`)-[:`%2$s`*0..]->(cs)<-[:`%2$s`*0..]-(b:`%1$s`)) where 0 < length(sp) <= $threshold_length \n" +
+                    "WITH cs, b, min(length(sp)) as dist \n" +
+                    "MATCH total_depth = (leaf)-[:`%2$s`*0..]->(cs)-[:`%2$s`*0..]->(root) where not (root)-[:`%2$s`]->() and not ()-[:`%2$s`]->(leaf) \n" +
+                    "WITH b, dist, max(length(total_depth) + 1) as depth \n" +
+                    "RETURN b as node, - log ( 1.0 * dist / (2.0 * depth)) as sim ";
+    private static String shortestPathSearch =
+            "MATCH (a) where id(a) = id($a_cat)" +
+                    "MATCH sp = ((a:`%1$s`)-[:`%2$s`*0..]->()<-[:`%2$s`*0..]-(b:`%1$s`)) where 0 < length(sp) <= $threshold_length " +
+                    "RETURN  b as node, 1.0 / (1.0 + min(length(sp))) as sim order by sim desc ";
 
     private static String shortestPathQueryIndirect =
             "MATCH (a),(b) where id(a) = id($a_cat) and id(b) = id($b_cat)" +
             "match pa = (a)-[:`%1$s`*0..]->(root_a) where not (root_a)-[:`%1$s`]->()\n" +
             "match pb = (b)-[:`%1$s`*0..]->(root_b) where not (root_b)-[:`%1$s`]->()\n" +
-            "return pa, pb limit 1";
+            "return pa, root_a, pb, root_b, (length(pa) + length(pb)) as total_len order by total_len limit 1";
 
     private static String maxDepthQuery =
             "MATCH (a) where id(a) = id($a_cat) " +
                     "match pa = (leaf_a)-[:`%1$s`*0..]->(a)-[:`%1$s`*0..]->(root_a) where not (root_a)-[:`%1$s`]->() and not ()-[:`%1$s`]->(leaf_a) \n" +
                     "return length(pa) + 1 as len order by len desc limit 1";
 
+    private static String globalMaxDepthQuery =
+            "MATCH (a) where id(a) = id($a_cat) " +
+                    "match (a)-[:`%1$s`*0..]->(root_a) where not (root_a)-[:`%1$s`]->() \n" +
+                    "with distinct root_a \n" +
+                    "match pa = (leaf_a)-[:`%1$s`*0..]->(root_a) where not ()-[:`%1$s`]->(leaf_a)" +
+                    "return root_a, max(length(pa) + 1) as len order by len desc limit 1";
     private static String depthQuery =
             "MATCH (a) where id(a) = id($a_cat) " +
                     "match pa = (a)-[:`%1$s`*0..]->(root_a) where not (root_a)-[:`%1$s`]->()  \n" +
@@ -75,23 +88,42 @@ public class Similarities {
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("a_cat", elem1);
         queryParams.put("b_cat", elem2);
-        Result spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel, subclassOfRel), queryParams);
+        Result spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel), queryParams);
         if (spResult.hasNext()) {
             Path shortest = (Path) spResult.next().get("sp");
             return 1.0D / (1.0D + shortest.length());
         } else if (simulateRoot){
-            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel, subclassOfRel, subclassOfRel, subclassOfRel), queryParams);
+            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel), queryParams);
             if (spResult.hasNext()) {
-                Map<String, Object> next = spResult.next();
-                Path a_leg = (Path) next.get("pa");
-                Path b_leg = (Path) next.get("pb");
-                return 1.0D / (1.0D + a_leg.length() + b_leg.length() + 2.0D);
+                return 1.0D / (1.0D + (Long)spResult.next().get("total_len") + 2.0D);
             } else {
                 return 0D; //or null
             }
         } else {
             return 0D; //or null
         }
+    }
+
+    @Procedure(name = "n10s.sim.pathsim.search")
+    @Description("n10s.sim.pathsim.search() - returns the elements in the taxonomy with a path similarity equal or greater than a given threshold.")
+    public Stream<SemanticSearchResult> pathSimSearch(@Name("node1") Node elem1, @Name("simThreshold") Double minSim,
+                                                      @Name(value = "params", defaultValue = "{}") Map<String, Object> params) throws SimilarityCalculatorException {
+        final GraphConfig gc = getGraphConfig();
+
+        // We make sure the taxonomy structure is known, either via graphconfig or via inline param setting
+        if(gc == null && missingParams(params, CLASS_LABEL_INLINE_PARAM, SUB_CLASS_OF_REL_PARAM)){
+            throw new SimilarityCalculatorException("No GraphConfig or in-procedure params. Method cannot be run.");
+        }
+
+        Boolean simulateRoot = !params.containsKey(SIMULATE_ROOT_PARAM) || (params.containsKey(SIMULATE_ROOT_PARAM)&&((boolean)params.get(SIMULATE_ROOT_PARAM)==true));
+        String classLabel = (gc != null ? gc.getClassLabelName() : (String)params.get(CLASS_LABEL_INLINE_PARAM));
+        String subclassOfRel = (gc != null ? gc.getSubClassOfRelName() : (String)params.get(SUB_CLASS_OF_REL_PARAM));
+
+        Map<String, Object> queryParams = new HashMap<>();
+        queryParams.put("a_cat", elem1);
+        queryParams.put("threshold_length", (1.0 / minSim) - 1 );
+
+        return tx.execute(String.format(shortestPathSearch, classLabel, subclassOfRel), queryParams).stream().map(SemanticSearchResult::new);
     }
 
     @UserFunction(name = "n10s.sim.lchsim.value")
@@ -109,40 +141,29 @@ public class Similarities {
         String classLabel = (gc != null ? gc.getClassLabelName() : (String)params.get(CLASS_LABEL_INLINE_PARAM));
         String subclassOfRel = (gc != null ? gc.getSubClassOfRelName() : (String)params.get(SUB_CLASS_OF_REL_PARAM));
 
-        Long len_a = Long.MAX_VALUE;
-        Long len_b = Long.MAX_VALUE;
         Long max_depth = Long.MAX_VALUE;
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("a_cat", elem1);
-        Result spResult = tx.execute(String.format(maxDepthQuery, subclassOfRel, subclassOfRel, subclassOfRel, subclassOfRel), queryParams);
-        if (spResult.hasNext()) {
-            len_a = (Long) spResult.next().get("len");
-        }
-        queryParams.put("a_cat", elem2);
-        spResult = tx.execute(String.format(maxDepthQuery, subclassOfRel, subclassOfRel, subclassOfRel, subclassOfRel), queryParams);
-        if (spResult.hasNext()) {
-            len_b = (Long) spResult.next().get("len");
-        }
-
-        if (len_a > len_b){
-            max_depth = len_a;
-        } else {
-            max_depth =  len_b;
-        }
-
-        queryParams.put("a_cat", elem1);
         queryParams.put("b_cat", elem2);
-        spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel, subclassOfRel), queryParams);
+        Result spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel), queryParams);
         if (spResult.hasNext()) {
-            Path shortest = (Path) spResult.next().get("sp");
+            Map<String, Object> next = spResult.next();
+            Path shortest = (Path) next.get("sp");
+            queryParams = new HashMap<>();
+            queryParams.put("a_cat", next.get("cs"));
+            max_depth = (Long)tx.execute(String.format(maxDepthQuery, subclassOfRel), queryParams).next().get("len");
             return - Math.log(shortest.length()/ (2.0D * max_depth));
         } else if (simulateRoot){
-            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel, subclassOfRel, subclassOfRel, subclassOfRel), queryParams);
+            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel), queryParams);
             if (spResult.hasNext()) {
                 Map<String, Object> next = spResult.next();
-                Path a_leg = (Path) next.get("pa");
-                Path b_leg = (Path) next.get("pb");
-                return - Math.log((a_leg.length() + b_leg.length() + 2.0D)/ (2.0D * max_depth));
+                Long distance = (Long) next.get("total_len");
+                queryParams = new HashMap<>();
+                queryParams.put("a_cat", next.get("root_a"));
+                Long max_depth_a = (Long)tx.execute(String.format(maxDepthQuery, subclassOfRel), queryParams).next().get("len");
+                queryParams.put("a_cat", next.get("root_b"));
+                Long max_depth_b = (Long)tx.execute(String.format(maxDepthQuery, subclassOfRel), queryParams).next().get("len");
+                return - Math.log((distance + 2.0D)/ (2.0D * (max_depth_a >= max_depth_b?max_depth_a:max_depth_b)));
             } else {
                 return 0D; //or null
             }
@@ -151,6 +172,31 @@ public class Similarities {
         }
     }
 
+
+    @Procedure(name = "n10s.sim.lchsim.search")
+    @Description("n10s.sim.lchsim.search() - returns the elements in the taxonomy with a Leacock-Chodorow similarity equal or greater than a given threshold.")
+    public Stream<SemanticSearchResult> lchSimSearch(@Name("node1") Node elem1, @Name("simThreshold") Double minSim,
+                                                      @Name(value = "params", defaultValue = "{}") Map<String, Object> params) throws SimilarityCalculatorException {
+        final GraphConfig gc = getGraphConfig();
+
+        // We make sure the taxonomy structure is known, either via graphconfig or via inline param setting
+        if(gc == null && missingParams(params, CLASS_LABEL_INLINE_PARAM, SUB_CLASS_OF_REL_PARAM)){
+            throw new SimilarityCalculatorException("No GraphConfig or in-procedure params. Method cannot be run.");
+        }
+
+        Boolean simulateRoot = !params.containsKey(SIMULATE_ROOT_PARAM) || (params.containsKey(SIMULATE_ROOT_PARAM)&&((boolean)params.get(SIMULATE_ROOT_PARAM)==true));
+        String classLabel = (gc != null ? gc.getClassLabelName() : (String)params.get(CLASS_LABEL_INLINE_PARAM));
+        String subclassOfRel = (gc != null ? gc.getSubClassOfRelName() : (String)params.get(SUB_CLASS_OF_REL_PARAM));
+
+        Map<String, Object> queryParams = new HashMap<>();
+        queryParams.put("a_cat", elem1);
+        Long worst_case_total_depth = (Long) tx.execute(String.format(globalMaxDepthQuery, subclassOfRel), queryParams).next().get("len");
+
+        queryParams.put("threshold_length", ((2.0 *  worst_case_total_depth)/ Math.pow(10,minSim)));
+        //TODO: THIS IS NOT EFFICIENT: EXTRACT THE DEPTH COMPUTATION AND CACHE
+        System.out.println(String.format(shortestPathSearchWithMaxDepth, classLabel, subclassOfRel));
+        return tx.execute(String.format(shortestPathSearchWithMaxDepth, classLabel, subclassOfRel), queryParams).stream().map(SemanticSearchResult::new);
+    }
 
     @UserFunction(name = "n10s.sim.wupsim.value")
     @Description("n10s.sim.wupsim.value() - returns a numeric value representing the Wu&Palmer similarity between two elements.")
@@ -172,19 +218,19 @@ public class Similarities {
 
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("a_cat", elem1);
-        Result spResult = tx.execute(String.format(depthQuery, subclassOfRel, subclassOfRel), queryParams);
+        Result spResult = tx.execute(String.format(depthQuery, subclassOfRel), queryParams);
         if (spResult.hasNext()) {
             depth_a = (Long) spResult.next().get("len");
         }
         queryParams.put("a_cat", elem2);
-        spResult = tx.execute(String.format(depthQuery, subclassOfRel, subclassOfRel), queryParams);
+        spResult = tx.execute(String.format(depthQuery, subclassOfRel), queryParams);
         if (spResult.hasNext()) {
             depth_b = (Long) spResult.next().get("len");
         }
 
         queryParams.put("a_cat", elem1);
         queryParams.put("b_cat", elem2);
-        spResult = tx.execute(String.format(lcsQuery, subclassOfRel, subclassOfRel,subclassOfRel, subclassOfRel), queryParams);
+        spResult = tx.execute(String.format(lcsQuery, subclassOfRel), queryParams);
         if (spResult.hasNext()) {
             Map<String, Object> next = spResult.next();
             Node lcs = (Node) next.get("lcs");
@@ -215,13 +261,13 @@ public class Similarities {
         Map<String, Object> queryParams = new HashMap<>();
         queryParams.put("a_cat", elem1);
         queryParams.put("b_cat", elem2);
-        Result spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel, subclassOfRel), queryParams);
+        Result spResult = tx.execute(String.format(shortestPathQuery, subclassOfRel), queryParams);
 
         if (spResult.hasNext()) {
             Path shortest = (Path) spResult.next().get("sp");
             return shortest;
         } else if (simulateRoot){
-            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel, subclassOfRel, subclassOfRel, subclassOfRel), queryParams);
+            spResult = tx.execute(String.format(shortestPathQueryIndirect, subclassOfRel), queryParams);
             if (spResult.hasNext()) {
                 Map<String, Object> next = spResult.next();
                 Path a_leg = (Path) next.get("pa");
