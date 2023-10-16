@@ -115,6 +115,15 @@ public class ValidationProcedures extends CommonProcedures {
     return Stream.empty();
   }
 
+  @Procedure(name = "n10s.validation.shacl.viewCypher", mode = Mode.READ)
+  @Description("n10s.validation.shacl.viewCypher() - shows the compiled cypher for the loaded SHACL shapes.")
+  public Stream<CypherResult> printCypherCompiled()
+          throws IOException, ClassNotFoundException {
+
+    ValidatorConfig vc = new ValidatorConfig(tx);
+    return vc.generateRunnableQueries(tx, true, null).parallelStream()
+            .map(x -> new CypherResult(x, vc.getAllParams()));
+  }
 
   @Procedure(name = "n10s.validation.shacl.validate", mode = Mode.READ)
   @Description("n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.")

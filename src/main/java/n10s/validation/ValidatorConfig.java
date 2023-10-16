@@ -18,6 +18,9 @@ import org.neo4j.graphdb.Transaction;
 public class ValidatorConfig {
 
   private static final int UNION_BATCH_SIZE = 4;
+  private static final String QUERY_HEADER_STR = "UNWIND [] as row RETURN '' as nodeId, " +
+          "'' as nodeType, '' as shapeId, '' as propertyShape, '' as offendingValue, '' as propertyName"
+          + ", '' as severity , '' as message, '' as customMsg " ;
 
   private final Map<String, Object> allParams;
   private final List<ConstraintComponent> constraintList;
@@ -135,7 +138,7 @@ public class ValidatorConfig {
         sb = newInitialisedStringBuilder();
       }
     }
-    if (sb.length() > 0) {
+    if (sb.length() > QUERY_HEADER_STR.length()) {
       runnableQueries.add(sb.toString());
     }
     return runnableQueries;
@@ -168,9 +171,7 @@ public class ValidatorConfig {
   }
 
   private StringBuilder newInitialisedStringBuilder() {
-    return new StringBuilder().append("UNWIND [] as row RETURN '' as nodeId, " +
-        "'' as nodeType, '' as shapeId, '' as propertyShape, '' as offendingValue, '' as propertyName"
-        + ", '' as severity , '' as message, '' as customMsg ");
+    return new StringBuilder().append(QUERY_HEADER_STR);
   }
 
   public void writeToDB(Transaction tx) throws IOException {

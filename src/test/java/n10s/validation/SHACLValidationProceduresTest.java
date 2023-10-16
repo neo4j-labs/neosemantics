@@ -15,8 +15,6 @@ import java.util.*;
 import n10s.aux.AuxProcedures;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.nsprefixes.NsPrefixDefProcedures;
-import n10s.onto.load.OntoLoadProcedures;
-import n10s.onto.preview.OntoPreviewProcedures;
 import n10s.rdf.RDFProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -765,6 +763,11 @@ public class SHACLValidationProceduresTest {
               "\n" +
               "','Turtle')");
 
+      Result cr = session.run("call n10s.validation.shacl.viewCypher();");
+      while (cr.hasNext()){
+        System.out.println(cr.next());
+      }
+
       Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
 
       assertEquals(true, validationResults.hasNext());
@@ -797,6 +800,72 @@ public class SHACLValidationProceduresTest {
 
       assertEquals(false, validationResults.hasNext());
   }
+
+  @Test
+  public void testShacleViewCypher() throws Exception {
+    Session session = driver.session();
+
+    //db is empty
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+    String theshacl = "@prefix sh:      <http://www.w3.org/ns/shacl#> .\n" +
+            "@prefix xsd:     <http://www.w3.org/2001/XMLSchema#> .\n" +
+            "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+            "@prefix neovoc:  <neo4j://vocabulary#> .\n" +
+            "@prefix n4sch:   <neo4j://graph.schema#> .\n" +
+            "\n" +
+            "neovoc:UserShape \n" +
+            "    a sh:NodeShape ; \n" +
+            "    sh:closed true ; \n" +
+            "    sh:ignoredProperties ( rdf:type ) ; \n" +
+            "    sh:targetClass n4sch:User ; \n" +
+            "    sh:property neovoc:NameProperty . \n" +
+            "\n" +
+            "neovoc:NameProperty \n" +
+            "    a sh:PropertyShape ; \n" +
+            "    sh:path n4sch:name ; \n" +
+            "    sh:minCount 1 ; \n" +
+            "    sh:maxCount 1 ; \n" +
+            "    sh:datatype xsd:string .";
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("shacl", theshacl);
+    session.run("CALL n10s.validation.shacl.import.inline($shacl, 'Turtle')\n" +
+               "YIELD target, propertyOrRelationshipPath, param, value\n" +
+               "RETURN target, propertyOrRelationshipPath, param, value;" , params);
+
+    // You need to instantiate the classes so that the cypher is generated
+    session.run("create (:User { name: \"Andres 0.032304708384909175\" })");
+
+    Result cr = session.run("call n10s.validation.shacl.viewCypher() yield cypher, params " +
+            " return cypher, params['neo4j://vocabulary#UserShape_http://www.w3.org/ns/shacl#closed']['allAllowedProps'] as ap ," +
+            "  params['neo4j://vocabulary#NameProperty_http://www.w3.org/ns/shacl#minCount'] as mc ;");
+
+    assertTrue(cr.hasNext());
+    Record next = cr.next();
+    assertEquals("UNWIND [] as row RETURN '' as nodeId, '' as nodeType, '' as shapeId, '' as propertyShape, '' as offendingValue, '' as propertyName, '' as severity , '' as message, '' as customMsg \n" +
+                    " UNION \n" +
+                    "MATCH (focus:`User`) WHERE  NOT all(x in [] +  focus.`name` where coalesce(toString( x ) = x , false) ) RETURN  id(focus)  as nodeId,  'User'  as nodeType,  'neo4j://vocabulary#NameProperty' as shapeId, 'http://www.w3.org/ns/shacl#DatatypeConstraintComponent' as propertyShape, focus.`name` as offendingValue,  'name'  as propertyName,  'http://www.w3.org/ns/shacl#Violation' as severity, 'property value should be of type ' + n10s.rdf.getIRILocalName('http://www.w3.org/2001/XMLSchema#string') as message ,  '' as customMsg\n" +
+                    " UNION \n" +
+                    "WITH $`neo4j://vocabulary#UserShape_http://www.w3.org/ns/shacl#closed` as params MATCH (focus:`User`) WHERE  true \n" +
+                    "UNWIND [ x in [(focus)-[r]->()| type(r)] where not x in params.allAllowedProps] + [ x in keys(focus) where  not x in params.allAllowedProps] as noProp\n" +
+                    "RETURN   id(focus)  as nodeId,  'User'  as nodeType,  'neo4j://vocabulary#UserShape' as shapeId, 'http://www.w3.org/ns/shacl#ClosedConstraintComponent' as propertyShape, substring(reduce(result='', x in [] + coalesce(focus[noProp],[(focus)-[r]-(x) where type(r)=noProp |  id(x) ]) | result + ', ' + x ),2) as offendingValue,  noProp  as propertyName,  'http://www.w3.org/ns/shacl#Violation' as severity,'Closed type definition does not include this property/relationship' as message ,  '' as customMsg\n" +
+                    " UNION \n" +
+                    "WITH $`neo4j://vocabulary#NameProperty_http://www.w3.org/ns/shacl#minCount` as params MATCH (focus:`User`) WHERE NOT  toInteger(params.minCount) <=  ( size([(focus)-[rel:`name`]->()| rel ]) +  size([] + coalesce(focus.`name`, [])) )  <= toInteger(params.maxCount)  RETURN  id(focus)  as nodeId,  'User'  as nodeType,  'neo4j://vocabulary#NameProperty' as shapeId, 'http://www.w3.org/ns/shacl#CountConstraintComponent' as propertyShape,  'cardinality (' + (coalesce(size([(focus)-[rel:`name`]->()| rel ]),0) + coalesce(size([] + focus.`name`),0)) + ') is outside the defined min-max limits'  as message,  'name'  as propertyName,  'http://www.w3.org/ns/shacl#Violation' as severity,null as offendingValue ,  '' as customMsg\n" +
+                    " UNION \n" +
+                    "MATCH (focus:`User`)-[r:`name`]->(x) WHERE  true RETURN  id(focus)  as nodeId,  'User'  as nodeType,  'neo4j://vocabulary#NameProperty' as shapeId, 'http://www.w3.org/ns/shacl#DatatypeConstraintComponent' as propertyShape,  'node id: ' + id(x) as offendingValue,  'name'  as propertyName,  'http://www.w3.org/ns/shacl#Violation' as severity, 'name'  + ' should be a property, instead it  is a relationship' as message  ,  '' as customMsg",
+            next.get("cypher").asString());
+
+
+    assertEquals(next.get("ap").asList(),Arrays.asList("type", "name"));
+    Map<String, Object> mc = next.get("mc").asMap();
+    assertEquals(1L,mc.get("maxCount"));
+    assertEquals(1L,mc.get("minCount"));
+
+    assertFalse(cr.hasNext());
+
+  }
+
 
   @Test
   public void testBugCredSui() throws Exception {
