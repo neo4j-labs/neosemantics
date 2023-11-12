@@ -37,12 +37,10 @@ public class MicroReasoners {
       "MATCH (x:`%1$s` { `%2$s`: $oneOfCats } ) MATCH (y:`%1$s` { `%2$s`: $virtLabel } ) "
           + " WHERE  (x)-[:`%3$s`*]->(y) RETURN count(x) > 0 as isTrue ";
 
-  private static final String scoInferenceCypherTopDownQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE id(cat) = $catId RETURN collect(DISTINCT id(subcat)) AS catIds";
-  private static final String scoInferenceCypherBottomUpQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE id(subcat) = $catId RETURN collect(DISTINCT id(cat)) AS catIds";
+  private static final String scoInferenceCypherTopDownQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE elementid(cat) = $catId RETURN collect(DISTINCT elementid(subcat)) AS catIds";
+  private static final String scoInferenceCypherBottomUpQuery = "MATCH (cat)<-[:`%1$s`*0..]-(subcat) WHERE elementid(subcat) = $catId RETURN collect(DISTINCT elementid(cat)) AS catIds";
   private static final String sroInferenceFormatReturnRelNamesQuery = "RETURN $virtRel as r UNION MATCH (:`%1$s` { `%2$s`: $virtRel})<-[:`%3$s`*]-(sr:`%1$s`) RETURN DISTINCT sr.`%2$s` as r";
   //TODO: come up with a well defined approach for class and rel name properties
-  private static final String DEFAULT_CAT_NAME_PROP_NAME = "name";
-  private static final String DEFAULT_REL_NAME_PROP_NAME = "name";
   private static final boolean DEFAULT_SEARCH_TOP_DOWN = false;
 
   @Context
@@ -64,7 +62,7 @@ public class MicroReasoners {
     final GraphConfig gc = getGraphConfig();
 
     if(gc == null && missingParams(props, "catLabel", "catNameProp", "subCatRel")){
-      throw new MicroReasonerException("No GraphConfig or in-procedure params. Method cannot be run.");
+      throw new MicroReasonerException("No GraphConfig or in-procedure params (catLabel,catNameProp,subCatRel). Method cannot be run.");
     }
 
     Map<String, Object> params = new HashMap<String, Object>();
@@ -72,7 +70,7 @@ public class MicroReasoners {
     Result results = tx.execute(String.format(sloInferenceFormatReturnClassNames,
         (props.containsKey("catLabel") ? (String) props.get("catLabel") : gc.getClassLabelName()),
         (props.containsKey("catNameProp") ? (String) props.get("catNameProp")
-            : DEFAULT_CAT_NAME_PROP_NAME),
+            : gc.getClassNamePropName()),
         (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : gc.getSubClassOfRelName())),
         params);
 
@@ -109,7 +107,7 @@ public class MicroReasoners {
 
     //if no graphconfig (or ontoconfig) and no required in-function params, funcion cannot be invoked
     if(gc == null && missingParams(props, "subCatRel")){
-      throw new MicroReasonerException("No GraphConfig or in-procedure params. Method cannot be run.");
+      throw new MicroReasonerException("No GraphConfig or in-procedure params (subCatRel). Method cannot be run.");
     }
 
     final String inCatRelName = (props.containsKey("inCatRel") ? (String) props.get("inCatRel")
@@ -118,10 +116,10 @@ public class MicroReasoners {
         : gc.getSubClassOfRelName());
 
     Map<String, Object> params = new HashMap<>();
-    params.put("catId", catNode.getId());
+    params.put("catId", catNode.getElementId());
 
     String cypher = "MATCH (rootCategory)<-[:`" + subCatRelName + "`*0..]-()<-[:`" +
-        inCatRelName + "`]-(individual) WHERE id(rootCategory) = $catId RETURN individual ";
+        inCatRelName + "`]-(individual) WHERE elementid(rootCategory) = $catId RETURN individual ";
 
     return tx.execute(cypher, params).stream().map(n -> (Node) n.get("individual"))
         .map(NodeResult::new);
@@ -147,14 +145,14 @@ public class MicroReasoners {
 
   private List<Long> getSubcatIds(Node catNode, String subCatRelName, GraphConfig gc) {
     Map<String, Object> params = new HashMap<String, Object>();
-    params.put("catId", catNode.getId());
+    params.put("catId", catNode.getElementId());
     return (List<Long>) tx.execute( String.format(scoInferenceCypherTopDownQuery,
             (subCatRelName == null ? gc.getSubClassOfRelName():subCatRelName)), params).next().get("catIds");
             //scoInferenceCypherTopDown
         //: scoInferenceCypherTopDown.replace("SCO", subCatRelName)), params).next().get("catIds");
   }
 
-  private List<Long> getSuperCatIds(long catNodeId, String subCatRelName, GraphConfig gc) {
+  private List<Long> getSuperCatIds(String catNodeId, String subCatRelName, GraphConfig gc) {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("catId", catNodeId);
     return (List<Long>) tx.execute( String.format(scoInferenceCypherBottomUpQuery,
@@ -171,8 +169,8 @@ public class MicroReasoners {
     final GraphConfig gc = getGraphConfig();
 
     //if no graphconfig (or ontoconfig) and no required in-function params, funcion cannot be invoked
-    if(gc == null && missingParams(props, "relLabel","subRelRel")){
-      throw new MicroReasonerException("No GraphConfig or in-procedure params. Method cannot be run.");
+    if(gc == null && missingParams(props, "relLabel","subRelRel","relNameProp")){
+      throw new MicroReasonerException("No GraphConfig or in-procedure params (relLabel, subRelRel, relNameProp). Method cannot be run.");
     }
 
     String directionString = (props.containsKey("relDir") ? (String) props.get("relDir") : "");
@@ -182,10 +180,11 @@ public class MicroReasoners {
     Map<String, Object> params = new HashMap<String, Object>();
     params.put("virtRel", virtRel);
 
+    //this test could be removed, we've tested already that the props are there (!!)
     Result results = tx.execute(String.format(sroInferenceFormatReturnRelNamesQuery,
         (props.containsKey("relLabel") ? (String) props.get("relLabel") : gc.getObjectPropertyLabelName()),
         (props.containsKey("relNameProp") ? (String) props.get("relNameProp")
-            : DEFAULT_REL_NAME_PROP_NAME),
+            : gc.getRelNamePropName()),
         (props.containsKey("subRelRel") ? (String) props.get("subRelRel") : gc.getSubPropertyOfRelName())),
         params);
     Set<RelationshipType> rts = new HashSet<RelationshipType>();
@@ -217,12 +216,12 @@ public class MicroReasoners {
     final GraphConfig gc = getGraphConfig();
 
     if (gc == null && missingParams(props, "catLabel", "catNameProp", "subCatRel")) {
-      throw new MicroReasonerException("No GraphConfig or in-procedure params. Method cannot be run.");
+      throw new MicroReasonerException("No GraphConfig or in-procedure params (catLabel, catNameProp, subCatRel). Method cannot be run.");
     }
 
     String cypher = getInferredLabelsQuery((String) props.getOrDefault("catLabel",gc.getClassLabelName()),
             (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
-            (String) props.getOrDefault("catNameProp",DEFAULT_CAT_NAME_PROP_NAME));
+            (String) props.getOrDefault("catNameProp",gc.getClassNamePropName()));
 
     return tx.execute(cypher).stream().map(n -> (String) n.get("inferredlabel")).map(LabelNameResult::new);
   }
@@ -385,14 +384,14 @@ public class MicroReasoners {
     final GraphConfig gc = getGraphConfig();
 
     //if no graphconfig (or ontoconfig) and no required in-function params, funcion cannot be invoked
-    if(gc == null && missingParams(props, "catLabel", "subCatRel")){
-      throw new MicroReasonerException("No GraphConfig or in-function params. Method cannot be run.");
+    if(gc == null && missingParams(props, "catLabel", "subCatRel","catNameProp")){
+      throw new MicroReasonerException("No GraphConfig or in-function params (catLabel, subCatRel, catNameProp). Method cannot be run.");
     }
 
     String queryString = String.format(subcatPathQuery,
         (props.containsKey("catLabel") ? (String) props.get("catLabel") : gc.getClassLabelName()),
         (props.containsKey("catNameProp") ? (String) props.get("catNameProp")
-            : DEFAULT_CAT_NAME_PROP_NAME),
+            : gc.getClassNamePropName()),
         (props.containsKey("subCatRel") ? (String) props.get("subCatRel") : gc.getSubClassOfRelName()));
 
     Map<String, Object> params = new HashMap<String, Object>();
@@ -441,15 +440,15 @@ public class MicroReasoners {
       List<Long> catIds = getSubcatIds(category, subCatRelName, gc);
       boolean is = false;
       while (!is && relIterator.hasNext()) {
-        is |= catIds.contains(relIterator.next().getEndNode().getId());
+        is |= catIds.contains(relIterator.next().getEndNode().getElementId());
       }
       return is;
 
     } else {
       boolean is = false;
       while (!is && relIterator.hasNext()) {
-        List<Long> catIds = getSuperCatIds(relIterator.next().getEndNode().getId(), subCatRelName, gc);
-        is |= catIds.contains(category.getId());
+        List<Long> catIds = getSuperCatIds(relIterator.next().getEndNode().getElementId(), subCatRelName, gc);
+        is |= catIds.contains(category.getElementId());
       }
       return is;
 

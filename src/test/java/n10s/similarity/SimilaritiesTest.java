@@ -122,9 +122,18 @@ public class SimilaritiesTest {
 
     assertEquals(2, p.length());
 
+    String explanation = session.run("match (a:Class {name:\t\"Atlas\"}),(b:Class {name:\t\"Tiguan\"}) \n" +
+            "return n10s.sim.pathsim.explain(a,b) as expl").next().get("expl").asString();
+
+    assertEquals("Atlas is a type of SUV\nTiguan is a type of SUV", explanation);
+
     assertTrue(session.run("match (a:Class {name:\t\"Atlas\"}),(b:Class {name:\t\"Disconnected\"}) \n" +
             "return n10s.sim.pathsim.path(a,b, { simulateRoot: false}) as p").next().get("p").isNull());
 
+    explanation = session.run("match (a:Class {name:\t\"Atlas\"}),(b:Class {name:\t\"Disconnected\"}) \n" +
+            "return n10s.sim.pathsim.explain(a,b, { simulateRoot: false}) as expl").next().get("expl").asString();
+
+    assertEquals("", explanation);
   }
 
   @Test

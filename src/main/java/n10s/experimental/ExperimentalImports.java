@@ -56,7 +56,7 @@ public class ExperimentalImports extends RDFProcedures {
           "neo4j://voc#", containerUri, relName);
 
     } catch (IOException | RDFHandlerException | QueryExecutionException | RDFParseException | RDFImportPreRequisitesNotMet e) {
-      throw new RDFImportException(e);
+      throw new RDFImportException(e.getMessage() + (e.getCause()!=e? " " + e.getCause().getMessage():""));
     } catch (GraphConfig.GraphConfigNotFound e) {
       throw new RDFImportException(
           "A Graph Config is required for RDF importing procedures to run");

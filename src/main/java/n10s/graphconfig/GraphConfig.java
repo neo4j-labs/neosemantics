@@ -56,6 +56,12 @@ public class GraphConfig {
   private static final String DEFAULT_DOMAIN_REL_NAME = "DOMAIN";
   private static final String DEFAULT_RANGE_REL_NAME = "RANGE";
 
+  private static final String DEFAULT_CLASS_NAME_PROP_NAME = "name";
+
+  private static final String DEFAULT_REL_NAME_PROP_NAME = "name";
+
+
+
   private int handleVocabUris;
   private int handleMultival;
   private int handleRDFTypes;
@@ -73,6 +79,10 @@ public class GraphConfig {
   private String rangeRelName;
   private String baseSchemaNamespace;
   private String baseSchemaNamespacePrefix;
+
+  private String classNamePropName;
+
+  private String relNamePropName;
 
 
   public GraphConfig(Map<String, Object> props) throws InvalidParamException {
@@ -138,6 +148,12 @@ public class GraphConfig {
         props.containsKey("domainRel") ? (String) props.get("domainRel") : DEFAULT_DOMAIN_REL_NAME;
     this.rangeRelName =
         props.containsKey("rangeRel") ? (String) props.get("rangeRel") : DEFAULT_RANGE_REL_NAME;
+
+    this.classNamePropName =
+            props.containsKey("classNamePropName") ? (String) props.get("classNamePropName") : DEFAULT_CLASS_NAME_PROP_NAME;
+
+    this.relNamePropName =
+            props.containsKey("relNamePropName") ? (String) props.get("relNamePropName") : DEFAULT_REL_NAME_PROP_NAME;
   }
 
   public GraphConfig(Transaction tx) throws GraphConfigNotFound {
@@ -184,6 +200,12 @@ public class GraphConfig {
       this.rangeRelName =
           graphConfigProperties.containsKey("_rangeRel") ? (String) graphConfigProperties
               .get("_rangeRel") : DEFAULT_RANGE_REL_NAME;
+      this.classNamePropName =
+              graphConfigProperties.containsKey("_classNamePropName") ? (String) graphConfigProperties
+                      .get("_classNamePropName") : DEFAULT_CLASS_NAME_PROP_NAME;
+      this.relNamePropName =
+              graphConfigProperties.containsKey("_relNamePropName") ? (String) graphConfigProperties
+                      .get("_relNamePropName") : DEFAULT_REL_NAME_PROP_NAME;
     } else {
       throw new GraphConfigNotFound();
     }
@@ -327,6 +349,8 @@ public class GraphConfig {
     result.add(new GraphConfigItemResult("subPropertyOfRel", getSubPropertyOfRelName()));
     result.add(new GraphConfigItemResult("domainRel", getDomainRelName()));
     result.add(new GraphConfigItemResult("rangeRel", getRangeRelName()));
+    result.add(new GraphConfigItemResult("classNamePropName", getClassNamePropName()));
+    result.add(new GraphConfigItemResult("relNamePropName", getRelNamePropName()));
 
     return result;
   }
@@ -353,6 +377,8 @@ public class GraphConfig {
     configAsMap.put("_subPropertyOfRel", this.subPropertyOfRelName);
     configAsMap.put("_domainRel", this.domainRelName);
     configAsMap.put("_rangeRel", this.rangeRelName);
+    configAsMap.put("_classNamePropName", this.classNamePropName);
+    configAsMap.put("_relNamePropName", this.relNamePropName);
 
     return configAsMap;
   }
@@ -434,6 +460,14 @@ public class GraphConfig {
     return rangeRelName;
   }
 
+  public String getClassNamePropName() {
+    return classNamePropName;
+  }
+
+  public String getRelNamePropName() {
+    return relNamePropName;
+  }
+
   public String getRelatedConceptRelName() {
     return "RELATED";
     //TODO: create a config param for skosRelatedConceptRelName
@@ -494,6 +528,12 @@ public class GraphConfig {
     }
     if (props.containsKey("rangeRel")) {
       this.rangeRelName = (String) props.get("rangeRel");
+    }
+    if (props.containsKey("classNamePropName")) {
+      this.classNamePropName = (String) props.get("classNamePropName");
+    }
+    if (props.containsKey("relNamePropName")) {
+      this.relNamePropName = (String) props.get("relNamePropName");
     }
   }
 

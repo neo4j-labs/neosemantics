@@ -10,6 +10,7 @@ import org.neo4j.procedure.*;
 import java.util.*;
 import java.util.stream.Stream;
 
+
 public class Similarities {
 
     @Context
@@ -282,6 +283,25 @@ public class Similarities {
     }
 
 
+    @UserFunction(name = "n10s.sim.pathsim.explain")
+    @Description("n10s.sim.pathsim.explain() - returns a textual description explaining the path similarity between two elements.")
+    public String pathSimExplain(@Name("node1") Node elem1, @Name("node2") Node elem2,
+                            @Name(value = "params", defaultValue = "{}") Map<String, Object> params) throws SimilarityCalculatorException {
+        final GraphConfig gc = getGraphConfig();
+        String result = "";
+        Path path = pathSimPath(elem1, elem2, params);
+        if (path != null) {
+            for (Relationship rel : path.relationships()) {
+                result += rel.getStartNode().getProperty((String) params.getOrDefault("catNameProp", gc.getClassNamePropName())) +
+                        " is a type of " +
+                        rel.getEndNode().getProperty((String) params.getOrDefault("catNameProp", gc.getClassNamePropName())) + "\n";
+            }
+        }
+        return result.isEmpty()?result:result.substring(0,result.length()-1);
+
+    }
+
+
     private PathResult createVirtualPath(Path leg1, Path leg2, String scoRelType) {
         final Iterable<Relationship> leg1_rels = leg1.relationships();
         final Node first = leg1.startNode();
@@ -295,24 +315,32 @@ public class Similarities {
         }
 
         //add intermediate node
-        VirtualNode root = new VirtualNode(new Label[]{Label.label("SyntheticRoot")}, Collections.emptyMap());
+        VirtualNode root = new VirtualNode(
+                new Label[]{Label.label(getGraphConfig().getClassLabelName())},
+                            Collections.singletonMap(
+                                    getGraphConfig().getClassNamePropName(),"All things (synthetic category everything is part of)"));
         virtualPath.addRel(new VirtualRelationship(current, root,RelationshipType.withName(scoRelType)));
 
 
         final Iterable<Relationship> leg2_rels = leg2.relationships();
-        List<Relationship> secondLegAsList = new ArrayList<Relationship>();
+        if (leg2.length() == 0){
+            //it's a one node path
+            virtualPath.addRel(new VirtualRelationship(leg2.startNode(), root, RelationshipType.withName(scoRelType)));
 
-        for (Relationship rel : leg2_rels) {
-            secondLegAsList.add(rel);
-        }
-        Collections.reverse(secondLegAsList);
+        } else {
+            List<Relationship> secondLegAsList = new ArrayList<Relationship>();
+            for (Relationship rel : leg2_rels) {
+                secondLegAsList.add(rel);
+            }
+            Collections.reverse(secondLegAsList);
 
-        virtualPath.addRel(new VirtualRelationship(secondLegAsList.get(0).getEndNode(), root,RelationshipType.withName(scoRelType)));
+            virtualPath.addRel(new VirtualRelationship(secondLegAsList.get(0).getEndNode(), root, RelationshipType.withName(scoRelType)));
 
-        for (Relationship rel : secondLegAsList) {
-            VirtualNode start = VirtualNode.from(rel.getStartNode());
-            VirtualNode end = VirtualNode.from(rel.getEndNode());
-            virtualPath.addRel(VirtualRelationship.from(start, end, rel));
+            for (Relationship rel : secondLegAsList) {
+                VirtualNode start = VirtualNode.from(rel.getStartNode());
+                VirtualNode end = VirtualNode.from(rel.getEndNode());
+                virtualPath.addRel(VirtualRelationship.from(start, end, rel));
+            }
         }
         return new PathResult(virtualPath);
     }
