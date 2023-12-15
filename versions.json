@@ -1,20 +1,5 @@
 [
     {
-        "neo4j": "5.11.0",
-        "neo4jVersion": "5.11.0",
-        "n10s": "5.11.0.0",
-        "version": "5.11.0.0",
-        "url": "http://github.com/neo4j-labs/neosemantics/releases/5.11.0.0",
-        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/5.11.0.0",
-        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/5.11.0.0/neosemantics-5.11.0.0.jar",
-        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/5.11.0.0/neosemantics-5.11.0.0.jar",
-        "config": {
-            "+:dbms.security.procedures.unrestricted": [
-                "n10s.*"
-            ]
-        }
-    },
-    {
         "neo4j": "5.7.0",
         "neo4jVersion": "5.7.0",
         "n10s": "5.7.0.0",
