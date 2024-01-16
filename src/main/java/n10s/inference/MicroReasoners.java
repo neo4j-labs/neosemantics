@@ -215,21 +215,42 @@ public class MicroReasoners {
   public Stream<LabelNameResult> labels(@Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
     final GraphConfig gc = getGraphConfig();
 
-    if (gc == null && missingParams(props, "catLabel", "catNameProp", "subCatRel")) {
-      throw new MicroReasonerException("No GraphConfig or in-procedure params (catLabel, catNameProp, subCatRel). Method cannot be run.");
+    if (gc == null && missingParams(props, "catLabel", "catNameProp", "subCatRel", "relLabel", "propLabel")) {
+      throw new MicroReasonerException("No GraphConfig or in-procedure params (catLabel, catNameProp, subCatRel, relLabel, propLabel). Method cannot be run.");
     }
 
-    String cypher = getInferredLabelsQuery((String) props.getOrDefault("catLabel",gc.getClassLabelName()),
-            (String) props.getOrDefault("subCatRel",gc.getSubClassOfRelName()),
-            (String) props.getOrDefault("catNameProp",gc.getClassNamePropName()));
+    String cypher;
 
+    if (gc == null){
+      cypher = getInferredLabelsQuery((String) props.get("catLabel"),
+              (String) props.get("subCatRel"),
+              (String) props.get("catNameProp"),
+              (String) props.get("relLabel"),
+              (String) props.get("propLabel"));
+    } else {
+      cypher = getInferredLabelsQuery((String) props.getOrDefault("catLabel", gc.getClassLabelName()),
+              (String) props.getOrDefault("subCatRel", gc.getSubClassOfRelName()),
+              (String) props.getOrDefault("catNameProp", gc.getClassNamePropName()),
+              (String) props.getOrDefault("relLabel", gc.getObjectPropertyLabelName()),
+              (String) props.getOrDefault("propLabel", gc.getDataTypePropertyLabelName()));
+    }
     return tx.execute(cypher).stream().map(n -> (String) n.get("inferredlabel")).map(LabelNameResult::new);
   }
 
-  private static final String getInferredLabelsQuery(String catLabel, String subCatRel, String catNameProp ) {
-    return "call db.labels() yield label\n" +
-            "    match hierarchy = (:`" + catLabel + "` { `" + catNameProp + "`: label })-[:`" + subCatRel + "`*0..]->(p) where size([(p)-[s:`" + subCatRel + "`]->() | s]) = 0\n" +
-            "    unwind [n in nodes(hierarchy) | n.`" + catNameProp + "` ] as inferredlabel return distinct inferredlabel";
+  private static final String getInferredLabelsQuery(String catLabel, String subCatRel, String catNameProp,
+                                                     String relLabel, String propLabel ) {
+    return "call db.labels() yield label " +
+    " where not label in ['_GraphConfig', 'Resource', '_NsPrefDef', '" + relLabel + "', '" + propLabel + "', '" + catLabel + "', '_MapNs', '_MapDef'] " +
+            " call { " +
+            " with label " +
+            " return label as inferredlabel " +
+            " union " +
+            " with label " +
+            " match hierarchy = (:`" + catLabel + "` { `" + catNameProp + "`: label })-[:`" + subCatRel + "`*0..]->(p) where size([(p)-[s:`" + subCatRel + "`]->() | s]) = 0 " +
+            " unwind [n in nodes(hierarchy) | n.`" + catNameProp + "` ] as inferredlabel " +
+            " return distinct inferredlabel " +
+            " } " +
+            " return distinct inferredlabel " ;
   }
 
   private static final String getClassRelsFromOntoQuery(boolean outgoing, boolean includeAll, String catLabel,

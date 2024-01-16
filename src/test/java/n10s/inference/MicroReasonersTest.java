@@ -448,6 +448,42 @@ public class MicroReasonersTest {
         assertEquals(Set.of("Movie", "ArticsticCreation","Person", "Critic"), inferredLabelSet);
     }
 
+    @Test
+    public void testGetInferredLabelsNoOntoWithConfig() throws Exception {
+        Session session = driver.session();
+
+
+        session.run("CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE");
+        session.run("call n10s.graphconfig.init({ handleVocabUris: 'IGNORE', classLabel: 'Label', " +
+                "subClassOfRel: 'SLO' })");
+
+        session.run("create (:Actor { name: 'Keaanu Reeves', born: 1968 })" +
+                "-[:ACTED_IN]->(:Movie { title: 'The Matrix', released: 1999 })");
+
+        String queryGetInferredLabels = "call n10s.inference.labels() yield label return collect(label) as labels";
+        Set inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Actor", "Movie"), inferredLabelSet);
+        session.run("match (a:Actor { name: 'Keaanu Reeves'}) detach delete a");
+        inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Movie"), new HashSet<>(inferredLabelSet));
+    }
+
+    @Test
+    public void testGetInferredLabelsNoOntoNoConfig() throws Exception {
+        Session session = driver.session();
+
+
+        session.run("create (:Actor { name: 'Keaanu Reeves', born: 1968 })" +
+                "-[:ACTED_IN]->(:Movie { title: 'The Matrix', released: 1999 })");
+
+        String queryGetInferredLabels = "call n10s.inference.labels({ catLabel:'Class', catNameProp: 'name', subCatRel: 'SCO', relLabel: 'Relationship', propLabel: 'Property'}) yield label return collect(label) as labels";
+        Set inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Actor", "Movie"), inferredLabelSet);
+        session.run("match (a:Actor { name: 'Keaanu Reeves'}) detach delete a");
+        inferredLabelSet = new HashSet<>(session.run(queryGetInferredLabels).next().get("labels").asList());
+        assertEquals(Set.of("Movie"), new HashSet<>(inferredLabelSet));
+    }
+
 
     @Test
   public void testHasLabelCustom() throws Exception {
