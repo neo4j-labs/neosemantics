@@ -1,6 +1,5 @@
 package n10s.result;
 
-import org.apache.commons.collections.CollectionUtils;
 import org.neo4j.graphdb.*;
 import org.neo4j.graphdb.traversal.Paths;
 
@@ -8,9 +7,6 @@ import java.util.*;
 
 import java.util.stream.Collectors;
 import java.util.concurrent.atomic.AtomicReference;
-
-
-//import static org.apache.commons.collections4.IterableUtils.reversedIterable;
 
 
 public class VirtualPath implements Path {
@@ -124,11 +120,25 @@ public class VirtualPath implements Path {
 
   private void requireConnected(Relationship relationship) {
     final List<Node> previousNodes = getPreviousNodes();
-    boolean isRelConnectedToPrevious = CollectionUtils.containsAny( previousNodes, Arrays.asList(relationship.getNodes()) );
+    boolean isRelConnectedToPrevious = containsAny( previousNodes, Arrays.asList(relationship.getNodes()));
     if (!isRelConnectedToPrevious) {
       throw new IllegalArgumentException("Relationship is not part of current path.");
     }
   }
+
+    public static boolean containsAny(Collection<?> coll1, Collection<?> coll2) {
+      if (coll1 == null || coll2 == null) {
+        return false;
+      }
+
+      for (Object obj : coll1) {
+        if (coll2.contains(obj)) {
+          return true;
+        }
+      }
+
+      return false;
+    }
 
   private List<Node> getPreviousNodes() {
     Relationship previousRelationship = lastRelationship();
@@ -136,24 +146,5 @@ public class VirtualPath implements Path {
       return Arrays.asList(previousRelationship.getNodes());
     }
     return List.of(endNode());
-  }
-
-  public static final class Builder {
-    private final Node start;
-    private final List<Relationship> relationships = new ArrayList<>();
-
-    public Builder(Node start) {
-      this.start = start;
-    }
-
-    public Builder push(Relationship relationship) {
-      this.relationships.add(relationship);
-      return this;
-    }
-
-    public VirtualPath build() {
-      return new VirtualPath(start, relationships);
-    }
-
   }
 }

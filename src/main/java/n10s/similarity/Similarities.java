@@ -194,8 +194,7 @@ public class Similarities {
         Long worst_case_total_depth = (Long) tx.execute(String.format(globalMaxDepthQuery, subclassOfRel), queryParams).next().get("len");
 
         queryParams.put("threshold_length", ((2.0 *  worst_case_total_depth)/ Math.pow(10,minSim)));
-        //TODO: THIS IS NOT EFFICIENT: EXTRACT THE DEPTH COMPUTATION AND CACHE
-        System.out.println(String.format(shortestPathSearchWithMaxDepth, classLabel, subclassOfRel));
+        //TODO: MAKE THIS MORE EFFICIENT: EXTRACT THE DEPTH COMPUTATION AND CACHE
         return tx.execute(String.format(shortestPathSearchWithMaxDepth, classLabel, subclassOfRel), queryParams).stream().map(SemanticSearchResult::new);
     }
 
