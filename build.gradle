@@ -9,20 +9,24 @@ import groovy.json.JsonSlurper
  * @return
  */
 def collectNeo4jReleases() {
-    def slurper = new JsonSlurper()
+    def url = new URL("https://repo1.maven.org/maven2/org/neo4j/neo4j-kernel/maven-metadata.xml")
+    def xmlString = url.getText()
 
-    // get from tags or releases?
-    // https://api.github.com/repos/neo4j/neo4j/releases
-    def releases = slurper.parseText(new URL("https://search.maven.org/solrsearch/select?q=g:%22org.neo4j%22+AND+a:%22neo4j%22&core=gav&rows=200&wt=json").getText())
-    releases = releases.response.docs
+    def rootNode = new XmlParser().parseText(xmlString)
+    def releases = []
 
-    def actualReleases = []
-    for (release in releases) {
-        actualReleases.add(release.v)
+    def versions = rootNode.versioning.versions.version
+
+    for (a in versions) {
+        def version = a.value()
+        def size = version.size()
+        if (size > 0) {
+            releases.add(version.get(0))
+        }
     }
 
     // We sort considering that X.Y.Z-SOMETHING should be considered lower than X.Y.Z --> it's not a lexicographical ordering
-    return actualReleases
+    return releases
             .findAll { it >= "3.0" }
             .sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
             .reverse()
@@ -32,12 +36,12 @@ def orderVersion(str) {
     return str.split("[.-]").collect{ it =~ "^\\d+\$" ? it.padLeft(4,"0") : it.replace("beta","mbeta").replace("BETA","MBETA") }.join(".") + "/"
 }
 /**
- * Coupling Neo4j with APOC
+ * Coupling Neo4j with neosemantics
  *
  * There are two heuristic in place:
  *
- * - latest version of Neo4j with latest version of APOC
- * - if there is no available version of APOC for a given NEO4j release than take the prior available version of APOC
+ * - latest version of Neo4j with latest version of neosemantics
+ * - if there is no available version of neosemantics for a given NEO4j release than take the prior available version of neosemantics
  */
 task versions {
     def neo4jReleases = collectNeo4jReleases()
@@ -48,18 +52,19 @@ task versions {
     def pattern = ~/<neo4j.version>(.*)<\/neo4j.version>/
     def releases = slurper.parseText(new URL("https://api.github.com/repos/neo4j-labs/neosemantics/releases?page=1&per_page=500").getText())
     def versions = []
-    def neo4jToApoc = [:]
+    def neo4jToN10s = [:]
     def latestn10s, oldestn10ss
     for (release in releases) {
         if (release.prerelease || release.draft) continue;
-        def buildText = new URL("https://raw.githubusercontent.com/neo4j-labs/neosemantics/" + release.tag_name + "/pom.xml").getText()
+        def tagName = release.tag_name > "5.1.0" ? release.tag_name.split("\\.")[0, 1].join(".") : release.tag_name
+        def buildText = new URL("https://raw.githubusercontent.com/neo4j-labs/neosemantics/" + tagName + "/pom.xml").getText()
         def matcher = pattern.matcher(buildText)
         for (def i = 0; i < matcher.getCount(); i++) {
             def neo4jVersion = matcher[i][1]
 
             println "neo " + neo4jVersion + ", n10s " + release.tag_name
-            if (!neo4jToApoc.containsKey(neo4jVersion)) {
-                neo4jToApoc[neo4jVersion] = release.tag_name
+            if (!neo4jToN10s.containsKey(neo4jVersion)) {
+                neo4jToN10s[neo4jVersion] = release.tag_name
             }
 
             if (latestn10s == null) {
@@ -71,22 +76,22 @@ task versions {
     }
 
     println "LATEST n10s IS " + latestn10s + " WHILE OLDEST IS " + oldestn10ss
-    println(neo4jToApoc)
+    println(neo4jToN10s)
     println(neo4jReleases)
     for (neo4jRelease in neo4jReleases) {
         def prefix = neo4jRelease.substring(0,Math.min(4,neo4jRelease.length()))
         if (prefix < "3.0") continue;
 
-        def n10sVersion = neo4jToApoc[neo4jRelease]
+        def n10sVersion = neo4jToN10s[neo4jRelease]
 
         // If there is no n10s release for a Neo4j release we have to guess which one to associate
         if (n10sVersion == null) {
-            def matchingNeo4jVersions = neo4jToApoc.keySet().findAll{ it.substring(0,4) == prefix }.sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
-            def matchingApocVersions = neo4jToApoc.subMap(matchingNeo4jVersions).values().sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
+            def matchingNeo4jVersions = neo4jToN10s.keySet().findAll{ it.substring(0,4) == prefix }.sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
+            def matchingN10sVersions = neo4jToN10s.subMap(matchingNeo4jVersions).values().sort{ o1, o2 -> orderVersion(o1) <=> orderVersion(o2) }
             matchingNeo4jVersions = matchingNeo4jVersions.findAll{ orderVersion(it) < orderVersion(neo4jRelease) }
             def matchingNeo4jVersion = matchingNeo4jVersions.isEmpty() ? null : matchingNeo4jVersions[-1]
-            def firstApocVersion = matchingApocVersions.isEmpty() ? null : matchingApocVersions[0]
-            n10sVersion = neo4jToApoc[matchingNeo4jVersion]==null ? firstApocVersion : neo4jToApoc[matchingNeo4jVersion]
+            def firstN10sVersion = matchingN10sVersions.isEmpty() ? null : matchingN10sVersions[0]
+            n10sVersion = neo4jToN10s[matchingNeo4jVersion]==null ? firstN10sVersion : neo4jToN10s[matchingNeo4jVersion]
         }
         if (n10sVersion != null) {
             def version = [ neo4j : neo4jRelease,
