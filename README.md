@@ -26,15 +26,16 @@ Select your database, and in the plugins section click on the install button (th
 <img src="https://raw.githubusercontent.com/neo4j-labs/rdflib-neo4j/master/img/install-n10s.png" height="400">
 
 
-If you want have the http endpoint mounted on your DB server, you'll need to 
+If you want to have the http endpoint mounted on your DB server, you'll need to 
 add the following line to your config. 
 
   ```
-  dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+  server.unmanaged_extension_classes=n10s.endpoint=/rdf
   ```
 In the desktop you'll be able to do this by clicking on the 
 three dots to the right hand side of your database and then select settings. 
 You can add the fragment at the end of the file. 
+
 
 ### On a Neo4j Server 
 
@@ -42,15 +43,15 @@ You can add the fragment at the end of the file.
 it in the <NEO_HOME>/plugins directory of your Neo4j instance. 
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
       ```
-      dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+      server.unmanaged_extension_classes=n10s.endpoint=/rdf
       ``` 
 3. Restart the server. 
 
 
 ### Verifying the installation
 
-You can check that the installation went well by:
-Running `call dbms.procedures()`. The list of procedures should include a number of them prefixed by **n10s**.
+You can check that the installation went well by running `SHOW PROCEDURES`.
+The list of procedures should include a number of them prefixed by **n10s**.
 
 If you installed the http endpoint, you can check it was correctly installed by looking in 
 the logs and making sure they show the following line on startup:
@@ -58,7 +59,7 @@ the logs and making sure they show the following line on startup:
 YYYY-MM-DD HH:MM:SS.000+0000 INFO  Mounted unmanaged extension [n10s.endpoint] at [/rdf]
 ```
 
-An alternative way of testing the extension is mounted is by running `:GET /rdf/ping` on 
+An alternative way of testing the extension is mounted is by running `:GET http://localhost:7474/rdf/ping` on 
 the neo4j browser. This should return the following message
 ```
 {"ping":"here!"}
