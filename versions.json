@@ -195,6 +195,21 @@
         }
     },
     {
+        "neo4j": "4.4.41",
+        "neo4jVersion": "4.4.41",
+        "n10s": "4.4.0.3",
+        "version": "4.4.0.3",
+        "url": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.3",
+        "homepageUrl": "http://github.com/neo4j-labs/neosemantics/releases/4.4.0.3",
+        "jar": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.3/neosemantics-4.4.0.3.jar",
+        "downloadUrl": "https://github.com/neo4j-labs/neosemantics/releases/download/4.4.0.3/neosemantics-4.4.0.3.jar",
+        "config": {
+            "+:dbms.security.procedures.unrestricted": [
+                "n10s.*"
+            ]
+        }
+    },
+    {
         "neo4j": "4.4.40",
         "neo4jVersion": "4.4.40",
         "n10s": "4.4.0.3",
