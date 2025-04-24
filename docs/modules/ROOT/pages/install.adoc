@@ -17,12 +17,12 @@ dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
 call dbms.procedures()
 
 The list of procedures should include the ones documented below.
-You can check that the extension is mounted by running
+You can check that the extension is mounted by running the following from the Neo4j Browser
 [source,cypher]
 ----
 :GET http://localhost:7474/rdf/ping
 ----
-The previous command assumes you're running neo4j on your local machine, replace `localhos` with the host name if that is not the case.
+The previous command assumes you're running neo4j on your local machine, replace `localhost` with the host name if that is not the case.
 
 **Note on build**
 
