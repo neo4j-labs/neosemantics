@@ -153,8 +153,7 @@ public class RDFEndpointTest {
 
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
-            + id.toString());
+        resolveURI(neo4j.httpURI(), "neo4j/describe/" + id.toString()));
 
     String expected = String.format("[ {\n"
         + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
@@ -199,7 +198,7 @@ public class RDFEndpointTest {
 //
 //    // When
 //    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-//            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+//            resolveURI(neo4j.httpURI(), "neo4j/describe/")
 //                    + URLEncoder.encode("http://neo4j.paradise.icij.dataset/ind/JB",StandardCharsets.UTF_8));
 //
 //    String expected = "";
@@ -232,7 +231,7 @@ public class RDFEndpointTest {
 
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/http%3A%2F%2Fneo4j.com%2Fmovies%2FKeanu");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/http%3A%2F%2Fneo4j.com%2Fmovies%2FKeanu"));
 
     String expected = "{\n" +
             "  \"@id\" : \"http://neo4j.com/movies/Keanu\",\n" +
@@ -253,8 +252,7 @@ public class RDFEndpointTest {
 
     // When
     response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
-                    "http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo"));
 
     expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "@prefix neovoc: <neo4j://graph.schema#> .\n" +
@@ -310,7 +308,7 @@ public class RDFEndpointTest {
     map.put("format", "Turtle-star");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
@@ -366,7 +364,7 @@ public class RDFEndpointTest {
     map.put("cypher", "MATCH (n)  RETURN collect(n) as col");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expected = "<neo4j://person#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
         + "<neo4j://person#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
@@ -440,8 +438,7 @@ public class RDFEndpointTest {
     }
 
     Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() +
-                    "neo4j/describe/http%3A%2F%2Fwww.example.com%2Fexample%23Enitity1Individual?format=RDF/XML");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/http%3A%2F%2Fwww.example.com%2Fexample%23Enitity1Individual?format=RDF/XML"));
 
     String expected =
             "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.example.com/example#Enitity1> .\n" +
@@ -499,7 +496,7 @@ public class RDFEndpointTest {
         + "RETURN collect(distinct n) + collect(distinct x)");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expected = String.format(
           "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
@@ -552,7 +549,7 @@ public class RDFEndpointTest {
     map.put("cypher", "MATCH (n) RETURN collect(n) as col");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expectedNoNonResources = "<http://example.org/vocab/show/218> <http://example.org/vocab/show/producer> \"Joanna Smith\" .\n"
         + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/localName> \"Cette Série des Années Septante\" .\n"
@@ -593,7 +590,7 @@ public class RDFEndpointTest {
 
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+        resolveURI(neo4j.httpURI(), "neo4j/describe/")
             + id3.toString());
 
     String expected = String.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
@@ -653,7 +650,7 @@ public class RDFEndpointTest {
     session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
     org.neo4j.driver.Result importResults
         = session.run("CALL n10s.rdf.import.fetch('" +
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+        resolveURI(neo4j.httpURI(), "neo4j/describe/")
         + id +
         "','Turtle')");
 
@@ -710,7 +707,7 @@ public class RDFEndpointTest {
 
     // then export elements and check the output is right
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") +
                 "http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength");
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
@@ -765,8 +762,7 @@ public class RDFEndpointTest {
     }
     // then export elements and check the output is right
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/" + id);
+            resolveURI(neo4j.httpURI(), "neo4j/describe/" + id));
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
@@ -781,7 +777,7 @@ public class RDFEndpointTest {
 
 
     response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+            resolveURI(neo4j.httpURI(), "neo4j/describe/") +
                     URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
                             "UTF-8"));
     assertEquals(200, response.status());
@@ -822,8 +818,7 @@ public class RDFEndpointTest {
 
     // then export elements and check the output is right
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/" + id);
+            resolveURI(neo4j.httpURI(), "neo4j/describe/" + id));
 
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "@prefix neovoc: <neo4j://graph.schema#> .\n" +
@@ -839,7 +834,7 @@ public class RDFEndpointTest {
 
 
     response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/" +
+            resolveURI(neo4j.httpURI(), "neo4j/describe/") +
                     URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
                             "UTF-8"));
 
@@ -891,7 +886,7 @@ public class RDFEndpointTest {
     session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
     org.neo4j.driver.Result importResults
         = session.run("CALL n10s.rdf.import.fetch('" +
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher" +
+        resolveURI(neo4j.httpURI(), "neo4j/cypher") +
         "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
         + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
@@ -940,8 +935,7 @@ public class RDFEndpointTest {
     }
     // When
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/find/Director/born/1961?valType=INTEGER");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/born/1961?valType=INTEGER"));
 
     String expected = String.format("[ {\n"
         + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
@@ -961,8 +955,7 @@ public class RDFEndpointTest {
 
     // When
     response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/find/Director/name/Laurence%20Fishburne");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/name/Laurence%20Fishburne"));
 
     expected = String.format("[ {\n"
         + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
@@ -981,8 +974,7 @@ public class RDFEndpointTest {
 
     // When
     response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/find/Actor/born/1964?valType=INTEGER");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Actor/born/1964?valType=INTEGER"));
 
     Map<String,String> nameToId = new HashMap<>();
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -1031,15 +1023,13 @@ public class RDFEndpointTest {
   @Test
   public void testFindNodeByLabelAndPropertyNotFoundOrInvalid() throws Exception {
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/find/WrongLabel/wrongProperty/someValue");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/find/WrongLabel/wrongProperty/someValue"));
 
     assertEquals(emptyJsonLd, response.rawContent());
     assertEquals(200, response.status());
 
     response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/find/Something");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Something"));
 
     assertEquals("", response.rawContent());
     assertEquals(404, response.status());
@@ -1051,15 +1041,13 @@ public class RDFEndpointTest {
   public void testGetNodeByUriOrIdNotFoundOrInvalid() throws Exception {
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/n3").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/9999999");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/9999999"));
     assertEquals(200, response.status());
     assertEquals("@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n", response.rawContent());
 
     response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/9999999");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/9999999"));
     assertEquals(200, response.status());
     assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             "<rdf:RDF\n" +
@@ -1070,8 +1058,7 @@ public class RDFEndpointTest {
             "</rdf:RDF>", response.rawContent());
 
     response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/adb");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/adb"));
 
     assertEquals("[ ]", response.rawContent());
     assertEquals(200, response.status());
@@ -1082,14 +1069,12 @@ public class RDFEndpointTest {
     }
 
     response = HTTP.withHeaders("Accept", "text/n3").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-                    + "neo4j/describe/9999999");
+            resolveURI(neo4j.httpURI(), "neo4j/describe/9999999"));
     assertEquals(200, response.status());
     assertEquals("", response.rawContent());
 
     response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/9999999");
+        resolveURI(neo4j.httpURI(), "neo4j/describe/9999999"));
     assertEquals(200, response.status());
     assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             "<rdf:RDF\n" +
@@ -1102,7 +1087,7 @@ public class RDFEndpointTest {
   @Test
   public void testPing() throws Exception {
     HTTP.Response response = HTTP.GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "ping");
+        resolveURI(neo4j.httpURI(), "ping"));
 
     assertEquals("{\"ping\":\"here!\"}", response.rawContent());
     assertEquals(200, response.status());
@@ -1148,7 +1133,7 @@ public class RDFEndpointTest {
     map.put("cypher", "MATCH (n:Category)--(:Category) RETURN distinct n LIMIT 4");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expected =
         String.format(
@@ -1173,7 +1158,7 @@ public class RDFEndpointTest {
     // request passing serialisation format as request param
     map.put("format", "RDF/XML");
     response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
@@ -1182,7 +1167,7 @@ public class RDFEndpointTest {
     map.put("mappedElemsOnly", "true");
     map.remove("format");
     response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     assertEquals(200, response.status());
     assertEquals("", response.rawContent());
@@ -1229,7 +1214,7 @@ public class RDFEndpointTest {
     map.put("cypherParams", cypherParams);
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expected =
         "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
@@ -1245,7 +1230,7 @@ public class RDFEndpointTest {
 
     map.put("mappedElemsOnly", "true");
     response = HTTP.withHeaders("Accept", "text/plain").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     String expectedOnlyMapped =
         "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
@@ -1282,7 +1267,7 @@ public class RDFEndpointTest {
       assertEquals(1, count(result));
     }
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+        resolveURI(neo4j.httpURI(), "neo4j/onto"));
 
     String expected =
         "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
@@ -1346,7 +1331,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+            resolveURI(neo4j.httpURI(), "neo4j/onto"));
 
     String expected =
             "<neo4j://graph.schema#PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
@@ -1388,7 +1373,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+        resolveURI(neo4j.httpURI(), "neo4j/onto"));
 
     String expected =
         "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n" +
@@ -1438,7 +1423,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/onto");
+            resolveURI(neo4j.httpURI(), "neo4j/onto"));
 
     String expected =
             "<http://permid.org/ontology/organization/Person> <http://www.w3.org/2000/01/rdf-schema#label> \"Person\" .\n" +
@@ -1488,8 +1473,7 @@ public class RDFEndpointTest {
       assertEquals("https://permid.org/1-21523433753", result.next().get("uri"));
     }
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString()));
     String expected = "@prefix neovoc: <neo4j://graph.schema#> .\n" +
         "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor>;\n"
@@ -1520,8 +1504,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder.encode(
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder.encode(
             "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement",
             StandardCharsets.UTF_8.toString())
             + "?excludeContext=true");
@@ -1543,7 +1526,7 @@ public class RDFEndpointTest {
 
     //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
     response = HTTP.withHeaders("Accept", "text/plain").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe/"
+        resolveURI(neo4j.httpURI(), "neo4j/describe/")
             + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace", "UTF-8")
     );
 
@@ -1608,8 +1591,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
                 StandardCharsets.UTF_8.toString()));
 
@@ -1644,8 +1626,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://example.org/vocab/show/218", StandardCharsets.UTF_8.toString()));
 
     String expected = "@prefix show: <http://example.org/vocab/show/> .\n" +
@@ -1694,7 +1675,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (n:Resource) RETURN n LIMIT 1");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "[ {\n" +
@@ -1734,7 +1715,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (n) RETURN n ");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "[ {\n" +
@@ -1786,7 +1767,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (a)-[r:ns0" + PREFIX_SEPARATOR + "Likes]-(b) RETURN *");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
@@ -1839,8 +1820,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1880,8 +1860,7 @@ public class RDFEndpointTest {
       tx.commit();
     }
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -1926,8 +1905,7 @@ public class RDFEndpointTest {
       tx.commit();
     }
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -1970,8 +1948,7 @@ public class RDFEndpointTest {
       tx.commit();
     }
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -2016,7 +1993,7 @@ public class RDFEndpointTest {
         "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -2043,6 +2020,15 @@ public class RDFEndpointTest {
 
   }
 
+  public static String resolveURI(java.net.URI baseUri, String path) throws java.net.URISyntaxException {
+    String location = HTTP.GET(baseUri.resolve("rdf").toString()).location();
+    if (location.startsWith("http")) {
+      return new java.net.URI(location).resolve(path).toString();
+    } else {
+      return baseUri.resolve(location).resolve(path).toString();
+    }
+  }
+
   @Test
   public void testcypherDatesAndDatetimes() throws Exception {
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2063,9 +2049,7 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
-        params);
+    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(resolveURI(neo4j.httpURI(), "neo4j/cypher"), params);
 
     String expected = "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n"
         + "@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.\n"
@@ -2094,7 +2078,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (n) RETURN * ");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     assertEquals(200, response.status());
@@ -2110,7 +2094,7 @@ public class RDFEndpointTest {
     }
 
     response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     assertTrue(ModelTestUtils
@@ -2127,7 +2111,7 @@ public class RDFEndpointTest {
     }
 
     response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String exportedAsRDF = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
@@ -2171,7 +2155,7 @@ public class RDFEndpointTest {
         "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
@@ -2222,7 +2206,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (a:`http://example.com/Car`) RETURN *");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -2270,7 +2254,7 @@ public class RDFEndpointTest {
     params.put("cypher", "MATCH (a:ns0__Car) RETURN *");
 
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
         params);
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
@@ -2334,7 +2318,7 @@ public class RDFEndpointTest {
     HTTP.Response response = HTTP.
         withHeaders("Accept", "text/turtle")
         .POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
             params);
 
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
@@ -2379,7 +2363,7 @@ public class RDFEndpointTest {
     HTTP.Response response = HTTP.
         withHeaders("Accept", "application/trig")
         .POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
             params);
 
     String expected = Resources
@@ -2415,7 +2399,7 @@ public class RDFEndpointTest {
     HTTP.Response response = HTTP.
         withHeaders("Accept", "application/n-quads")
         .POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
             params);
 
     String expected = Resources
@@ -2445,8 +2429,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://www.example.org/exampleDocument#Monica",
                 StandardCharsets.UTF_8.toString()));
 
@@ -2478,8 +2461,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://www.example.org/exampleDocument#Monica",
                 StandardCharsets.UTF_8.toString())
             + "?graphuri=http://www.example.org/exampleDocument%23G1");
@@ -2518,8 +2500,7 @@ public class RDFEndpointTest {
     }
 
     HTTP.Response response = HTTP.withHeaders("Accept", "application/n-quads").GET(
-        HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location()
-            + "neo4j/describe/" + URLEncoder
+        resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder
             .encode("http://www.example.org/exampleDocument#Monica",
                 StandardCharsets.UTF_8.toString())
             + "?graphuri=http://www.example.org/exampleDocument%23G1");
@@ -2572,7 +2553,7 @@ public class RDFEndpointTest {
     HTTP.Response response = HTTP.
         withHeaders("Accept", "application/trig")
         .POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher",
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
             params);
 
     String expected = Resources
@@ -2640,7 +2621,7 @@ public class RDFEndpointTest {
     map.put("cypher", "match(n:ConceptScheme) return n");
 
     Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/cypher", map);
+            resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
 
     assertEquals(200, response.status());
     String expected = "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"5\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +

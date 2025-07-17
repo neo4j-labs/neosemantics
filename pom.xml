@@ -5,7 +5,7 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>neosemantics</artifactId>
-  <version>5.20.0</version>
+  <version>2025.06.0</version>
   <packaging>jar</packaging>
   <name>neosemantics (n10s)</name>
   <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
@@ -34,10 +34,24 @@
   </developers>
 
   <properties>
-    <neo4j.version>5.20.0</neo4j.version>
+    <neo4j.version>2025.06.2</neo4j.version>
     <sesame.version>4.3.12</sesame.version>
+    <jackson.version>2.19.0</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- Force all Jackson dependencies to use the same version -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>
@@ -143,14 +157,14 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-core</artifactId>
-      <version>2.13.3</version>
+      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
 
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-      <version>2.13.3</version>
+      <version>${jackson.version}</version>
       <scope>provided</scope>
     </dependency>
 
@@ -199,7 +213,7 @@
     <dependency>
       <groupId>org.neo4j.driver</groupId>
       <artifactId>neo4j-java-driver</artifactId>
-      <version>4.1.1</version>
+      <version>5.28.9</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
