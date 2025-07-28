@@ -126,8 +126,7 @@ Let's use the `/cypher` method to serialise as RDF an order given its `orderID`.
 
 [source,Cypher]
 ----
-:POST /rdf/cypher
-{ "cypher" : "MATCH path = (n:Order { orderID : '10785'})-[:ORDERS]->()-[:PART_OF]->(:Category { categoryName : 'Beverages'}) RETURN path " , "format": "RDF/XML" , "mappedElemsOnly" : true }
+ 
 ----
 
 The Cypher query uses the elements in the Neo4j graph but the generated RDF uses schema.org vocabulary elements. The mapping we just defined is bridging the two. Note that the mapping is completely dynamic which means that any change to the mapping definition will be applied to any subsequent request.

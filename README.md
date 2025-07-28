@@ -49,8 +49,10 @@ it in the <NEO_HOME>/plugins directory of your Neo4j instance.
 
 ### Verifying the installation
 
+
 You can check that the installation went well by:
-Running `call dbms.procedures()`. The list of procedures should include a number of them prefixed by **n10s**.
+Running `SHOW PROCEDURES WHERE name STARTS WITH "n10s"`. 
+The list of procedures should include a number of them prefixed by **n10s**.
 
 If you installed the http endpoint, you can check it was correctly installed by looking in 
 the logs and making sure they show the following line on startup:
@@ -102,7 +104,7 @@ call n10s.graphconfig.init( { handleMultival: "ARRAY",
 
 #### 2.  Importing RDF data
 
-Once the Graph config is created we can import data from a url using `fetch`:
+Once the Graph config is created we can import data from an url using `fetch`:
 
 ``` 
 call n10s.rdf.import.fetch( "https://raw.githubusercontent.com/jbarrasa/neosemantics/3.5/docs/rdf/nsmntx.ttl",

@@ -9,6 +9,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.zip.GZIPInputStream;
@@ -19,6 +20,7 @@ import org.apache.commons.compress.archivers.ArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
+import org.eclipse.rdf4j.common.lang.FileFormat;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
@@ -230,6 +232,7 @@ public class CommonProcedures {
 
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
+    System.out.println("availableParsers = " + Arrays.stream(availableParsers).map(FileFormat::getName).toList());
     if (format != null) {
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().equals(format)) {

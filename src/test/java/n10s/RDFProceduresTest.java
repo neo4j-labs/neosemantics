@@ -1,5 +1,6 @@
 package n10s;
 
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
 import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
 import static org.junit.Assert.assertArrayEquals;
@@ -2833,10 +2834,9 @@ public class RDFProceduresTest {
 
       assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
 
-      Result result = session.run("MATCH (n:Resource) RETURN n.ns0__totalLength as tl ");
+      Result result = session.run("MATCH (n:Resource) WHERE n.uri = \"http://dbpedia.org/resource/%22No_Flashlight%22:_Songs_of_the_Fulfilled_Night\" RETURN n.ns0__totalLength as tl");
       Record next = result.next();
       assertTrue(next.get("tl").asList().containsAll(Arrays.asList("45.75^^xsd__double", "2271.0"))); //"2271.0^^ns1__second" if custom datatypes were being kept
-
       assertEquals(1L, session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
 
       assertTrue(session.run("MATCH (r:Resource) DETACH DELETE r RETURN count(r) as ct").next().get("ct").asLong() > 0);
@@ -2866,9 +2866,7 @@ public class RDFProceduresTest {
       assertEquals(6, session.run("MATCH (n:Resource) RETURN count(n) as nodeCount ").next().get("nodeCount").asInt());
 
       assertEquals(1L, session.run("MATCH (n:Resource) WHERE '45.75^^xsd__double' in n.ns0__totalLength RETURN count(n) as ct ").next().get("ct").asLong());
-
     }
-
   }
 
   @Test
