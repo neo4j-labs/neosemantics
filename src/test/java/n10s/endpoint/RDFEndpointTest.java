@@ -438,7 +438,6 @@ public class RDFEndpointTest {
     }
 
     Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-//            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=http%3A%2F%2Fwww.example.com%2Fexample%23Enitity1Individual&format=RDF/XML"));
             resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + URLEncoder.encode("http://www.example.com/example#Enitity1Individual", StandardCharsets.UTF_8) + "&format=RDF/XML"));
 
     String expected =
