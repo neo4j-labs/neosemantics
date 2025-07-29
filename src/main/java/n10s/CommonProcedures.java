@@ -232,7 +232,6 @@ public class CommonProcedures {
 
 
   protected RDFFormat getFormat(String format) throws RDFImportBadParams {
-    System.out.println("availableParsers = " + Arrays.stream(availableParsers).map(FileFormat::getName).toList());
     if (format != null) {
       for (RDFFormat parser : availableParsers) {
         if (parser.getName().equals(format)) {

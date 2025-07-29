@@ -819,21 +819,7 @@ public class RDFEndpointTest {
     // then export elements and check the output is right
     HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
             resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id));
-// <html>
-//<head>
-//<meta http-equiv="Content-Type" content="text/html;charset=ISO-8859-1"/>
-//<title>Error 400 Ambiguous URI path separator</title>
-//</head>
-//<body>
-//<h2>HTTP ERROR 400 Ambiguous URI path separator</h2>
-//<table>
-//<tr><th>URI:</th><td>/badURI</td></tr>
-//<tr><th>STATUS:</th><td>400</td></tr>
-//<tr><th>MESSAGE:</th><td>Ambiguous URI path separator</td></tr>
-//</table>
-//
-//</body>
-//</html>
+
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "@prefix neovoc: <neo4j://graph.schema#> .\n" +
             "@prefix neoind: <neo4j://graph.individuals#> .\n" +
@@ -845,46 +831,12 @@ public class RDFEndpointTest {
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
             .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
-
-    /* TODO
-    Capisco perfettamente la tua frustrazione. È una situazione comune quando si aggiorna il software: una richiesta che funzionava smette di andare a buon fine.
-Il motivo per cui prima funzionava e ora non più è quasi certamente un aggiornamento di sicurezza nel server di Neo4j (o nel server web sottostante, Jetty).
-
-Perché Funzionava Prima e Ora Non Più?
-Nelle versioni precedenti, il server era più permissivo e consentiva la presenza di slash codificati (%2F) all'interno del percorso (path) di un URL.
-
-Tuttavia, permettere questa pratica è considerato un rischio per la sicurezza, perché può portare a vulnerabilità note come "Path Traversal Attacks". Per questo motivo, le versioni più recenti di quasi tutti i server web, per impostazione predefinita, rifiutano queste richieste con un errore 400 Bad Request.
-
-In sintesi: non è cambiata la logica dell'API, ma sono aumentate le misure di sicurezza del server che la ospita.
-     */
-
-    String fullEncoded = URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength", StandardCharsets.UTF_8);
-    fullEncoded = fullEncoded.replace("%2F", "/");
-
-    String urlOld = 
-            HTTP.GET(neo4j.httpURI().resolve("rdf").toString()).location() + "neo4j/describe?nodeIdentifier=" +
-                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
-                            "UTF-8");
-
-    response = HTTP.withHeaders("Accept", "text/turtle").GET(neo4j.httpURI() + "rdf/neo4j/describe?nodeIdentifier=http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength"
-//            resolveURI(neo4j.httpURI(), "neo4j/describe/ontologies") +
-//            resolveURI(neo4j.httpURI(), "neo4j/describe/") + "httpn4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength"
-//            resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder.encode("t/4/Cyber_EA_Smart_City", StandardCharsets.UTF_8)
-//                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
-//                    URLEncoder.encode("4/Cyber_EA_Smart_City#RF_signal_strength",
-////                    URLEncoder.encode("RF_signal_strength",
-//                            "UTF-8")
-    );
     
-//    response = HTTP.withHeaders("Accept", "text/turtle").GET(
-////            resolveURI(neo4j.httpURI(), "neo4j/describe/ontologies") +
-//            resolveURI(neo4j.httpURI(), "neo4j/describe/") + "httpn4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength"
-////            resolveURI(neo4j.httpURI(), "neo4j/describe/") + URLEncoder.encode("t/4/Cyber_EA_Smart_City", StandardCharsets.UTF_8)
-////                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
-////                    URLEncoder.encode("4/Cyber_EA_Smart_City#RF_signal_strength",
-//////                    URLEncoder.encode("RF_signal_strength",
-////                            "UTF-8")
-//    );
+    response = HTTP.withHeaders("Accept", "text/turtle").GET(
+            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
+                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
+                            StandardCharsets.UTF_8)
+    );
 
     assertEquals(200, response.status());
     assertTrue(ModelTestUtils
