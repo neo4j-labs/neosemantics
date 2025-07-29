@@ -36,23 +36,22 @@
   <properties>
     <neo4j.version>2025.06.2</neo4j.version>
     <sesame.version>4.3.12</sesame.version>
-    <jackson.version>2.13.3</jackson.version>
-<!--    <jackson.version>2.19.0</jackson.version>-->
+    <jackson.version>2.19.0</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
-<!--  <dependencyManagement>-->
-<!--    <dependencies>-->
-<!--      &lt;!&ndash; Force all Jackson dependencies to use the same version &ndash;&gt;-->
-<!--      <dependency>-->
-<!--        <groupId>com.fasterxml.jackson</groupId>-->
-<!--        <artifactId>jackson-bom</artifactId>-->
-<!--        <version>${jackson.version}</version>-->
-<!--        <type>pom</type>-->
-<!--        <scope>import</scope>-->
-<!--      </dependency>-->
-<!--    </dependencies>-->
-<!--  </dependencyManagement>-->
+  <dependencyManagement>
+    <dependencies>
+      <!-- Force all Jackson dependencies to use the same version -->
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <dependencies>
     <dependency>

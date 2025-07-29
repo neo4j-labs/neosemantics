@@ -77,15 +77,8 @@ public class RDFEndpoint {
     }};
     return Response.ok().entity(objectMapper.writeValueAsString(results)).build();
   }
-
-  /*
-  HTTP error 400 (Bad Request) occurs because the slash (/) in your identifier, 
-  once encoded in %2F by URLEncoder, 
-  is often blocked for security reasons by the application server (such as Tomcat, WildFly) or by a proxy before it even reaches your JAX-RS code.
-   */
+  
   @GET
-//  @Path("/{dbname}/describe/{nodeidentifier}")
-//  @Path("/{dbname}/describe/{nodeidentifier:.+}")
   @Path("/{dbname}/describe")
   @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
       "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
@@ -99,20 +92,6 @@ public class RDFEndpoint {
       @QueryParam("format") String format,
       @HeaderParam("accept") String acceptHeaderParam) {
     return Response.ok().entity((StreamingOutput) outputStream -> {
-//  @GET
-//  @Path("/{dbname}/describe/{nodeidentifier}")
-//  @Produces({"application/rdf+xml", "text/plain", "text/turtle", "text/n3",
-//          "application/trig", "application/ld+json", "application/n-quads", "text/x-turtlestar",
-//          "application/x-trigstar"})
-//  public Response nodebyIdOrUri(@Context DatabaseManagementService gds,
-//                                @PathParam("dbname") String dbNameParam,
-//                                @PathParam("nodeidentifier") String nodeIdentifier,
-//                                @QueryParam("graphuri") String namedGraphId,
-//                                @QueryParam("excludeContext") String excludeContextParam,
-//                                @QueryParam("mappedElemsOnly") String onlyMappedInfo,
-//                                @QueryParam("format") String format,
-//                                @HeaderParam("accept") String acceptHeaderParam) {
-//    return Response.ok().entity((StreamingOutput) outputStream -> {
       RDFWriter writer = startRdfWriter(getFormat(acceptHeaderParam, format), outputStream);
       GraphDatabaseService neo4j = gds.database(dbNameParam);
       try (Transaction tx = neo4j.beginTx()) {
