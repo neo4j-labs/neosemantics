@@ -4,7 +4,7 @@
 
 You can either download a prebuilt jar from the https://github.com/jbarrasa/neosemantics/releases[releases area] or build it from the source. If you prefer to build, check the note below.
 
-1. Copy the  the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. (**note:** If you're going to use the JSON-LD serialisation format for RDF, you'll need to include also link:/labs/apoc/[APOC])
+1. Copy the jar(s) in the <NEO_HOME>/plugins directory of your Neo4j instance. (**note:** If you're going to use the JSON-LD serialisation format for RDF, you'll need to include also link:/labs/apoc/[APOC])
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf (notice that it is possible to modify where the extension is mounted by using an alternative name to `/rdf` below).
 +
 [source,shell]
@@ -19,7 +19,7 @@ When the property `dbms.security.procedures.allowlist` is set, then it must incl
 3. Restart the server.
 4. Check that the installation went well by running
 [source,cypher]
-call dbms.procedures()
+SHOW PROCEDURES WHERE name STARTS WITH "n10s"
 
 The list of procedures should include the ones documented below.
 You can check that the extension is mounted by running
@@ -27,7 +27,7 @@ You can check that the extension is mounted by running
 ----
 :GET http://localhost:7474/rdf/ping
 ----
-The previous command assumes you're running neo4j on your local machine, replace `localhos` with the host name if that is not the case.
+The previous command assumes you're running neo4j on your local machine, replace `localhost` with the host name if that is not the case.
 
 **Note on build**
 

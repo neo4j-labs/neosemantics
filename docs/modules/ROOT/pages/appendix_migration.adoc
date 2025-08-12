@@ -1,4 +1,4 @@
-= Appendix A. Migrating from neosemantics 3 to 4
+= Appendix B. Migrating from neosemantics 3 to 4
 :page-pagination:
 
 [appendix]
@@ -10,6 +10,7 @@ If you have previously used neosemantics v3.x, you can find the information you 
 == Who should read this guide
 
 This documentation is intended for users who are familiar with neosemantics. Based on this assumption, we are intentionally brief in the examples and comparisons.
+
 
 === Changes in neosemantics 4.x
 

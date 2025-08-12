@@ -308,7 +308,7 @@ a|
 [cols="15,5,45,35"]
 |===
 | method| type| params| Description
-| /rdf/<dbname>/describe/<nodeid or uri>
+| /rdf/<dbname>/describe
 |GET
 a|
 * the id of a node or the (urlencoded) uri
