@@ -9,7 +9,7 @@ You can either download a prebuilt jar from the https://github.com/jbarrasa/neos
 +
 [source,shell]
 ----
-dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+server.unmanaged_extension_classes=n10s.endpoint=/rdf
 ----
 +
 [NOTE]
