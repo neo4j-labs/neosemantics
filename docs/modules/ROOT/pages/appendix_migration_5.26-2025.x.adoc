@@ -1,0 +1,41 @@
+= Appendix A. Migrating to 5.26 and 2025.x
+
+
+:page-pagination:
+
+[abstract]
+If you have previously used neosemantics up to v5.20, you can find the information you will need to migrate to neosemantics v5.26 and v2025.x.
+
+== Who should read this guide
+
+This documentation is intended for users who are familiar with neosemantics. Based on this assumption, we are intentionally brief in the examples and comparisons.
+
+=== Changes in neosemantics v5.26 and 2025.x
+
+==== Changes to the URL structure of the RDF endpoint
+
+Starting with Neo4j 5.26 and 2025.x that use recent versions of the Jetty web server (that is Jetty 12), the structure for URLs sent to the RDF description endpoint has become stricter. Passing a full URI containing encoded slashes (`%2F`) directly within the URL path is no longer permitted and will result in an `HTTP 400 Bad Request` error.
+
+Therefore, the `/rdf/<dbname>/describe/<nodeid or uri>` endpoint is changed.
+
+This change is a direct consequence of enhanced security policies in Jetty. Specifically, the `UriCompliance` mode, which is stricter by default, now flags ambiguous path separators to prevent potential 'Path Traversal' vulnerabilities. For more technical details, see the Jetty issue https://github.com/jetty/jetty.project/issues/12162[#12162] and the `AMBIGUOUS_PATH_SEPARATOR` definition in the https://github.com/jetty/jetty.project/blob/jetty-12.0.x/jetty-core/jetty-http/src/main/java/org/eclipse/jetty/http/UriCompliance.java#L75[UriCompliance source code].
+
+The correct way to describe a resource identified by a URI is to pass it as a query parameter named `nodeidentifier`.
+Note that the URI should be encoded as before.
+
+[options="header"]
+|===
+| Previous Method (No longer supported) | Correct Method (Required)
+| The full URI was part of the *path*. | The full URI is passed as the `nodeidentifier` *query parameter*.
+| `/rdf/<dbName>/describe/http%3A%2F%2Fneo4j.org%2Find%23neo4j355` | `/rdf/<dbName>/describe?nodeidentifier=http%3A%2F%2Fneo4j.org%2Find%23neo4j355`
+|===
+
+.Request Transformation Example
+[source,http]
+----
+// OLD REQUEST (NOW RETURNS 400 ERROR)
+GET /rdf/neo4j/describe/http%3A%2F%2Fneo4j.org%2Find%23neo4j355
+
+// NEW REQUEST (CORRECT)
+GET /rdf/neo4j/describe?nodeidentifier=http%3A%2F%2Fneo4j.org%2Find%23neo4j355
+----

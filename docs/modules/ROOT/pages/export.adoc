@@ -141,7 +141,7 @@ URIs need to be encoded in `GET` requests.
 
 [source,Cypher]
 ----
-:GET /rdf/neo4j/describe/http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
+:GET /rdf/neo4j/describe?nodeidentifier=http%3A%2F%2Fneo4j.org%2Find%23neo4j355?format=RDF/XML
 ----
 
 Notice the URL encoding of the URI (the clean URI is `http://neo4j.org/ind#neo4j355`) and the `format` parameter to specify the serialisation format. Here's the output of the request:

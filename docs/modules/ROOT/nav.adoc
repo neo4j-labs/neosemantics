@@ -45,6 +45,7 @@
 // ** xref:reference.adoc#_utility_functions[12.2. Utility Functions]
 // ** xref:reference.adoc#_extensions_http_endpoints[12.3. Extensions (HTTP endpoints)]
 * xref:examples.adoc[13. Projects using Neosemantics]
-* xref:appendix_migration.adoc[A. Migrating from neosemantics 3 to 4]
+* xref:appendix_migration_5.26-2025.x.adoc[A. Migrating from neosemantics 4.x and 5.x to 5.26 and 2025.x]
+* xref:appendix_migration.adoc[B. Migrating from neosemantics 3 to 4]
 // ** xref:appendix_migration.adoc#_who_should_read_this_guide[A.1. Who should read this guide]
 // ** xref:appendix_migration.adoc#_changes_in_neosemantics_4_x[A.2. Changes in neosemantics 4.x]

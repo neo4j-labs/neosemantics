@@ -19,6 +19,7 @@ The guide covers the following areas:
 * xref:inference.adoc[Chapter 11, Inferencing/Reasoning] — A detailed guide to inferencing and reasoning.
 * xref:reference.adoc[Chapter 12, Neosemantics Reference] — An overview of all procedures and functions in the library.
 * xref:examples.adoc[Chapter 13, Projects using Neosemantics] — A list of projects using n10s.
-* xref:appendix_migration.adoc[Appendix A, Migrating from neosemantics 3 to 4] — A guide for neosemantics 3.x users
+* xref:appendix_migration_5.26-2025.x.adoc[Appendix A, Migrating from neosemantics 4.x and 5.x to 5.26 and 2025.x] — A guide for neosemantics 4.x and 5.20 users
+* xref:appendix_migration.adoc[Appendix B, Migrating from neosemantics 3 to 4] — A guide for neosemantics 3.x users
 
 image::nsmntx-block-diagram.png[Neosemantics diagram, 200,align="center"]
