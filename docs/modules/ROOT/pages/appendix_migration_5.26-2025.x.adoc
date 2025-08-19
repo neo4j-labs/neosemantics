@@ -1,20 +1,20 @@
-= Appendix A. Migrating to 2025.x
+= Appendix A. Migrating to 5.26 and 2025.x
 
 
 :page-pagination:
 
 [abstract]
-If you have previously used neosemantics up to v5.x, you can find the information you will need to migrate to using neosemantics v2025.x.
+If you have previously used neosemantics up to v5.20, you can find the information you will need to migrate to neosemantics v5.26 and v2025.x.
 
 == Who should read this guide
 
 This documentation is intended for users who are familiar with neosemantics. Based on this assumption, we are intentionally brief in the examples and comparisons.
 
-=== Changes in neosemantics 2025.x
+=== Changes in neosemantics v5.26 and 2025.x
 
 ==== Changes to the URL structure of the RDF endpoint
 
-Starting with Neo4j 2025.x that use recent versions of the Jetty web server (that is Jetty 12), the structure for URLs sent to the RDF description endpoint has become stricter. Passing a full URI containing encoded slashes (`%2F`) directly within the URL path is no longer permitted and will result in an `HTTP 400 Bad Request` error.
+Starting with Neo4j 5.26 and 2025.x that use recent versions of the Jetty web server (that is Jetty 12), the structure for URLs sent to the RDF description endpoint has become stricter. Passing a full URI containing encoded slashes (`%2F`) directly within the URL path is no longer permitted and will result in an `HTTP 400 Bad Request` error.
 
 Therefore, the `/rdf/<dbname>/describe/<nodeid or uri>` endpoint is changed.
 
