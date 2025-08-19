@@ -30,7 +30,7 @@ If you want have the http endpoint mounted on your DB server, you'll need to
 add the following line to your config. 
 
   ```
-  dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+  server.unmanaged_extension_classes=n10s.endpoint=/rdf
   ```
 In the desktop you'll be able to do this by clicking on the 
 three dots to the right hand side of your database and then select settings. 
@@ -42,7 +42,7 @@ You can add the fragment at the end of the file.
 it in the <NEO_HOME>/plugins directory of your Neo4j instance. 
 2. Add the following line to your <NEO_HOME>/conf/neo4j.conf
       ```
-      dbms.unmanaged_extension_classes=n10s.endpoint=/rdf
+      server.unmanaged_extension_classes=n10s.endpoint=/rdf
       ``` 
 3. Restart the server. 
 
