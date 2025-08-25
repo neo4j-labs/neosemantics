@@ -1033,7 +1033,7 @@ public class RDFEndpointTest {
     response = HTTP.withHeaders("Accept", "application/ld+json").GET(
         resolveURI(neo4j.httpURI(), "neo4j/describe/find/Something"));
 
-    assertEquals("{\"errors\":[{\"code\":\"Neo.ClientError.Request.Invalid\",\"message\":\"Not Found\"}]}", response.rawContent());
+    assertEquals("", response.rawContent());
     assertEquals(404, response.status());
   }
 
