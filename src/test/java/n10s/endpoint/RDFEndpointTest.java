@@ -1,22 +1,9 @@
 package n10s.endpoint;
 
-import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_ON_URI;
-import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
-import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
-import static org.junit.Assert.*;
-import static org.neo4j.internal.helpers.collection.Iterators.count;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.type.CollectionType;
 import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.io.Resources;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.text.MessageFormat;
-import java.util.*;
-
 import n10s.ModelTestUtils;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
@@ -25,32 +12,42 @@ import n10s.onto.load.OntoLoadProcedures;
 import n10s.quadrdf.delete.QuadRDFDeleteProcedures;
 import n10s.quadrdf.load.QuadRDFLoadProcedures;
 import n10s.rdf.RDFProcedures;
-import n10s.rdf.aggregate.CollectTriples;
 import n10s.rdf.delete.RDFDeleteProcedures;
-import n10s.rdf.export.ExportProcessor;
 import n10s.rdf.export.RDFExportProcedures;
 import n10s.rdf.load.RDFLoadProcedures;
-import n10s.rdf.stream.RDFStreamProcedures;
 import n10s.validation.ValidationProcedures;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
-import org.eclipse.rdf4j.query.algebra.Str;
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.junit.*;
-import org.neo4j.driver.Config;
-import org.neo4j.driver.Driver;
-import org.neo4j.driver.GraphDatabase;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Session;
+import org.neo4j.driver.*;
 import org.neo4j.driver.types.Node;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.harness.junit.rule.Neo4jRule;
-import org.neo4j.test.server.HTTP;
-import org.neo4j.test.server.HTTP.Response;
+
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
+
+import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
+import static n10s.graphconfig.Params.PREFIX_SEPARATOR;
+import static org.junit.Assert.*;
+import static org.neo4j.internal.helpers.collection.Iterators.count;
 
 /**
  * Created by jbarrasa on 14/09/2016.
+ * Refactored to use Java HttpClient instead of org.neo4j.test.server.HTTP
  */
 public class RDFEndpointTest {
 
@@ -58,6 +55,11 @@ public class RDFEndpointTest {
   public static GraphDatabaseService graphDatabaseService;
   public static GraphDatabaseService tempGDBs;
   public static Driver tempDriver;
+
+  // New HttpClient instance
+  private static final HttpClient client = HttpClient.newBuilder()
+          .followRedirects(HttpClient.Redirect.ALWAYS)
+          .build();
 
   @ClassRule
   public static Neo4jRule neo4j = new Neo4jRule().withUnmanagedExtension("/rdf", RDFEndpoint.class)
@@ -73,65 +75,65 @@ public class RDFEndpointTest {
           .withProcedure(ValidationProcedures.class)
           .withProcedure(RDFExportProcedures.class);
 
-    @ClassRule
-    public static Neo4jRule temp = new Neo4jRule()
+  @ClassRule
+  public static Neo4jRule temp = new Neo4jRule()
           .withProcedure(RDFLoadProcedures.class)
           .withProcedure(GraphConfigProcedures.class);
-    @BeforeClass
-    public static void init() {
-        driver = GraphDatabase.driver(neo4j.boltURI(),
-                Config.builder().withoutEncryption().build());
+  @BeforeClass
+  public static void init() {
+    driver = GraphDatabase.driver(neo4j.boltURI(),
+            Config.builder().withoutEncryption().build());
 
-        tempDriver = GraphDatabase.driver(temp.boltURI(),
-                Config.builder().withoutEncryption().build());
-    }
-    @Before
-    public void cleanDatabase() {
-        driver.session().run("match (n) detach delete n").consume();
-        driver.session().run("drop constraint n10s_unique_uri if exists").consume();
-        driver.session().run("drop index uri_index if exists").consume();
+    tempDriver = GraphDatabase.driver(temp.boltURI(),
+            Config.builder().withoutEncryption().build());
+  }
+  @Before
+  public void cleanDatabase() {
+    driver.session().run("match (n) detach delete n").consume();
+    driver.session().run("drop constraint n10s_unique_uri if exists").consume();
+    driver.session().run("drop index uri_index if exists").consume();
 
 
-        tempDriver.session().run("match (n) detach delete n").consume();
-        tempDriver.session().run("drop constraint n10s_unique_uri if exists").consume();
-        tempDriver.session().run("drop index uri_index if exists").consume();
+    tempDriver.session().run("match (n) detach delete n").consume();
+    tempDriver.session().run("drop constraint n10s_unique_uri if exists").consume();
+    tempDriver.session().run("drop index uri_index if exists").consume();
 
-        graphDatabaseService = neo4j.defaultDatabaseService();
-        tempGDBs = temp.defaultDatabaseService();
-    }
+    graphDatabaseService = neo4j.defaultDatabaseService();
+    tempGDBs = temp.defaultDatabaseService();
+  }
 
 
   private static final ObjectMapper jsonMapper = new ObjectMapper();
 
   private static final CollectionType collectionType = TypeFactory
-      .defaultInstance().constructCollectionType(Set.class, Map.class);
+          .defaultInstance().constructCollectionType(Set.class, Map.class);
   private String emptyJsonLd = "{\n"
-      + "  \"@context\" : {\n"
-      + "    \"n4sch\" : \"neo4j://graph.schema#\",\n"
-      + "    \"n4ind\" : \"neo4j://graph.individuals#\"\n"
-      + "  }\n"
-      + "}";
+          + "  \"@context\" : {\n"
+          + "    \"n4sch\" : \"neo4j://graph.schema#\",\n"
+          + "    \"n4ind\" : \"neo4j://graph.individuals#\"\n"
+          + "  }\n"
+          + "}";
 
   @Test
   public void testGetNodeById() throws Exception {
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-          "MERGE (a:Category {catName: 'Actor'})\n" +
-          "MERGE (d:Category {catName: 'Director'})\n" +
-          "MERGE (c:Category {catName: 'Critic'})\n" +
-          "CREATE (a)-[:SCO]->(p)\n" +
-          "CREATE (d)-[:SCO]->(p)\n" +
-          "CREATE (c)-[:SCO]->(p)\n" +
-          "RETURN *";
+              "MERGE (a:Category {catName: 'Actor'})\n" +
+              "MERGE (d:Category {catName: 'Director'})\n" +
+              "MERGE (c:Category {catName: 'Critic'})\n" +
+              "CREATE (a)-[:SCO]->(p)\n" +
+              "CREATE (d)-[:SCO]->(p)\n" +
+              "CREATE (c)-[:SCO]->(p)\n" +
+              "RETURN *";
       tx.execute(ontoCreation);
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -152,35 +154,39 @@ public class RDFEndpointTest {
     }
 
     // When
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id.toString())))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = String.format("[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
-        + "  \"neo4j://graph.schema#FRIEND_OF\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals%2$s\"\n"
-        + "  } ]\n"
-        + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
-        + "  \"@type\" : [ \"neo4j://graph.schema#Critic\" ],\n"
-        + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#born\" : [ {\n"
-        + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
-        + "    \"@value\" : \"1960\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#name\" : [ {\n"
-        + "    \"@value\" : \"Hugo Weaving\"\n"
-        + "  } ]\n"
-        + "} ]",
+                    + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
+                    + "  \"neo4j://graph.schema#FRIEND_OF\" : [ {\n"
+                    + "    \"@id\" : \"neo4j://graph.individuals%2$s\"\n"
+                    + "  } ]\n"
+                    + "}, {\n"
+                    + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
+                    + "  \"@type\" : [ \"neo4j://graph.schema#Critic\" ],\n"
+                    + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
+                    + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
+                    + "  } ],\n"
+                    + "  \"neo4j://graph.schema#born\" : [ {\n"
+                    + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+                    + "    \"@value\" : \"1960\"\n"
+                    + "  } ],\n"
+                    + "  \"neo4j://graph.schema#name\" : [ {\n"
+                    + "    \"@value\" : \"Hugo Weaving\"\n"
+                    + "  } ]\n"
+                    + "} ]",
             nameToId.get("Carrie-Anne Moss"),
             nameToId.get("Hugo Weaving"),
             nameToId.get("Andy Wachowski")
-            );
-    assertEquals(200, response.status());
+    );
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
   }
 
@@ -230,8 +236,12 @@ public class RDFEndpointTest {
     }
 
     // When
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=http%3A%2F%2Fneo4j.com%2Fmovies%2FKeanu"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=http%3A%2F%2Fneo4j.com%2Fmovies%2FKeanu")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "{\n" +
             "  \"@id\" : \"http://neo4j.com/movies/Keanu\",\n" +
@@ -246,13 +256,17 @@ public class RDFEndpointTest {
             "    \"neovoc\" : \"neo4j://graph.schema#\" " +
             "  }\n" +
             "}";
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
     // When
-    response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo"));
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=http%3A%2F%2Fneo4j.com%2Fmovies%2FHugo")))
+            .header("Accept", "text/x-turtlestar")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "@prefix neovoc: <neo4j://graph.schema#> .\n" +
@@ -269,9 +283,9 @@ public class RDFEndpointTest {
             "<http://neo4j.com/movies/Carrie> neovoc:FRIEND_OF <http://neo4j.com/movies/Hugo> .\n";
 
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
+            .compareModels(expected, RDFFormat.TURTLESTAR, response.body(), RDFFormat.TURTLESTAR));
 
   }
 
@@ -307,8 +321,13 @@ public class RDFEndpointTest {
     map.put("cypher", "MATCH s = (:Cable{id: 4 })--(:CableRoutingPoint{id: 2 }) RETURN s");
     map.put("format", "Turtle-star");
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
@@ -329,9 +348,9 @@ public class RDFEndpointTest {
             "  n4sch:createdAt \"2018-04-05T12:34:00+02:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> .\n" +
             "\n" ;
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
+            .compareModels(expected, RDFFormat.TURTLESTAR, response.body(), RDFFormat.TURTLESTAR));
 
   }
 
@@ -345,17 +364,17 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
-        String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://person#1', name:'Keanu Reeves', born:1964})\n" +
-            "CREATE (Carrie:Director {uri:'neo4j://person#2', name:'Carrie-Anne Moss', born:1967})\n" +
-            "CREATE (Laurence:Director {uri:'neo4j://person#3', name:'Laurence Fishburne', born:1961})\n" +
-            "CREATE (Hugo:Critic {uri:'neo4j://person#4', name:'Hugo Weaving', born:1960})\n" +
-            "CREATE (AndyW:Actor {uri:'neo4j://person#5', name:'Andy Wachowski', born:1967})\n" +
-            "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
-            "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
-        tx.execute(dataInsertion);
+      String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://person#1', name:'Keanu Reeves', born:1964})\n" +
+              "CREATE (Carrie:Director {uri:'neo4j://person#2', name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {uri:'neo4j://person#3', name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {uri:'neo4j://person#4', name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {uri:'neo4j://person#5', name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
+      tx.execute(dataInsertion);
 
-        tx.execute("call n10s.mapping.add(\"http://schema.org/something\",\"STH\")");
-        tx.commit();
+      tx.execute("call n10s.mapping.add(\"http://schema.org/something\",\"STH\")");
+      tx.commit();
 
     }
 
@@ -363,30 +382,35 @@ public class RDFEndpointTest {
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n)  RETURN collect(n) as col");
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "<neo4j://person#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://person#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://person#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
-        + "<neo4j://person#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
-        + "<neo4j://person#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
-        + "<neo4j://person#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://person#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://person#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://person#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://person#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
-        + "<neo4j://person#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
-        + "<neo4j://person#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://person#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
-        + "<neo4j://person#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
-        + "<neo4j://person#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
-    assertEquals(200, response.status());
+            + "<neo4j://person#5> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://person#5> <neo4j://graph.schema#name> \"Andy Wachowski\" .\n"
+            + "<neo4j://person#4> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Critic> .\n"
+            + "<neo4j://person#5> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Actor> .\n"
+            + "<neo4j://person#2> <neo4j://graph.schema#born> \"1967\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://person#3> <neo4j://graph.schema#born> \"1961\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://person#4> <neo4j://graph.schema#born> \"1960\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://person#1> <neo4j://graph.schema#born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<neo4j://person#1> <neo4j://graph.schema#name> \"Keanu Reeves\" .\n"
+            + "<neo4j://person#3> <neo4j://graph.schema#name> \"Laurence Fishburne\" .\n"
+            + "<neo4j://person#2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+            + "<neo4j://person#3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Director> .\n"
+            + "<neo4j://person#4> <neo4j://graph.schema#name> \"Hugo Weaving\" .\n"
+            + "<neo4j://person#2> <neo4j://graph.schema#name> \"Carrie-Anne Moss\" .\n";
+    assertEquals(200, response.statusCode());
 
-    String responseString = response.rawContent();
+    String responseString = response.body();
 
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, responseString, RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, responseString, RDFFormat.TURTLE));
 
   }
 
@@ -437,18 +461,22 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + URLEncoder.encode("http://www.example.com/example#Enitity1Individual", StandardCharsets.UTF_8) + "&format=RDF/XML"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + URLEncoder.encode("http://www.example.com/example#Enitity1Individual", StandardCharsets.UTF_8) + "&format=RDF/XML")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
             "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.example.com/example#Enitity1> .\n" +
-            "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requires> <http://www.example.com/example#Entity2Individual> .\n" +
-            "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requiresProp> \"12345\" ." +
-            "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .";
-    assertEquals(200, response.status());
-    System.out.println(response.rawContent());
+                    "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requires> <http://www.example.com/example#Entity2Individual> .\n" +
+                    "<http://www.example.com/example#Enitity1Individual> <http://www.example.com/example#requiresProp> \"12345\" ." +
+                    "<http://www.example.com/example#Enitity1Individual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#NamedIndividual> .";
+    assertEquals(200, response.statusCode());
+    System.out.println(response.body());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.RDFXML));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.RDFXML));
 
   }
 
@@ -464,7 +492,7 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       tx.execute(Files.readString(Paths.get(
-          RDFEndpointTest.class.getClassLoader().getResource("movies.cypher").getPath())));
+              RDFEndpointTest.class.getClassLoader().getResource("movies.cypher").getPath())));
 
       tx.commit();
     }
@@ -477,8 +505,8 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result execute = tx.execute("call n10s.validation.shacl.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("shacl/person2-shacl.ttl")
-              .toURI() + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("shacl/person2-shacl.ttl")
+                      .toURI() + "','Turtle')");
       assertTrue(execute.hasNext());
       Map<String, Object> next = execute.next();
       tx.commit();
@@ -493,34 +521,39 @@ public class RDFEndpointTest {
 
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n:Movie { title: \"That Thing You Do\"})--(x) "
-        + "RETURN collect(distinct n) + collect(distinct x)");
+            + "RETURN collect(distinct n) + collect(distinct x)");
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = String.format(
-          "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
-        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
-        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals%4$s> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
-        + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
-        + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
-        + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
-        + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
-        + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .",
+            "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#title> \"That Thing You Do\" .\n"
+                    + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#name> \"Charlize Theron\" .\n"
+                    + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#born> \"1977\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+                    + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+                    + "<neo4j://graph.individuals%4$s> <http://schema.org/when> \"1996\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+                    + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#name> \"Tom Hanks\" .\n"
+                    + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#name> \"Liv Tyler\" .\n"
+                    + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+                    + "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Person> .\n"
+                    + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#born> \"1956\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+                    + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#tagline> \"In every life there comes a time when that thing you dream becomes that thing you do\" .\n"
+                    + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+                    + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#born> \"1975\"^^<http://www.w3.org/2001/XMLSchema#long> .",
             nameToId.get("Charlize Theron"),
             nameToId.get("Liv Tyler"),
             nameToId.get("Tom Hanks"),
             nameToId.get("That Thing You Do")
-            );
+    );
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -537,8 +570,8 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result execute = tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("multival.ttl")
-              .toURI() + "','Turtle',{})");
+              RDFEndpointTest.class.getClassLoader().getResource("multival.ttl")
+                      .toURI() + "','Turtle',{})");
       Map<String, Object> next = execute.next();
       assertEquals(9L, next.get("triplesLoaded"));
 
@@ -548,16 +581,21 @@ public class RDFEndpointTest {
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n) RETURN collect(n) as col");
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expectedNoNonResources = "<http://example.org/vocab/show/218> <http://example.org/vocab/show/producer> \"Joanna Smith\" .\n"
-        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/localName> \"Cette Série des Années Septante\" .\n"
-        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/showId> \"218\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/availableInLang> \"ES\" .";
-    assertEquals(200, response.status());
+            + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/localName> \"Cette Série des Années Septante\" .\n"
+            + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/showId> \"218\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "<http://example.org/vocab/show/218> <http://example.org/vocab/show/availableInLang> \"ES\" .";
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expectedNoNonResources, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expectedNoNonResources, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -566,12 +604,12 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH { hoursADay: 8 } ]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF  { since: 'the early days' }]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
 
@@ -589,27 +627,30 @@ public class RDFEndpointTest {
     }
 
     // When
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/x-turtlestar").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=")
-            + id3.toString());
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + id3.toString()))
+            .header("Accept", "text/x-turtlestar")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = String.format( "@prefix neoind: <neo4j://graph.individuals#> .\n"
-        + "@prefix neovoc: <neo4j://graph.schema#> .\n"
-        + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "\n"
-        + "neoind:%2$s a neovoc:Critic;\n"
-        + "  neovoc:WORKS_WITH neoind:%3$s;\n"
-        + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
-        + "  neovoc:name \"Hugo Weaving\" .\n"
-        + "\n"
-        + "<<neoind:%1$s neovoc:FRIEND_OF neoind:%2$s>> neovoc:since \"the early days\" .\n"
-        + "\n"
-        + "<<neoind:%2$s neovoc:WORKS_WITH neoind:%3$s>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-        + "\n"
-        + "neoind:%1$s neovoc:FRIEND_OF neoind:%2$s .", id1, id3, id4);
-    assertEquals(200, response.status());
+            + "@prefix neovoc: <neo4j://graph.schema#> .\n"
+            + "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+            + "\n"
+            + "neoind:%2$s a neovoc:Critic;\n"
+            + "  neovoc:WORKS_WITH neoind:%3$s;\n"
+            + "  neovoc:born \"1960\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+            + "  neovoc:name \"Hugo Weaving\" .\n"
+            + "\n"
+            + "<<neoind:%1$s neovoc:FRIEND_OF neoind:%2$s>> neovoc:since \"the early days\" .\n"
+            + "\n"
+            + "<<neoind:%2$s neovoc:WORKS_WITH neoind:%3$s>> neovoc:hoursADay \"8\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+            + "\n"
+            + "neoind:%1$s neovoc:FRIEND_OF neoind:%2$s .", id1, id3, id4);
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLESTAR, response.rawContent(), RDFFormat.TURTLESTAR));
+            .compareModels(expected, RDFFormat.TURTLESTAR, response.body(), RDFFormat.TURTLESTAR));
 
   }
 
@@ -618,21 +659,21 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-          "MERGE (a:Category {catName: 'Actor'})\n" +
-          "MERGE (d:Category {catName: 'Director'})\n" +
-          "MERGE (c:Category {catName: 'Critic'})\n" +
-          "CREATE (a)-[:SCO]->(p)\n" +
-          "CREATE (d)-[:SCO]->(p)\n" +
-          "CREATE (c)-[:SCO]->(p)\n" +
-          "RETURN *";
+              "MERGE (a:Category {catName: 'Actor'})\n" +
+              "MERGE (d:Category {catName: 'Director'})\n" +
+              "MERGE (c:Category {catName: 'Critic'})\n" +
+              "CREATE (a)-[:SCO]->(p)\n" +
+              "CREATE (d)-[:SCO]->(p)\n" +
+              "CREATE (c)-[:SCO]->(p)\n" +
+              "RETURN *";
       tx.execute(ontoCreation);
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -649,29 +690,29 @@ public class RDFEndpointTest {
     session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
     session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE', typesToLabels: true } )");
     org.neo4j.driver.Result importResults
-        = session.run("CALL n10s.rdf.import.fetch('" +
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=")
-        + id +
-        "','Turtle')");
+            = session.run("CALL n10s.rdf.import.fetch('" +
+            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=")
+            + id +
+            "','Turtle')");
 
-      Map<String, Object> singleResult = importResults
-          .single().asMap();
+    Map<String, Object> singleResult = importResults
+            .single().asMap();
 
-      assertEquals(5L, singleResult.get("triplesLoaded"));
-      org.neo4j.driver.Result postImport = session.run("MATCH (n:Resource:Critic) RETURN n");
-      Node criticPostImport = postImport.next().get("n").asNode();
+    assertEquals(5L, singleResult.get("triplesLoaded"));
+    org.neo4j.driver.Result postImport = session.run("MATCH (n:Resource:Critic) RETURN n");
+    Node criticPostImport = postImport.next().get("n").asNode();
 
-      try (Transaction tx = graphDatabaseService.beginTx()) {
+    try (Transaction tx = graphDatabaseService.beginTx()) {
 
-        Result result = tx.execute("MATCH (n:Critic) WHERE NOT n:Resource "
-            + " RETURN n.born AS born, n.name AS name,  id(n) AS id");
-        Map<String, Object> criticPreImport = result.next();
-        assertEquals(criticPreImport.get("name"), criticPostImport.get("name").asString());
-        assertEquals(criticPreImport.get("born"), criticPostImport.get("born").asLong());
-        assertNull(criticPreImport.get("uri"));
-        assertEquals("neo4j://graph.individuals#" + criticPreImport.get("id"),
-            criticPostImport.get("uri").asString());
-      }
+      Result result = tx.execute("MATCH (n:Critic) WHERE NOT n:Resource "
+              + " RETURN n.born AS born, n.name AS name,  id(n) AS id");
+      Map<String, Object> criticPreImport = result.next();
+      assertEquals(criticPreImport.get("name"), criticPostImport.get("name").asString());
+      assertEquals(criticPreImport.get("born"), criticPostImport.get("born").asLong());
+      assertNull(criticPreImport.get("uri"));
+      assertEquals("neo4j://graph.individuals#" + criticPreImport.get("id"),
+              criticPostImport.get("uri").asString());
+    }
   }
 
 
@@ -686,29 +727,32 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: \"IGNORE\" })");
       tx.execute("CALL n10s.onto.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
-              .toURI() + "','RDF/XML',{})");
+              RDFEndpointTest.class.getClassLoader().getResource("onto1.owl")
+                      .toURI() + "','RDF/XML',{})");
 
       tx.commit();
     }
     //  check data is  correctly loaded
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute("match (n:Class " +
-          "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})"
-          +
-          "-[r]-(o) " +
-          "return n.name as name, id(n) as id, type(r) as reltype, o.uri as otheruri");
+              "{ uri: \"http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength\"})"
+              +
+              "-[r]-(o) " +
+              "return n.name as name, id(n) as id, type(r) as reltype, o.uri as otheruri");
       Map<String, Object> next = result.next();
       assertEquals("RF_signal_strength", next.get("name"));
       assertEquals("SCO", next.get("reltype"));
       assertEquals("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key",
-          next.get("otheruri"));
+              next.get("otheruri"));
     }
 
     // then export elements and check the output is right
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
-                "http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength");
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + "http%3A%2F%2Fn4j.com%2Ftst1%2Fontologies%2F2017%2F4%2FCyber_EA_Smart_City%23RF_signal_strength"))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "\n" +
@@ -716,9 +760,9 @@ public class RDFEndpointTest {
             "  n4sch:SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key>;\n" +
             "  n4sch:name \"RF_signal_strength\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
 
   }
@@ -761,8 +805,12 @@ public class RDFEndpointTest {
       tx.commit();
     }
     // then export elements and check the output is right
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id)))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix n4sch: <neo4j://graph.schema#> .\n" +
             "@prefix n4ind: <neo4j://graph.individuals#> .\n" +
@@ -771,18 +819,23 @@ public class RDFEndpointTest {
             "  n4sch:n4sch__SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key>;\n" +
             "  n4sch:n4sch__name \"RF_signal_strength\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
 
-    response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
                     URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
-                            "UTF-8"));
-    assertEquals(200, response.status());
+                            "UTF-8")))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
   }
 
   @Test
@@ -817,8 +870,12 @@ public class RDFEndpointTest {
     }
 
     // then export elements and check the output is right
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=" + id)))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "@prefix neovoc: <neo4j://graph.schema#> .\n" +
@@ -828,19 +885,22 @@ public class RDFEndpointTest {
             "  neovoc:SCO <http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#Vehicle_Key> ;\n" +
             "  neovoc:name \"RF_signal_strength\" .\n";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
-    
-    response = HTTP.withHeaders("Accept", "text/turtle").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
-                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
-                            StandardCharsets.UTF_8)
-    );
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
-    assertEquals(200, response.status());
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") +
+                    URLEncoder.encode("http://n4j.com/tst1/ontologies/2017/4/Cyber_EA_Smart_City#RF_signal_strength",
+                            StandardCharsets.UTF_8)))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -850,21 +910,21 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-          "MERGE (a:Category {catName: 'Actor'})\n" +
-          "MERGE (d:Category {catName: 'Director'})\n" +
-          "MERGE (c:Category {catName: 'Critic'})\n" +
-          "CREATE (a)-[:SCO]->(p)\n" +
-          "CREATE (d)-[:SCO]->(p)\n" +
-          "CREATE (c)-[:SCO]->(p)\n" +
-          "RETURN *";
+              "MERGE (a:Category {catName: 'Actor'})\n" +
+              "MERGE (d:Category {catName: 'Director'})\n" +
+              "MERGE (c:Category {catName: 'Critic'})\n" +
+              "CREATE (a)-[:SCO]->(p)\n" +
+              "CREATE (d)-[:SCO]->(p)\n" +
+              "CREATE (c)-[:SCO]->(p)\n" +
+              "RETURN *";
       tx.execute(ontoCreation);
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -872,7 +932,7 @@ public class RDFEndpointTest {
     Map<String, Object> preImport;
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx.execute(
-          "MATCH (n:Critic) RETURN n.born AS born, n.name AS name , n.uri as uri, id(n) as id");
+              "MATCH (n:Critic) RETURN n.born AS born, n.name AS name , n.uri as uri, id(n) as id");
       preImport = result.next();
       assertEquals(1960L, preImport.get("born"));
       assertNotNull(preImport.get("id"));
@@ -885,22 +945,22 @@ public class RDFEndpointTest {
     session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
     session.run("CALL n10s.graphconfig.init( { handleVocabUris: 'IGNORE' })");
     org.neo4j.driver.Result importResults
-        = session.run("CALL n10s.rdf.import.fetch('" +
-        resolveURI(neo4j.httpURI(), "neo4j/cypher") +
-        "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
-        + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
+            = session.run("CALL n10s.rdf.import.fetch('" +
+            resolveURI(neo4j.httpURI(), "neo4j/cypher") +
+            "','Turtle',{ headerParams: { Accept: \"text/turtle\"},"
+            + "payload: '{ \"cypher\": \"MATCH (x:Critic) RETURN x \"}'})");
 
-      Map<String, Object> singleResult = importResults
-          .single().asMap();
+    Map<String, Object> singleResult = importResults
+            .single().asMap();
 
-      assertEquals(3L, singleResult.get("triplesLoaded"));
-      org.neo4j.driver.Result postImport = session.run("MATCH (n:Resource:Critic) RETURN n");
-      Record next = postImport.next();
-      Node criticPostImport = next.get("n").asNode();
-      assertEquals(preImport.get("name"), criticPostImport.get("name").asString());
-      assertEquals(preImport.get("born"), criticPostImport.get("born").asLong());
-      assertEquals("neo4j://graph.individuals#" + preImport.get("id"),
-          criticPostImport.get("uri").asString());
+    assertEquals(3L, singleResult.get("triplesLoaded"));
+    org.neo4j.driver.Result postImport = session.run("MATCH (n:Resource:Critic) RETURN n");
+    Record next = postImport.next();
+    Node criticPostImport = next.get("n").asNode();
+    assertEquals(preImport.get("name"), criticPostImport.get("name").asString());
+    assertEquals(preImport.get("born"), criticPostImport.get("born").asLong());
+    assertEquals("neo4j://graph.individuals#" + preImport.get("id"),
+            criticPostImport.get("uri").asString());
   }
 
 
@@ -909,21 +969,21 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: ' Person'})\n" +
-          "MERGE (a:Category {catName: 'Actor'})\n" +
-          "MERGE (d:Category {catName: 'Director'})\n" +
-          "MERGE (c:Category {catName: 'Critic'})\n" +
-          "CREATE (a)-[:SCO]->(p)\n" +
-          "CREATE (d)-[:SCO]->(p)\n" +
-          "CREATE (c)-[:SCO]->(p)\n" +
-          "RETURN *";
+              "MERGE (a:Category {catName: 'Actor'})\n" +
+              "MERGE (d:Category {catName: 'Director'})\n" +
+              "MERGE (c:Category {catName: 'Critic'})\n" +
+              "CREATE (a)-[:SCO]->(p)\n" +
+              "CREATE (d)-[:SCO]->(p)\n" +
+              "CREATE (c)-[:SCO]->(p)\n" +
+              "RETURN *";
       tx.execute(ontoCreation);
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1964})\n" +
-          "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
-          "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1964})\n" +
+              "CREATE (Hugo)-[:WORKS_WITH]->(AndyW)\n" +
+              "CREATE (Hugo)<-[:FRIEND_OF]-(Carrie)";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -934,48 +994,60 @@ public class RDFEndpointTest {
       assertNotNull(id);
     }
     // When
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/born/1961?valType=INTEGER"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/born/1961?valType=INTEGER")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 //        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=find/Director/born/1961?valType=INTEGER"));
 
     String expected = String.format("[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
-        + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
-        + "  \"neo4j://graph.schema#born\" : [ {\n"
-        + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
-        + "    \"@value\" : \"1961\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#name\" : [ {\n"
-        + "    \"@value\" : \"Laurence Fishburne\"\n"
-        + "  } ]\n"
-        + "} ]", id.toString());
+            + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
+            + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
+            + "  \"neo4j://graph.schema#born\" : [ {\n"
+            + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+            + "    \"@value\" : \"1961\"\n"
+            + "  } ],\n"
+            + "  \"neo4j://graph.schema#name\" : [ {\n"
+            + "    \"@value\" : \"Laurence Fishburne\"\n"
+            + "  } ]\n"
+            + "} ]", id.toString());
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
     // When
-    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/name/Laurence%20Fishburne"));
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe/find/Director/name/Laurence%20Fishburne")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     expected = String.format("[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
-        + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
-        + "  \"neo4j://graph.schema#born\" : [ {\n"
-        + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
-        + "    \"@value\" : \"1961\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#name\" : [ {\n"
-        + "    \"@value\" : \"Laurence Fishburne\"\n"
-        + "  } ]\n"
-        + "} ]", id.toString());
-    assertEquals(200, response.status());
+            + "  \"@id\" : \"neo4j://graph.individuals#%s\",\n"
+            + "  \"@type\" : [ \"neo4j://graph.schema#Director\" ],\n"
+            + "  \"neo4j://graph.schema#born\" : [ {\n"
+            + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+            + "    \"@value\" : \"1961\"\n"
+            + "  } ],\n"
+            + "  \"neo4j://graph.schema#name\" : [ {\n"
+            + "    \"@value\" : \"Laurence Fishburne\"\n"
+            + "  } ]\n"
+            + "} ]", id.toString());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
     // When
-    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Actor/born/1964?valType=INTEGER"));
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe/find/Actor/born/1964?valType=INTEGER")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     Map<String,String> nameToId = new HashMap<>();
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -985,112 +1057,143 @@ public class RDFEndpointTest {
     }
 
     expected = String.format(
-  "[ {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
-        + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
-        + "  \"neo4j://graph.schema#born\" : [ {\n"
-        + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
-        + "    \"@value\" : \"1964\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#name\" : [ {\n"
-        + "    \"@value\" : \"Keanu Reeves\"\n"
-        + "  } ]\n"
-        + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
-        + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
-        + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
-        + "  } ]\n"
-        + "}, {\n"
-        + "  \"@id\" : \"neo4j://graph.individuals%3$s\",\n"
-        + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
-        + "  \"neo4j://graph.schema#born\" : [ {\n"
-        + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
-        + "    \"@value\" : \"1964\"\n"
-        + "  } ],\n"
-        + "  \"neo4j://graph.schema#name\" : [ {\n"
-        + "    \"@value\" : \"Andy Wachowski\"\n"
-        + "  } ]\n"
-        + "} ]",
-          nameToId.get("Keanu Reeves"),   //0
-          nameToId.get("Hugo Weaving"),   //1
-          nameToId.get("Andy Wachowski") //2
+            "[ {\n"
+                    + "  \"@id\" : \"neo4j://graph.individuals%1$s\",\n"
+                    + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
+                    + "  \"neo4j://graph.schema#born\" : [ {\n"
+                    + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+                    + "    \"@value\" : \"1964\"\n"
+                    + "  } ],\n"
+                    + "  \"neo4j://graph.schema#name\" : [ {\n"
+                    + "    \"@value\" : \"Keanu Reeves\"\n"
+                    + "  } ]\n"
+                    + "}, {\n"
+                    + "  \"@id\" : \"neo4j://graph.individuals%2$s\",\n"
+                    + "  \"neo4j://graph.schema#WORKS_WITH\" : [ {\n"
+                    + "    \"@id\" : \"neo4j://graph.individuals%3$s\"\n"
+                    + "  } ]\n"
+                    + "}, {\n"
+                    + "  \"@id\" : \"neo4j://graph.individuals%3$s\",\n"
+                    + "  \"@type\" : [ \"neo4j://graph.schema#Actor\" ],\n"
+                    + "  \"neo4j://graph.schema#born\" : [ {\n"
+                    + "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n"
+                    + "    \"@value\" : \"1964\"\n"
+                    + "  } ],\n"
+                    + "  \"neo4j://graph.schema#name\" : [ {\n"
+                    + "    \"@value\" : \"Andy Wachowski\"\n"
+                    + "  } ]\n"
+                    + "} ]",
+            nameToId.get("Keanu Reeves"),   //0
+            nameToId.get("Hugo Weaving"),   //1
+            nameToId.get("Andy Wachowski") //2
 
     );
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
   }
 
   @Test
   public void testFindNodeByLabelAndPropertyNotFoundOrInvalid() throws Exception {
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe/find/WrongLabel/wrongProperty/someValue"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe/find/WrongLabel/wrongProperty/someValue")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     // TODO - document it??
-    assertEquals(emptyJsonLd, response.rawContent());
-    assertEquals(200, response.status());
+    assertEquals(emptyJsonLd, response.body());
+    assertEquals(200, response.statusCode());
 
-    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe/find/Something"));
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe/find/Something")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals("", response.rawContent());
-    assertEquals(404, response.status());
+    assertEquals("{\"errors\":[{\"code\":\"Neo.ClientError.Request.Invalid\",\"message\":\"Not Found\"}]}", response.body());
+    assertEquals(404, response.statusCode());
   }
 
   @Test
   public void testGetNodeByUriOrIdNotFoundOrInvalid() throws Exception {
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/n3").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999"));
-    assertEquals(200, response.status());
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999")))
+            .header("Accept", "text/n3")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    assertEquals(200, response.statusCode());
     assertEquals("@prefix n4sch: <neo4j://graph.schema#> .\n" +
-            "@prefix n4ind: <neo4j://graph.individuals#> .\n", response.rawContent());
+            "@prefix n4ind: <neo4j://graph.individuals#> .\n", response.body());
 
-    response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999"));
-    assertEquals(200, response.status());
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999")))
+            .header("Accept", "application/rdf+xml")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    assertEquals(200, response.statusCode());
     assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             "<rdf:RDF\n" +
             "\txmlns:n4sch=\"neo4j://graph.schema#\"\n" +
             "\txmlns:n4ind=\"neo4j://graph.individuals#\"\n" +
             "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
             "\n" +
-            "</rdf:RDF>", response.rawContent());
+            "</rdf:RDF>", response.body());
 
-    response = HTTP.withHeaders("Accept", "application/ld+json").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=adb"));
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=adb")))
+            .header("Accept", "application/ld+json")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals("[ ]", response.rawContent());
-    assertEquals(200, response.status());
+    assertEquals("[ ]", response.body());
+    assertEquals(200, response.statusCode());
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init()");
       tx.commit();
     }
 
-    response = HTTP.withHeaders("Accept", "text/n3").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999"));
-    assertEquals(200, response.status());
-    assertEquals("", response.rawContent());
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999")))
+            .header("Accept", "text/n3")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    assertEquals(200, response.statusCode());
+    assertEquals("", response.body());
 
-    response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999"));
-    assertEquals(200, response.status());
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=9999999")))
+            .header("Accept", "application/rdf+xml")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
+    assertEquals(200, response.statusCode());
     assertEquals("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
             "<rdf:RDF\n" +
             "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
             "\n" +
-            "</rdf:RDF>", response.rawContent());
+            "</rdf:RDF>", response.body());
 
   }
 
   @Test
   public void testPing() throws Exception {
-    HTTP.Response response = HTTP.GET(
-        resolveURI(neo4j.httpURI(), "ping"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "ping")))
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals("{\"ping\":\"here!\"}", response.rawContent());
-    assertEquals(200, response.status());
+    assertEquals("{\"ping\":\"here!\"}", response.body());
+    assertEquals(200, response.statusCode());
 
   }
 
@@ -1099,19 +1202,19 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String ontoCreation = "MERGE (p:Category {catName: 'Person'})\n" +
-          "MERGE (a:Category {catName: 'Actor'})\n" +
-          "MERGE (d:Category {catName: 'Director'})\n" +
-          "MERGE (c:Category {catName: 'Critic'})\n" +
-          "CREATE (a)-[:SCO]->(p)\n" +
-          "CREATE (d)-[:SCO]->(p)\n" +
-          "CREATE (c)-[:SCO]->(p)\n" +
-          "RETURN *";
+              "MERGE (a:Category {catName: 'Actor'})\n" +
+              "MERGE (d:Category {catName: 'Director'})\n" +
+              "MERGE (c:Category {catName: 'Critic'})\n" +
+              "CREATE (a)-[:SCO]->(p)\n" +
+              "CREATE (d)-[:SCO]->(p)\n" +
+              "CREATE (c)-[:SCO]->(p)\n" +
+              "RETURN *";
       tx.execute(ontoCreation);
       String dataInsertion = "CREATE (Keanu:Actor {name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})";
+              "CREATE (Carrie:Director {name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {name:'Andy Wachowski', born:1967})";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -1132,45 +1235,60 @@ public class RDFEndpointTest {
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "MATCH (n:Category)--(:Category) RETURN distinct n LIMIT 4");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
-        String.format(
-              "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#catName> \"Critic\" .\n"
-            + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#catName> \"Person\" .\n"
-            + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#catName> \"Director\" .\n"
-            + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
-            + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#catName> \"Actor\" .\n",
-                nameToId.get("Critic"),
-                nameToId.get("Person"),
-                nameToId.get("Director"),
-                nameToId.get("Actor")
-        );
+            String.format(
+                    "<neo4j://graph.individuals%1$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+                            + "<neo4j://graph.individuals%1$s> <neo4j://graph.schema#catName> \"Critic\" .\n"
+                            + "<neo4j://graph.individuals%2$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+                            + "<neo4j://graph.individuals%2$s> <neo4j://graph.schema#catName> \"Person\" .\n"
+                            + "<neo4j://graph.individuals%3$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+                            + "<neo4j://graph.individuals%3$s> <neo4j://graph.schema#catName> \"Director\" .\n"
+                            + "<neo4j://graph.individuals%4$s> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Category> .\n"
+                            + "<neo4j://graph.individuals%4$s> <neo4j://graph.schema#catName> \"Actor\" .\n",
+                    nameToId.get("Critic"),
+                    nameToId.get("Person"),
+                    nameToId.get("Director"),
+                    nameToId.get("Actor")
+            );
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
     // request passing serialisation format as request param
     map.put("format", "RDF/XML");
-    response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.RDFXML));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.RDFXML));
 
     map.put("mappedElemsOnly", "true");
     map.remove("format");
-    response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals(200, response.status());
-    assertEquals("", response.rawContent());
+    assertEquals(200, response.statusCode());
+    assertEquals("", response.body());
 
   }
 
@@ -1185,11 +1303,11 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       String dataInsertion = "CREATE (Keanu:Actor {uri:'neo4j://graph.individuals#1', name:'Keanu Reeves', born:1964})\n" +
-          "CREATE (Carrie:Director {uri:'neo4j://graph.individuals#2', name:'Carrie-Anne Moss', born:1967})\n" +
-          "CREATE (Laurence:Director {uri:'neo4j://graph.individuals#3', name:'Laurence Fishburne', born:1961})\n" +
-          "CREATE (Hugo:Critic {uri:'neo4j://graph.individuals#4', name:'Hugo Weaving', born:1960})\n" +
-          "CREATE (AndyW:Actor {uri:'neo4j://graph.individuals#5', name:'Andy Wachowski', born:1967}) "
-          + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {uri:'neo4j://graph.individuals#6', title: 'The Matrix'})";
+              "CREATE (Carrie:Director {uri:'neo4j://graph.individuals#2', name:'Carrie-Anne Moss', born:1967})\n" +
+              "CREATE (Laurence:Director {uri:'neo4j://graph.individuals#3', name:'Laurence Fishburne', born:1961})\n" +
+              "CREATE (Hugo:Critic {uri:'neo4j://graph.individuals#4', name:'Hugo Weaving', born:1960})\n" +
+              "CREATE (AndyW:Actor {uri:'neo4j://graph.individuals#5', name:'Andy Wachowski', born:1967}) "
+              + "CREATE (Keanu)-[:ACTED_IN]->(:Movie {uri:'neo4j://graph.individuals#6', title: 'The Matrix'})";
       tx.execute(dataInsertion);
 
       tx.execute("CALL n10s.mapping.add('http://schema.org/Person','Actor')");
@@ -1213,35 +1331,45 @@ public class RDFEndpointTest {
     cypherParams.put("actorName", "Keanu Reeves");
     map.put("cypherParams", cypherParams);
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
-        "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://graph.individuals#6> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
-            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://graph.individuals#6> <neo4j://graph.schema#title> \"The Matrix\" .\n"
-            + "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
-            + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .";
+            "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+                    + "<neo4j://graph.individuals#6> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#Movie> .\n"
+                    + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+                    + "<neo4j://graph.individuals#6> <neo4j://graph.schema#title> \"The Matrix\" .\n"
+                    + "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
+                    + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
     map.put("mappedElemsOnly", "true");
-    response = HTTP.withHeaders("Accept", "text/plain").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expectedOnlyMapped =
-        "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
-            + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
-            + "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
-            + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
+            "<neo4j://graph.individuals#1> <http://schema.org/inMovie> <neo4j://graph.individuals#6> .\n"
+                    + "<neo4j://graph.individuals#1> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://schema.org/Person> .\n"
+                    + "<neo4j://graph.individuals#1> <http://schema.org/dob> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long> .\n"
+                    + "<neo4j://graph.individuals#1> <http://schema.org/familyName> \"Keanu Reeves\" .\n";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expectedOnlyMapped, RDFFormat.NTRIPLES, response.rawContent(),
-            RDFFormat.NTRIPLES));
+            .compareModels(expectedOnlyMapped, RDFFormat.NTRIPLES, response.body(),
+                    RDFFormat.NTRIPLES));
 
 
   }
@@ -1250,14 +1378,14 @@ public class RDFEndpointTest {
   public void testontoOnLPG() throws Exception {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       String dataInsertion =
-          "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
-              "CREATE (mtrx:Movie:Resource {title:'The Matrix', released:2001})\n" +
-              "CREATE (dir:Director:Resource {name:'Laurence Fishburne', born:1961})\n" +
-              "CREATE (cri:Critic:Resource {name:'Hugo Weaving', born:1960})\n" +
-              "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
-              "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
-              "CREATE (cri)-[:RATED]->(mtrx)\n" +
-              "RETURN *";
+              "CREATE (kean:Actor:Resource {name:'Keanu Reeves', born:1964})\n" +
+                      "CREATE (mtrx:Movie:Resource {title:'The Matrix', released:2001})\n" +
+                      "CREATE (dir:Director:Resource {name:'Laurence Fishburne', born:1961})\n" +
+                      "CREATE (cri:Critic:Resource {name:'Hugo Weaving', born:1960})\n" +
+                      "CREATE (kean)-[:ACTED_IN]->(mtrx)\n" +
+                      "CREATE (dir)-[:DIRECTED]->(mtrx)\n" +
+                      "CREATE (cri)-[:RATED]->(mtrx)\n" +
+                      "RETURN *";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -1266,53 +1394,57 @@ public class RDFEndpointTest {
       Result result = tx.execute("MATCH (n:Critic) RETURN id(n) AS id ");
       assertEquals(1, count(result));
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/onto"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/onto")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
-        "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
-                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n" +
-                "<neo4j://graph.schema#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<neo4j://graph.schema#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
-                "<neo4j://graph.schema#released> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
-                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
-                "<neo4j://graph.schema#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
-                "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#label> \"title\" .\n" +
-                "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
-                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#label> \"released\" .\n" +
-                "<neo4j://graph.schema#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<neo4j://graph.schema#title> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
-                "<neo4j://graph.schema#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
-                "<neo4j://graph.schema#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n" +
-                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
-                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
-                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
-                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
-                "<neo4j://graph.schema#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
-                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
-                "<neo4j://graph.schema#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
-                "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n" +
-                "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
-                "<neo4j://graph.schema#name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
-                "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
-                "<neo4j://graph.schema#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .";
-    assertEquals(200, response.status());
+            "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
+                    "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#label> \"ACTED_IN\" .\n" +
+                    "<neo4j://graph.schema#Movie> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<neo4j://graph.schema#Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                    "<neo4j://graph.schema#released> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                    "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                    "<neo4j://graph.schema#Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Movie> .\n" +
+                    "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#label> \"title\" .\n" +
+                    "<neo4j://graph.schema#title> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                    "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#label> \"released\" .\n" +
+                    "<neo4j://graph.schema#Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://graph.schema#title> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<neo4j://graph.schema#released> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                    "<neo4j://graph.schema#Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                    "<neo4j://graph.schema#Movie> <http://www.w3.org/2000/01/rdf-schema#label> \"Movie\" .\n" +
+                    "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                    "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Critic> .\n" +
+                    "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                    "<neo4j://graph.schema#Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
+                    "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#label> \"RATED\" .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Director> .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
+                    "<neo4j://graph.schema#RATED> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<neo4j://graph.schema#DIRECTED> <http://www.w3.org/2000/01/rdf-schema#label> \"DIRECTED\" .\n" +
+                    "<neo4j://graph.schema#ACTED_IN> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<neo4j://graph.schema#name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<neo4j://graph.schema#RATED> <http://www.w3.org/2000/01/rdf-schema#range> <neo4j://graph.schema#Movie> .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#domain> <neo4j://graph.schema#Actor> .\n" +
+                    "<neo4j://graph.schema#born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                    "<neo4j://graph.schema#Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .";
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
   }
 
@@ -1330,15 +1462,19 @@ public class RDFEndpointTest {
       assertEquals(1, count(result));
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/onto"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/onto")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
             "<neo4j://graph.schema#PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
                     "<neo4j://graph.schema#PropertyLessThing> <http://www.w3.org/2000/01/rdf-schema#label> \"PropertyLessThing\" .\n" ;
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
   }
 
@@ -1351,60 +1487,64 @@ public class RDFEndpointTest {
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
 
       String dataInsertion =
-          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-              + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-              "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-              + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-              "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-              + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-              + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-              "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-              + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-              "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
-              "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
+                      "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
       tx.execute(dataInsertion);
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/onto"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/onto")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
-        "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n" +
-                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
-                "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
-                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
-                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
-                "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
-                "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Director> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
-                "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
-                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
-                "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
-                "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#label> \"FriendOf\" .\n" +
-                "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-                "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#label> \"Likes\" .\n";
-    assertEquals(200, response.status());
+            "<http://permid.org/ontology/organization/Director> <http://www.w3.org/2000/01/rdf-schema#label> \"Director\" .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#string> .\n" +
+                    "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/2000/01/rdf-schema#label> \"Actor\" .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#range> <http://www.w3.org/2001/XMLSchema#integer> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Director> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#label> \"name\" .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Actor> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#label> \"born\" .\n" +
+                    "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/2000/01/rdf-schema#label> \"Critic\" .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                    "<http://permid.org/ontology/organization/Critic> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#range> <http://permid.org/ontology/organization/Director> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/name> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Critic> .\n" +
+                    "<http://ont.thomsonreuters.com/mdaas/born> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#DatatypeProperty> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#ObjectProperty> .\n" +
+                    "<http://permid.org/ontology/organization/Actor> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#domain> <http://permid.org/ontology/organization/Actor> .\n" +
+                    "<http://permid.org/ontology/organization/FriendOf> <http://www.w3.org/2000/01/rdf-schema#label> \"FriendOf\" .\n" +
+                    "<http://permid.org/ontology/organization/Director> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/Likes> <http://www.w3.org/2000/01/rdf-schema#label> \"Likes\" .\n";
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
   }
 
@@ -1417,23 +1557,27 @@ public class RDFEndpointTest {
 
       String dataInsertion =
               "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "PropertyLessThing )\n" +
-              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Person { uri: 'https://permid.org/1-21523433751' })" ;
+                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Person { uri: 'https://permid.org/1-21523433751' })" ;
       tx.execute(dataInsertion);
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/plain").GET(
-            resolveURI(neo4j.httpURI(), "neo4j/onto"));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/onto")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected =
             "<http://permid.org/ontology/organization/Person> <http://www.w3.org/2000/01/rdf-schema#label> \"Person\" .\n" +
-            "<http://permid.org/ontology/organization/Person> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
-            "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/2000/01/rdf-schema#label> \"PropertyLessThing\" .\n" +
-            "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" ;
+                    "<http://permid.org/ontology/organization/Person> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" +
+                    "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/2000/01/rdf-schema#label> \"PropertyLessThing\" .\n" +
+                    "<http://permid.org/ontology/organization/PropertyLessThing> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.w3.org/2002/07/owl#Class> .\n" ;
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
 
   }
 
@@ -1444,47 +1588,52 @@ public class RDFEndpointTest {
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
       String dataInsertion =
-          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-              + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-              "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-              + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-              "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-              + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-              + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-              "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-              + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-              "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
-              "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) \n" +
+                      "CREATE (Keanu)<-[:ns0" + PREFIX_SEPARATOR + "FriendOf]-(Hugo) ";
       tx.execute(dataInsertion);
       tx.commit();
     }
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       Result result = tx
-          .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) RETURN n.uri AS uri ");
+              .execute("MATCH (n:ns0" + PREFIX_SEPARATOR + "Critic) RETURN n.uri AS uri ");
       //assertEquals( 1, count( result ) );
 
       assertEquals("https://permid.org/1-21523433753", result.next().get("uri"));
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("https://permid.org/1-21523433750", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+
     String expected = "@prefix neovoc: <neo4j://graph.schema#> .\n" +
-        "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor>;\n"
-        + " <http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
-        + " <http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\";\n"
-        + " <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .\n"
-        + " <https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n"
-        + " <https://permid.org/1-21523433750> .\n";
-    assertEquals(200, response.status());
+            "<https://permid.org/1-21523433750> a <http://permid.org/ontology/organization/Actor>;\n"
+            + " <http://ont.thomsonreuters.com/mdaas/born> \"1964\"^^<http://www.w3.org/2001/XMLSchema#long>;\n"
+            + " <http://ont.thomsonreuters.com/mdaas/name> \"Keanu Reeves\";\n"
+            + " <http://permid.org/ontology/organization/Likes> <https://permid.org/1-21523433751> .\n"
+            + " <https://permid.org/1-21523433753> <http://permid.org/ontology/organization/FriendOf>\n"
+            + " <https://permid.org/1-21523433750> .\n";
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -1497,43 +1646,50 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({})");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-              .toURI() + "','RDF/XML')");
+              RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                      .toURI() + "','RDF/XML')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder.encode(
-            "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement",
-            StandardCharsets.UTF_8.toString())
-            + "&excludeContext=true");
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder.encode(
+                    "https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement",
+                    StandardCharsets.UTF_8.toString())
+                    + "&excludeContext=true"))
+            .header("Accept", "application/rdf+xml")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" +
-        "<rdf:RDF\txmlns:neovoc=\"neo4j://graph.schema#\"" +
-        "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">" +
-        "<rdf:Description rdf:about=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement\">"
-        +
-        "\t<rdf:type rdf:resource=\"http://www.w3.org/2002/07/owl#Class\"/>" +
-        "\t<definition xmlns=\"http://www.w3.org/2004/02/skos/core#\">a formal, legally binding agreement between members of the Board of Directors of the organization</definition>"
-        +
-        "\t<label xmlns=\"http://www.w3.org/2000/01/rdf-schema#\">board agreement</label>" +
-        "</rdf:Description></rdf:RDF>";
+            "<rdf:RDF\txmlns:neovoc=\"neo4j://graph.schema#\"" +
+            "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">" +
+            "<rdf:Description rdf:about=\"https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/BoardAgreement\">"
+            +
+            "\t<rdf:type rdf:resource=\"http://www.w3.org/2002/07/owl#Class\"/>" +
+            "\t<definition xmlns=\"http://www.w3.org/2004/02/skos/core#\">a formal, legally binding agreement between members of the Board of Directors of the organization</definition>"
+            +
+            "\t<label xmlns=\"http://www.w3.org/2000/01/rdf-schema#\">board agreement</label>" +
+            "</rdf:Description></rdf:RDF>";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+            .compareModels(expected, RDFFormat.RDFXML, response.body(), RDFFormat.RDFXML));
 
     //uris need to be urlencoded. Normally not a problem but beware of hash signs!!
-    response = HTTP.withHeaders("Accept", "text/plain").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=")
-            + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace", "UTF-8")
-    );
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=")
+                    + URLEncoder.encode("http://www.w3.org/2004/02/skos/core#TestyMcTestFace", "UTF-8")))
+            .header("Accept", "text/plain")
+            .GET()
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     expected = "<https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/> <http://www.omg.org/techprocess/ab/SpecificationMetadata/linkToResourceAddedForTestingPurposesByJB> <http://www.w3.org/2004/02/skos/core#TestyMcTestFace> .";
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.NTRIPLES));
-    assertEquals(200, response.status());
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.NTRIPLES));
+    assertEquals(200, response.statusCode());
   }
 
 
@@ -1548,7 +1704,7 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.graphconfig.init({})");
       //set a prefix that we can remove afterwards
       tx.execute(
-          "call n10s.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
+              "call n10s.nsprefixes.add('fiboanno','https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/')");
       //add dct namespace prefix, as it's not part of the predefined ones.
       tx.execute("call n10s.nsprefixes.add(\"dct\",\"http://purl.org/dc/terms/\")").next();
       tx.commit();
@@ -1557,18 +1713,18 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
 
       Map<String, Object> importResult = tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
-              .toURI() + "','RDF/XML',{})").next();
+              RDFEndpointTest.class.getClassLoader().getResource("fibo-fragment.rdf")
+                      .toURI() + "','RDF/XML',{})").next();
       Map<String, Object> nsFromImportResults = (Map<String, Object>) importResult
-          .get("namespaces");
+              .get("namespaces");
       assertTrue(nsFromImportResults.size() == 7);
 
       Map<String, Object> nspd = (Map<String, Object>) tx
-          .execute("match (n:_NsPrefDef) return properties(n) as p").next()
-          .get("p");
+              .execute("match (n:_NsPrefDef) return properties(n) as p").next()
+              .get("p");
       assertTrue(nspd.containsKey("fiboanno"));
       assertTrue(nspd.get("fiboanno")
-          .equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
+              .equals("https://spec.edmcouncil.org/fibo/ontology/FND/Utilities/AnnotationVocabulary/"));
       assertTrue(nspd.containsKey("dct"));
       assertTrue(nspd.get("dct").equals("http://purl.org/dc/terms/"));
       assertTrue(nspd.containsKey("owl"));
@@ -1590,23 +1746,27 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
-                StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("https://spec.edmcouncil.org/fibo/ontology/BE/Corporations/Corporations/",
+                            StandardCharsets.UTF_8.toString())))
+            .header("Accept", "application/rdf+xml")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        + "<rdf:RDF\n"
-        + "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n"
-        + "<!-- RDF Serialization ERROR: Prefix fiboanno in use but not defined in the '_NsPrefDef' node -->\n"
-        + "\n"
-        + "</rdf:RDF>";
+            + "<rdf:RDF\n"
+            + "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n"
+            + "\n"
+            + "\n"
+            + "</rdf:RDF>";
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+            .compareModels(expected, RDFFormat.RDFXML, response.body(), RDFFormat.RDFXML));
 
-    assertTrue(response.rawContent().contains("RDF Serialization ERROR: Prefix fiboanno "
-        + "in use but not in the namespace prefix definition"));
+    assertTrue(response.body().contains("RDF Serialization ERROR: Prefix fiboanno "
+            + "in use but not in the namespace prefix definition"));
 
   }
 
@@ -1619,26 +1779,30 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { keepLangTag : true, handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
-              .toURI() + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("multilang.ttl")
+                      .toURI() + "','Turtle')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://example.org/vocab/show/218", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://example.org/vocab/show/218", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix show: <http://example.org/vocab/show/> .\n" +
-        "show:218 show:localName \"That Seventies Show\"@en .                 # literal with a language tag\n"
-        +
-        "show:218 show:localName 'Cette Série des Années Soixante-dix'@fr . # literal delimited by single quote\n"
-        +
-        "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
+            "show:218 show:localName \"That Seventies Show\"@en .                 # literal with a language tag\n"
+            +
+            "show:218 show:localName 'Cette Série des Années Soixante-dix'@fr . # literal delimited by single quote\n"
+            +
+            "show:218 show:localName \"Cette Série des Années Septante\"@fr-be .  # literal with a region subtag";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -1651,22 +1815,22 @@ public class RDFEndpointTest {
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
 
       String dataInsertion =
-          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-              + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
-              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-              "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-              + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-              "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-              + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-              + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-              "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-              + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-              "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' })\n" +
+                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -1674,25 +1838,29 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n:Resource) RETURN n LIMIT 1");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/ld+json")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "[ {\n" +
-        "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
-        "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
-        "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
-        "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
-        "    \"@value\" : \"1964\"\n" +
-        "  } ],\n" +
-        "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
-        "    \"@value\" : \"Keanu Reeves\"\n" +
-        "  } ]\n" +
-        "} ]";
+            "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
+            "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
+            "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
+            "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+            "    \"@value\" : \"1964\"\n" +
+            "  } ],\n" +
+            "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
+            "    \"@value\" : \"Keanu Reeves\"\n" +
+            "  } ]\n" +
+            "} ]";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
   }
 
@@ -1704,9 +1872,9 @@ public class RDFEndpointTest {
       tx.execute("CALL n10s.nsprefixes.add('ns1', 'http://ont.thomsonreuters.com/mdaas/')");
       tx.execute("CALL n10s.nsprefixes.add('ns0', 'http://permid.org/ontology/organization/')");
       String dataInsertion =
-          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-              + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: 'https://permid.org/1-21523433750' }) ";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -1714,25 +1882,29 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n) RETURN n ");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/ld+json").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/ld+json")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "[ {\n" +
-        "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
-        "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
-        "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
-        "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
-        "    \"@value\" : \"1964\"\n" +
-        "  } ],\n" +
-        "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
-        "    \"@value\" : \"Keanu Reeves\"\n" +
-        "  } ]\n" +
-        "} ]";
+            "  \"@id\" : \"https://permid.org/1-21523433750\",\n" +
+            "  \"@type\" : [ \"http://permid.org/ontology/organization/Actor\" ],\n" +
+            "  \"http://ont.thomsonreuters.com/mdaas/born\" : [ {\n" +
+            "    \"@type\" : \"http://www.w3.org/2001/XMLSchema#long\",\n" +
+            "    \"@value\" : \"1964\"\n" +
+            "  } ],\n" +
+            "  \"http://ont.thomsonreuters.com/mdaas/name\" : [ {\n" +
+            "    \"@value\" : \"Keanu Reeves\"\n" +
+            "  } ]\n" +
+            "} ]";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.JSONLD, response.rawContent(), RDFFormat.JSONLD));
+            .compareModels(expected, RDFFormat.JSONLD, response.body(), RDFFormat.JSONLD));
 
   }
 
@@ -1743,22 +1915,22 @@ public class RDFEndpointTest {
       tx.execute("call n10s.nsprefixes.add('ns0','http://permid.org/ontology/organization/')");
       tx.execute("call n10s.nsprefixes.add('ns1','http://ont.thomsonreuters.com/mdaas/')");
       String dataInsertion =
-          "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
-              + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
-              + "born:1964, uri: '_:1-21523433750' })\n" +
-              "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
-              "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
-              + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
-              + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
-              "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
-              + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
-              + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
-              "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
-              + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
-              + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
-              "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
+              "CREATE (Keanu:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1" + PREFIX_SEPARATOR
+                      + "name:'Keanu Reeves', ns1" + PREFIX_SEPARATOR
+                      + "born:1964, uri: '_:1-21523433750' })\n" +
+                      "CREATE (Carrie:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Carrie-Anne Moss', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433751' })\n" +
+                      "CREATE (Laurence:Resource:ns0" + PREFIX_SEPARATOR + "Director {ns1"
+                      + PREFIX_SEPARATOR + "name:'Laurence Fishburne', ns1" + PREFIX_SEPARATOR
+                      + "born:1961, uri: 'https://permid.org/1-21523433752' })\n" +
+                      "CREATE (Hugo:Resource:ns0" + PREFIX_SEPARATOR + "Critic {ns1"
+                      + PREFIX_SEPARATOR + "name:'Hugo Weaving', ns1" + PREFIX_SEPARATOR
+                      + "born:1960, uri: 'https://permid.org/1-21523433753' })\n" +
+                      "CREATE (AndyW:Resource:ns0" + PREFIX_SEPARATOR + "Actor {ns1"
+                      + PREFIX_SEPARATOR + "name:'Andy Wachowski', ns1" + PREFIX_SEPARATOR
+                      + "born:1967, uri: 'https://permid.org/1-21523433754' })\n" +
+                      "CREATE (Keanu)-[:ns0" + PREFIX_SEPARATOR + "Likes]->(Carrie) ";
       tx.execute(dataInsertion);
       tx.commit();
     }
@@ -1766,38 +1938,42 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a)-[r:ns0" + PREFIX_SEPARATOR + "Likes]-(b) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/rdf+xml").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/rdf+xml")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-        "<rdf:RDF\n" +
-        "\txmlns:neovoc=\"neo4j://graph.schema#\"\n" +
-        "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
-        "\n" +
-        "<rdf:Description rdf:about=\"https://permid.org/1-21523433751\">\n" +
-        "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Director\"/>\n" +
-        "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1967</born>\n"
-        +
-        "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Carrie-Anne Moss</name>\n" +
-        "</rdf:Description>\n" +
-        "\n" +
-        "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
-        "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n"
-        +
-        "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Actor\"/>\n" +
-        "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1964</born>\n"
-        +
-        "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Keanu Reeves</name>\n" +
-        "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n"
-        +
-        "</rdf:Description>\n" +
-        "\n" +
-        "</rdf:RDF>";
+            "<rdf:RDF\n" +
+            "\txmlns:neovoc=\"neo4j://graph.schema#\"\n" +
+            "\txmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">\n" +
+            "\n" +
+            "<rdf:Description rdf:about=\"https://permid.org/1-21523433751\">\n" +
+            "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Director\"/>\n" +
+            "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1967</born>\n"
+            +
+            "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Carrie-Anne Moss</name>\n" +
+            "</rdf:Description>\n" +
+            "\n" +
+            "<rdf:Description rdf:about=\"_:1-21523433750\">\n" +
+            "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n"
+            +
+            "\t<rdf:type rdf:resource=\"http://permid.org/ontology/organization/Actor\"/>\n" +
+            "\t<born xmlns=\"http://ont.thomsonreuters.com/mdaas/\" rdf:datatype=\"http://www.w3.org/2001/XMLSchema#long\">1964</born>\n"
+            +
+            "\t<name xmlns=\"http://ont.thomsonreuters.com/mdaas/\">Keanu Reeves</name>\n" +
+            "\t<Likes xmlns=\"http://permid.org/ontology/organization/\" rdf:resource=\"https://permid.org/1-21523433751\"/>\n"
+            +
+            "</rdf:Description>\n" +
+            "\n" +
+            "</rdf:RDF>";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.RDFXML, response.rawContent(), RDFFormat.RDFXML));
+            .compareModels(expected, RDFFormat.RDFXML, response.body(), RDFFormat.RDFXML));
 
   }
 
@@ -1810,36 +1986,40 @@ public class RDFEndpointTest {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
-          "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true, typesToLabels: true} )");
+              "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true, typesToLabels: true} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "<http://example.org/Resource1>  a  <http://example.org/Resource>;\n" +
-        "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
-        +
-        "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
-        "  <http://example.org/Predicate4>  true;\n" +
-        "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n" +
-        "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
-        +
-        "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+            "<http://example.org/Resource1>  a  <http://example.org/Resource>;\n" +
+            "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+            +
+            "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+            "  <http://example.org/Predicate4>  true;\n" +
+            "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n" +
+            "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+            +
+            "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -1851,38 +2031,42 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, "
-          + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE',"
-          + " keepCustomDataTypes: true, typesToLabels: true} )");
+              + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE',"
+              + " keepCustomDataTypes: true, typesToLabels: true} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-              .toURI() + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI() + "','Turtle')");
 
       tx.commit();
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://example.org/Resource1", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "<http://example.org/Resource1>\n" +
-        "                                a  <http://example.org/Resource>;\n" +
-        "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
-        +
-        "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
-        "  <http://example.org/Predicate4>  true;\n" +
-        "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
-        +
-        "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
-        +
-        "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+            "\n" +
+            "<http://example.org/Resource1>\n" +
+            "                                a  <http://example.org/Resource>;\n" +
+            "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+            +
+            "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+            "  <http://example.org/Predicate4>  true;\n" +
+            "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+            +
+            "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+            +
+            "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -1894,37 +2078,41 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( "
-          + "{ keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-          + "  multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
-          + "  keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+              + "{ keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+              + "  multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
+              + "  keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
-        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "ex:Mercedes \n" +
-        "\trdf:type ex:Car ;\n" +
-        "\tex:price \"10000\"^^ex:EUR ;\n" +
-        "\tex:price \"11000\"^^ex:USD ;\n" +
-        "\tex:power \"300\" ;\n" +
-        "\tex:power \"223,71\" ;\n" +
-        "\tex:color \"red\"^^ex:Color ;\n" +
-        "\tex:class \"A-Class\"@en ;\n" +
-        "\tex:released \"2019\"^^xsd:long ;\n" +
-        "\tex:type \"Cabrio\" .";
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+            "\n" +
+            "ex:Mercedes \n" +
+            "\trdf:type ex:Car ;\n" +
+            "\tex:price \"10000\"^^ex:EUR ;\n" +
+            "\tex:price \"11000\"^^ex:USD ;\n" +
+            "\tex:power \"300\" ;\n" +
+            "\tex:power \"223,71\" ;\n" +
+            "\tex:color \"red\"^^ex:Color ;\n" +
+            "\tex:class \"A-Class\"@en ;\n" +
+            "\tex:released \"2019\"^^xsd:long ;\n" +
+            "\tex:type \"Cabrio\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -1936,38 +2124,42 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, "
-          + " handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-          + " multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
-          + " keepCustomDataTypes: true, "
-          + " customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+              + " handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+              + " multivalPropList: ['http://example.com/price', 'http://example.com/power'], "
+              + " keepCustomDataTypes: true, "
+              + " customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpoint.class.getClassLoader().getResource("customDataTypes.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpoint.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://example.com/Mercedes", StandardCharsets.UTF_8.toString())))
+            .header("Accept", "text/turtle")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
-        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "ex:Mercedes \n" +
-        "\trdf:type ex:Car ;\n" +
-        "\tex:price \"10000\"^^ex:EUR ;\n" +
-        "\tex:price \"11000\"^^ex:USD ;\n" +
-        "\tex:power \"300\" ;\n" +
-        "\tex:power \"223,71\" ;\n" +
-        "\tex:color \"red\"^^ex:Color ;\n" +
-        "\tex:class \"A-Class\"@en ;\n" +
-        "\tex:released \"2019\"^^xsd:long ;\n" +
-        "\tex:type \"Cabrio\" .";
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+            "\n" +
+            "ex:Mercedes \n" +
+            "\trdf:type ex:Car ;\n" +
+            "\tex:price \"10000\"^^ex:EUR ;\n" +
+            "\tex:price \"11000\"^^ex:USD ;\n" +
+            "\tex:power \"300\" ;\n" +
+            "\tex:power \"223,71\" ;\n" +
+            "\tex:color \"red\"^^ex:Color ;\n" +
+            "\tex:class \"A-Class\"@en ;\n" +
+            "\tex:released \"2019\"^^xsd:long ;\n" +
+            "\tex:type \"Cabrio\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
 
   }
@@ -1980,52 +2172,74 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
-          "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true} )");
+              "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'OVERWRITE', keepCustomDataTypes: true} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
-        "OPTIONAL MATCH (n)-[]-(m) RETURN *");
+            "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "<http://example.org/Resource1>\n" +
-        "                                a  <http://example.org/Resource>;\n" +
-        "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
-        +
-        "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
-        "  <http://example.org/Predicate4>  true;\n" +
-        "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
-        +
-        "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
-        +
-        "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+            "\n" +
+            "<http://example.org/Resource1>\n" +
+            "                                a  <http://example.org/Resource>;\n" +
+            "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+            +
+            "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+            "  <http://example.org/Predicate4>  true;\n" +
+            "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+            +
+            "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+            +
+            "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
 
   }
 
+  // Refactored resolveURI to construct the URL without using HTTP.GET().location()
   public static String resolveURI(java.net.URI baseUri, String path) throws java.net.URISyntaxException {
-    String location = HTTP.GET(baseUri.resolve("rdf").toString()).location();
-    if (location.startsWith("http")) {
-      return new java.net.URI(location).resolve(path).toString();
-    } else {
-      return baseUri.resolve(location).resolve(path).toString();
+    // In newer Neo4j harness, the unmanaged extension is mounted at "/rdf"
+    // and we can construct the URI directly.
+    // neo4j.httpURI() returns something like http://localhost:1234
+    // We need http://localhost:1234/rdf/neo4j/describe...
+
+    // If we want to be robust and follow redirects like the old utility:
+    try {
+      HttpRequest request = HttpRequest.newBuilder()
+              .uri(baseUri.resolve("rdf"))
+              .GET()
+              .build();
+      // We don't really need to execute this if we trust the structure, 
+      // but if the extension redirects:
+      HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+      // If 3xx, the client follows it automatically.
+      String resolvedBase = response.uri().toString();
+      if(!resolvedBase.endsWith("/")) {
+        resolvedBase += "/";
+      }
+      return new java.net.URI(resolvedBase).resolve(path).toString();
+    } catch (Exception e) {
+      throw new RuntimeException(e);
     }
   }
 
@@ -2038,10 +2252,10 @@ public class RDFEndpointTest {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader()
-              .getResource("datetime/datetime-simple-multivalued.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader()
+                      .getResource("datetime/datetime-simple-multivalued.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
@@ -2049,19 +2263,25 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(resolveURI(neo4j.httpURI(), "neo4j/cypher"), params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>.\n"
-        + "@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.\n"
-        + "@prefix exterms: <hhttp://www.example.org/terms/>.\n"
-        + "@prefix ex: <hhttp://www.example.org/indiv/>.\n"
-        + "\n"
-        + "ex:index.html  exterms:someDateValue  \"1999-08-16\"^^xsd:date, \"1999-08-17\"^^xsd:date, \"1999-08-18\"^^xsd:date  ;\n"
-        + "               exterms:someDateTimeValues \"2012-12-31T23:57:00\"^^xsd:dateTime, \"2012-12-30T23:57:00\"^^xsd:dateTime .";
+            + "@prefix xsd:     <http://www.w3.org/2001/XMLSchema#>.\n"
+            + "@prefix exterms: <hhttp://www.example.org/terms/>.\n"
+            + "@prefix ex: <hhttp://www.example.org/indiv/>.\n"
+            + "\n"
+            + "ex:index.html  exterms:someDateValue  \"1999-08-16\"^^xsd:date, \"1999-08-17\"^^xsd:date, \"1999-08-18\"^^xsd:date  ;\n"
+            + "               exterms:someDateTimeValues \"2012-12-31T23:57:00\"^^xsd:dateTime, \"2012-12-30T23:57:00\"^^xsd:dateTime .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -2077,14 +2297,18 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n) RETURN * ");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
 
     assertTrue(ModelTestUtils
-        .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(" MATCH (n) DETACH DELETE n ");
@@ -2093,12 +2317,16 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
-    response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     assertTrue(ModelTestUtils
-        .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(getExportedAsLPG("neo4j://explicit_uri#123"), RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
@@ -2110,80 +2338,88 @@ public class RDFEndpointTest {
       tx.commit();
     }
 
-    response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String exportedAsRDF = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
-        + "@prefix neovoc: <neo4j://myvoc#> .\n"
-        + "\n"
-        + "\n"
-        + "<neo4j://explicit_uri#123> neovoc:name \"the name\" .";
+            + "@prefix neovoc: <neo4j://myvoc#> .\n"
+            + "\n"
+            + "\n"
+            + "<neo4j://explicit_uri#123> neovoc:name \"the name\" .";
 
     assertTrue(ModelTestUtils
-        .compareModels(exportedAsRDF, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(exportedAsRDF, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
   private String getExportedAsLPG( String uri ) {
     return "@prefix neovoc: <neo4j://graph.schema#> .\n"
-        + "@prefix neoind: <neo4j://graph.individuals#> .\n"
-        + "\n"
-        + "<" + uri + "> neovoc:name \"the name\" .";
+            + "@prefix neoind: <neo4j://graph.individuals#> .\n"
+            + "\n"
+            + "<" + uri + "> neovoc:name \"the name\" .";
   }
 
 
   @Test
   public void testcypherAfterImportWithCustomDTShortenURIsSerializeAsTurtle()
-      throws Exception {
+          throws Exception {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, "
-          + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
-          + " keepCustomDataTypes: true } )");
+              + " handleVocabUris: 'SHORTEN', handleMultival: 'OVERWRITE', "
+              + " keepCustomDataTypes: true } )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
-              .toURI() + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes2.ttl")
+                      .toURI() + "','Turtle')");
 
       tx.commit();
     }
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (n {uri: 'http://example.org/Resource1'})" +
-        "OPTIONAL MATCH (n)-[]-(m) RETURN *");
+            "OPTIONAL MATCH (n)-[]-(m) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "<http://example.org/Resource1>\n" +
-        "                                a  <http://example.org/Resource>;\n" +
-        "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
-        +
-        "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
-        "  <http://example.org/Predicate4>  true;\n" +
-        "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
-        "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
-        +
-        "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
-        +
-        "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
+            "\n" +
+            "<http://example.org/Resource1>\n" +
+            "                                a  <http://example.org/Resource>;\n" +
+            "  <http://example.org/Predicate1>  \"2008-04-17\"^^<http://www.w3.org/2001/XMLSchema#date>;\n"
+            +
+            "  <http://example.org/Predicate2>  \"4.75\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate3>  \"2\"^^xsd:long;\n" +
+            "  <http://example.org/Predicate4>  true;\n" +
+            "  <http://example.org/Predicate5>  \"2\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate6>  \"4\"^^xsd:double;\n" +
+            "  <http://example.org/Predicate7>  \"52.63\"^^<http://example.org/USD>;\n"
+            +
+            "  <http://example.org/Predicate8>  \"2008-03-22T00:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime>;\n"
+            +
+            "  <http://example.org/Predicate9> \"-100\"^^xsd:long.";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
   @Test
   public void testcypherAfterImportWithMultiCustomDTKeepURIsSerializeAsTurtle()
-      throws Exception {
+          throws Exception {
 
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
@@ -2191,13 +2427,13 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( "
-          + "{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
-          + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-          + "keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+              + "{keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', "
+              + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+              + "keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
@@ -2205,47 +2441,51 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a:`http://example.com/Car`) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
-        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "ex:Mercedes \n" +
-        "\trdf:type ex:Car ;\n" +
-        "\tex:price \"10000\"^^ex:EUR ;\n" +
-        "\tex:price \"11000\"^^ex:USD ;\n" +
-        "\tex:power \"300\" ;\n" +
-        "\tex:power \"223,71\" ;\n" +
-        "\tex:color \"red\"^^ex:Color ;\n" +
-        "\tex:class \"A-Klasse\"@de ;\n" +
-        "\tex:class \"A-Class\"@en ;\n" +
-        "\tex:released \"2019\"^^xsd:long ;\n" +
-        "\tex:type \"Cabrio\" .";
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+            "\n" +
+            "ex:Mercedes \n" +
+            "\trdf:type ex:Car ;\n" +
+            "\tex:price \"10000\"^^ex:EUR ;\n" +
+            "\tex:price \"11000\"^^ex:USD ;\n" +
+            "\tex:power \"300\" ;\n" +
+            "\tex:power \"223,71\" ;\n" +
+            "\tex:color \"red\"^^ex:Color ;\n" +
+            "\tex:class \"A-Klasse\"@de ;\n" +
+            "\tex:class \"A-Class\"@en ;\n" +
+            "\tex:released \"2019\"^^xsd:long ;\n" +
+            "\tex:type \"Cabrio\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
   @Test
   public void testcypherAfterImportWithMultiCustomDTShortenURIsSerializeAsTurtle()
-      throws Exception {
+          throws Exception {
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(UNIQUENESS_CONSTRAINT_STATEMENT);
       tx.commit();
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
-          "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
-              + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
-              + " keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
+              "CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'SHORTEN', handleMultival: 'ARRAY', "
+                      + " multivalPropList: ['http://example.com/price', 'http://example.com/power', 'http://example.com/class'], "
+                      + " keepCustomDataTypes: true, customDataTypePropList: ['http://example.com/price', 'http://example.com/color']} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("customDataTypes.ttl")
+                      .toURI()
+              + "','Turtle')");
 
       tx.commit();
     }
@@ -2253,28 +2493,32 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a:ns0__Car) RETURN *");
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "text/turtle").POST(
-        resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-        params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix ex: <http://example.com/> .\n" +
-        "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-        "\n" +
-        "ex:Mercedes \n" +
-        "\trdf:type ex:Car ;\n" +
-        "\tex:price \"10000\"^^ex:EUR ;\n" +
-        "\tex:price \"11000\"^^ex:USD ;\n" +
-        "\tex:power \"300\" ;\n" +
-        "\tex:power \"223,71\" ;\n" +
-        "\tex:color \"red\"^^ex:Color ;\n" +
-        "\tex:class \"A-Klasse\"@de ;\n" +
-        "\tex:class \"A-Class\"@en ;\n" +
-        "\tex:released \"2019\"^^xsd:long ;\n" +
-        "\tex:type \"Cabrio\" .";
+            "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+            "\n" +
+            "ex:Mercedes \n" +
+            "\trdf:type ex:Car ;\n" +
+            "\tex:price \"10000\"^^ex:EUR ;\n" +
+            "\tex:price \"11000\"^^ex:USD ;\n" +
+            "\tex:power \"300\" ;\n" +
+            "\tex:power \"223,71\" ;\n" +
+            "\tex:color \"red\"^^ex:Color ;\n" +
+            "\tex:class \"A-Klasse\"@de ;\n" +
+            "\tex:class \"A-Class\"@en ;\n" +
+            "\tex:released \"2019\"^^xsd:long ;\n" +
+            "\tex:type \"Cabrio\" .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -2287,20 +2531,20 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( "
-          + " { keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true} )");
+              + " { keepLangTag: true, handleVocabUris: 'KEEP', handleMultival: 'ARRAY', keepCustomDataTypes: true} )");
       tx.execute("CALL n10s.rdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodes.ttl")
+                      .toURI()
+              + "','Turtle')");
       Result res = tx.execute("CALL n10s.rdf.delete.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
-              .toURI()
-          + "','Turtle')");
+              RDFEndpointTest.class.getClassLoader().getResource("deleteRDF/bNodesDeletion.ttl")
+                      .toURI()
+              + "','Turtle')");
       Map map = res.next();
       assertEquals(1L, map.get("triplesDeleted"));
       assertEquals(
-          "8 of the statements could not be deleted, due to use of blank nodes.",
-          map.get("extraInfo"));
+              "8 of the statements could not be deleted, due to use of blank nodes.",
+              map.get("extraInfo"));
       tx.commit();
     }
     String aliceUri = null;
@@ -2315,11 +2559,13 @@ public class RDFEndpointTest {
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH p = ()<-[:`http://example.org/homePage`]-(:Resource)-[:`http://example.org/hasAddress`]->() return p");
 
-    HTTP.Response response = HTTP.
-        withHeaders("Accept", "text/turtle")
-        .POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-            params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/turtle")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
             "\n" +
@@ -2333,9 +2579,9 @@ public class RDFEndpointTest {
             "  <http://example.org/hasAddress> <" + addrUri + ">;\n" +
             "  <http://example.org/homePage> <http://example.net/alice-carol> .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TURTLE, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.TURTLE, response.body(), RDFFormat.TURTLE));
 
   }
 
@@ -2347,31 +2593,33 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
-          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+              + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-              .toURI()
-          + "','TriG')");
+              RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                      .toURI()
+              + "','TriG')");
       tx.commit();
     }
 
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a:Resource) "
-        + "OPTIONAL MATCH (a)-[r]->(b:Resource)"
-        + "RETURN DISTINCT *");
+            + "OPTIONAL MATCH (a)-[r]->(b:Resource)"
+            + "RETURN DISTINCT *");
 
-    HTTP.Response response = HTTP.
-        withHeaders("Accept", "application/trig")
-        .POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-            params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/trig")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = Resources
-        .toString(Resources.getResource("RDFDatasets/RDFDataset.trig"),
-            StandardCharsets.UTF_8);
-    assertEquals(200, response.status());
+            .toString(Resources.getResource("RDFDatasets/RDFDataset.trig"),
+                    StandardCharsets.UTF_8);
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+            .compareModels(expected, RDFFormat.TRIG, response.body(), RDFFormat.TRIG));
 
   }
 
@@ -2383,31 +2631,33 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', "
-          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, "
-          + " handleMultival: 'ARRAY'} )");
+              + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, "
+              + " handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
-              .toURI()
-          + "','N-Quads')");
+              RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                      .toURI()
+              + "','N-Quads')");
       tx.commit();
     }
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a:Resource) "
-        + "OPTIONAL MATCH (a)-[r]->(b)"
-        + "RETURN DISTINCT *");
+            + "OPTIONAL MATCH (a)-[r]->(b)"
+            + "RETURN DISTINCT *");
 
-    HTTP.Response response = HTTP.
-        withHeaders("Accept", "application/n-quads")
-        .POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-            params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/n-quads")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = Resources
-        .toString(Resources.getResource("RDFDatasets/RDFDataset.nq"),
-            StandardCharsets.UTF_8);
-    assertEquals(200, response.status());
+            .toString(Resources.getResource("RDFDatasets/RDFDataset.nq"),
+                    StandardCharsets.UTF_8);
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+            .compareModels(expected, RDFFormat.NQUADS, response.body(), RDFFormat.NQUADS));
 
   }
 
@@ -2419,28 +2669,32 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
-          "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+              "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-              .toURI()
-          + "','TriG')");
+              RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                      .toURI()
+              + "','TriG')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://www.example.org/exampleDocument#Monica",
-                StandardCharsets.UTF_8.toString()));
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://www.example.org/exampleDocument#Monica",
+                            StandardCharsets.UTF_8.toString())))
+            .header("Accept", "application/trig")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "{\n"
-        + "  <http://www.example.org/exampleDocument#Monica> a <http://www.example.org/vocabulary#Person>;\n"
-        + "    <http://www.example.org/vocabulary#friendOf> <http://www.example.org/exampleDocument#John> .\n"
-        + "}";
+            + "  <http://www.example.org/exampleDocument#Monica> a <http://www.example.org/vocabulary#Person>;\n"
+            + "    <http://www.example.org/vocabulary#friendOf> <http://www.example.org/exampleDocument#John> .\n"
+            + "}";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+            .compareModels(expected, RDFFormat.TRIG, response.body(), RDFFormat.TRIG));
   }
 
   @Test
@@ -2451,34 +2705,38 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute(
-          "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
+              "CALL n10s.graphconfig.init( { handleVocabUris: 'KEEP', typesToLabels: true, keepCustomDataTypes: true, handleMultival: 'ARRAY'} )");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
-              .toURI()
-          + "','TriG')");
+              RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.trig")
+                      .toURI()
+              + "','TriG')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/trig").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://www.example.org/exampleDocument#Monica",
-                StandardCharsets.UTF_8.toString())
-            + "&graphuri=http://www.example.org/exampleDocument%23G1");
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://www.example.org/exampleDocument#Monica",
+                            StandardCharsets.UTF_8.toString())
+                    + "&graphuri=http://www.example.org/exampleDocument%23G1"))
+            .header("Accept", "application/trig")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = "<http://www.example.org/exampleDocument#G1> {\n"
-        + "  <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name>\n"
-        + "      \"Monica Murphy\";\n"
-        + "    <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org>;\n"
-        + "    <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John>;\n"
-        + "    <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management>,\n"
-        + "      <http://www.example.org/vocabulary#Programming>;\n"
-        + "    <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> .\n"
-        + "}";
+            + "  <http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name>\n"
+            + "      \"Monica Murphy\";\n"
+            + "    <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org>;\n"
+            + "    <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John>;\n"
+            + "    <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management>,\n"
+            + "      <http://www.example.org/vocabulary#Programming>;\n"
+            + "    <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> .\n"
+            + "}";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+            .compareModels(expected, RDFFormat.TRIG, response.body(), RDFFormat.TRIG));
 
   }
 
@@ -2490,31 +2748,35 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init({ handleVocabUris: 'KEEP', "
-          + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
+              + " typesToLabels: true, commitSize: 500, keepCustomDataTypes: true, handleMultival: 'ARRAY'})");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
-              .toURI()
-          + "','N-Quads')");
+              RDFEndpointTest.class.getClassLoader().getResource("RDFDatasets/RDFDataset.nq")
+                      .toURI()
+              + "','N-Quads')");
 
       tx.commit();
     }
 
-    HTTP.Response response = HTTP.withHeaders("Accept", "application/n-quads").GET(
-        resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
-            .encode("http://www.example.org/exampleDocument#Monica",
-                StandardCharsets.UTF_8.toString())
-            + "&graphuri=http://www.example.org/exampleDocument%23G1");
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/describe?nodeIdentifier=") + URLEncoder
+                    .encode("http://www.example.org/exampleDocument#Monica",
+                            StandardCharsets.UTF_8.toString())
+                    + "&graphuri=http://www.example.org/exampleDocument%23G1"))
+            .header("Accept", "application/n-quads")
+            .GET()
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
     String expected =
-        "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
-            + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"
-            + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John> <http://www.example.org/exampleDocument#G1> .\n"
-            + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management> <http://www.example.org/exampleDocument#G1> .\n"
-            + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Programming> <http://www.example.org/exampleDocument#G1> .\n"
-            + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> <http://www.example.org/exampleDocument#G1> .";
+            "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#name> \"Monica Murphy\" <http://www.example.org/exampleDocument#G1> .\n"
+                    + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#homepage> <http://www.monicamurphy.org> <http://www.example.org/exampleDocument#G1> .\n"
+                    + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#knows> <http://www.example.org/exampleDocument#John> <http://www.example.org/exampleDocument#G1> .\n"
+                    + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Management> <http://www.example.org/exampleDocument#G1> .\n"
+                    + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#hasSkill> <http://www.example.org/vocabulary#Programming> <http://www.example.org/exampleDocument#G1> .\n"
+                    + "<http://www.example.org/exampleDocument#Monica> <http://www.example.org/vocabulary#email> <mailto:monica@monicamurphy.org> <http://www.example.org/exampleDocument#G1> .";
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.NQUADS, response.rawContent(), RDFFormat.NQUADS));
+            .compareModels(expected, RDFFormat.NQUADS, response.body(), RDFFormat.NQUADS));
 
   }
 
@@ -2526,42 +2788,44 @@ public class RDFEndpointTest {
     }
     try (Transaction tx = graphDatabaseService.beginTx()) {
       tx.execute("CALL n10s.graphconfig.init( {keepLangTag: true, handleVocabUris: 'KEEP', "
-          + " handleMultival: 'ARRAY', keepCustomDataTypes: true})");
+              + " handleMultival: 'ARRAY', keepCustomDataTypes: true})");
       tx.execute("CALL n10s.experimental.quadrdf.import.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource(
-              "RDFDatasets/RDFDatasetBNodes.trig")
-              .toURI()
-          + "','TriG')");
+              RDFEndpointTest.class.getClassLoader().getResource(
+                              "RDFDatasets/RDFDatasetBNodes.trig")
+                      .toURI()
+              + "','TriG')");
       Result res = tx.execute("CALL n10s.experimental.quadrdf.delete.fetch('" +
-          RDFEndpointTest.class.getClassLoader().getResource(
-              "RDFDatasets/RDFDatasetBNodesDelete.trig")
-              .toURI()
-          + "','TriG')");
+              RDFEndpointTest.class.getClassLoader().getResource(
+                              "RDFDatasets/RDFDatasetBNodesDelete.trig")
+                      .toURI()
+              + "','TriG')");
       Map map = res.next();
       assertEquals(3L, map.get("triplesDeleted"));
       assertEquals(
-          "4 of the statements could not be deleted, due to containing a blank node.",
-          map.get("extraInfo"));
+              "4 of the statements could not be deleted, due to containing a blank node.",
+              map.get("extraInfo"));
       tx.commit();
     }
 
     Map<String, String> params = new HashMap<>();
     params.put("cypher", "MATCH (a:Resource) "
-        + "OPTIONAL MATCH (a)-[r]->()"
-        + "RETURN DISTINCT *");
+            + "OPTIONAL MATCH (a)-[r]->()"
+            + "RETURN DISTINCT *");
 
-    HTTP.Response response = HTTP.
-        withHeaders("Accept", "application/trig")
-        .POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"),
-            params);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "application/trig")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(params)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
     String expected = Resources
-        .toString(Resources.getResource("RDFDatasets/RDFDatasetBNodesPostDeletion.trig"),
-            StandardCharsets.UTF_8);
-    assertEquals(200, response.status());
+            .toString(Resources.getResource("RDFDatasets/RDFDatasetBNodesPostDeletion.trig"),
+                    StandardCharsets.UTF_8);
+    assertEquals(200, response.statusCode());
     assertTrue(ModelTestUtils
-        .compareModels(expected, RDFFormat.TRIG, response.rawContent(), RDFFormat.TRIG));
+            .compareModels(expected, RDFFormat.TRIG, response.body(), RDFFormat.TRIG));
 
   }
 
@@ -2611,7 +2875,7 @@ public class RDFEndpointTest {
         expectedList.add("5");
         assertTrue((triple.get("predicate").equals(RDF.TYPE.stringValue()) &&
                 triple.get("object").equals("neo4j://graph.schema#ConceptScheme"))
-        || (triple.get("predicate").equals("neo4j://graph.schema#topConcepts") &&
+                || (triple.get("predicate").equals("neo4j://graph.schema#topConcepts") &&
                 expectedList.contains(triple.get("object"))) &&
                 triple.get("isLiteral").equals(true) && triple.get("literalType").equals("http://www.w3.org/2001/XMLSchema#long"));
       }
@@ -2620,16 +2884,21 @@ public class RDFEndpointTest {
     Map<String, Object> map = new HashMap<>();
     map.put("cypher", "match(n:ConceptScheme) return n");
 
-    Response response = HTTP.withHeaders("Accept", "text/plain").POST(
-            resolveURI(neo4j.httpURI(), "neo4j/cypher"), map);
+    HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(resolveURI(neo4j.httpURI(), "neo4j/cypher")))
+            .header("Accept", "text/plain")
+            .header("Content-Type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonMapper.writeValueAsString(map)))
+            .build();
+    HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
-    assertEquals(200, response.status());
+    assertEquals(200, response.statusCode());
     String expected = "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"5\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
             "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"3\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
             "<http://data.elsevier.com/vocabulary/OmniScience> <neo4j://graph.schema#topConcepts> \"0\"^^<http://www.w3.org/2001/XMLSchema#long> .\n" +
             "<http://data.elsevier.com/vocabulary/OmniScience> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <neo4j://graph.schema#ConceptScheme> .\n";
     assertTrue(ModelTestUtils
-            .compareModels(expected, RDFFormat.NTRIPLES, response.rawContent(), RDFFormat.TURTLE));
+            .compareModels(expected, RDFFormat.NTRIPLES, response.body(), RDFFormat.TURTLE));
   }
 
 }
