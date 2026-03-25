@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.graphconfig.drop¦n10s.graphconfig.drop() :: (param :: STRING, value :: ANY)¦removes the current graph config
+¦procedure¦n10s.graphconfig.drop¦n10s.graphconfig.drop() :: (param :: STRING?, value :: ANY?)¦removes the current graph config

@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.validation.shacl.listShapes() :: (target :: STRING, propertyOrRelationshipPath :: STRING, param :: STRING, value :: ANY)
+¦n10s.validation.shacl.listShapes() :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)

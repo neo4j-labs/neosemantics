@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦function¦n10s.sim.pathsim.path¦n10s.sim.pathsim.path(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: PATH¦n10s.sim.pathsim.path() - returns a numeric value representing the path similarity between two elements.

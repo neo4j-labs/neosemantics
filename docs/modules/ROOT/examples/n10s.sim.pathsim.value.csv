@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.sim.pathsim.value¦n10s.sim.pathsim.value(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: FLOAT¦n10s.sim.pathsim.value() - returns a numeric value representing the path similarity between two elements.
+¦function¦n10s.sim.pathsim.value¦n10s.sim.pathsim.value(node1 :: NODE?, node2 :: NODE?, params = {} :: MAP?) :: (FLOAT?)¦n10s.sim.pathsim.value() - returns a numeric value representing the path similarity between two elements.

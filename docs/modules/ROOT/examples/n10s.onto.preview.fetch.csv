@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.onto.preview.fetch¦n10s.onto.preview.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (nodes :: LIST<NODE>, relationships :: LIST<RELATIONSHIP>)¦Parses an ontology and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB.
+¦procedure¦n10s.onto.preview.fetch¦n10s.onto.preview.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (nodes :: LIST? OF NODE?, relationships :: LIST? OF RELATIONSHIP?)¦Parses an ontology and produces virtual Nodes and relationships for preview in the Neo4j browser. No writing to the DB.

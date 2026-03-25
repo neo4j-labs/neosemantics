@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.graphconfig.set¦n10s.graphconfig.set(params = {} :: MAP) :: (param :: STRING, value :: ANY)¦sets specific params to the config that drives the behavior of the graph
+¦procedure¦n10s.graphconfig.set¦n10s.graphconfig.set(params = {} :: MAP?) :: (param :: STRING?, value :: ANY?)¦sets specific params to the config that drives the behavior of the graph

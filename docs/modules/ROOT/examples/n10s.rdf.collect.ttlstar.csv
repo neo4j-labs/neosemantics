@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.collect.ttlstar¦n10s.rdf.collect.ttlstar(subject :: STRING, predicate :: STRING, object :: STRING, isLiteral :: BOOLEAN, literalType :: STRING, literalLang :: STRING, sspo = null :: LIST<STRING>) :: STRING¦n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* and returns them serialised as JSON-LD

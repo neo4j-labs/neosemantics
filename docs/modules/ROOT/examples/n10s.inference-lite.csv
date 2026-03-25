@@ -1,12 +1,6 @@
 ¦signature
-¦n10s.inference.getRels(node :: NODE, rel :: STRING, params = {} :: MAP) :: (rel :: RELATIONSHIP, node :: NODE)
-¦n10s.inference.labels(params = {} :: MAP) :: (label :: STRING)
-¦n10s.inference.nodesInCategory(category :: NODE, params = {} :: MAP) :: (node :: NODE)
-¦n10s.inference.nodesLabelled(label :: STRING, params = {} :: MAP) :: (node :: NODE)
-¦n10s.inference.class_incoming_rels(class :: NODE, params = {} :: MAP) :: LIST<ANY>
-¦n10s.inference.class_outgoing_rels(class :: NODE, params = {} :: MAP) :: LIST<ANY>
-¦n10s.inference.class_props(class :: NODE, params = {} :: MAP) :: LIST<ANY>
-¦n10s.inference.hasLabel(node :: NODE, label :: STRING, params = {} :: MAP) :: BOOLEAN
-¦n10s.inference.inCategory(node :: NODE, category :: NODE, params = {} :: MAP) :: BOOLEAN
-¦n10s.inference.rel_source_classes(rel :: NODE, params = {} :: MAP) :: LIST<ANY>
-¦n10s.inference.rel_target_classes(rel :: NODE, params = {} :: MAP) :: LIST<ANY>
+¦n10s.inference.getRels(node :: NODE?, rel :: STRING?, params = {} :: MAP?) :: (rel :: RELATIONSHIP?, node :: NODE?)
+¦n10s.inference.nodesInCategory(category :: NODE?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)
+¦n10s.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)

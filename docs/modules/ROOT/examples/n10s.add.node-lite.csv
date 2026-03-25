@@ -1,2 +1,0 @@
-¦signature
-¦n10s.add.node(uri :: STRING, types :: LIST<STRING>, properties :: LIST<MAP>) :: (node :: NODE)

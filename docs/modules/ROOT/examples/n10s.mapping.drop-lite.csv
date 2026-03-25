@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.mapping.drop(graphElementName :: STRING) :: (output :: STRING)
+¦n10s.mapping.drop(graphElementName :: STRING?) :: (output :: STRING?)

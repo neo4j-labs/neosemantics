@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦procedure¦n10s.experimental.export.dimodel.fetch¦n10s.experimental.export.dimodel.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (modelFile :: STRING, mappingsScript :: STRING, summary :: STRING)¦Generates a data importer tool model aligned with the selected ontology

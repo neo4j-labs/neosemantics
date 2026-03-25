@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.nsprefixes.add¦n10s.nsprefixes.add(prefix :: STRING, ns :: STRING) :: (prefix :: STRING, namespace :: STRING)¦Adds namespace - prefix pair definition
+¦procedure¦n10s.nsprefixes.add¦n10s.nsprefixes.add(prefix :: STRING?, ns :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦Adds namespace - prefix pair definition

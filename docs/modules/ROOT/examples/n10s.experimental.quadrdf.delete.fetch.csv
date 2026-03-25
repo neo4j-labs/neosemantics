@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.experimental.quadrdf.delete.fetch¦n10s.experimental.quadrdf.delete.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (terminationStatus :: STRING, triplesDeleted :: INTEGER, namespaces :: MAP, extraInfo :: STRING)¦
+¦procedure¦n10s.experimental.quadrdf.delete.fetch¦n10s.experimental.quadrdf.delete.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesDeleted :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?)¦

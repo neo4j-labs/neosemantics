@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.validation.shacl.listShapes¦n10s.validation.shacl.listShapes() :: (target :: STRING, propertyOrRelationshipPath :: STRING, param :: STRING, value :: ANY)¦n10s.validation.listShapes() - list SHACL shapes loaded in the Graph
+¦procedure¦n10s.validation.shacl.listShapes¦n10s.validation.shacl.listShapes() :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)¦n10s.validation.listShapes() - list SHACL shapes loaded in the Graph

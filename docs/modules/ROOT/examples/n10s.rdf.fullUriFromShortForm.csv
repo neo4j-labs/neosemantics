@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.fullUriFromShortForm¦n10s.rdf.fullUriFromShortForm(short :: STRING) :: STRING¦Returns the expanded (full) IRI given a shortened one created in the load process with semantics.importRDF
+¦function¦n10s.rdf.fullUriFromShortForm¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)¦Returns the expanded (full) IRI given a shortened one created in the load process with semantics.importRDF

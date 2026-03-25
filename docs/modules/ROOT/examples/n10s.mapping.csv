@@ -1,5 +1,5 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.mapping.add¦n10s.mapping.add(elementUri :: STRING, graphElementName :: STRING) :: (schemaNs :: STRING, schemaPrefix :: STRING, schemaElement :: STRING, elemName :: STRING)¦
-¦procedure¦n10s.mapping.drop¦n10s.mapping.drop(graphElementName :: STRING) :: (output :: STRING)¦
-¦procedure¦n10s.mapping.dropAll¦n10s.mapping.dropAll(namespace :: STRING) :: (output :: STRING)¦
-¦procedure¦n10s.mapping.list¦n10s.mapping.list(schemaElem =  :: STRING) :: (schemaNs :: STRING, schemaPrefix :: STRING, schemaElement :: STRING, elemName :: STRING)¦
+¦procedure¦n10s.mapping.add¦n10s.mapping.add(elementUri :: STRING?, graphElementName :: STRING?) :: (schemaNs :: STRING?, schemaPrefix :: STRING?, schemaElement :: STRING?, elemName :: STRING?)¦
+¦procedure¦n10s.mapping.drop¦n10s.mapping.drop(graphElementName :: STRING?) :: (output :: STRING?)¦
+¦procedure¦n10s.mapping.dropAll¦n10s.mapping.dropAll(namespace :: STRING?) :: (output :: STRING?)¦
+¦procedure¦n10s.mapping.list¦n10s.mapping.list(schemaElem =  :: STRING?) :: (schemaNs :: STRING?, schemaPrefix :: STRING?, schemaElement :: STRING?, elemName :: STRING?)¦

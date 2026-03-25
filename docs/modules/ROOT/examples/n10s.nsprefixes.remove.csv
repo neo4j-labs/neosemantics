@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.nsprefixes.remove¦n10s.nsprefixes.remove(prefix :: STRING) :: (prefix :: STRING, namespace :: STRING)¦removes namespace prefix (by prefix)
+¦procedure¦n10s.nsprefixes.remove¦n10s.nsprefixes.remove(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦removes namespace prefix (by prefix)

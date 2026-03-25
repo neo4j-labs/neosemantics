@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.experimental.quadrdf.import.fetch¦n10s.experimental.quadrdf.import.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (terminationStatus :: STRING, triplesLoaded :: INTEGER, triplesParsed :: INTEGER, namespaces :: MAP, extraInfo :: STRING, callParams :: MAP)¦
+¦procedure¦n10s.experimental.quadrdf.import.fetch¦n10s.experimental.quadrdf.import.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)¦

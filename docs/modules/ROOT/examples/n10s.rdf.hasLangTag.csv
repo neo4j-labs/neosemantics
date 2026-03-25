@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.hasLangTag¦n10s.rdf.hasLangTag(lang :: STRING, value :: ANY) :: BOOLEAN¦Returns false if the value is not a string or if the string is not tagged with the  given language tag
+¦function¦n10s.rdf.hasLangTag¦n10s.rdf.hasLangTag(lang :: STRING?, value :: ANY?) :: (BOOLEAN?)¦Returns false if the value is not a string or if the string is not tagged with the  given language tag

@@ -1,5 +1,5 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.graphconfig.drop¦n10s.graphconfig.drop() :: (param :: STRING, value :: ANY)¦removes the current graph config
-¦procedure¦n10s.graphconfig.init¦n10s.graphconfig.init(params = {} :: MAP) :: (param :: STRING, value :: ANY)¦Initialises the config that drives the behavior of the graph
-¦procedure¦n10s.graphconfig.set¦n10s.graphconfig.set(params = {} :: MAP) :: (param :: STRING, value :: ANY)¦sets specific params to the config that drives the behavior of the graph
-¦procedure¦n10s.graphconfig.show¦n10s.graphconfig.show() :: (param :: STRING, value :: ANY)¦Shows the current graph config
+¦procedure¦n10s.graphconfig.drop¦n10s.graphconfig.drop() :: (param :: STRING?, value :: ANY?)¦removes the current graph config
+¦procedure¦n10s.graphconfig.init¦n10s.graphconfig.init(params = {} :: MAP?) :: (param :: STRING?, value :: ANY?)¦Initialises the config that drives the behavior of the graph
+¦procedure¦n10s.graphconfig.set¦n10s.graphconfig.set(params = {} :: MAP?) :: (param :: STRING?, value :: ANY?)¦sets specific params to the config that drives the behavior of the graph
+¦procedure¦n10s.graphconfig.show¦n10s.graphconfig.show() :: (param :: STRING?, value :: ANY?)¦Shows the current graph config

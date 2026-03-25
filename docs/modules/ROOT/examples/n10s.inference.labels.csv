@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦procedure¦n10s.inference.labels¦n10s.inference.labels(params = {} :: MAP) :: (label :: STRING)¦n10s.inference.labels() - returns all labels in use in the graph, including inferred ones.

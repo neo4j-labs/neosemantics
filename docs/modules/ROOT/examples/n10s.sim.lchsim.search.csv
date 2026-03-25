@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦procedure¦n10s.sim.lchsim.search¦n10s.sim.lchsim.search(node1 :: NODE, simThreshold :: FLOAT, params = {} :: MAP) :: (similarity :: FLOAT, node :: NODE)¦n10s.sim.lchsim.search() - returns the elements in the taxonomy with a Leacock-Chodorow similarity equal or greater than a given threshold.

@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.inference.hasLabel¦n10s.inference.hasLabel(node :: NODE, label :: STRING, params = {} :: MAP) :: BOOLEAN¦n10s.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or implicitly labeled as 'label'.
+¦function¦n10s.inference.hasLabel¦n10s.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)¦n10s.inference.hasLabel(node,'label',{}) - checks whether node is explicitly or implicitly labeled as 'label'.

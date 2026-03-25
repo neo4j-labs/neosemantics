@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.isIRI¦n10s.rdf.isIRI(str :: STRING) :: BOOLEAN¦Returns the true if string is a valid IRI

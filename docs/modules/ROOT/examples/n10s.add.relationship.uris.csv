@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦procedure¦n10s.add.relationship.uris¦n10s.add.relationship.uris(from :: STRING, type :: STRING, properties :: LIST<MAP>, to :: STRING) :: (rel :: RELATIONSHIP)¦creates a relationship in the graph following the existing GraphConfig.

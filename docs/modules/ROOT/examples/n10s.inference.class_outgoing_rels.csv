@@ -1,2 +1,0 @@
-¦type¦qualified name¦signature¦description
-¦function¦n10s.inference.class_outgoing_rels¦n10s.inference.class_outgoing_rels(class :: NODE, params = {} :: MAP) :: LIST<ANY>¦n10s.inference.class_out_rels(class, { includeAll: true, catLabel:''...} ) - returns inferred outgoing relationships for a given class

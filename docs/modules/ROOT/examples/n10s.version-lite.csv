@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.version() :: STRING
+¦n10s.version() :: (STRING?)

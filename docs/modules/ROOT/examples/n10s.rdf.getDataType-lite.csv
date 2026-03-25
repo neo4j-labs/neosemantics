@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.getDataType(literal :: ANY) :: STRING
+¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)
