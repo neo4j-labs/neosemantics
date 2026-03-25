@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.nsprefixes.list¦n10s.nsprefixes.list() :: (prefix :: STRING?, namespace :: STRING?)¦Lists all existing namespace prefix definitions
+¦procedure¦n10s.nsprefixes.list¦n10s.nsprefixes.list() :: (prefix :: STRING, namespace :: STRING)¦Lists all existing namespace prefix definitions

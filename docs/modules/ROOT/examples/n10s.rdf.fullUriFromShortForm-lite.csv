@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)
+¦n10s.rdf.fullUriFromShortForm(short :: STRING) :: STRING

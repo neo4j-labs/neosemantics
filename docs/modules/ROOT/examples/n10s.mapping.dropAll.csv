@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.mapping.dropAll¦n10s.mapping.dropAll(namespace :: STRING?) :: (output :: STRING?)¦
+¦procedure¦n10s.mapping.dropAll¦n10s.mapping.dropAll(namespace :: STRING) :: (output :: STRING)¦

@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.validation.shacl.import.inline¦n10s.validation.shacl.import.inline(rdf :: STRING?, format :: STRING?, params = {} :: MAP?) :: (target :: STRING?, propertyOrRelationshipPath :: STRING?, param :: STRING?, value :: ANY?)¦Imports a SHACL shapes snippet passed as parameter and compiles a validator into neo4j
+¦procedure¦n10s.validation.shacl.import.inline¦n10s.validation.shacl.import.inline(rdf :: STRING, format :: STRING, params = {} :: MAP) :: (target :: STRING, propertyOrRelationshipPath :: STRING, param :: STRING, value :: ANY)¦Imports a SHACL shapes snippet passed as parameter and compiles a validator into neo4j

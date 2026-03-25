@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.graphconfig.init¦n10s.graphconfig.init(params = {} :: MAP?) :: (param :: STRING?, value :: ANY?)¦Initialises the config that drives the behavior of the graph
+¦procedure¦n10s.graphconfig.init¦n10s.graphconfig.init(params = {} :: MAP) :: (param :: STRING, value :: ANY)¦Initialises the config that drives the behavior of the graph

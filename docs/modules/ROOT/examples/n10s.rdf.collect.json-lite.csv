@@ -1,0 +1,2 @@
+¦signature
+¦n10s.rdf.collect.json(subject :: STRING, predicate :: STRING, object :: STRING, isLiteral :: BOOLEAN, literalType :: STRING, literalLang :: STRING, sspo = null :: LIST<STRING>) :: STRING

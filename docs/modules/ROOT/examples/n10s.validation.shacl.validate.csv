@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.validation.shacl.validate¦n10s.validation.shacl.validate() :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)¦n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.
+¦procedure¦n10s.validation.shacl.validate¦n10s.validation.shacl.validate() :: (focusNode :: ANY, nodeType :: STRING, shapeId :: STRING, propertyShape :: STRING, offendingValue :: ANY, resultPath :: STRING, severity :: STRING, resultMessage :: STRING, customMessage :: STRING)¦n10s.validation.shacl.validate() - runs SHACL validation on the whole graph.

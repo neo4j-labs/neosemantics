@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.getIRINamespace(url :: STRING?) :: (STRING?)
+¦n10s.rdf.getIRINamespace(url :: STRING) :: STRING

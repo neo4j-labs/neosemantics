@@ -1,0 +1,2 @@
+¦signature
+¦n10s.sim.pathsim.explain(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: STRING

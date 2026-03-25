@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.mapping.dropAll(namespace :: STRING?) :: (output :: STRING?)
+¦n10s.mapping.dropAll(namespace :: STRING) :: (output :: STRING)

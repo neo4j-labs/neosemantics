@@ -1,2 +1,5 @@
 ¦signature
-¦n10s.sim.pathsim.value(node1 :: NODE?, node2 :: NODE?, params = {} :: MAP?) :: (FLOAT?)
+¦n10s.sim.pathsim.search(node1 :: NODE, simThreshold :: FLOAT, params = {} :: MAP) :: (similarity :: FLOAT, node :: NODE)
+¦n10s.sim.pathsim.explain(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: STRING
+¦n10s.sim.pathsim.path(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: PATH
+¦n10s.sim.pathsim.value(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: FLOAT

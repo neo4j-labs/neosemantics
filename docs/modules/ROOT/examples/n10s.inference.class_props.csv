@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.inference.class_props¦n10s.inference.class_props(class :: NODE, params = {} :: MAP) :: LIST<ANY>¦n10s.inference.class_props(class, { catLabel:''...} ) - returns inferred properties for a given class

@@ -1,0 +1,2 @@
+¦signature
+¦n10s.inference.rel_target_classes(rel :: NODE, params = {} :: MAP) :: LIST<ANY>

@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.getValue¦n10s.rdf.getValue(literal :: STRING?) :: (STRING?)¦Returns the value of a datatype of a property after stripping out the datatype information when present
+¦function¦n10s.rdf.getValue¦n10s.rdf.getValue(literal :: STRING) :: STRING¦Returns the value of a datatype of a property after stripping out the datatype information when present

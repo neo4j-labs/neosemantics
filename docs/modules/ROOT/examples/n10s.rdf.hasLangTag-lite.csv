@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.rdf.hasLangTag(lang :: STRING?, value :: ANY?) :: (BOOLEAN?)
+¦n10s.rdf.hasLangTag(lang :: STRING, value :: ANY) :: BOOLEAN

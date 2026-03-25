@@ -1,2 +1,5 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.sim.pathsim.value¦n10s.sim.pathsim.value(node1 :: NODE?, node2 :: NODE?, params = {} :: MAP?) :: (FLOAT?)¦n10s.sim.pathsim.value() - returns a numeric value representing the path similarity between two elements.
+¦procedure¦n10s.sim.pathsim.search¦n10s.sim.pathsim.search(node1 :: NODE, simThreshold :: FLOAT, params = {} :: MAP) :: (similarity :: FLOAT, node :: NODE)¦n10s.sim.pathsim.search() - returns the elements in the taxonomy with a path similarity equal or greater than a given threshold.
+¦function¦n10s.sim.pathsim.explain¦n10s.sim.pathsim.explain(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: STRING¦n10s.sim.pathsim.explain() - returns a textual description explaining the path similarity between two elements.
+¦function¦n10s.sim.pathsim.path¦n10s.sim.pathsim.path(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: PATH¦n10s.sim.pathsim.path() - returns a numeric value representing the path similarity between two elements.
+¦function¦n10s.sim.pathsim.value¦n10s.sim.pathsim.value(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: FLOAT¦n10s.sim.pathsim.value() - returns a numeric value representing the path similarity between two elements.

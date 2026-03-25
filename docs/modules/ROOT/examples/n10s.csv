@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.version¦n10s.version() :: (STRING?)¦RETURN n10s.version() | return the version of n10s currently installed
+¦function¦n10s.version¦n10s.version() :: STRING¦RETURN n10s.version() | return the version of n10s currently installed

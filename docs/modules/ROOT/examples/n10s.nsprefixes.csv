@@ -1,6 +1,6 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.nsprefixes.add¦n10s.nsprefixes.add(prefix :: STRING?, ns :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦Adds namespace - prefix pair definition
-¦procedure¦n10s.nsprefixes.addFromText¦n10s.nsprefixes.addFromText(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦Adds namespaces from a prefix declaration header fragment
-¦procedure¦n10s.nsprefixes.list¦n10s.nsprefixes.list() :: (prefix :: STRING?, namespace :: STRING?)¦Lists all existing namespace prefix definitions
-¦procedure¦n10s.nsprefixes.remove¦n10s.nsprefixes.remove(prefix :: STRING?) :: (prefix :: STRING?, namespace :: STRING?)¦removes namespace prefix (by prefix)
-¦procedure¦n10s.nsprefixes.removeAll¦n10s.nsprefixes.removeAll() :: (prefix :: STRING?, namespace :: STRING?)¦removes all namespace prefixes
+¦procedure¦n10s.nsprefixes.add¦n10s.nsprefixes.add(prefix :: STRING, ns :: STRING) :: (prefix :: STRING, namespace :: STRING)¦Adds namespace - prefix pair definition
+¦procedure¦n10s.nsprefixes.addFromText¦n10s.nsprefixes.addFromText(prefix :: STRING) :: (prefix :: STRING, namespace :: STRING)¦Adds namespaces from a prefix declaration header fragment
+¦procedure¦n10s.nsprefixes.list¦n10s.nsprefixes.list() :: (prefix :: STRING, namespace :: STRING)¦Lists all existing namespace prefix definitions
+¦procedure¦n10s.nsprefixes.remove¦n10s.nsprefixes.remove(prefix :: STRING) :: (prefix :: STRING, namespace :: STRING)¦removes namespace prefix (by prefix)
+¦procedure¦n10s.nsprefixes.removeAll¦n10s.nsprefixes.removeAll() :: (prefix :: STRING, namespace :: STRING)¦removes all namespace prefixes

@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.inference.hasLabel(node :: NODE?, label :: STRING?, params = {} :: MAP?) :: (BOOLEAN?)
+¦n10s.inference.hasLabel(node :: NODE, label :: STRING, params = {} :: MAP) :: BOOLEAN

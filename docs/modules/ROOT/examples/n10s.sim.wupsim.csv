@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.sim.wupsim.value¦n10s.sim.wupsim.value(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: FLOAT¦n10s.sim.wupsim.value() - returns a numeric value representing the Wu&Palmer similarity between two elements.

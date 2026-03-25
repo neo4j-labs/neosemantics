@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.mapping.drop¦n10s.mapping.drop(graphElementName :: STRING?) :: (output :: STRING?)¦
+¦procedure¦n10s.mapping.drop¦n10s.mapping.drop(graphElementName :: STRING) :: (output :: STRING)¦

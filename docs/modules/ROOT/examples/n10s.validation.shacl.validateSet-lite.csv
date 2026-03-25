@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.validation.shacl.validateSet(nodeList = [] :: LIST? OF NODE?) :: (focusNode :: ANY?, nodeType :: STRING?, shapeId :: STRING?, propertyShape :: STRING?, offendingValue :: ANY?, resultPath :: STRING?, severity :: STRING?, resultMessage :: STRING?)
+¦n10s.validation.shacl.validateSet(nodeList = [] :: LIST<NODE>) :: (focusNode :: ANY, nodeType :: STRING, shapeId :: STRING, propertyShape :: STRING, offendingValue :: ANY, resultPath :: STRING, severity :: STRING, resultMessage :: STRING, customMessage :: STRING)

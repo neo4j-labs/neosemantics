@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.aux.dt.check¦n10s.aux.dt.check(expectedType :: STRING, actual :: ANY) :: BOOLEAN¦Checks if a value has a given datatype (XSD)

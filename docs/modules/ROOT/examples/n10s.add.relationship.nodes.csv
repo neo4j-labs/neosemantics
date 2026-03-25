@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.add.relationship.nodes¦n10s.add.relationship.nodes(from :: NODE, type :: STRING, properties :: LIST<MAP>, to :: NODE) :: (rel :: RELATIONSHIP)¦creates a relationship in the graph following the existing GraphConfig.

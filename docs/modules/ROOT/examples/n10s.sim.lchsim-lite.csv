@@ -1,0 +1,3 @@
+¦signature
+¦n10s.sim.lchsim.search(node1 :: NODE, simThreshold :: FLOAT, params = {} :: MAP) :: (similarity :: FLOAT, node :: NODE)
+¦n10s.sim.lchsim.value(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: FLOAT

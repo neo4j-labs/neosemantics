@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.inference.rel_source_classes¦n10s.inference.rel_source_classes(rel :: NODE, params = {} :: MAP) :: LIST<ANY>¦n10s.inference.rel_targets(rel, { includeAll: true, catLabel:''...} ) - returns inferred sources (domains) for a given relationship

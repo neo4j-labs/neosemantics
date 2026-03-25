@@ -1,0 +1,2 @@
+¦signature
+¦n10s.add.relationship.uris(from :: STRING, type :: STRING, properties :: LIST<MAP>, to :: STRING) :: (rel :: RELATIONSHIP)

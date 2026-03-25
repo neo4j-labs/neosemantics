@@ -1,0 +1,2 @@
+¦signature
+¦n10s.add.relationship.nodes(from :: NODE, type :: STRING, properties :: LIST<MAP>, to :: NODE) :: (rel :: RELATIONSHIP)

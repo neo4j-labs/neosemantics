@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.skos.import.fetch¦n10s.skos.import.fetch(url :: STRING?, format :: STRING?, params = {} :: MAP?) :: (terminationStatus :: STRING?, triplesLoaded :: INTEGER?, triplesParsed :: INTEGER?, namespaces :: MAP?, extraInfo :: STRING?, callParams :: MAP?)¦Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.
+¦procedure¦n10s.skos.import.fetch¦n10s.skos.import.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (terminationStatus :: STRING, triplesLoaded :: INTEGER, triplesParsed :: INTEGER, namespaces :: MAP, extraInfo :: STRING, callParams :: MAP)¦Imports classes, properties (dataType and Object), hierarchies thereof and domain and range info.

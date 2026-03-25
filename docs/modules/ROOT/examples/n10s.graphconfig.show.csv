@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦procedure¦n10s.graphconfig.show¦n10s.graphconfig.show() :: (param :: STRING?, value :: ANY?)¦Shows the current graph config
+¦procedure¦n10s.graphconfig.show¦n10s.graphconfig.show() :: (param :: STRING, value :: ANY)¦Shows the current graph config

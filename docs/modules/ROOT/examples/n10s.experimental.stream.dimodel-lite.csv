@@ -1,0 +1,3 @@
+¦signature
+¦n10s.experimental.stream.dimodel.fetch(url :: STRING, format :: STRING, params = {} :: MAP) :: (modelFile :: STRING, mappingsScript :: STRING, summary :: STRING)
+¦n10s.experimental.stream.dimodel.inline(rdf :: STRING, format :: STRING, params = {} :: MAP) :: (modelFile :: STRING, mappingsScript :: STRING, summary :: STRING)

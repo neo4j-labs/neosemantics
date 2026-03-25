@@ -1,2 +1,2 @@
 ¦signature
-¦n10s.inference.nodesLabelled(label :: STRING?, params = {} :: MAP?) :: (node :: NODE?)
+¦n10s.inference.nodesLabelled(label :: STRING, params = {} :: MAP) :: (node :: NODE)

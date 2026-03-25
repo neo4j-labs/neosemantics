@@ -1,2 +1,2 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.inference.inCategory¦n10s.inference.inCategory(node :: NODE?, category :: NODE?, params = {} :: MAP?) :: (BOOLEAN?)¦n10s.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category.
+¦function¦n10s.inference.inCategory¦n10s.inference.inCategory(node :: NODE, category :: NODE, params = {} :: MAP) :: BOOLEAN¦n10s.inference.inCategory(node, category, {}) - checks whether node is explicitly or implicitly in a category.

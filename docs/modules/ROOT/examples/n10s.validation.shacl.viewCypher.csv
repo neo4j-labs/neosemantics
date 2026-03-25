@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.validation.shacl.viewCypher¦n10s.validation.shacl.viewCypher() :: (cypher :: STRING, params :: MAP)¦n10s.validation.shacl.viewCypher() - shows the compiled cypher for the loaded SHACL shapes.

@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.experimental.stream.dimodel.inline¦n10s.experimental.stream.dimodel.inline(rdf :: STRING, format :: STRING, params = {} :: MAP) :: (modelFile :: STRING, mappingsScript :: STRING, summary :: STRING)¦Generates a data importer tool model aligned with the selected ontology

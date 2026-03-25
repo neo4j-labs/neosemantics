@@ -1,0 +1,2 @@
+¦signature
+¦n10s.inference.class_props(class :: NODE, params = {} :: MAP) :: LIST<ANY>

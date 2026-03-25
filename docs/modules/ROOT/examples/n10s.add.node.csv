@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦procedure¦n10s.add.node¦n10s.add.node(uri :: STRING, types :: LIST<STRING>, properties :: LIST<MAP>) :: (node :: NODE)¦creates a node in the graph following the existing GraphConfig.

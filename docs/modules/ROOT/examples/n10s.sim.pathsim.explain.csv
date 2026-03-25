@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.sim.pathsim.explain¦n10s.sim.pathsim.explain(node1 :: NODE, node2 :: NODE, params = {} :: MAP) :: STRING¦n10s.sim.pathsim.explain() - returns a textual description explaining the path similarity between two elements.

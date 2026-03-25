@@ -1,0 +1,2 @@
+¦type¦qualified name¦signature¦description
+¦function¦n10s.inference.class_incoming_rels¦n10s.inference.class_incoming_rels(class :: NODE, params = {} :: MAP) :: LIST<ANY>¦n10s.inference.class_in_rels(class, { includeAll: true, catLabel:''...} ) - returns inferred incoming relationships for a given class

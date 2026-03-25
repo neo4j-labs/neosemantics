@@ -1,12 +1,12 @@
 ¦type¦qualified name¦signature¦description
-¦function¦n10s.rdf.collect¦n10s.rdf.collect(subject :: STRING?, predicate :: STRING?, object :: STRING?, isLiteral :: BOOLEAN?, literalType :: STRING?, literalLang :: STRING?, sspo = null :: LIST? OF STRING?) :: (STRING?)¦n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* and returns them serialised as N-triples
-¦function¦n10s.rdf.fullUriFromShortForm¦n10s.rdf.fullUriFromShortForm(short :: STRING?) :: (STRING?)¦Returns the expanded (full) IRI given a shortened one created in the load process with semantics.importRDF
-¦function¦n10s.rdf.getDataType¦n10s.rdf.getDataType(literal :: ANY?) :: (STRING?)¦Returns the XMLSchema or custom datatype of a property when present
-¦function¦n10s.rdf.getIRILocalName¦n10s.rdf.getIRILocalName(url :: STRING?) :: (STRING?)¦Returns the local part of an IRI
-¦function¦n10s.rdf.getIRINamespace¦n10s.rdf.getIRINamespace(url :: STRING?) :: (STRING?)¦Returns the namespace part of an IRI
-¦function¦n10s.rdf.getLangTag¦n10s.rdf.getLangTag(value :: ANY?) :: (STRING?)¦Returns the language tag of a value. Returns null if the value is not a string orif the string has no language tag
-¦function¦n10s.rdf.getLangValue¦n10s.rdf.getLangValue(lang :: STRING?, values :: ANY?) :: (STRING?)¦Returns the first value with the language tag passed as first argument or null if there's not a value for the provided tag
-¦function¦n10s.rdf.getValue¦n10s.rdf.getValue(literal :: STRING?) :: (STRING?)¦Returns the value of a datatype of a property after stripping out the datatype information when present
-¦function¦n10s.rdf.hasLangTag¦n10s.rdf.hasLangTag(lang :: STRING?, value :: ANY?) :: (BOOLEAN?)¦Returns false if the value is not a string or if the string is not tagged with the  given language tag
-¦function¦n10s.rdf.isIRI¦n10s.rdf.isIRI(str :: STRING?) :: (BOOLEAN?)¦Returns the true if string is a valid IRI
-¦function¦n10s.rdf.shortFormFromFullUri¦n10s.rdf.shortFormFromFullUri(uri :: STRING?) :: (STRING?)¦Returns the shortened version of an IRI using the existing namespace definitions
+¦function¦n10s.rdf.collect¦n10s.rdf.collect(subject :: STRING, predicate :: STRING, object :: STRING, isLiteral :: BOOLEAN, literalType :: STRING, literalLang :: STRING, sspo = null :: LIST<STRING>) :: STRING¦n10s.rdf.collect(subject,predicate,object,isLiteral,literalType,literalLang) - collects a set of triples as returned by n10s.rdf.export.* or n10s.rdf.stream.* and returns them serialised as N-triples
+¦function¦n10s.rdf.fullUriFromShortForm¦n10s.rdf.fullUriFromShortForm(short :: STRING) :: STRING¦Returns the expanded (full) IRI given a shortened one created in the load process with semantics.importRDF
+¦function¦n10s.rdf.getDataType¦n10s.rdf.getDataType(literal :: ANY) :: STRING¦Returns the XMLSchema or custom datatype of a property when present
+¦function¦n10s.rdf.getIRILocalName¦n10s.rdf.getIRILocalName(url :: STRING) :: STRING¦Returns the local part of an IRI
+¦function¦n10s.rdf.getIRINamespace¦n10s.rdf.getIRINamespace(url :: STRING) :: STRING¦Returns the namespace part of an IRI
+¦function¦n10s.rdf.getLangTag¦n10s.rdf.getLangTag(value :: ANY) :: STRING¦Returns the language tag of a value. Returns null if the value is not a string orif the string has no language tag
+¦function¦n10s.rdf.getLangValue¦n10s.rdf.getLangValue(lang :: STRING, values :: ANY) :: STRING¦Returns the first value with the language tag passed as first argument or null if there's not a value for the provided tag
+¦function¦n10s.rdf.getValue¦n10s.rdf.getValue(literal :: STRING) :: STRING¦Returns the value of a datatype of a property after stripping out the datatype information when present
+¦function¦n10s.rdf.hasLangTag¦n10s.rdf.hasLangTag(lang :: STRING, value :: ANY) :: BOOLEAN¦Returns false if the value is not a string or if the string is not tagged with the  given language tag
+¦function¦n10s.rdf.isIRI¦n10s.rdf.isIRI(str :: STRING) :: BOOLEAN¦Returns the true if string is a valid IRI
+¦function¦n10s.rdf.shortFormFromFullUri¦n10s.rdf.shortFormFromFullUri(uri :: STRING) :: STRING¦Returns the shortened version of an IRI using the existing namespace definitions

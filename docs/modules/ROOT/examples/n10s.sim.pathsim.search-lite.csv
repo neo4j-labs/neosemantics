@@ -1,0 +1,2 @@
+¦signature
+¦n10s.sim.pathsim.search(node1 :: NODE, simThreshold :: FLOAT, params = {} :: MAP) :: (similarity :: FLOAT, node :: NODE)
