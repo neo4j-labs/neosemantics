@@ -768,7 +768,7 @@ ex:item1 ont:upsellWith ex:item2 .
 
 neosemantics maps this to a Neo4j relationship with annotation properties. The predicate of the quoted triple becomes the relationship type, and the annotation predicates become relationship properties.
 
-The original predicate IRI is always stored as an `iri` property on the relationship, regardless of the `handleVocabUris` setting. This ensures the full IRI is recoverable even when names are shortened or local names are used.
+The original predicate IRI is stored as an `iri` property on the relationship whenever `handleVocabUris` is set to `SHORTEN`, `SHORTEN_STRICT`, `IGNORE`, or `MAP` — i.e., whenever the relationship type name no longer equals the full IRI. When `handleVocabUris` is `KEEP`, the relationship type name is the full IRI, so storing a separate `iri` property would be redundant and it is omitted.
 
 === Example import
 
