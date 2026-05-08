@@ -28,8 +28,6 @@ import org.neo4j.logging.Log;
 public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
   private static final Label RESOURCE = Label.label("Resource");
-  private static final int MAX_DEADLOCK_RETRIES = 3;
-  private static final long DEADLOCK_RETRY_DELAY_MS = 200;
   private Cache<String, Node> nodeCache;
 
   public DirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
@@ -238,8 +236,8 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
         break;
       } catch (DeadlockDetectedException e) {
         attempts++;
-        if (attempts > MAX_DEADLOCK_RETRIES) {
-          log.error("Deadlock in partial commit unresolved after " + MAX_DEADLOCK_RETRIES
+        if (attempts > parserConfig.getDeadlockMaxRetries()) {
+          log.error("Deadlock in partial commit unresolved after " + parserConfig.getDeadlockMaxRetries()
               + " retries. " + mappedTripleCounter + " triples lost.", e);
           if (getParserConfig().isAbortOnError()) {
             throw new PartialCommitException("Deadlock in partial commit. ", e);
@@ -247,9 +245,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
           break;
         }
         log.warn("Deadlock in partial commit, retrying (attempt " + attempts + "/"
-            + MAX_DEADLOCK_RETRIES + ")");
+            + parserConfig.getDeadlockMaxRetries() + ")");
         try {
-          Thread.sleep(DEADLOCK_RETRY_DELAY_MS * attempts);
+          Thread.sleep(parserConfig.getDeadlockRetryDelayMs() * attempts);
         } catch (InterruptedException ie) {
           Thread.currentThread().interrupt();
           break;
