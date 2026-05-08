@@ -24,6 +24,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.logging.Log;
 
 /**
@@ -35,6 +36,8 @@ import org.neo4j.logging.Log;
 public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor {
 
   private static final Label RESOURCE = Label.label("Resource");
+  private static final int MAX_DEADLOCK_RETRIES = 3;
+  private static final long DEADLOCK_RETRY_DELAY_MS = 200;
   private Cache<ContextResource, Node> nodeCache;
 
   public RDFQuadDirectStatementLoader(GraphDatabaseService db, Transaction tx, RDFParserConfig conf,
@@ -243,21 +246,42 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
         namespaces.partialRefresh(tempTransaction);
         tempTransaction.commit();
         log.debug("namespace prefixes synced: " + namespaces.toString());
-      }catch (Exception e) {
-        e.printStackTrace();
+      } catch (Exception e) {
+        log.error("Problems syncing up namespace prefixes in partial commit. ", e);
       }
     }
 
-    try (Transaction tempTransaction = graphdb.beginTx()) {
-      this.runPartialTx(tempTransaction);
-      tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
-          + totalTriplesMapped);
-    }catch (Exception e) {
-      e.printStackTrace();
+    int attempts = 0;
+    while (true) {
+      try (Transaction tempTransaction = graphdb.beginTx()) {
+        this.runPartialTx(tempTransaction);
+        tempTransaction.commit();
+        log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+            + totalTriplesMapped);
+        totalTriplesMapped += mappedTripleCounter;
+        break;
+      } catch (DeadlockDetectedException e) {
+        attempts++;
+        if (attempts > MAX_DEADLOCK_RETRIES) {
+          log.error("Deadlock in partial commit unresolved after " + MAX_DEADLOCK_RETRIES
+              + " retries. " + mappedTripleCounter + " triples lost.", e);
+          break;
+        }
+        log.warn("Deadlock in partial commit, retrying (attempt " + attempts + "/"
+            + MAX_DEADLOCK_RETRIES + ")");
+        try {
+          Thread.sleep(DEADLOCK_RETRY_DELAY_MS * attempts);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      } catch (Exception e) {
+        log.error("Problems when running partial commit. Partial transaction rolled back. "
+            + mappedTripleCounter + " triples lost.", e);
+        break;
+      }
     }
 
-    totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
 
   }
