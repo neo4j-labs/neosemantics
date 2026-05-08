@@ -696,6 +696,55 @@ RETURN n10s.rdf.getValue(n.ns0__power);
 
 The user functions mentioned above can be combined with other user functions like `uriFromShort` or `getIRILocalName` etc.
 
+[[handling-datetime]]
+== Handling XSD date and time literals
+
+neosemantics maps standard XSD date/time types to native Neo4j temporal values:
+
+* `xsd:date` → `LocalDate`
+* `xsd:dateTime` → `ZonedDateTime` (when a named zone ID is present, e.g. `[UTC]`) or `OffsetDateTime` (when only a UTC offset is present, e.g. `+00:00`)
+* `xsd:time` → `LocalTime`
+
+=== Datetimes with UTC offsets
+
+The ISO 8601 format allows two ways to express a timezone:
+
+* As a *named zone ID*: `"2024-01-15T10:30:00[Europe/Berlin]"` — parsed as `ZonedDateTime`
+* As a *bare UTC offset*: `"2024-01-15T10:30:00+02:00"` — parsed as `OffsetDateTime`
+
+Both forms are stored as native Neo4j temporal properties and are comparable and sortable.
+
+For example, the following Turtle fragment with different offset-based datetimes:
+
+[source,RDF]
+----
+@prefix ex: <http://example.com/> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ex:Event1
+    ex:startDate "2024-06-22T21:41:34.066344+00:00"^^xsd:dateTime .
+
+ex:Event2
+    ex:startDate "1970-01-01T00:00:00-05:00"^^xsd:dateTime .
+----
+
+After import, the `startDate` properties are stored as Neo4j temporal values, not strings:
+
+[source,cypher]
+----
+MATCH (n:Resource)
+RETURN n.ns0__startDate, type(n.ns0__startDate)
+----
+
+You can use all standard Neo4j temporal functions on them:
+
+[source,cypher]
+----
+MATCH (n:Resource)
+WHERE n.ns0__startDate > datetime("2024-01-01T00:00:00Z")
+RETURN n
+----
+
 [[classes-as-nodes]]
 == Classes as Nodes (instead of Labels)
 
