@@ -750,6 +750,63 @@ suggests persists `rdf:type` statements exclusively as relationships.
 
 More on the usefulness of representing the ontology in the neo4j graph in section xref:inference.adoc[Inference/Reasoning].
 
+[[rdf-star]]
+== RDF-star (Turtle-star) — Annotated Relationships
+
+RDF-star (also called RDF-star or Turtle-star) extends RDF with the ability to annotate a triple with additional properties. The syntax uses `<<` and `>>` to quote a triple:
+
+[source,RDF]
+----
+@prefix ex: <http://example.com/> .
+@prefix ont: <https://example.com/ontology/> .
+
+ex:item1 ont:upsellWith ex:item2 .
+
+<<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 ;
+                                     ont:confidence 0.95 .
+----
+
+neosemantics maps this to a Neo4j relationship with annotation properties. The predicate of the quoted triple becomes the relationship type, and the annotation predicates become relationship properties.
+
+The original predicate IRI is stored as an `iri` property on the relationship whenever `handleVocabUris` is set to `SHORTEN`, `SHORTEN_STRICT`, `IGNORE`, or `MAP` — i.e., whenever the relationship type name no longer equals the full IRI. When `handleVocabUris` is `KEEP`, the relationship type name is the full IRI, so storing a separate `iri` property would be redundant and it is omitted.
+
+=== Example import
+
+[source,cypher]
+----
+CALL n10s.graphconfig.init({
+  handleVocabUris: "IGNORE",
+  applyNeo4jNaming: true,
+  handleRDFTypes: "LABELS"
+});
+
+CALL n10s.rdf.import.inline('
+  @prefix ex: <http://example.com/> .
+  @prefix ont: <https://example.com/ontology/> .
+
+  ex:item1 ont:upsellWith ex:item2 .
+  <<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 .
+', "Turtle");
+----
+
+=== Querying the annotated relationship
+
+[source,cypher]
+----
+MATCH ()-[r:UPSELLWITH]->()
+RETURN r.iri, r.orderNo
+----
+
+.Results
+[opts="header"]
+|===
+| r.iri | r.orderNo
+| "https://example.com/ontology/upsellWith" | 1
+|===
+
+[NOTE]
+RDF-star support requires Turtle-star format. Use `"Turtle"` as the format parameter — the parser automatically handles the `<<...>>` quoted triple syntax.
+
 [[advancedfetching]]
 == Advanced settings for fetching RDF
 

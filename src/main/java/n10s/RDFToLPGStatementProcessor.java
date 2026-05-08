@@ -322,7 +322,10 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
   private Map<String, Object> initialiseRelProps(Map<Statement,Map<String, Object>> m, Statement stmt) {
     HashMap<String, Object> props = new HashMap<>();
-    //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
+    // Store predicate IRI except when KEEP, where the relationship type name is already the full IRI
+    if (parserConfig.getGraphConf().getHandleVocabUris() != GRAPHCONF_VOC_URI_KEEP) {
+      props.put("iri", stmt.getPredicate().stringValue());
+    }
     m.put(stmt, props);
     return props;
   }
