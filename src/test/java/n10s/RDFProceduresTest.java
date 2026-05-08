@@ -750,6 +750,33 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportRDFStarRelationshipIRI() throws Exception {
+    // Regression test for #265: predicate IRI must be stored as 'iri' property on
+    // relationships imported via RDF-star so it is not lost when handleVocabUris is IGNORE
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true, handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <https://example.com/graph/> .\n" +
+              "@prefix ont: <https://example.com/ontology/> .\n" +
+              "ex:item1 a ont:Product .\n" +
+              "ex:item2 a ont:Product .\n" +
+              "<<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 .\n";
+
+      Result importResult = session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+      assertEquals(3L, importResult.single().get("triplesLoaded").asLong());
+
+      // With applyNeo4jNaming:true, the relationship type is UPSELLWITH (local name uppercased)
+      // but the full predicate IRI must still be accessible via the 'iri' property
+      Record rel = session.run(
+              "MATCH ()-[r:UPSELLWITH]->() RETURN r.orderNo as orderNo, r.iri as iri")
+              .single();
+      assertEquals(1L, rel.get("orderNo").asLong());
+      assertEquals("https://example.com/ontology/upsellWith", rel.get("iri").asString());
+    }
+  }
+
+  @Test
   public void testImportRDFStarWithArrayMultiVal() throws Exception {
     try (Session session = driver.session()) {
 

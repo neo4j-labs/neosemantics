@@ -315,7 +315,8 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
   private Map<String, Object> initialiseRelProps(Map<Statement,Map<String, Object>> m, Statement stmt) {
     HashMap<String, Object> props = new HashMap<>();
-    //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
+    // Store predicate IRI so it is not lost when handleVocabUris is IGNORE or SHORTEN
+    props.put("iri", stmt.getPredicate().stringValue());
     m.put(stmt, props);
     return props;
   }
