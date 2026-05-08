@@ -741,7 +741,7 @@ the instances to the previously loaded ontology.
 call n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/miniinstances.ttl","Turtle");
 ----
 
-The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), tere's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.
+The resulting graph connects the instance data to the ontology elements. This is the magic of unique identifiers (uris), there's nothing you need to do for the linkage to happen, if your RDF is well formed and uris are used consistently in it, then it will happen automatically.
 
 image::miniontoandinstances.png[Connected ontology and instance data imported in Neo4j,scaledwidth="100%"]
 
