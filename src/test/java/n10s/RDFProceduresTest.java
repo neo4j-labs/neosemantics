@@ -777,6 +777,32 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportRDFStarRelationshipIRINotStoredWhenKEEP() throws Exception {
+    // With handleVocabUris=KEEP the relationship type name is already the full IRI,
+    // so storing 'iri' as a property would be redundant — verify it is omitted
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <https://example.com/graph/> .\n" +
+              "@prefix ont: <https://example.com/ontology/> .\n" +
+              "ex:item1 a ont:Product .\n" +
+              "ex:item2 a ont:Product .\n" +
+              "<<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      Record rel = session.run(
+              "MATCH ()-[r]->() WHERE type(r) = 'https://example.com/ontology/upsellWith' " +
+              "RETURN r.iri as iri, r.orderNo as orderNo")
+              .single();
+      // With KEEP, type name IS the full IRI, so 'iri' property must not be stored
+      assertTrue("iri property should not be set when handleVocabUris=KEEP", rel.get("iri").isNull());
+      assertEquals(1L, rel.get("orderNo").asLong());
+    }
+  }
+
+  @Test
   public void testImportRDFStarWithArrayMultiVal() throws Exception {
     try (Session session = driver.session()) {
 
