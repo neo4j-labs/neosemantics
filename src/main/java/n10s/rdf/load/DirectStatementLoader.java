@@ -18,6 +18,7 @@ import n10s.graphconfig.RDFParserConfig;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.neo4j.graphdb.*;
+import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.logging.Log;
 
 /**
@@ -59,8 +60,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
   public Integer runPartialTx(Transaction inThreadTransaction) {
 
-    try {
-      for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
+    for (Map.Entry<String, Set<String>> entry : resourceLabels.entrySet()) {
         try {
           final Node node;
           node = nodeCache.get(entry.getKey(), () -> {
@@ -147,15 +147,13 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
         result = namespaces.partialRefresh(inThreadTransaction);
       }
 
-      return result;
-
-    } finally {
       statements.clear();
       resourceLabels.clear();
       resourceProps.clear();
       relProps.clear();
       nodeCache.invalidateAll();
-    }
+
+      return result;
   }
 
   private void setProperty(Entity node, String k, Object v) {
@@ -227,16 +225,40 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
       }
     }
 
-    try (Transaction tempTransaction = graphdb.beginTx()) {
-      this.runPartialTx(tempTransaction);
-      tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
-          + totalTriplesMapped);
-      totalTriplesMapped += mappedTripleCounter;
-    } catch (Exception e) {
-      log.error("Problems when running partial commit. Partial transaction rolled back. "  + mappedTripleCounter + " triples lost.", e);
-      if (getParserConfig().isAbortOnError()){
-        throw new PartialCommitException("Problems when running partial commit. Partial transaction rolled back. " , e);
+    int attempts = 0;
+    while (true) {
+      try (Transaction tempTransaction = graphdb.beginTx()) {
+        this.runPartialTx(tempTransaction);
+        tempTransaction.commit();
+        log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+            + totalTriplesMapped);
+        totalTriplesMapped += mappedTripleCounter;
+        break;
+      } catch (DeadlockDetectedException e) {
+        attempts++;
+        if (attempts > parserConfig.getDeadlockMaxRetries()) {
+          log.error("Deadlock in partial commit unresolved after " + parserConfig.getDeadlockMaxRetries()
+              + " retries. " + mappedTripleCounter + " triples lost.", e);
+          if (getParserConfig().isAbortOnError()) {
+            throw new PartialCommitException("Deadlock in partial commit. ", e);
+          }
+          break;
+        }
+        log.warn("Deadlock in partial commit, retrying (attempt " + attempts + "/"
+            + parserConfig.getDeadlockMaxRetries() + ")");
+        try {
+          Thread.sleep(parserConfig.getDeadlockRetryDelayMs() * attempts);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      } catch (Exception e) {
+        log.error("Problems when running partial commit. Partial transaction rolled back. "
+            + mappedTripleCounter + " triples lost.", e);
+        if (getParserConfig().isAbortOnError()) {
+          throw new PartialCommitException("Problems when running partial commit. Partial transaction rolled back. ", e);
+        }
+        break;
       }
     }
 

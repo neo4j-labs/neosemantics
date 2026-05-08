@@ -16,6 +16,9 @@ public class RDFParserConfig {
   private static final long DEFAULT_NODE_CACHE_SIZE = 10000;
   //number of triples streamed by default
   private static final int DEFAULT_STREAM_TRIPLE_LIMIT = 1000;
+  //deadlock retry defaults
+  private static final int DEFAULT_DEADLOCK_MAX_RETRIES = 3;
+  private static final long DEFAULT_DEADLOCK_RETRY_DELAY_MS = 200;
   private final Set<String> predicateExclusionList;
   private final boolean verifyUriSyntax;
   private final long nodeCacheSize;
@@ -27,6 +30,8 @@ public class RDFParserConfig {
   private boolean strictDataTypeCheck;
 
   private boolean singleTx;
+  private final int deadlockMaxRetries;
+  private final long deadlockRetryDelayMs;
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
@@ -51,6 +56,10 @@ public class RDFParserConfig {
             .get("strictDataTypeCheck") : true;
     singleTx = props.containsKey("singleTx") ? (Boolean) props
               .get("singleTx") : false;
+    deadlockMaxRetries = props.containsKey("deadlockMaxRetries")
+        ? ((Long) props.get("deadlockMaxRetries")).intValue() : DEFAULT_DEADLOCK_MAX_RETRIES;
+    deadlockRetryDelayMs = props.containsKey("deadlockRetryDelayMs")
+        ? (Long) props.get("deadlockRetryDelayMs") : DEFAULT_DEADLOCK_RETRY_DELAY_MS;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -93,6 +102,10 @@ public class RDFParserConfig {
 
   public boolean isStrictDataTypeCheck() { return strictDataTypeCheck;  }
 
+  public int getDeadlockMaxRetries() { return deadlockMaxRetries; }
+
+  public long getDeadlockRetryDelayMs() { return deadlockRetryDelayMs; }
+
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
 
@@ -122,6 +135,14 @@ public class RDFParserConfig {
 
     if (streamTripleLimit != DEFAULT_STREAM_TRIPLE_LIMIT) {
       summary.put("limit", streamTripleLimit);
+    }
+
+    if (deadlockMaxRetries != DEFAULT_DEADLOCK_MAX_RETRIES) {
+      summary.put("deadlockMaxRetries", deadlockMaxRetries);
+    }
+
+    if (deadlockRetryDelayMs != DEFAULT_DEADLOCK_RETRY_DELAY_MS) {
+      summary.put("deadlockRetryDelayMs", deadlockRetryDelayMs);
     }
 
     return summary;

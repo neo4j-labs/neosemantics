@@ -4382,4 +4382,39 @@ public class RDFProceduresTest {
                       .hasNext());
     }
   }
+
+  @Test
+  public void testPeriodicCommitImportsAllTriples() throws Exception {
+    // Regression test for #297: buffer clearing moved from finally to success path so that
+    // all triples across multiple partial commits are stored correctly.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +
+              "ex:alice a foaf:Person ; foaf:name 'Alice' ; foaf:age 30 .\n" +
+              "ex:bob   a foaf:Person ; foaf:name 'Bob'   ; foaf:age 25 .\n" +
+              "ex:carol a foaf:Person ; foaf:name 'Carol' ; foaf:age 35 .\n" +
+              "ex:dave  a foaf:Person ; foaf:name 'Dave'  ; foaf:age 28 .\n" +
+              "ex:alice foaf:knows ex:bob .\n" +
+              "ex:bob   foaf:knows ex:carol .\n" +
+              "ex:carol foaf:knows ex:dave .\n";
+
+      // commitSize: 3 forces multiple partial commits across the 12 triples above
+      Result importResults = session.run(
+              "CALL n10s.rdf.import.inline('" + turtle + "','Turtle', { commitSize: 3 })");
+      long loaded = importResults.single().get("triplesLoaded").asLong();
+      assertTrue("All triples should be imported across partial commits, got: " + loaded,
+              loaded >= 12L);
+
+      long personCount = session.run(
+              "MATCH (n:Person) RETURN count(n) AS c").single().get("c").asLong();
+      assertEquals("All four Person nodes should be present", 4L, personCount);
+
+      long knowsCount = session.run(
+              "MATCH ()-[:knows]->() RETURN count(*) AS c").single().get("c").asLong();
+      assertEquals("All knows relationships should be present", 3L, knowsCount);
+    }
+  }
 }
