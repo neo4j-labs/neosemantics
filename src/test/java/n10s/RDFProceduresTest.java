@@ -4417,4 +4417,59 @@ public class RDFProceduresTest {
       assertEquals("All knows relationships should be present", 3L, knowsCount);
     }
   }
+
+  @Test
+  public void testRDFStarMultipleAnnotationPredicates() throws Exception {
+    // Two DIFFERENT annotation predicates on the same quoted triple must merge into
+    // ONE relationship with BOTH properties — not two separate relationships.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:s1 a ex:Person .\n" +
+              "ex:s2 a ex:Person .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:since 2020 .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:strength \"strong\" .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      long relCount = session.run("MATCH ()-[r:likes]->() RETURN count(r) AS c")
+              .single().get("c").asLong();
+      assertEquals("Two different annotation predicates must produce exactly one relationship", 1L, relCount);
+
+      Record r = session.run("MATCH ()-[r:likes]->() RETURN r.since AS since, r.strength AS strength")
+              .single();
+      assertEquals(2020L, r.get("since").asLong());
+      assertEquals("strong", r.get("strength").asString());
+    }
+  }
+
+  @Test
+  public void testRDFStarSameAnnotationPredicateMultipleValues() throws Exception {
+    // Same annotation predicate with two values: with handleMultival ARRAY both values are kept.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS'," +
+              "  handleMultival: 'ARRAY', multivalPropList: ['urn:ex:becauseOf'] }");
+
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:s1 a ex:Person .\n" +
+              "ex:s2 a ex:Person .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:becauseOf \"x\" .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:becauseOf \"y\" .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      long relCount = session.run("MATCH ()-[r:likes]->() RETURN count(r) AS c")
+              .single().get("c").asLong();
+      assertEquals("Same annotation predicate with two values should produce one relationship", 1L, relCount);
+
+      List<Object> values = session.run("MATCH ()-[r:likes]->() RETURN r.becauseOf AS v")
+              .single().get("v").asList();
+      assertEquals("Both annotation values must be preserved as array", 2, values.size());
+      assertTrue(values.contains("x"));
+      assertTrue(values.contains("y"));
+    }
+  }
 }
