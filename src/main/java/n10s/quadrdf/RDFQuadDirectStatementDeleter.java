@@ -100,8 +100,10 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
               return node;
             }
           });
-        } catch (InvalidCacheLoadException | IllegalStateException e) {
-          e.printStackTrace();
+        } catch (InvalidCacheLoadException e) {
+          log.debug("Node not found for delete (uri=" + entry.getKey().getUri() + ")");
+        } catch (IllegalStateException e) {
+          log.warn("Data inconsistency during delete: " + e.getMessage());
         }
         node = tempNode;
         entry.getValue().forEach(l -> {
@@ -180,7 +182,7 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
           deleteNodeIfEmpty(node);
         }
       } catch (ExecutionException e) {
-        e.printStackTrace();
+        log.error("Unexpected error processing delete for uri=" + entry.getKey().getUri(), e);
       }
     }
 
@@ -219,8 +221,10 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
               return node;
             }
           });
-        } catch (InvalidCacheLoadException | IllegalStateException e) {
-          e.printStackTrace();
+        } catch (InvalidCacheLoadException e) {
+          log.debug("Subject node not found for delete (uri=" + st.getSubject().stringValue() + ")");
+        } catch (IllegalStateException e) {
+          log.warn("Data inconsistency during delete (subject): " + e.getMessage());
         }
         ContextResource to = new ContextResource(st.getObject().stringValue(),
             st.getContext() != null ? st.getContext().stringValue() : null);
@@ -249,8 +253,10 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
               return node;
             }
           });
-        } catch (InvalidCacheLoadException | IllegalStateException e) {
-          e.printStackTrace();
+        } catch (InvalidCacheLoadException e) {
+          log.debug("Object node not found for delete (uri=" + st.getObject().stringValue() + ")");
+        } catch (IllegalStateException e) {
+          log.warn("Data inconsistency during delete (object): " + e.getMessage());
         }
         if (fromNode == null || toNode == null) {
           notDeletedStatementCount++;
@@ -287,7 +293,7 @@ public class RDFQuadDirectStatementDeleter extends RDFQuadToLPGStatementProcesso
         deleteNodeIfEmpty(toNode);
         deleteNodeIfEmpty(fromNode);
       } catch (ExecutionException e) {
-        e.printStackTrace();
+        log.error("Unexpected error processing relationship delete", e);
       }
     }
 

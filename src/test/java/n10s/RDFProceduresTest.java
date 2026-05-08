@@ -4393,17 +4393,18 @@ public class RDFProceduresTest {
 
       String turtle = "@prefix ex: <http://example.org/> .\n" +
               "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +
-              "ex:alice a foaf:Person ; foaf:name 'Alice' ; foaf:age 30 .\n" +
-              "ex:bob   a foaf:Person ; foaf:name 'Bob'   ; foaf:age 25 .\n" +
-              "ex:carol a foaf:Person ; foaf:name 'Carol' ; foaf:age 35 .\n" +
-              "ex:dave  a foaf:Person ; foaf:name 'Dave'  ; foaf:age 28 .\n" +
+              "ex:alice a foaf:Person ; foaf:name \"Alice\" ; foaf:age 30 .\n" +
+              "ex:bob   a foaf:Person ; foaf:name \"Bob\"   ; foaf:age 25 .\n" +
+              "ex:carol a foaf:Person ; foaf:name \"Carol\" ; foaf:age 35 .\n" +
+              "ex:dave  a foaf:Person ; foaf:name \"Dave\"  ; foaf:age 28 .\n" +
               "ex:alice foaf:knows ex:bob .\n" +
               "ex:bob   foaf:knows ex:carol .\n" +
               "ex:carol foaf:knows ex:dave .\n";
 
       // commitSize: 3 forces multiple partial commits across the 12 triples above
       Result importResults = session.run(
-              "CALL n10s.rdf.import.inline('" + turtle + "','Turtle', { commitSize: 3 })");
+              "CALL n10s.rdf.import.inline($turtle,'Turtle', { commitSize: 3 })",
+              Map.of("turtle", turtle));
       long loaded = importResults.single().get("triplesLoaded").asLong();
       assertTrue("All triples should be imported across partial commits, got: " + loaded,
               loaded >= 12L);
