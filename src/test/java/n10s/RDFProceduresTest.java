@@ -795,7 +795,7 @@ public class RDFProceduresTest {
 
       Record rel = session.run(
               "MATCH ()-[r]->() WHERE type(r) = 'https://example.com/ontology/upsellWith' " +
-              "RETURN r.iri as iri, r.orderNo as orderNo")
+              "RETURN r.iri as iri, r.`https://example.com/ontology/orderNo` as orderNo")
               .single();
       // With KEEP, type name IS the full IRI, so 'iri' property must not be stored
       assertTrue("iri property should not be set when handleVocabUris=KEEP", rel.get("iri").isNull());
@@ -4389,7 +4389,7 @@ public class RDFProceduresTest {
     // all triples across multiple partial commits are stored correctly.
     try (Session session = driver.session()) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
 
       String turtle = "@prefix ex: <http://example.org/> .\n" +
               "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +

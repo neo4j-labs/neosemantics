@@ -77,7 +77,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
               .get(entry.getKey(),
                   () -> inThreadTransaction.findNode(RESOURCE, "uri", entry.getKey()));
         } catch (InvalidCacheLoadException icle) {
-          icle.printStackTrace();
+          log.debug("Node not found for delete (uri=" + entry.getKey() + ")");
         }
         node = tempNode;
         entry.getValue().forEach(l -> {
@@ -176,7 +176,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
             return inThreadTransaction.findNode(RESOURCE, "uri", st.getSubject().stringValue());
           });
         } catch (InvalidCacheLoadException icle) {
-          icle.printStackTrace();
+          log.debug("Subject node not found for delete (uri=" + st.getSubject().stringValue() + ")");
         }
         Node toNode = null;
         try {
@@ -184,7 +184,7 @@ public class DirectStatementDeleter extends RDFToLPGStatementProcessor {
             return inThreadTransaction.findNode(RESOURCE, "uri", st.getObject().stringValue());
           });
         } catch (InvalidCacheLoadException icle) {
-          icle.printStackTrace();
+          log.debug("Object node not found for delete (uri=" + st.getObject().stringValue() + ")");
         }
         if (fromNode == null || toNode == null) {
           notDeletedStatementCount++;
