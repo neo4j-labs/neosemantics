@@ -20,6 +20,7 @@ import org.neo4j.values.storable.PointValue;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -131,10 +132,16 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
           return ZonedDateTime.parse(object.stringValue(), neo4jZonedDateFormat);
         }catch(DateTimeParseException dtpe2){
           try {
-            return DateUtils.parseDateTime(object.stringValue());
-          } catch (IllegalArgumentException e) {
-            //if date cannot be parsed we return string value
-            return object.stringValue();
+            // ISO 8601 with UTC offset (e.g. "2020-06-22T21:41:34.066344+00:00")
+            // ZonedDateTime requires a zone region ID; OffsetDateTime handles bare offsets
+            return OffsetDateTime.parse(object.stringValue());
+          } catch (DateTimeParseException dtpe3) {
+            try {
+              return DateUtils.parseDateTime(object.stringValue());
+            } catch (IllegalArgumentException e) {
+              //if date cannot be parsed we return string value
+              return object.stringValue();
+            }
           }
         }
       }

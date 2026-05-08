@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -873,6 +874,44 @@ public class RDFProceduresTest {
                               "MATCH (r:Resource { uri: 'neo4j://graph.individuals#1'}) return r.ns0__inspectionDates as h")
                       .next().get("h").asZonedDateTime());
 
+    }
+  }
+
+  @Test
+  public void testImportDateTimeWithUTCOffset() throws Exception {
+    // Regression test for #166: ISO 8601 datetimes with bare UTC offset (+00:00)
+    // were falling through to string because ZonedDateTime.parse requires a zone region ID
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
+
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+              "@prefix dcterms: <http://purl.org/dc/terms/> .\n" +
+              "ex:item1 a ex:Example ;\n" +
+              "  dcterms:modified \"2020-06-22T21:41:34.066344+00:00\"^^xsd:dateTime .\n" +
+              "ex:item2 a ex:Example ;\n" +
+              "  dcterms:modified \"2021-03-15T08:30:00.000000-05:00\"^^xsd:dateTime .\n";
+
+      Result importResult = session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle')");
+      assertEquals(4L, importResult.single().get("triplesLoaded").asLong());
+
+      // Verify UTC offset (+00:00) is stored as a temporal, not a string
+      Record item1 = session.run(
+              "MATCH (r:Resource {uri:'http://example.org/item1'}) RETURN r.modified as m")
+              .single();
+      assertFalse("datetime with +00:00 offset should not be a string",
+              item1.get("m").type().name().equals("STRING"));
+      assertEquals(OffsetDateTime.parse("2020-06-22T21:41:34.066344+00:00").toInstant(),
+              item1.get("m").asOffsetDateTime().toInstant());
+
+      // Verify negative offset (-05:00) is also handled correctly
+      Record item2 = session.run(
+              "MATCH (r:Resource {uri:'http://example.org/item2'}) RETURN r.modified as m")
+              .single();
+      assertFalse("datetime with -05:00 offset should not be a string",
+              item2.get("m").type().name().equals("STRING"));
+      assertEquals(OffsetDateTime.parse("2021-03-15T08:30:00.000000-05:00").toInstant(),
+              item2.get("m").asOffsetDateTime().toInstant());
     }
   }
 
