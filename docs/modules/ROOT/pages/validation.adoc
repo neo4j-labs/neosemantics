@@ -185,6 +185,56 @@ The result would be a reduced version of what we got when run on the whole graph
 ----
 
 
+[[QualifiedValueShape]]
+=== Qualified cardinality constraints (sh:qualifiedValueShape)
+
+Use `sh:qualifiedValueShape` together with `sh:qualifiedMinCount` and/or `sh:qualifiedMaxCount` when you need to count only the relationships that point to nodes of a *specific class*, rather than all relationships on a path.
+
+For example, the following shape requires each `Person` to have at least 1 and at most 3 `KNOWS` relationships whose target carries the `Employee` label:
+
+[source, Turtle]
+----
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix neo4j: <neo4j://graph.schema#> .
+
+neo4j:PersonShape a sh:NodeShape ;
+  sh:targetClass neo4j:Person ;
+  sh:property [
+    sh:path neo4j:KNOWS ;
+    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;
+    sh:qualifiedMinCount 1 ;
+    sh:qualifiedMaxCount 3 ;
+  ] .
+----
+
+Load and validate as usual:
+
+[source, cypher]
+----
+// Load the constraint
+CALL n10s.validation.shacl.import.inline('
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix neo4j: <neo4j://graph.schema#> .
+
+neo4j:PersonShape a sh:NodeShape ;
+  sh:targetClass neo4j:Person ;
+  sh:property [
+    sh:path neo4j:KNOWS ;
+    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;
+    sh:qualifiedMinCount 1 ;
+    sh:qualifiedMaxCount 3 ;
+  ] .
+', 'Turtle')
+
+// Run validation
+CALL n10s.validation.shacl.validate()
+YIELD focusNode, nodeType, propertyShape, offendingValue, resultPath, severity
+RETURN focusNode, nodeType, propertyShape, offendingValue, resultPath, severity
+----
+
+`KNOWS` relationships to nodes that do *not* carry the `Employee` label are ignored by the count.
+Both `sh:qualifiedMinCount` and `sh:qualifiedMaxCount` are optional — you can specify either or both.
+
 === Validating transactions
 The validations can also be run in the context of a transaction (in the form a trigger) in a way that if the validation returns a non empty result, the transaction is rolled back.
 This can be useful if we want to prevent getting the graph in a state that violates our model constraints. For this mode of operation we'll use the `validateTransaction` variant.
