@@ -39,14 +39,21 @@ import static n10s.utils.UriUtils.translateUri;
 
 public class SHACLValidator {
 
-  private static final String CYPHER_TX_INFIX = " focus in $touchedNodes AND ";
-
+  // Global (full-graph) query prefixes
   private static final String CYPHER_MATCH_WHERE = "MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_MATCH_ALL_WHERE = "MATCH (focus) WHERE ";
   private static final String CYPHER_MATCH_REL_WHERE = "MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_MATCH_ALL_REL_WHERE = "MATCH (focus)-[r:`%s`]->(x) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params MATCH (focus:`%s`) WHERE ";
   private static final String CYPHER_WITH_PARAMS_MATCH_ALL_WHERE = "WITH $`%s` as params MATCH (focus) WHERE ";
+
+  // Transaction (node-set) query prefixes — start from $touchedNodes to avoid full label scan
+  private static final String CYPHER_TX_MATCH_WHERE = "UNWIND $touchedNodes AS focus WITH focus WHERE focus:`%s` AND ";
+  private static final String CYPHER_TX_MATCH_ALL_WHERE = "UNWIND $touchedNodes AS focus WITH focus WHERE ";
+  private static final String CYPHER_TX_MATCH_REL_WHERE = "UNWIND $touchedNodes AS focus MATCH (focus:`%s`)-[r:`%s`]->(x) WHERE ";
+  private static final String CYPHER_TX_MATCH_ALL_REL_WHERE = "UNWIND $touchedNodes AS focus MATCH (focus)-[r:`%s`]->(x) WHERE ";
+  private static final String CYPHER_TX_WITH_PARAMS_MATCH_WHERE = "WITH $`%s` as params UNWIND $touchedNodes AS focus WITH params, focus WHERE focus:`%s` AND ";
+  private static final String CYPHER_TX_WITH_PARAMS_MATCH_ALL_WHERE = "WITH $`%s` as params UNWIND $touchedNodes AS focus WITH params, focus WHERE ";
   private static final String BNODE_PREFIX = "bnode://id/";
   private static final int GLOBAL_CONSTRAINT = 0;
   private static final int CLASS_BASED_CONSTRAINT = 1;
@@ -62,7 +69,8 @@ public class SHACLValidator {
           "\n" +
           "SELECT distinct ?ns ?ps ?mostly ?path ?invPath ?rangeClass  ?rangeKind ?datatype ?severity (coalesce(?pmsg, ?nmsg,\"\") as ?msg)\n" +
           "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc ?minStrLen \n" +
-          "?maxStrLen (GROUP_CONCAT (distinct ?disjointProp; separator=\"---\") AS ?disjointProps) \n" +
+          "?maxStrLen ?qualifiedClass ?qualifiedMinCount ?qualifiedMaxCount\n" +
+          "(GROUP_CONCAT (distinct ?disjointProp; separator=\"---\") AS ?disjointProps) \n" +
           "(GROUP_CONCAT (distinct ?hasValueUri; separator=\"---\") AS ?hasValueUris) \n" +
           "(GROUP_CONCAT (distinct ?hasValueLiteral; separator=\"---\") AS ?hasValueLiterals) \n" +
           "(GROUP_CONCAT (distinct ?in; separator=\"---\") AS ?ins) \n" +
@@ -116,11 +124,14 @@ public class SHACLValidator {
           "    optional { ?ps sh:minLength  ?minStrLen }\n" +
           "    optional { ?ps sh:disjoint  ?disjointProp }\n" +
           "    optional { ?ps exp:mostly  ?mostly }\n" +
+          "    optional { ?ps sh:qualifiedValueShape/sh:class  ?qualifiedClass }\n" +
+          "    optional { ?ps sh:qualifiedMinCount  ?qualifiedMinCount }\n" +
+          "    optional { ?ps sh:qualifiedMaxCount  ?qualifiedMaxCount }\n" +
           "   \n" +
           "} group by \n" +
           "?ns ?ps ?path ?mostly ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?nmsg ?pmsg " +
           "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc " +
-          "?minStrLen ?maxStrLen ?inFirst ?notInFirst";
+          "?minStrLen ?maxStrLen ?inFirst ?notInFirst ?qualifiedClass ?qualifiedMinCount ?qualifiedMaxCount";
 
   String NODE_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
           "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
@@ -679,6 +690,54 @@ public class SHACLValidator {
       }
     }
 
+    if (theConstraint.get("qualifiedClass") != null &&
+            (theConstraint.get("qualifiedMinCount") != null || theConstraint.get("qualifiedMaxCount") != null)
+            && !(boolean) theConstraint.get("inverse")) {
+
+      String qualifiedClassTranslated = translateUri((String) theConstraint.get("qualifiedClass"), tx, gc);
+      String paramSetId = theConstraint.get("propShapeUid") + "_" + SHACL.QUALIFIED_VALUE_SHAPE.stringValue();
+      Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
+      params.put("qualifiedMinCount", theConstraint.get("qualifiedMinCount"));
+      params.put("qualifiedMaxCount", theConstraint.get("qualifiedMaxCount"));
+
+      String constraintSHACLType = (theConstraint.get("qualifiedMinCount") != null && theConstraint.get("qualifiedMaxCount") != null ?
+              SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue() + "|" + SHACL.QUALIFIED_MAX_COUNT_CONSTRAINT_COMPONENT.stringValue() :
+              (theConstraint.get("qualifiedMinCount") != null ? SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue() :
+                      SHACL.QUALIFIED_MAX_COUNT_CONSTRAINT_COMPONENT.stringValue()));
+
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "QualifiedMinCardinality", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(paramSetId, focusLabel,
+                              (theConstraint.get("qualifiedMinCount") != null ? " toInteger(params.qualifiedMinCount) <= " : ""),
+                              propOrRel,
+                              qualifiedClassTranslated,
+                              (theConstraint.get("qualifiedMaxCount") != null ? " <= toInteger(params.qualifiedMaxCount) " : ""),
+                              focusLabel, (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, qualifiedClassTranslated,
+                              propOrRel,
+                              severity, customMsg),
+                      Arrays.asList(paramSetId,
+                              (theConstraint.get("qualifiedMinCount") != null ? " toInteger(params.qualifiedMinCount) <= " : ""),
+                              propOrRel,
+                              qualifiedClassTranslated,
+                              (theConstraint.get("qualifiedMaxCount") != null ? " <= toInteger(params.qualifiedMaxCount) " : ""),
+                              (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, qualifiedClassTranslated,
+                              propOrRel,
+                              severity, customMsg)));
+
+      //ADD constraint to the list
+      if (theConstraint.get("qualifiedMaxCount") != null) {
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
+                printConstraintType(SHACL.QUALIFIED_MAX_COUNT), theConstraint.get("qualifiedMaxCount")));
+      }
+      if (theConstraint.get("qualifiedMinCount") != null) {
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
+                printConstraintType(SHACL.QUALIFIED_MIN_COUNT), theConstraint.get("qualifiedMinCount")));
+      }
+    }
+
     if ((theConstraint.get("minStrLen") != null || theConstraint.get("maxStrLen") != null)
             && !isConstraintOnType ) {
 
@@ -1066,6 +1125,14 @@ public class SHACLValidator {
                   : null);
           record.put("maxStrLen",
               next.hasBinding("maxStrLen") ? ((Literal) next.getValue("maxStrLen")).intValue()
+                  : null);
+          record.put("qualifiedClass",
+              next.hasBinding("qualifiedClass") ? next.getValue("qualifiedClass").stringValue() : null);
+          record.put("qualifiedMinCount",
+              next.hasBinding("qualifiedMinCount") ? ((Literal) next.getValue("qualifiedMinCount")).intValue()
+                  : null);
+          record.put("qualifiedMaxCount",
+              next.hasBinding("qualifiedMaxCount") ? ((Literal) next.getValue("qualifiedMaxCount")).intValue()
                   : null);
           Value value = next.getValue("ps"); //if  this is null throw exception (?)
           if (value instanceof BNode) {
@@ -1485,6 +1552,15 @@ public class SHACLValidator {
                 + propertyNameFragment + severityFragment
                 + "null as offendingValue , " + customMsgFragment);
         break;
+      case "QualifiedMinCardinality":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s size([(focus)-[:`%s`]->(t) WHERE t:`%s` | t]) %s RETURN "
+                + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape, 'qualified cardinality (' + coalesce(size([(focus)-[:`%s`]->(t) WHERE t:`%s` | t]),0) + ') is outside the defined min-max limits' as message, "
+                + propertyNameFragment + severityFragment
+                + "null as offendingValue , " + customMsgFragment);
+        break;
       case "StrLen":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
@@ -1542,8 +1618,18 @@ public class SHACLValidator {
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT );
   }
 
-  private String getQuery(String pref, boolean tx, String queryConstraintWhere, String suff) {
-    return pref + (tx ? CYPHER_TX_INFIX : "") + queryConstraintWhere + suff;
+  private String getQuery(String globalPref, boolean tx, String queryConstraintWhere, String suff) {
+    return (tx ? txPrefix(globalPref) : globalPref) + queryConstraintWhere + suff;
+  }
+
+  private static String txPrefix(String globalPref) {
+    if (globalPref.equals(CYPHER_MATCH_WHERE))                  return CYPHER_TX_MATCH_WHERE;
+    if (globalPref.equals(CYPHER_MATCH_ALL_WHERE))              return CYPHER_TX_MATCH_ALL_WHERE;
+    if (globalPref.equals(CYPHER_MATCH_REL_WHERE))              return CYPHER_TX_MATCH_REL_WHERE;
+    if (globalPref.equals(CYPHER_MATCH_ALL_REL_WHERE))          return CYPHER_TX_MATCH_ALL_REL_WHERE;
+    if (globalPref.equals(CYPHER_WITH_PARAMS_MATCH_WHERE))      return CYPHER_TX_WITH_PARAMS_MATCH_WHERE;
+    if (globalPref.equals(CYPHER_WITH_PARAMS_MATCH_ALL_WHERE))  return CYPHER_TX_WITH_PARAMS_MATCH_ALL_WHERE;
+    throw new IllegalArgumentException("No tx variant for prefix: " + globalPref);
   }
 
 }

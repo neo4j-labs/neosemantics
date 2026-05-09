@@ -1998,6 +1998,197 @@ public class SHACLValidationProceduresTest {
     verifyBadCypher(SHAPES_BAD_QUERY_3);
   }
 
+  @Test
+  public void testQualifiedValueShapeMinCount() throws Exception {
+    // Issue #269: sh:qualifiedValueShape + sh:qualifiedMinCount
+    // Product must have at least 1 isClassifiedBy -> ClassA and at least 1 -> ClassB
+    Session session = driver.session();
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+    // Create data: p1 is valid (has ClassA and ClassB), p2 missing ClassA, p3 missing ClassB
+    List<Long> nodeIds = session.run(
+        "CREATE (clsA:ClassA {id:'a'}), (clsB:ClassB {id:'b'}), (clsC:ClassC {id:'c'})\n" +
+        "CREATE (p1:Product {name:'valid'})  -[:isClassifiedBy]->(clsA)\n" +
+        "CREATE (p1)                         -[:isClassifiedBy]->(clsB)\n" +
+        "CREATE (p2:Product {name:'missingA'})-[:isClassifiedBy]->(clsB)\n" +
+        "CREATE (p3:Product {name:'missingB'})-[:isClassifiedBy]->(clsA)\n" +
+        "RETURN [id(p2), id(p3)] as ids"
+    ).next().get("ids").asList(Value::asLong);
+
+    String shacl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+        "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+        "@prefix ex: <http://example.org/> .\n" +
+        "ex:ProductShape a sh:NodeShape ;\n" +
+        "  sh:targetClass neo4j:Product ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassA ] ;\n" +
+        "    sh:qualifiedMinCount 1 ;\n" +
+        "  ] ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassB ] ;\n" +
+        "    sh:qualifiedMinCount 1 ;\n" +
+        "  ] .\n";
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("shacl", shacl);
+    session.run("CALL n10s.validation.shacl.import.inline($shacl, 'Turtle')", params);
+
+    Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+    assertTrue(validationResults.hasNext());
+
+    Set<Long> violatingNodes = new HashSet<>();
+    Set<String> constraintComponents = new HashSet<>();
+    while (validationResults.hasNext()) {
+      Record rec = validationResults.next();
+      violatingNodes.add(rec.get("focusNode").asLong());
+      constraintComponents.add(rec.get("propertyShape").asString());
+    }
+
+    // p2 (missing ClassA) and p3 (missing ClassB) must be reported
+    assertEquals(2, violatingNodes.size());
+    assertTrue(violatingNodes.containsAll(nodeIds));
+    assertTrue(constraintComponents.contains(SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue()));
+
+    session.run("MATCH (n) DETACH DELETE n");
+  }
+
+  @Test
+  public void testQualifiedValueShapeMaxCount() throws Exception {
+    // Issue #269: sh:qualifiedValueShape + sh:qualifiedMaxCount
+    // Product must have at most 1 isClassifiedBy -> ClassA
+    Session session = driver.session();
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+    List<Long> nodeIds = session.run(
+        "CREATE (a1:ClassA {id:'a1'}), (a2:ClassA {id:'a2'}), (b1:ClassB {id:'b1'})\n" +
+        "CREATE (p1:Product {name:'valid'})-[:isClassifiedBy]->(a1)\n" +
+        "CREATE (p2:Product {name:'tooManyA'})-[:isClassifiedBy]->(a1)\n" +
+        "CREATE (p2)-[:isClassifiedBy]->(a2)\n" +
+        "RETURN [id(p2)] as ids"
+    ).next().get("ids").asList(Value::asLong);
+
+    String shacl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+        "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+        "@prefix ex: <http://example.org/> .\n" +
+        "ex:ProductShape a sh:NodeShape ;\n" +
+        "  sh:targetClass neo4j:Product ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassA ] ;\n" +
+        "    sh:qualifiedMaxCount 1 ;\n" +
+        "  ] .\n";
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("shacl", shacl);
+    session.run("CALL n10s.validation.shacl.import.inline($shacl, 'Turtle')", params);
+
+    Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+    assertTrue(validationResults.hasNext());
+
+    Set<Long> violatingNodes = new HashSet<>();
+    Set<String> constraintComponents = new HashSet<>();
+    while (validationResults.hasNext()) {
+      Record rec = validationResults.next();
+      violatingNodes.add(rec.get("focusNode").asLong());
+      constraintComponents.add(rec.get("propertyShape").asString());
+    }
+
+    assertEquals(1, violatingNodes.size());
+    assertTrue(violatingNodes.containsAll(nodeIds));
+    assertTrue(constraintComponents.contains(SHACL.QUALIFIED_MAX_COUNT_CONSTRAINT_COMPONENT.stringValue()));
+
+    session.run("MATCH (n) DETACH DELETE n");
+  }
+
+  @Test
+  public void testQualifiedValueShapeMinAndMaxCount() throws Exception {
+    // Issue #269: sh:qualifiedValueShape with both sh:qualifiedMinCount and sh:qualifiedMaxCount
+    // Product must have exactly 1 isClassifiedBy -> ClassA
+    Session session = driver.session();
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+    List<Long> invalidIds = session.run(
+        "CREATE (a1:ClassA {id:'a1'}), (a2:ClassA {id:'a2'}), (b1:ClassB {id:'b1'})\n" +
+        "CREATE (p1:Product {name:'valid'})-[:isClassifiedBy]->(a1)\n" +
+        "CREATE (p2:Product {name:'tooMany'})-[:isClassifiedBy]->(a1)\n" +
+        "CREATE (p2)-[:isClassifiedBy]->(a2)\n" +
+        "CREATE (p3:Product {name:'tooFew'})-[:isClassifiedBy]->(b1)\n" +
+        "RETURN [id(p2), id(p3)] as ids"
+    ).next().get("ids").asList(Value::asLong);
+
+    String shacl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+        "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+        "@prefix ex: <http://example.org/> .\n" +
+        "ex:ProductShape a sh:NodeShape ;\n" +
+        "  sh:targetClass neo4j:Product ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassA ] ;\n" +
+        "    sh:qualifiedMinCount 1 ;\n" +
+        "    sh:qualifiedMaxCount 1 ;\n" +
+        "  ] .\n";
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("shacl", shacl);
+    session.run("CALL n10s.validation.shacl.import.inline($shacl, 'Turtle')", params);
+
+    Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+    assertTrue(validationResults.hasNext());
+
+    Set<Long> violatingNodes = new HashSet<>();
+    while (validationResults.hasNext()) {
+      Record rec = validationResults.next();
+      violatingNodes.add(rec.get("focusNode").asLong());
+    }
+
+    assertEquals(2, violatingNodes.size());
+    assertTrue(violatingNodes.containsAll(invalidIds));
+
+    session.run("MATCH (n) DETACH DELETE n");
+  }
+
+  @Test
+  public void testQualifiedValueShapeNoViolations() throws Exception {
+    // Issue #269: valid graph produces no violations
+    Session session = driver.session();
+    assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+    session.run(
+        "CREATE (a1:ClassA {id:'a1'}), (b1:ClassB {id:'b1'})\n" +
+        "CREATE (p1:Product {name:'valid'})-[:isClassifiedBy]->(a1)\n" +
+        "CREATE (p1)-[:isClassifiedBy]->(b1)"
+    );
+
+    String shacl = "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+        "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+        "@prefix ex: <http://example.org/> .\n" +
+        "ex:ProductShape a sh:NodeShape ;\n" +
+        "  sh:targetClass neo4j:Product ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassA ] ;\n" +
+        "    sh:qualifiedMinCount 1 ;\n" +
+        "    sh:qualifiedMaxCount 1 ;\n" +
+        "  ] ;\n" +
+        "  sh:property [\n" +
+        "    sh:path neo4j:isClassifiedBy ;\n" +
+        "    sh:qualifiedValueShape [ sh:class neo4j:ClassB ] ;\n" +
+        "    sh:qualifiedMinCount 1 ;\n" +
+        "    sh:qualifiedMaxCount 1 ;\n" +
+        "  ] .\n";
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("shacl", shacl);
+    session.run("CALL n10s.validation.shacl.import.inline($shacl, 'Turtle')", params);
+
+    Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+    assertFalse(validationResults.hasNext());
+
+    session.run("MATCH (n) DETACH DELETE n");
+  }
+
   private void verifyBadCypher(String query) {
     try (Session session = driver.session()) {
 
