@@ -1274,6 +1274,63 @@ public class RDFProceduresTest {
     }
   }
 
+  /**
+   * Issue #180: Double-hash URIs (##) as found in real Wikidata dumps cause an
+   * RDFParseException in strict mode, aborting the whole import with terminationStatus=KO.
+   * Setting verifyUriSyntax:false disables the URI syntax check so the import completes
+   * successfully (terminationStatus=OK) with all triples loaded (bad URI is accepted, not skipped).
+   */
+  @Test
+  public void testImportDoubleHashUriLenientMode() throws Exception {
+    try (Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
+
+      session.run("call n10s.nsprefixes.add('pr','http://example.org/vocab/show/')");
+
+      // With lenient mode (verifyUriSyntax:false) the double-hash URI must not abort the import.
+      // Both triples are loaded: the valid one and the double-hash one (URI syntax not enforced).
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("badUri-brace.ttl")
+                      .toURI()
+              + "','Turtle',{ verifyUriSyntax: false})");
+      org.neo4j.driver.Record rec = importResults.next();
+      assertEquals("OK", rec.get("terminationStatus").asString());
+      assertEquals(2L, rec.get("triplesLoaded").asLong());
+      assertEquals("valid entity",
+              session.run("MATCH (e {uri: 'http://example.org/vocab/show/validEntity'}) RETURN e.pr"
+                              + PREFIX_SEPARATOR + "name AS name")
+                      .next().get("name").asString());
+    }
+  }
+
+  /**
+   * Issue #180 (strict mode): Double-hash URIs (##) as found in real Wikidata dumps abort the
+   * import in strict mode (the default). The terminationStatus must be 'KO' and 0 triples loaded.
+   */
+  @Test
+  public void testImportDoubleHashUriStrictModeAborts() throws Exception {
+    try (Session session = driver.session()) {
+
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'SHORTEN', handleRDFTypes: 'LABELS' }");
+
+      session.run("call n10s.nsprefixes.add('pr','http://example.org/vocab/show/')");
+
+      // Default (verifyUriSyntax:true): the double-hash URI causes terminationStatus=KO, 0 triples.
+      Result importResults
+              = session.run("CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("badUri-brace.ttl")
+                      .toURI()
+              + "','Turtle')");
+      org.neo4j.driver.Record r = importResults.next();
+      assertEquals("KO", r.get("terminationStatus").asString());
+      assertEquals(0L, r.get("triplesLoaded").asLong());
+    }
+  }
+
   @Test
   public void testImportLangFilter() throws Exception {
     try (Session session = driver.session()) {

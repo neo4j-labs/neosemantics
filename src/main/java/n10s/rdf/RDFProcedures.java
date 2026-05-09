@@ -214,6 +214,22 @@ public class RDFProcedures extends CommonProcedures {
     RDFParser rdfParser = Rio.createParser(format);
     rdfParser
             .set(BasicParserSettings.VERIFY_URI_SYNTAX, statementAdder.getParserConfig().isVerifyUriSyntax());
+    if (!statementAdder.getParserConfig().isVerifyUriSyntax()) {
+      // When URI syntax verification is disabled, make URI parse errors non-fatal so that
+      // individual triples with malformed IRIs are skipped rather than aborting the import (issue #180).
+      rdfParser.getParserConfig().addNonFatalError(BasicParserSettings.VERIFY_URI_SYNTAX);
+      rdfParser.setParseErrorListener(new ParseErrorListener() {
+        @Override public void warning(String msg, long line, long col) {
+          log.warn("RDF parse warning at line %d, col %d: %s", line, col, msg);
+        }
+        @Override public void error(String msg, long line, long col) {
+          log.warn("RDF parse error (triple skipped) at line %d, col %d: %s", line, col, msg);
+        }
+        @Override public void fatalError(String msg, long line, long col) {
+          log.warn("RDF parse fatal error at line %d, col %d: %s", line, col, msg);
+        }
+      });
+    }
     rdfParser.setRDFHandler(statementAdder);
     rdfParser.parse(new ByteArrayInputStream(rdfFragment.getBytes(Charset.defaultCharset())),
             "http://neo4j.com/base/");

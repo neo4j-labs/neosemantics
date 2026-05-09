@@ -21,6 +21,7 @@ import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.rdf4j.common.lang.FileFormat;
+import org.eclipse.rdf4j.rio.ParseErrorListener;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.Rio;
@@ -129,6 +130,23 @@ public class CommonProcedures {
     RDFParser rdfParser = Rio.createParser(format);
     rdfParser
         .set(BasicParserSettings.VERIFY_URI_SYNTAX, handler.getParserConfig().isVerifyUriSyntax());
+    if (!handler.getParserConfig().isVerifyUriSyntax()) {
+      // When URI syntax verification is disabled, make URI parse errors non-fatal so that
+      // individual triples with malformed IRIs (e.g. ##fragment, unencoded braces) are skipped
+      // rather than aborting the whole import (see issue #180).
+      rdfParser.getParserConfig().addNonFatalError(BasicParserSettings.VERIFY_URI_SYNTAX);
+      rdfParser.setParseErrorListener(new ParseErrorListener() {
+        @Override public void warning(String msg, long line, long col) {
+          log.warn("RDF parse warning at line %d, col %d: %s", line, col, msg);
+        }
+        @Override public void error(String msg, long line, long col) {
+          log.warn("RDF parse error (triple skipped) at line %d, col %d: %s", line, col, msg);
+        }
+        @Override public void fatalError(String msg, long line, long col) {
+          log.warn("RDF parse fatal error at line %d, col %d: %s", line, col, msg);
+        }
+      });
+    }
     rdfParser.setRDFHandler(handler);
     rdfParser.parse(inputStream, url);
   }

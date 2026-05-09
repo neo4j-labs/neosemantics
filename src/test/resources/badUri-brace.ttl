@@ -1,0 +1,12 @@
+@prefix pr: <http://example.org/vocab/show/> .
+
+# This triple has a valid URI and should be imported in all modes
+pr:validEntity
+      pr:name "valid entity" .
+
+# This triple has a double-hash (##) URI as found in real Wikidata dumps (issue #180).
+# In strict mode (verifyUriSyntax:true, the default) this causes a parse exception with
+# terminationStatus=KO and 0 triples loaded. With verifyUriSyntax:false the URI syntax
+# check is disabled so both triples are imported successfully (terminationStatus=OK, loaded=2).
+pr:validEntity
+      pr:seeAlso <http://basketball.realgm.com/nba/teams/Memphis-Grizzlies/14/Rosters/Current/2007##1> .

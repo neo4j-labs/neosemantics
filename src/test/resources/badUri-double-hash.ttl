@@ -1,0 +1,9 @@
+@prefix pr: <http://example.org/vocab/show/> .
+
+# This triple has a valid URI and should be imported
+pr:validEntity
+      pr:name "valid entity" .
+
+# This triple has a malformed URI with double hash (##) which is illegal in IRIs
+pr:validEntity
+      pr:seeAlso <http://example.com/path##fragment> .
