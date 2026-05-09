@@ -4475,64 +4475,116 @@ public class RDFProceduresTest {
   }
 
   @Test
-  public void testCustomPropertiesAppliedToAllImportedNodes() throws Exception {
+  public void testCustomPropsAppliedToImportedNodes() throws Exception {
+    // Issue #256: custom properties supplied at import time should appear on every imported node.
     try (Session session = driver.session()) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
 
-      // A small Turtle snippet with two subjects connected by a predicate
-      String turtle = "@prefix ex: <http://example.org/> .\n" +
-              "ex:alice a ex:Person ;\n" +
-              "  ex:name \"Alice\" ;\n" +
-              "  ex:knows ex:bob .\n" +
-              "ex:bob a ex:Person ;\n" +
-              "  ex:name \"Bob\" .\n";
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:alice a ex:Person ; ex:name \"Alice\" .\n" +
+              "ex:bob   a ex:Person ; ex:name \"Bob\" .\n";
 
-      Result importResult = session.run(
-              "CALL n10s.rdf.import.inline($rdf, 'Turtle', { customProperties: { importBatch: 'test-run-1', importSource: 'unit-test' } })",
-              Map.of("rdf", turtle));
+      Result importResults = session.run(
+              "CALL n10s.rdf.import.inline($turtle, 'Turtle', " +
+              "{ customProps: { importId: 'run-001', sourceSystem: 'test' } })",
+              Map.of("turtle", turtle));
 
-      Map<String, Object> summary = importResult.single().asMap();
-      assertEquals("OK", summary.get("terminationStatus"));
+      Map<String, Object> result = importResults.single().asMap();
+      assertEquals("OK", result.get("terminationStatus"));
 
-      // All imported Resource nodes must carry the custom properties
-      long nodesWithBatch = session
-              .run("MATCH (n:Resource) WHERE n.importBatch = 'test-run-1' RETURN count(n) AS c")
+      // All imported Resource nodes must carry both custom properties
+      long withImportId = session.run(
+              "MATCH (n:Resource) WHERE n.importId = 'run-001' RETURN count(n) AS c")
               .single().get("c").asLong();
-      long totalNodes = session
-              .run("MATCH (n:Resource) RETURN count(n) AS c")
+      long withSource = session.run(
+              "MATCH (n:Resource) WHERE n.sourceSystem = 'test' RETURN count(n) AS c")
               .single().get("c").asLong();
-      assertTrue("At least two Resource nodes should have been created", totalNodes >= 2);
-      assertEquals("Every Resource node must have importBatch set", totalNodes, nodesWithBatch);
+      long total = session.run("MATCH (n:Resource) RETURN count(n) AS c")
+              .single().get("c").asLong();
 
-      long nodesWithSource = session
-              .run("MATCH (n:Resource) WHERE n.importSource = 'unit-test' RETURN count(n) AS c")
-              .single().get("c").asLong();
-      assertEquals("Every Resource node must have importSource set", totalNodes, nodesWithSource);
+      assertTrue("At least one Resource node must be created", total > 0);
+      assertEquals("Every imported node must have importId custom property", total, withImportId);
+      assertEquals("Every imported node must have sourceSystem custom property", total, withSource);
     }
   }
 
   @Test
-  public void testNoCustomPropertiesWhenParamAbsent() throws Exception {
+  public void testImportWithoutCustomPropsUnaffected() throws Exception {
+    // Regression: import without customProps must work exactly as before.
     try (Session session = driver.session()) {
       initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
 
-      String turtle = "@prefix ex: <http://example.org/> .\n" +
-              "ex:carol a ex:Person ;\n" +
-              "  ex:name \"Carol\" .\n";
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:carol a ex:Person ; ex:name \"Carol\" .\n";
 
-      // Import WITHOUT customProperties
-      Result importResult = session.run(
-              "CALL n10s.rdf.import.inline($rdf, 'Turtle')",
-              Map.of("rdf", turtle));
+      Result importResults = session.run(
+              "CALL n10s.rdf.import.inline($turtle, 'Turtle')",
+              Map.of("turtle", turtle));
 
-      assertEquals("OK", importResult.single().get("terminationStatus").asString());
+      Map<String, Object> result = importResults.single().asMap();
+      assertEquals("OK", result.get("terminationStatus"));
+      assertTrue((Long) result.get("triplesLoaded") > 0);
 
-      long nodesWithBatch = session
-              .run("MATCH (n:Resource) WHERE n.importBatch IS NOT NULL RETURN count(n) AS c")
+      // No stray custom properties must exist
+      long withImportId = session.run(
+              "MATCH (n:Resource) WHERE n.importId IS NOT NULL RETURN count(n) AS c")
               .single().get("c").asLong();
-      assertEquals("Nodes from an import without customProperties must not have importBatch", 0L, nodesWithBatch);
+      assertEquals("No importId property should exist when customProps not supplied", 0L, withImportId);
+    }
+  }
+
+  @Test
+  public void testCustomPropsDoNotOverrideUri() throws Exception {
+    // The 'uri' key in customProps must be silently ignored to prevent data corruption.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:dave a ex:Person .\n";
+
+      session.run(
+              "CALL n10s.rdf.import.inline($turtle, 'Turtle', " +
+              "{ customProps: { uri: 'should-be-ignored', tag: 'safe' } })",
+              Map.of("turtle", turtle));
+
+      // The actual uri must not be overwritten
+      String actualUri = session.run(
+              "MATCH (n:Resource) WHERE n.tag = 'safe' RETURN n.uri AS uri")
+              .single().get("uri").asString();
+      assertEquals("urn:ex:dave", actualUri);
+
+      // And 'tag' must be set
+      long tagCount = session.run(
+              "MATCH (n:Resource) WHERE n.tag = 'safe' RETURN count(n) AS c")
+              .single().get("c").asLong();
+      assertEquals(1L, tagCount);
+    }
+  }
+
+  @Test
+  public void testCustomPropsWithFetchImport() throws Exception {
+    // Custom properties must also work with n10s.rdf.import.fetch (file-based import).
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
+
+      Result importResults = session.run(
+              "CALL n10s.rdf.import.fetch('" +
+              RDFProceduresTest.class.getClassLoader().getResource("mini-ld.json").toURI() +
+              "', 'JSON-LD', { customProps: { importBatch: 'b42' } })");
+
+      Map<String, Object> result = importResults.single().asMap();
+      assertEquals("OK", result.get("terminationStatus"));
+
+      long total = session.run("MATCH (n:Resource) RETURN count(n) AS c")
+              .single().get("c").asLong();
+      long withBatch = session.run(
+              "MATCH (n:Resource) WHERE n.importBatch = 'b42' RETURN count(n) AS c")
+              .single().get("c").asLong();
+      assertEquals("All imported nodes must carry importBatch custom property", total, withBatch);
     }
   }
 }

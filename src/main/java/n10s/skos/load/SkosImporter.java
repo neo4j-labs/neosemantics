@@ -175,6 +175,17 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
 
   }
 
+  private void applyCustomProps(Node node) {
+    Map<String, Object> customProps = parserConfig.getCustomProps();
+    if (customProps != null) {
+      for (Map.Entry<String, Object> entry : customProps.entrySet()) {
+        if (!entry.getKey().equals("uri")) {
+          node.setProperty(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+  }
+
   private void instantiate(IRI label, IRI iri) {
     setLabel(iri.stringValue(), handleIRI(label, LABEL));
 
@@ -270,6 +281,7 @@ public class SkosImporter extends RDFToLPGStatementProcessor {
               node.setProperty(k, v);
             }
           });
+          applyCustomProps(node);
           //and after processing the props for all uris, then we clear them from resourceProps
           resourceProps.remove(entry.getKey());
 

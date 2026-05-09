@@ -2,7 +2,6 @@ package n10s.graphconfig;
 
 import n10s.RDFImportException;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +32,7 @@ public class RDFParserConfig {
   private boolean singleTx;
   private final int deadlockMaxRetries;
   private final long deadlockRetryDelayMs;
-  private final Map<String, Object> customProperties;
+  private final Map<String, Object> customProps;
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
@@ -62,9 +61,8 @@ public class RDFParserConfig {
         ? ((Long) props.get("deadlockMaxRetries")).intValue() : DEFAULT_DEADLOCK_MAX_RETRIES;
     deadlockRetryDelayMs = props.containsKey("deadlockRetryDelayMs")
         ? (Long) props.get("deadlockRetryDelayMs") : DEFAULT_DEADLOCK_RETRY_DELAY_MS;
-    customProperties = (props.containsKey("customProperties") && props.get("customProperties") != null)
-        ? Collections.unmodifiableMap((Map<String, Object>) props.get("customProperties"))
-        : null;
+    customProps = props.containsKey("customProps")
+        ? (Map<String, Object>) props.get("customProps") : null;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -111,7 +109,7 @@ public class RDFParserConfig {
 
   public long getDeadlockRetryDelayMs() { return deadlockRetryDelayMs; }
 
-  public Map<String, Object> getCustomProperties() { return customProperties; }
+  public Map<String, Object> getCustomProps() { return customProps; }
 
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
@@ -152,8 +150,8 @@ public class RDFParserConfig {
       summary.put("deadlockRetryDelayMs", deadlockRetryDelayMs);
     }
 
-    if (customProperties != null && !customProperties.isEmpty()) {
-      summary.put("customProperties", customProperties);
+    if (customProps != null && !customProps.isEmpty()) {
+      summary.put("customProps", customProps);
     }
 
     return summary;

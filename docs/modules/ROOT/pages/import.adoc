@@ -279,6 +279,42 @@ CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/d
 });
 ----
 
+[[custom-node-properties]]
+== Adding custom properties to every imported node
+
+You can attach arbitrary properties to every node created or updated during an import by passing a map in the `customProps` parameter.
+This is useful for tagging all nodes with an import identifier, a version, a source system name, or any other context-specific metadata.
+
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("https://github.com/neo4j-labs/neosemantics/raw/3.5/docs/rdf/nsmntx.ttl", "Turtle", {
+  customProps: { importId: "run-2024-01", sourceSystem: "my-ontology" }
+});
+----
+
+After the import, every `:Resource` node will have the `importId` and `sourceSystem` properties set.
+
+[source,cypher]
+----
+MATCH (n:Resource) WHERE n.importId = 'run-2024-01' RETURN count(n) AS count
+----
+
+The same parameter works with `n10s.rdf.import.inline`:
+
+[source,cypher]
+----
+CALL n10s.rdf.import.inline('<http://example.org/s> <http://example.org/p> <http://example.org/o> .', 'N-Triples', {
+  customProps: { version: '1.0', importedBy: 'dataTeam' }
+});
+----
+
+[NOTE]
+====
+* Custom properties are applied *after* all RDF-derived properties, so they always win over any property derived from the RDF data with the same name.
+* The key `uri` is reserved and will be silently ignored in `customProps` to prevent accidental corruption of the resource identifier.
+* Custom properties are *not* persisted in the `_GraphConfig` node; they are scoped to the specific procedure call.
+====
+
 [[handling-multivalued-properties]]
 == Handling multivalued properties
 

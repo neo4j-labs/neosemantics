@@ -115,6 +115,7 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
             node.setProperty(k, v);
           }
         });
+        applyCustomProps(node);
       } catch (ExecutionException e) {
         e.printStackTrace();
       }
@@ -235,6 +236,17 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
     return result;
   }
 
+
+  private void applyCustomProps(Node node) {
+    Map<String, Object> customProps = parserConfig.getCustomProps();
+    if (customProps != null) {
+      for (Map.Entry<String, Object> entry : customProps.entrySet()) {
+        if (!entry.getKey().equals("uri") && !entry.getKey().equals("graphUri")) {
+          node.setProperty(entry.getKey(), entry.getValue());
+        }
+      }
+    }
+  }
 
   @Override
   protected void periodicOperation() {
