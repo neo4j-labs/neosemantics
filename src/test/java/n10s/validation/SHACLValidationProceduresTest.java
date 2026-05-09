@@ -770,35 +770,82 @@ public class SHACLValidationProceduresTest {
 
       Result validationResults = session.run("CALL n10s.validation.shacl.validate() ");
 
-      assertEquals(true, validationResults.hasNext());
-
-      Record next = validationResults.next();
-      assertTrue(next.get("nodeType").asString().equals("Object"));
-      assertTrue(next.get("resultPath").asString().equals("minVal"));
-      assertEquals("200", next.get("offendingValue").asString());
-      assertEquals("http://www.w3.org/ns/shacl#DatatypeConstraintComponent",
-              next.get("propertyShape").asString());
+      // Expect two violations: DatatypeConstraintComponent (wrong type) AND
+      // ValueRangeConstraintComponent (non-numeric strings are non-comparable, so range check fails).
+      List<Record> violations = validationResults.list();
+      assertEquals(2, violations.size());
+      Map<String, String> propertyShapes = new java.util.HashMap<>();
+      for (Record r : violations) {
+          assertEquals("Object", r.get("nodeType").asString());
+          assertEquals("minVal", r.get("resultPath").asString());
+          assertEquals("200", r.get("offendingValue").asString());
+          propertyShapes.put(r.get("propertyShape").asString(), r.get("resultMessage").asString());
+      }
+      assertTrue(propertyShapes.containsKey("http://www.w3.org/ns/shacl#DatatypeConstraintComponent"));
       assertEquals("property value should be of type integer",
-              next.get("resultMessage").asString());
-
-      assertEquals(false, validationResults.hasNext());
+              propertyShapes.get("http://www.w3.org/ns/shacl#DatatypeConstraintComponent"));
+      assertTrue(propertyShapes.containsKey("http://www.w3.org/ns/shacl#ValueRangeConstraintComponent"));
 
       session.run("MATCH(s:Object) SET s.minVal = \"hello-world\";");
 
       validationResults = session.run("CALL n10s.validation.shacl.validate() ");
 
-      assertEquals(true, validationResults.hasNext());
-
-      next = validationResults.next();
-      assertTrue(next.get("nodeType").asString().equals("Object"));
-      assertTrue(next.get("resultPath").asString().equals("minVal"));
-      assertEquals("hello-world", next.get("offendingValue").asString());
-      assertEquals("http://www.w3.org/ns/shacl#DatatypeConstraintComponent",
-              next.get("propertyShape").asString());
+      violations = validationResults.list();
+      assertEquals(2, violations.size());
+      propertyShapes = new java.util.HashMap<>();
+      for (Record r : violations) {
+          assertEquals("Object", r.get("nodeType").asString());
+          assertEquals("minVal", r.get("resultPath").asString());
+          assertEquals("hello-world", r.get("offendingValue").asString());
+          propertyShapes.put(r.get("propertyShape").asString(), r.get("resultMessage").asString());
+      }
+      assertTrue(propertyShapes.containsKey("http://www.w3.org/ns/shacl#DatatypeConstraintComponent"));
       assertEquals("property value should be of type integer",
-              next.get("resultMessage").asString());
+              propertyShapes.get("http://www.w3.org/ns/shacl#DatatypeConstraintComponent"));
+      assertTrue(propertyShapes.containsKey("http://www.w3.org/ns/shacl#ValueRangeConstraintComponent"));
+  }
 
-      assertEquals(false, validationResults.hasNext());
+  @Test
+  public void testValueRangeRejectsNonNumericStringWithoutDatatype() throws Exception {
+      // Regression test for #213: sh:minInclusive/sh:maxInclusive with a non-numeric string
+      // should produce a ValueRangeConstraintComponent violation even when sh:datatype is absent.
+      // Previously the Cypher comparison (0 <= "string" <= 100) returned null, so no violation was raised.
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      session.run("CREATE(:Object { minVal: 'not-a-number' })");
+
+      session.run("call n10s.validation.shacl.import.inline('\n" +
+              "@prefix dtc: <http://ttt/#> .\n" +
+              "@prefix vs: <neo4j://graph.schema#>.\n" +
+              "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+              "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+              "\n" +
+              "dtc:ObjectShape\n" +
+              "    a sh:NodeShape;\n" +
+              "    sh:targetClass vs:Object;\n" +
+              "    sh:property [\n" +
+              "        sh:path vs:minVal;\n" +
+              "        sh:minInclusive 0;\n" +
+              "        sh:maxInclusive 100;\n" +
+              "    ] ;\n" +
+              ".\n" +
+              "','Turtle')");
+
+      Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+
+      assertTrue("expected a ValueRange violation for non-numeric string, but got none",
+              validationResults.hasNext());
+
+      Record next = validationResults.next();
+      assertEquals("Object", next.get("nodeType").asString());
+      assertEquals("minVal", next.get("resultPath").asString());
+      assertEquals("not-a-number", next.get("offendingValue").asString());
+      assertEquals("http://www.w3.org/ns/shacl#ValueRangeConstraintComponent",
+              next.get("propertyShape").asString());
+
+      assertFalse("expected exactly one violation", validationResults.hasNext());
   }
 
   @Test

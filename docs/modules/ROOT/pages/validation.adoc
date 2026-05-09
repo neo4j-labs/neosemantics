@@ -224,3 +224,29 @@ The transaction will not succeed and if run in the browser you'll get a rather c
 ----
 Caused by: n10s.validation.SHACLValidationException: {validationResult={severity=http://www.w3.org/ns/shacl#Violation, propertyShape=http://www.w3.org/ns/shacl#ClassConstraintComponent, shapeId=node1e78vkaeox2, focusNode=8, resultPath=ACTED_IN, offendingValue=175, nodeType=Person, resultMessage=value should be of type Movie}}
 ----
+
+[[ValueRangeConstraints]]
+== Value range constraints and type mismatches
+
+The SHACL value range constraints (`sh:minInclusive`, `sh:maxInclusive`, `sh:minExclusive`, `sh:maxExclusive`) validate that property values fall within a numeric range. If a property holds a non-numeric string value, the comparison is non-comparable and the constraint is violated, regardless of whether a `sh:datatype` constraint is also present.
+
+[source, turtle]
+----
+@prefix sh:    <http://www.w3.org/ns/shacl#> .
+@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .
+@prefix n4sch: <neo4j://graph.schema#> .
+@prefix ex:    <http://example.org/#> .
+
+ex:ScoreShape
+    a sh:NodeShape ;
+    sh:targetClass n4sch:Score ;
+    sh:property [
+        sh:path n4sch:value ;
+        sh:minInclusive 0 ;
+        sh:maxInclusive 100 ;
+    ] .
+----
+
+A node `(:Score { value: "not-a-number" })` will produce a `ValueRangeConstraintComponent` violation because the string value cannot be compared to the numeric bounds. A node `(:Score { value: 101 })` will similarly produce a violation because 101 > 100.
+
+When both `sh:datatype` and range constraints are defined on the same property, both constraints are evaluated independently per the SHACL specification. A value that violates both (e.g. a string `"200"` where an integer in 0–100 is expected) will produce two violations: one for `DatatypeConstraintComponent` and one for `ValueRangeConstraintComponent`.

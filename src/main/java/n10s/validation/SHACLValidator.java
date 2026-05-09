@@ -1497,7 +1497,7 @@ public class SHACLValidator {
       case "ValueRange":
         query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
                 tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
-                "NOT all(x in [] +  focus.`%s` where %s x %s ) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                "NOT all(x in [] +  focus.`%s` where x IS NULL OR coalesce(%s x %s, false) ) RETURN " + nodeIdFragment + nodeTypeFragment + shapeIdFragment
                 + "'%s' as propertyShape, focus.`%s` as offendingValue, "
                 + propertyNameFragment + severityFragment
                 + "'' as message , " + customMsgFragment);
