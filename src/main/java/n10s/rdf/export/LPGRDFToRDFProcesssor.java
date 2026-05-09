@@ -278,7 +278,11 @@ public class LPGRDFToRDFProcesssor extends ExportProcessor {
     result.add(base);
 
     if(this.exportPropertiesInRels) {
-      rel.getAllProperties().forEach((k, v) -> processPropOnRel(result, base, k, v));
+      rel.getAllProperties().forEach((k, v) -> {
+        if (!k.equals("iri")) {
+          processPropOnRel(result, base, k, v);
+        }
+      });
     }
 
     return result;
