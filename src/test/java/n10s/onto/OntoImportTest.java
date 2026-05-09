@@ -1,11 +1,9 @@
 package n10s.onto;
 
 import n10s.graphconfig.GraphConfigProcedures;
-import n10s.nsprefixes.NsPrefixDefProcedures;
 import n10s.onto.load.OntoLoadProcedures;
 import n10s.onto.preview.OntoPreviewProcedures;
 import n10s.rdf.RDFProcedures;
-import n10s.rdf.load.RDFLoadProcedures;
 import org.junit.*;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.*;
@@ -25,9 +23,9 @@ import static n10s.CommonProcedures.UNIQUENESS_CONSTRAINT_STATEMENT;
 import static org.junit.Assert.*;
 
 /**
- * Created by jbarrasa on 21/03/2016.
+ * Tests for n10s.onto.import.* procedures (fetch and inline variants).
  */
-public class OntoProceduresTest {
+public class OntoImportTest {
   public static Driver driver;
 
   @ClassRule
@@ -268,64 +266,9 @@ public class OntoProceduresTest {
           "                          owl:allValuesFrom :Animal\n" +
           "                        ] .";
 
-  String restrictionsWithDomAndRange = "" +
-          "@prefix : <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#> .\n" +
-          "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n" +
-          "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-          "@prefix xml: <http://www.w3.org/XML/1998/namespace> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "@base <http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2> .\n" +
-          "\n" +
-          "\n" +
-          ":Parent rdf:type owl:Class ;\n" +
-          "        rdfs:subClassOf [ rdf:type owl:Restriction ;\n" +
-          "                          owl:onProperty :hasChild ;\n" +
-          "                          owl:someValuesFrom :Person\n" +
-          "                        ] .\n" +
-          "\n" +
-          ":PetOwner rdf:type owl:Class ;\n" +
-          "        owl:equivalentClass [ rdf:type owl:Restriction ;\n" +
-          "                              owl:onProperty :hasPet ;\n" +
-          "                              owl:someValuesFrom :Animal\n" +
-          "                            ] .\n" +
-          "\n" +
-          ":Animal rdfs:label \"Animal\" ; \n" +
-          "        rdfs:comment \"an animal\" .\n" +
-          "\n" +
-          " :hasChild rdf:type owl:ObjectProperty ;\n" +
-          "        rdfs:domain :Person ;\n" +
-          "        rdfs:range :Person ;\n" +
-          "        rdfs:label \"has child\" ;\n" +
-          "        rdfs:comment \"be the parent of\" .\n" +
-          "\n";
-
-  String cardinalityRestriction = "<rdf:RDF\n" +
-          "    xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
-          "    xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
-          "    xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\">\n" +
-          "  <owl:Ontology rdf:about=\"http://test\"/>\n" +
-          "  <owl:Class rdf:about=\"http://test#Characteristic\"/>\n" +
-          "  <owl:Class rdf:about=\"http://test#Scale\"/>\n" +
-          "  <owl:Class rdf:about=\"http://test#Numeric\">\n" +
-          "    <rdfs:subClassOf>\n" +
-          "      <owl:Restriction>\n" +
-          "        <owl:onClass rdf:resource=\"http://test#Scale\"/>\n" +
-          "        <owl:maxQualifiedCardinality rdf:datatype=\"http://www.w3.org/2001/XMLSchema#nonNegativeInteger\"\n" +
-          "        >1</owl:maxQualifiedCardinality>\n" +
-          "        <owl:onProperty>\n" +
-          "          <owl:ObjectProperty rdf:about=\"http://test#hasUnit\"/>\n" +
-          "        </owl:onProperty>\n" +
-          "      </owl:Restriction>\n" +
-          "    </rdfs:subClassOf>\n" +
-          "    <rdfs:subClassOf rdf:resource=\"http://test#Characteristic\"/>\n" +
-          "    <rdfs:label>Numeric</rdfs:label>\n" +
-          "  </owl:Class>\n" +
-          "</rdf:RDF>\n";
-
   private static URI file(String path) {
     try {
-      return OntoProceduresTest.class.getClassLoader().getResource(path).toURI();
+      return OntoImportTest.class.getClassLoader().getResource(path).toURI();
     } catch (URISyntaxException e) {
       String msg = String.format("Failed to load the resource with path '%s'", path);
       throw new RuntimeException(msg, e);
@@ -333,219 +276,12 @@ public class OntoProceduresTest {
   }
 
   @Test
-  public void testOntoPreviewFromSnippet() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{}");
-
-      Map<String, Object> params = new HashMap<>();
-      params.put("rdf", this.turtleMultilangOntology);
-
-      Result importResults
-          = session
-          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
-      Map<String, Object> next = importResults
-          .next().asMap();
-      final List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(14, nodes.size());
-      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(17, rels.size());
-  }
-
-  @Test
-  public void testOntoPreviewFromSnippetLimit() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{}");
-
-      Map<String, Object> params = new HashMap<>();
-      params.put("rdf", this.turtleOntology);
-
-      Result importResults
-          = session
-          .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
-      Map<String, Object> next = importResults
-          .next().asMap();
-      List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(14, nodes.size());
-      List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(17, rels.size());
-
-      //now  limiting it to 5 triples
-      importResults
-          = session
-          .run("CALL n10s.onto.preview.inline($rdf,'Turtle',  { limit: 14 })", params);
-      next = importResults
-          .next().asMap();
-      nodes = (List<Node>) next.get("nodes");
-      assertEquals(5, nodes.size());
-      rels = (List<Relationship>) next.get("relationships");
-      assertEquals(1, rels.size());
-  }
-
-  @Test
-  public void testOntoPreviewFromSnippetWithRestrictions() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{}");
-
-      Map<String, Object> params = new HashMap<>();
-      params.put("rdf", this.restrictionsBasicTurtle);
-
-      Result importResults
-              = session
-              .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
-      Map<String, Object> next = importResults
-              .next().asMap();
-      final List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(5, nodes.size());
-      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(2, rels.size());
-  }
-
-  @Test
-  public void testOntoPreviewFromSnippetWithRestrictionsAndOtherElements() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{ handleVocabUris: 'IGNORE'}");
-
-      Map<String, Object> params = new HashMap<>();
-      params.put("rdf", this.restrictionsWithDomAndRange);
-
-      Result importResults
-              = session
-              .run("CALL n10s.onto.preview.inline($rdf,'Turtle')", params);
-      Map<String, Object> next = importResults
-              .next().asMap();
-      final List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(6, nodes.size());
-      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(4, rels.size());
-
-      int domainCount = 0;
-      int rangeCount = 0;
-      int restrictionCount = 0;
-      Iterator<Relationship> relsIterator = rels.iterator();
-      while (relsIterator.hasNext()) {
-        String relName = relsIterator.next().type();
-        if (relName.equals("DOMAIN")) {
-          domainCount++;
-        } else if (relName.equals("RANGE")) {
-          rangeCount++;
-        } else if (relName.equals("SCO_RESTRICTION") || relName.equals("EQC_RESTRICTION")) {
-          restrictionCount++;
-        }
-      }
-      assertEquals(1,domainCount);
-      assertEquals(1,rangeCount);
-      assertEquals(2,restrictionCount);
-
-      Iterator<Node> nodesIterator = nodes.iterator();
-      while (nodesIterator.hasNext()) {
-        Map<String, Object> nodeAsMap = nodesIterator.next().asMap();
-        if(nodeAsMap.get("uri").equals("http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#Animal")){
-          assertEquals("Animal", nodeAsMap.get("label"));
-          assertEquals("an animal", nodeAsMap.get("comment"));
-        } else if(nodeAsMap.get("uri").equals("http://www.semanticweb.org/jb/ontologies/2021/5/untitled-ontology-2#hasChild")){
-          assertEquals("has child", nodeAsMap.get("label"));
-          assertEquals("be the parent of", nodeAsMap.get("comment"));
-        } else {
-          assertFalse(nodeAsMap.containsKey("label") || nodeAsMap.containsKey("comment"));
-        }
-
-      }
-  }
-
-  @Test
-  public void testOntoPreviewFromSnippetWithCardinalityRestrictions() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-              "{ handleVocabUris: 'IGNORE'}");
-
-      Map<String, Object> params = new HashMap<>();
-      params.put("rdf", this.cardinalityRestriction);
-
-      Result importResults
-              = session
-              .run("CALL n10s.onto.preview.inline($rdf,'RDF/XML')", params);
-      Map<String, Object> next = importResults
-              .next().asMap();
-      final List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(4, nodes.size());
-      final List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(2, rels.size());
-
-      int restrictionCount = 0;
-      Iterator<Relationship> relsIterator = rels.iterator();
-      while (relsIterator.hasNext()) {
-        Relationship rel = relsIterator.next();
-        String relName = rel.type();
-        if (relName.equals("SCO_RESTRICTION") || relName.equals("EQC_RESTRICTION")) {
-          restrictionCount++;
-          Map<String, Object> relprops = rel.asMap();
-          assertEquals("http://test#hasUnit", relprops.get("onPropertyURI"));
-          assertEquals("MAXQUALIFIEDCARDINALITY", relprops.get("restrictionType"));
-          assertEquals(1L, relprops.get("cardinalityVal"));
-          assertEquals("hasUnit", relprops.get("onPropertyName"));
-        }
-      }
-      assertEquals(1,restrictionCount);
-
-      Iterator<Node> nodesIterator = nodes.iterator();
-      while (nodesIterator.hasNext()) {
-        Map<String, Object> nodeAsMap = nodesIterator.next().asMap();
-        if(nodeAsMap.get("uri").equals("http://test#hasUnit")){
-          assertEquals("hasUnit", nodeAsMap.get("name"));
-        }
-      }
-  }
-
-  @Test
-  public void testOntoPreviewFromFileLimit() throws Exception {
-    Session session = driver.session();
-
-      initialiseGraphDB(neo4j.defaultDatabaseService(),
-          "{}");
-
-      Result importResults
-          = session
-          .run("CALL n10s.onto.preview.fetch('" + OntoProceduresTest.class.getClassLoader()
-              .getResource("moviesontology.owl")
-              .toURI() + "','RDF/XML')");
-      Map<String, Object> next = importResults
-          .next().asMap();
-      List<Node> nodes = (List<Node>) next.get("nodes");
-      assertEquals(14, nodes.size());
-      List<Relationship> rels = (List<Relationship>) next.get("relationships");
-      assertEquals(17, rels.size());
-
-      //now  limiting it to 5 triples
-      importResults
-          = session
-          .run("CALL n10s.onto.preview.fetch(' " + OntoProceduresTest.class.getClassLoader()
-              .getResource("moviesontology.owl")
-              .toURI() + "','RDF/XML',  { limit: 6 })");
-      next = importResults
-          .next().asMap();
-      nodes = (List<Node>) next.get("nodes");
-      assertEquals(2, nodes.size());
-      rels = (List<Relationship>) next.get("relationships");
-      assertEquals(0, rels.size());
-  }
-
-
-  @Test
   public void ontoImportTest() throws Exception {
       initialiseGraphDB(neo4j.defaultDatabaseService(), "{ baseSchemaNamespace : 'http://basenamespace#' }");
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          OntoImportTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
@@ -570,7 +306,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-              OntoProceduresTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
+              OntoImportTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
               + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
 
       assertEquals(60L, importResults.next().get("triplesLoaded").asLong());
@@ -605,7 +341,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-              OntoProceduresTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
+              OntoImportTest.class.getClassLoader().getResource("moviesontologyWithPropCharacteristics.owl").toURI()
               + "','RDF/XML', {  domainRelName: 'DMN'})"); //this setting should be ignored
 
 
@@ -650,7 +386,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          OntoImportTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML')");
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
@@ -691,7 +427,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-              OntoProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+              OntoImportTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
               + "','RDF/XML')");
 
       assertEquals(57L, importResults.next().get("triplesLoaded").asLong());
@@ -776,7 +512,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
+          OntoImportTest.class.getClassLoader().getResource("moviesontology.owl").toURI()
           + "','RDF/XML', { predicateExclusionList: ['http://www.w3.org/2000/01/rdf-schema#label',"
           + "'http://www.w3.org/2000/01/rdf-schema#comment'] })");
 
@@ -867,7 +603,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("schema.rdf").toURI() +
+          OntoImportTest.class.getClassLoader().getResource("schema.rdf").toURI() +
           "','RDF/XML')");
 
       assertEquals(592L,
@@ -897,7 +633,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
+          OntoImportTest.class.getClassLoader().getResource("class-hierarchy-test.rdf")
               .toURI() +
           "','RDF/XML')");
       Record importSummary = importResults.next();
@@ -915,7 +651,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
+          OntoImportTest.class.getClassLoader().getResource("SPOTest.owl").toURI() +
           "','RDF/XML')");
 
       assertEquals(1L,
@@ -931,7 +667,7 @@ public class OntoProceduresTest {
       Session session = driver.session();
 
       Result importResults = session.run("CALL n10s.onto.import.fetch('" +
-          OntoProceduresTest.class.getClassLoader()
+          OntoImportTest.class.getClassLoader()
               .getResource("moviesontologyMultilabel.owl").toURI()
           + "','RDF/XML')");
 
@@ -1173,37 +909,6 @@ public class OntoProceduresTest {
 
       assertEquals(8L, next.get("triplesParsed").asLong());
   }
-
-//  @Test
-//  public void custTxMetadata() throws Exception {
-//    try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
-//            Config.builder().withoutEncryption().build())) {
-//
-//      initialiseGraphDB(neo4j.defaultDatabaseService(),
-//              "{ handleVocabUris: 'IGNORE' }");
-//      Session session = driver.session();
-//
-//      Map<String, Object> params = new HashMap<>();
-//      params.put("rdf", this.restrictionsOnResourcesImplicitClassTurtle);
-//
-//      Result importResults = session
-//              .run("CALL n10s.onto.import.inline($rdf,'Turtle')", params);
-//
-//      Record next = importResults.next();
-//
-//      assertEquals(8L, next.get("triplesLoaded").asLong());
-//
-//      assertEquals(8L, next.get("triplesParsed").asLong());
-//
-//      Map<String, Object> txm = new HashMap<>();
-//      params.put("batch_id", "BATCH#1234");
-//      TransactionConfig txc = TransactionConfig.builder().withMetadata(txm).build();
-//      Transaction tx = session.beginTransaction(txc);
-//      tx.run("CALL n10s.onto.import.inline($rdf,'Turtle')");
-//      tx.commit();
-//
-//    }
-//  }
 
   private void initialiseGraphDB(GraphDatabaseService db, String graphConfigParams) {
     db.executeTransactionally(UNIQUENESS_CONSTRAINT_STATEMENT);

@@ -25,7 +25,7 @@ import org.neo4j.driver.Record;
 import org.neo4j.driver.types.Node;
 import org.neo4j.harness.junit.rule.Neo4jRule;
 
-public class SHACLValidationProceduresTest {
+public class SHACLValidationBasicTest {
 
   final String VAL_RESULTS_QUERY_ON_IGNORE_GRAPH = "MATCH (vr:ValidationResult)\n" +
           "RETURN\n" +
@@ -87,6 +87,240 @@ public class SHACLValidationProceduresTest {
   }
 
   final String CREATE_N10S_CONSTRAINT = "CREATE CONSTRAINT n10s_unique_uri FOR ( resource:Resource ) REQUIRE (resource.uri) IS UNIQUE";
+
+  String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
+          "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "@prefix ex:    <http://www.example.com/device#> .\n" +
+          "@prefix owl:   <http://www.w3.org/2002/07/owl#> .\n" +
+          "\n" +
+          "\n" +
+          "ex:SoftwareShape\n" +
+          "    a sh:NodeShape ;\n" +
+          "    sh:targetClass ex:Software ;\n" +
+          "    sh:property [             \n" +
+          "        sh:path ex:id;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "        sh:maxLength 255;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:type;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:property [              \n" +
+          "        sh:path ex:status;     \n" +
+          "        sh:datatype xsd:string ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:closed true ;\n" +
+          "    .";
+
+  String SHAPES_CLOSED_DATA = "<?xml version=\"1.0\"?>\n" +
+          "<rdf:RDF xmlns=\"http://www.example.com/device#\"\n" +
+          "     xml:base=\"http://www.example.com/device\"\n" +
+          "     xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
+          "     xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
+          "     xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n" +
+          "     xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n" +
+          "     xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n" +
+          "     xmlns:device=\"http://www.example.com/device#\">\n" +
+          " \n" +
+          "\n" +
+          "    <!-- http://ww.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4 -->\n" +
+          "\n" +
+          "    <owl:NamedIndividual rdf:about=\"http://www.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4\">\n" +
+          "        <rdf:type rdf:resource=\"http://www.example.com/device#Software\"/>\n" +
+          "        <id rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">2</id>\n" +
+          "        <status rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">NEW</status>\n" +
+          "        <type rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">SCRIPT1</type>\n" +
+          "    </owl:NamedIndividual>\n" +
+          "</rdf:RDF>";
+
+  String DATE_TYPE_CONSTRAINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testDate;   \n" +
+          "        sh:datatype xsd:dateTime ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_1 =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  String DATE_DATA_2 =
+          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  String DATE_DATA_WHERE_PROP_IS_USED_AS_REL =
+          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+                  "<http://adaptive.accenture.com/ind#ADateForTestIndividual3> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  String DATE_TYPE_CONSTRAINT_DATE_AND_POINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testDate;   \n" +
+          "        sh:datatype xsd:date ;\n" +
+          "        sh:maxCount 1 ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testPoint;   \n" +
+          "        sh:datatype <" + WKTLITERAL_URI.stringValue()+ "> ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_POINT_AND_TYPE =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"Point(-1.324 -5.354)\"^^<" + WKTLITERAL_URI.stringValue() + "> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"1956-02-25T10:00:00.00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"1956-02-25T10:00:00.0000+01:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
+          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
+          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
+          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
+
+  String DATE_TYPE_CONSTRAINT_ANYURI = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
+          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "\n" +
+          "  neo4j:myShape a sh:NodeShape ;\n" +
+          "    sh:targetClass neo4j:TestEntitype ;\n" +
+          "    sh:property [            \n" +
+          "        sh:path neo4j:testUri ;   \n" +
+          "        sh:datatype xsd:anyURI ;\n" +
+          "        sh:minCount 1 ;\n" +
+          "    ] ;\n" +
+          ".";
+
+  String DATE_DATA_ANYURI =
+          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"http://www.example.com\" . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
+                  "\"http://www.example with.whitespaces.com\" . " +
+                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
+                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." ;
+
+  String SHAPES_REQUIRED_EXCLUDED_TYPES = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:womanShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Woman ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:name ;\n" +
+          "    sh:pattern \".*\" ;\n" +
+          "    sh:maxCount 1 ;\n" +
+          "    sh:datatype xsd:string ;\n" +
+          "  ];\n" +
+          "  sh:class neo4j:Person ;\n" +
+          "  sh:class [ sh:not neo4j:Man ] ;\n" +
+          ".\n" +
+          "ex:manShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Man ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:name ;\n" +
+          "    sh:pattern \".*\" ;\n" +
+          "    sh:maxCount 1 ;\n" +
+          "    sh:datatype xsd:string ;\n" +
+          "  ];\n" +
+          "  sh:class neo4j:Person ;\n" +
+          ".\n" ;
+
+  String SHAPES_REQUIRED_EXCLUDED_TYPES_QUERY = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:womanShape a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:daughter_of]->() \" ;\n" +
+          "  sh:class neo4j:Woman ;\n" +
+          "  sh:class [ sh:not neo4j:Man ] ;\n" +
+          ".\n" +
+          "ex:manShape a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:son_of]->() \" ;\n" +
+          "  sh:class neo4j:Man ;\n" +
+          "  sh:class [ sh:not neo4j:Woman ] ;\n" +
+          ".\n" ;
+
+  String SHAPES_BAD_QUERY_1 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" (focus)-[:daughter_of]->(y) \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
+
+  String SHAPES_BAD_QUERY_2 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" true return count(*); create (:HelloThere) ; \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
+
+  String SHAPES_BAD_QUERY_3 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
+          "\n" +
+          "ex:shape01 a sh:NodeShape ;\n" +
+          "  sh:targetQuery \" where existis(focus.prop)  \" ;\n" +
+          "  sh:class neo4j:Pointless ;\n" +
+          ".\n" ;
 
   @Test
   public void testCompiledValidatorIsPersisted() throws Exception {
@@ -213,7 +447,7 @@ public class SHACLValidationProceduresTest {
       session.run(data_input);
 
       Result results = session
-          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/cim.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -245,60 +479,6 @@ public class SHACLValidationProceduresTest {
       assertEquals(3, minCountCount);
       assertEquals(3, datatypeConstCount);
   }
-
-  String SHAPES_CLOSED_NO_EXCLUSION = "@prefix rdf:   <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n" +
-          "@prefix sh:    <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix xsd:   <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs:  <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "@prefix ex:    <http://www.example.com/device#> .\n" +
-          "@prefix owl:   <http://www.w3.org/2002/07/owl#> .\n" +
-          "\n" +
-          "\n" +
-          "ex:SoftwareShape\n" +
-          "    a sh:NodeShape ;\n" +
-          "    sh:targetClass ex:Software ;\n" +
-          "    sh:property [             \n" +
-          "        sh:path ex:id;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "        sh:maxLength 255;\n" +
-          "    ] ;\n" +
-          "    sh:property [              \n" +
-          "        sh:path ex:type;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          "    sh:property [              \n" +
-          "        sh:path ex:status;     \n" +
-          "        sh:datatype xsd:string ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          "    sh:closed true ;\n" +
-          "    .";
-
-  String SHAPES_CLOSED_DATA = "<?xml version=\"1.0\"?>\n" +
-          "<rdf:RDF xmlns=\"http://www.example.com/device#\"\n" +
-          "     xml:base=\"http://www.example.com/device\"\n" +
-          "     xmlns:owl=\"http://www.w3.org/2002/07/owl#\"\n" +
-          "     xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\"\n" +
-          "     xmlns:xml=\"http://www.w3.org/XML/1998/namespace\"\n" +
-          "     xmlns:xsd=\"http://www.w3.org/2001/XMLSchema#\"\n" +
-          "     xmlns:rdfs=\"http://www.w3.org/2000/01/rdf-schema#\"\n" +
-          "     xmlns:device=\"http://www.example.com/device#\">\n" +
-          " \n" +
-          "\n" +
-          "    <!-- http://ww.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4 -->\n" +
-          "\n" +
-          "    <owl:NamedIndividual rdf:about=\"http://www.example.com/device#68288e7d-5e92-46e4-ac6b-7ce4710739d4\">\n" +
-          "        <rdf:type rdf:resource=\"http://www.example.com/device#Software\"/>\n" +
-          "        <id rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">2</id>\n" +
-          "        <status rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">NEW</status>\n" +
-          "        <type rdf:datatype=\"http://www.w3.org/2001/XMLSchema#string\">SCRIPT1</type>\n" +
-          "    </owl:NamedIndividual>\n" +
-          "</rdf:RDF>";
 
   @Test
   public void testClosedShapeIgnore() throws Exception {
@@ -343,35 +523,6 @@ public class SHACLValidationProceduresTest {
       assertFalse(result.hasNext());
     }
   }
-
-  String DATE_TYPE_CONSTRAINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
-          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "\n" +
-          "  neo4j:myShape a sh:NodeShape ;\n" +
-          "    sh:targetClass neo4j:TestEntitype ;\n" +
-          "    sh:property [            \n" +
-          "        sh:path neo4j:testDate;   \n" +
-          "        sh:datatype xsd:dateTime ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          ".";
-
-  String DATE_DATA_1 =
-          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-                  "\"1956-06-25T10:00:00\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
-
-  String DATE_DATA_2 =
-          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-                  "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
 
   @Test
   public void testDataTypeShape() throws Exception {
@@ -418,16 +569,6 @@ public class SHACLValidationProceduresTest {
     }
   }
 
-  String DATE_DATA_WHERE_PROP_IS_USED_AS_REL =
-          "<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-                  "\"1956-06-25T10:00:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-                  "<http://adaptive.accenture.com/ind#ADateForTestIndividual3> . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
-
   @Test
   public void testDataTypeShapeDataTypeRestrictedPropUsedAsRel() throws Exception {
     try (Session session = driver.session()) {
@@ -464,43 +605,6 @@ public class SHACLValidationProceduresTest {
       assertEquals(1, datatypeConstCount);
     }
   }
-
-  String DATE_TYPE_CONSTRAINT_DATE_AND_POINT = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
-          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "\n" +
-          "  neo4j:myShape a sh:NodeShape ;\n" +
-          "    sh:targetClass neo4j:TestEntitype ;\n" +
-          "    sh:property [            \n" +
-          "        sh:path neo4j:testDate;   \n" +
-          "        sh:datatype xsd:date ;\n" +
-          "        sh:maxCount 1 ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          "    sh:property [            \n" +
-          "        sh:path neo4j:testPoint;   \n" +
-          "        sh:datatype <" + WKTLITERAL_URI.stringValue()+ "> ;\n" +
-          "    ] ;\n" +
-          ".";
-
-  String DATE_DATA_POINT_AND_TYPE =
-          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-          "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
-          "\"Point(-1.324 -5.354)\"^^<" + WKTLITERAL_URI.stringValue() + "> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-          "\"1956-02-25T10:00:00.00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
-          "\"1956-02-25T10:00:00.0000+01:00[Europe/Berlin]\"^^<http://www.w3.org/2001/XMLSchema#dateTime> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testDate> " +
-          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testPoint> " +
-          "\"353\"^^<http://www.w3.org/2001/XMLSchema#integer> . " +
-          "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-          "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> .";
 
   @Test
   public void testDataTypeShapeDataPointAndDate() throws Exception {
@@ -554,32 +658,6 @@ public class SHACLValidationProceduresTest {
       assertEquals(4, datatypeConstCount);
     }
   }
-
-  String DATE_TYPE_CONSTRAINT_ANYURI = "@prefix neo4j: <http://adaptive.accenture.com/ontologies/o1#> .\n" +
-          "  @prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "\n" +
-          "  neo4j:myShape a sh:NodeShape ;\n" +
-          "    sh:targetClass neo4j:TestEntitype ;\n" +
-          "    sh:property [            \n" +
-          "        sh:path neo4j:testUri ;   \n" +
-          "        sh:datatype xsd:anyURI ;\n" +
-          "        sh:minCount 1 ;\n" +
-          "    ] ;\n" +
-          ".";
-
-  String DATE_DATA_ANYURI =
-          "<http://adaptive.accenture.com/ind#testIndividual> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
-                  "\"1956-06-25\"^^<http://www.w3.org/2001/XMLSchema#date> . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
-                  "\"http://www.example.com\" . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual2> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://adaptive.accenture.com/ontologies/o1#testUri> " +
-                  "\"http://www.example with.whitespaces.com\" . " +
-                  "\\n<http://adaptive.accenture.com/ind#testIndividual3> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> " +
-                  "<http://adaptive.accenture.com/ontologies/o1#TestEntitype> ." ;
 
   @Test
   public void testDataTypeShapeAnyUri() throws Exception {
@@ -642,14 +720,14 @@ public class SHACLValidationProceduresTest {
     try (Session session = driver.session()) {
 
       Result loadShapes = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/musictest/music.shacl")
               .toURI() + "\",\"Turtle\", {})");
       assertTrue(loadShapes.hasNext());
 
       Result loadData = session.run(
-          "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.rdf.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/musictest/data.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -713,7 +791,7 @@ public class SHACLValidationProceduresTest {
 
       session.run(CREATE_N10S_CONSTRAINT);
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
           .getClassLoader()
           .getResource("shacl/person2lpg-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
@@ -947,7 +1025,7 @@ public class SHACLValidationProceduresTest {
       session.run(CREATE_N10S_CONSTRAINT);
       session.run("CALL n10s.graphconfig.init()");
       Result result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -961,7 +1039,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.nsprefixes.add('neo','neo4j://graph.schema#')");
       session.run("CALL n10s.nsprefixes.add('hello','http://example/')");
       result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -976,7 +1054,7 @@ public class SHACLValidationProceduresTest {
 
       //On pure LPG
       Result result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1019,7 +1097,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.nsprefixes.add('ex','http://example/')");
 
       result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1059,7 +1137,7 @@ public class SHACLValidationProceduresTest {
 
       assertTrue(session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })").hasNext());
       result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1098,7 +1176,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'KEEP' })");
 
       result = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1141,7 +1219,7 @@ public class SHACLValidationProceduresTest {
       session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'IGNORE' })");
       session.run(CREATE_N10S_CONSTRAINT);
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
           .getClassLoader()
           .getResource("shacl/person2lpg-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
@@ -1193,7 +1271,7 @@ public class SHACLValidationProceduresTest {
       Session session = driver.session();
 
       session.run("CALL n10s.graphconfig.init()");
-      
+
       session.run(CREATE_N10S_CONSTRAINT);
 
       String turtleNsDefinition = "@prefix ex: <http://example/> .\n"
@@ -1202,7 +1280,7 @@ public class SHACLValidationProceduresTest {
 
       session.run("CALL n10s.nsprefixes.addFromText(' " + turtleNsDefinition + " ')");
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
           .getClassLoader()
           .getResource("shacl/person2-shacl.ttl")
           .toURI() + "\",\"Turtle\", {})");
@@ -1250,7 +1328,7 @@ public class SHACLValidationProceduresTest {
         assertTrue(e.getMessage().contains("n10s.validation.SHACLValidationException: No shapes compiled"));
       }
   }
-  
+
   @Test
   public void testTxTriggerValidation() throws Exception {
       Session session = driver.session();
@@ -1276,7 +1354,7 @@ public class SHACLValidationProceduresTest {
       assertTrue(session.run("show unique constraints yield name").hasNext());
 
       Result loadShapesResult = session.run(
-          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+          "CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/person2lpg-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1297,481 +1375,6 @@ public class SHACLValidationProceduresTest {
         assertTrue(e.getMessage().contains("SHACLValidationException"));
       }
   }
-
-
-  @Test
-  public void testRunTestSuite0() throws Exception {
-    runIndividualTest("core/complex", "personexample", null, "IGNORE");
-    runIndividualTest("core/complex", "personexample", null, "SHORTEN");
-    runIndividualTest("core/complex", "personexample", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite1() throws Exception {
-    runIndividualTest("core/other", "rangeType-001", null, "IGNORE");
-    runIndividualTest("core/other", "rangeType-001", null, "SHORTEN");
-    runIndividualTest("core/other", "rangeType-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite1b() throws Exception {
-    runIndividualTest("core/other", "rangeType-query-001", null, "IGNORE");
-    runIndividualTest("core/other", "rangeType-query-001", null, "SHORTEN", "rangeType-query-001-shorten");
-    runIndividualTest("core/other", "rangeType-query-001", null, "KEEP","rangeType-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite2() throws Exception {
-    runIndividualTest("core/path", "path-inverse-001", null, "IGNORE");
-    runIndividualTest("core/path", "path-inverse-001", null, "SHORTEN");
-    runIndividualTest("core/path", "path-inverse-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite3() throws Exception {
-    runIndividualTest("core/property", "datatype-001", null, "IGNORE");
-    runIndividualTest("core/property", "datatype-001", null, "SHORTEN");
-    runIndividualTest("core/property", "datatype-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite3queryBased() throws Exception {
-    runIndividualTest("core/property", "datatype-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "datatype-query-001", null, "SHORTEN", "datatype-query-001-shorten");
-    runIndividualTest("core/property", "datatype-query-001", null, "KEEP", "datatype-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite4() throws Exception {
-    runIndividualTest("core/property", "datatype-002", null, "IGNORE");
-    runIndividualTest("core/property", "datatype-002", null, "SHORTEN");
-    runIndividualTest("core/property", "datatype-002", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite5() throws Exception {
-    runIndividualTest("core/property", "maxCount-001", null, "IGNORE");
-    runIndividualTest("core/property", "maxCount-001", null, "SHORTEN");
-    runIndividualTest("core/property", "maxCount-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite5b() throws Exception {
-    runIndividualTest("core/property", "maxCount-001b", null, "IGNORE");
-    runIndividualTest("core/property", "maxCount-001b", null, "SHORTEN");
-    runIndividualTest("core/property", "maxCount-001b", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite5c() throws Exception {
-    runIndividualTest("core/property", "maxCount-001c", null, "IGNORE");
-    runIndividualTest("core/property", "maxCount-001c", null, "SHORTEN");
-    runIndividualTest("core/property", "maxCount-001c", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite6() throws Exception {
-    runIndividualTest("core/property", "minExclussive-001", null, "IGNORE");
-    runIndividualTest("core/property", "minExclussive-001", null, "SHORTEN");
-    runIndividualTest("core/property", "minExclussive-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite6QueryBased() throws Exception {
-    runIndividualTest("core/property", "minMax-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "minMax-query-001", null, "SHORTEN", "minMax-query-001-shorten");
-    runIndividualTest("core/property", "minMax-query-001", null, "KEEP","minMax-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite7() throws Exception {
-    runIndividualTest("core/property", "hasValue-001", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-001", null, "SHORTEN");
-    runIndividualTest("core/property", "hasValue-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite7QueryBased() throws Exception {
-    runIndividualTest("core/property", "hasValue-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-query-001", null, "SHORTEN", "hasValue-query-001-shorten");
-    runIndividualTest("core/property", "hasValue-query-001", null, "KEEP","hasValue-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite7b() throws Exception {
-    // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
-    runIndividualTest("core/property", "hasValue-001b", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-001b", null, "SHORTEN");
-    runIndividualTest("core/property", "hasValue-001b", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite7bQueryBased() throws Exception {
-    // unclear what would that mean on a pure LPG. How to identify a node? By id maybe?
-    runIndividualTest("core/property", "hasValue-query-001b", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-query-001b", null, "SHORTEN", "hasValue-query-001b-shorten");
-    runIndividualTest("core/property", "hasValue-query-001b", null, "KEEP", "hasValue-query-001b-keep");
-  }
-
-  @Test
-  public void testRunTestSuite7c() throws Exception {
-    runIndividualTest("core/property", "hasValue-001c", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-001c", null, "SHORTEN");
-    runIndividualTest("core/property", "hasValue-001c", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite7cQueryBased() throws Exception {
-    runIndividualTest("core/property", "hasValue-query-001c", null, "IGNORE");
-    runIndividualTest("core/property", "hasValue-query-001c", null, "SHORTEN", "hasValue-query-001c-shorten");
-    runIndividualTest("core/property", "hasValue-query-001c", null, "KEEP", "hasValue-query-001c-keep");
-  }
-
-  @Test
-  public void testRunTestSuite8() throws Exception {
-    runIndividualTest("core/property", "in-001", null, "IGNORE");
-    runIndividualTest("core/property", "in-001", null, "SHORTEN");
-    runIndividualTest("core/property", "in-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8QueryBased() throws Exception {
-    runIndividualTest("core/property", "in-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "in-query-001", null, "SHORTEN", "in-query-001-shorten");
-    runIndividualTest("core/property", "in-query-001", null, "KEEP", "in-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite8not() throws Exception {
-    runIndividualTest("core/property", "in-not-001", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-001", null, "SHORTEN");
-    runIndividualTest("core/property", "in-not-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8notQueryBased() throws Exception {
-    runIndividualTest("core/property", "in-not-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-query-001", null, "SHORTEN","in-not-query-001-shorten");
-    runIndividualTest("core/property", "in-not-query-001", null, "KEEP","in-not-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite8b() throws Exception {
-    runIndividualTest("core/property", "in-001b", null, "IGNORE");
-    runIndividualTest("core/property", "in-001b", null, "SHORTEN");
-    runIndividualTest("core/property", "in-001b", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8bQueryBased() throws Exception {
-    runIndividualTest("core/property", "in-query-001b", null, "IGNORE");
-    runIndividualTest("core/property", "in-query-001b", null, "SHORTEN","in-query-001b-shorten");
-    runIndividualTest("core/property", "in-query-001b", null, "KEEP", "in-query-001b-keep");
-  }
-
-  @Test
-  public void testRunTestSuite8bnot() throws Exception {
-    runIndividualTest("core/property", "in-not-001b", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-001b", null, "SHORTEN");
-    runIndividualTest("core/property", "in-not-001b", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8bnotQueryBased() throws Exception {
-    runIndividualTest("core/property", "in-not-query-001b", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-query-001b", null, "SHORTEN","in-not-query-001b-shorten");
-    runIndividualTest("core/property", "in-not-query-001b", null, "KEEP", "in-not-query-001b-keep");
-  }
-
-  @Test
-  public void testRunTestSuite8c() throws Exception {
-    runIndividualTest("core/property", "in-001c", null, "IGNORE");
-    runIndividualTest("core/property", "in-001c", null, "SHORTEN");
-    runIndividualTest("core/property", "in-001c", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8cQueryBased() throws Exception {
-    runIndividualTest("core/property", "in-query-001c", null, "IGNORE");
-    runIndividualTest("core/property", "in-query-001c", null, "SHORTEN", "in-query-001c-shorten");
-    runIndividualTest("core/property", "in-query-001c", null, "KEEP","in-query-001c-keep");
-  }
-
-
-  @Test
-  public void testRunTestSuite8cnot() throws Exception {
-    runIndividualTest("core/property", "in-not-001c", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-001c", null, "SHORTEN");
-    runIndividualTest("core/property", "in-not-001c", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite8cnotQueryBased() throws Exception {
-    runIndividualTest("core/property", "in-not-query-001c", null, "IGNORE");
-    runIndividualTest("core/property", "in-not-query-001c", null, "SHORTEN", "in-not-query-001c-shorten");
-    runIndividualTest("core/property", "in-not-query-001c", null, "KEEP","in-not-query-001c-keep");
-  }
-
-  @Test
-  public void testRunTestSuite12() throws Exception {
-    runIndividualTest("core/property", "pattern-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "pattern-query-001", null, "SHORTEN","pattern-query-001-shorten");
-    runIndividualTest("core/property", "pattern-query-001", null, "KEEP","pattern-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite9() throws Exception {
-    runIndividualTest("core/property", "maxLength-001", null, "IGNORE");
-    runIndividualTest("core/property", "maxLength-001", null, "SHORTEN");
-    runIndividualTest("core/property", "maxLength-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite10() throws Exception {
-    runIndividualTest("core/property", "minCount-001", null, "IGNORE");
-    runIndividualTest("core/property", "minCount-001", null, "SHORTEN");
-    runIndividualTest("core/property", "minCount-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite10b() throws Exception {
-    runIndividualTest("core/property", "minCount-001b", null, "IGNORE");
-    runIndividualTest("core/property", "minCount-001b", null, "SHORTEN");
-    runIndividualTest("core/property", "minCount-001b", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuiteCountQueryBased() throws Exception {
-    runIndividualTest("core/property", "count-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "count-query-001", null, "SHORTEN", "count-query-001-shorten");
-    runIndividualTest("core/property", "count-query-001", null, "KEEP", "count-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite11() throws Exception {
-    runIndividualTest("core/property", "nodeKind-001", null, "IGNORE");
-    runIndividualTest("core/property", "nodeKind-001", null, "SHORTEN");
-    runIndividualTest("core/property", "nodeKind-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite13() throws Exception {
-    runIndividualTest("core/other", "closed-shape-query-001", null, "IGNORE");
-    runIndividualTest("core/other", "closed-shape-query-001", null, "SHORTEN","closed-shape-query-001-shorten");
-    runIndividualTest("core/other", "closed-shape-query-001", null, "KEEP","closed-shape-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite14() throws Exception {
-    runIndividualTest("core/other", "required-excluded-query-001", null, "IGNORE");
-    runIndividualTest("core/other", "required-excluded-query-001", null, "SHORTEN","required-excluded-query-001-shorten");
-    runIndividualTest("core/other", "required-excluded-query-001", null, "KEEP","required-excluded-query-001-keep");
-  }
-
-  @Test
-  public void testRunTestSuite15() throws Exception {
-    runIndividualTest("core/property", "disjoint-001", null, "IGNORE");
-    runIndividualTest("core/property", "disjoint-001", null, "SHORTEN");
-    runIndividualTest("core/property", "disjoint-001", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite16() throws Exception {
-    runIndividualTest("core/property", "disjoint-002", null, "IGNORE");
-    runIndividualTest("core/property", "disjoint-002", null, "SHORTEN");
-    runIndividualTest("core/property", "disjoint-002", null, "KEEP");
-  }
-
-  @Test
-  public void testRunTestSuite17() throws Exception {
-    runIndividualTest("core/property", "disjoint-query-001", null, "IGNORE");
-    runIndividualTest("core/property", "disjoint-query-001", null, "SHORTEN", "disjoint-query-001-shorten");
-    runIndividualTest("core/property", "disjoint-query-001", null, "KEEP", "disjoint-query-001-keep");
-  }
-
-  public void runIndividualTest(String testGroupName, String testName,
-      String cypherScript, String handleVocabUris, String ... overrideShapesFileName) throws Exception {
-
-      Session session = driver.session();
-      Result getschemastatementsResults = session
-          .run("show unique constraints yield name");
-      if (getschemastatementsResults.hasNext() &&
-          getschemastatementsResults.next().get("name").asString()
-              .equals(UNIQUENESS_CONSTRAINT_ON_URI)) {
-        //constraint exists. do nothing.
-      } else {
-        session.run(UNIQUENESS_CONSTRAINT_STATEMENT);
-        assertTrue(session.run("show unique constraints yield name").hasNext());
-      }
-
-      //db is empty
-      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
-
-      session.run("CALL n10s.graphconfig.init({ handleRDFTypes: 'LABELS_AND_NODES', handleMultival: 'ARRAY'" +
-          ", handleVocabUris: '" + handleVocabUris + "' })");
-
-      //load data
-      Result dataImportResults = session.run(
-              "CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class.getClassLoader()
-                      .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-data.ttl")
-                      .toURI() + "\",\"Turtle\")");
-
-      assertTrue(dataImportResults.hasNext());
-
-      assertTrue(dataImportResults.next().get("triplesLoaded").asLong() > 0);
-
-      //load shapes
-      Result shapesLoadResults = session
-          .run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
-              .getClassLoader()
-              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + (overrideShapesFileName.length>0?overrideShapesFileName[0]:testName) + "-shapes.ttl")
-              .toURI() + "\",\"Turtle\", {})");
-
-
-      assertTrue(shapesLoadResults.hasNext());
-
-      //load shapes for test completeness
-      Result loadShapesAsNodes = session
-          .run("CALL n10s.rdf.import.fetch(\"" + SHACLValidationProceduresTest.class
-              .getClassLoader()
-              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-shapes.ttl")
-              .toURI() + "\",\"Turtle\", {})");
-
-      assertTrue(loadShapesAsNodes.hasNext());
-
-      assertTrue(loadShapesAsNodes.next().get("triplesLoaded").asLong() > 0);
-
-      //load expected results
-      Result resultsLoadResult = session.run("call n10s.rdf.import.fetch('" + SHACLValidationProceduresTest.class
-              .getClassLoader()
-              .getResource("shacl/w3ctestsuite/" + testGroupName + "/" + testName + "-results.ttl")
-              .toURI() + "','Turtle')");
-
-      assertTrue(resultsLoadResult.hasNext());
-
-      assertTrue(resultsLoadResult.next().get("triplesLoaded").asLong() > 0);
-
-      // query them in the graph and flatten the list
-      Result expectedValidationResults = session.run(selectQuery(handleVocabUris));
-
-      assertTrue(expectedValidationResults.hasNext());
-
-
-      Set<ValidationResult> expectedResults = new HashSet<ValidationResult>();
-      while (expectedValidationResults.hasNext()) {
-        Record validationResult = expectedValidationResults.next();
-        Object focusNode = ((handleVocabUris.equals("SHORTEN") || handleVocabUris.equals("KEEP"))
-            ? validationResult.get("focus").asString() : validationResult.get("focus").asString());
-        String nodeType = validationResult.get("targetClass").isNull()?"":validationResult.get("targetClass").asString();
-        String propertyName = validationResult.get("path").asString();
-        String severity = validationResult.get("sev").asString();
-        String constraint = validationResult.get("constraint").asString();
-        String message = validationResult.get("message").isNull()? "": validationResult.get("message").asList().iterator().next().toString();
-        String shapeId = validationResult.get("shapeId").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
-
-        //TODO: Remove this
-        expectedResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, customMsg, offendingValue));
-      }
-
-      // run validation
-      Result actualValidationResults = session
-          .run("call n10s.validation.shacl.validate() ");
-
-      assertTrue(actualValidationResults.hasNext());
-
-      Set<ValidationResult> actualResults = new HashSet<ValidationResult>();
-      while (actualValidationResults.hasNext()) {
-        Record validationResult = actualValidationResults.next();
-        Object focusNode = validationResult.get("focusNode").asObject();
-        String nodeType = validationResult.get("nodeType").asString();
-        String propertyName = validationResult.get("resultPath").asString();
-        String severity = validationResult.get("severity").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessage").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
-        //TODO: remove this
-        actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, customMsg, offendingValue));
-      }
-
-      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
-      assertEquals(expectedResults.size() , actualResults.size());
-
-      for (ValidationResult x : expectedResults) {
-        assertTrue(contains(actualResults, x));
-      }
-
-      for (ValidationResult x : actualResults) {
-        assertTrue(contains(expectedResults, x));
-      }
-
-      //re-run it on set of nodes
-      actualValidationResults = session
-          .run("MATCH (n) with collect(n) as nodelist "
-              + "call n10s.validation.shacl.validateSet(nodelist)"
-              + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
-              + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
-
-      actualResults = new HashSet<ValidationResult>();
-      while (actualValidationResults.hasNext()) {
-        Record validationResult = actualValidationResults.next();
-        Object focusNode = validationResult.get("focusNode").asObject();
-        String nodeType = validationResult.get("nodeType").asString();
-        String propertyName = validationResult.get("resultPath").asString();
-        String severity = validationResult.get("severity").asString();
-        Object offendingValue = validationResult.get("offendingValue").asObject();
-        String constraint = validationResult.get("propertyShape").asString();
-        String message = validationResult.get("resultMessage").asString();
-        String shapeId = validationResult.get("shapeId").asString();
-        String customMsg = validationResult.get("customMsg").isNull()? "": validationResult.get("customMsg").asList().iterator().next().toString();
-        actualResults
-            .add(new ValidationResult(focusNode, nodeType, propertyName, severity, constraint,
-                shapeId, message, customMsg, offendingValue));
-
-      }
-
-      //when using labels_and_nodes there might be "duplicates" in the results (one for the label and one for the type)
-      assertEquals(expectedResults.size(), actualResults.size());
-
-      for (ValidationResult x : expectedResults) {
-        assertTrue(contains(actualResults, x));
-      }
-
-      for (ValidationResult x : actualResults) {
-        assertTrue(contains(expectedResults, x));
-      }
-
-    //re-run it on empty set of nodes
-    actualValidationResults = session
-            .run("MATCH (n:NonExistingNodes) with collect(n) as nodelist "
-                    + "call n10s.validation.shacl.validateSet(nodelist)"
-                    + " yield focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage "
-                    + " return focusNode, nodeType, shapeId, propertyShape, offendingValue, resultPath, severity, resultMessage ");
-
-    //no results expected as running on empty set of nodes
-    assertFalse(actualValidationResults.hasNext());
-
-      session.run("MATCH (n) DETACH DELETE n ").hasNext();
-  }
-
-  private String selectQuery(String handleVocabUris) {
-    if(handleVocabUris.equals("SHORTEN")) {
-      return VAL_RESULTS_QUERY_ON_SHORTEN_GRAPH ;
-    } else if (handleVocabUris.equals("KEEP")){
-      return VAL_RESULTS_QUERY_ON_KEEP_GRAPH ;
-    } else {
-      // "IGNORE"
-      return VAL_RESULTS_QUERY_ON_IGNORE_GRAPH ;
-    }
-  }
-
 
   @Test
   public void testHasTypeValidationOnMovieDB() throws Exception {
@@ -1796,7 +1399,7 @@ public class SHACLValidationProceduresTest {
                       " RETURN [id(RitaW), id(BillPull), id(VictorG)] as invalidNodes").next().get("invalidNodes").asList(Value::asLong);
 
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/typerestriction-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1818,7 +1421,7 @@ public class SHACLValidationProceduresTest {
 
 
 
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/typerestriction-enumerated-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1842,7 +1445,7 @@ public class SHACLValidationProceduresTest {
               "return id(p) as id\n").next().get("id").asLong();
       long tooFew = session.run("CREATE (p:Person {name:\"Mr. Toofew Types\", born:1922}) " +
               "return id(p) as id\n").next().get("id").asLong();
-      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationProceduresTest.class
+      session.run("CALL n10s.validation.shacl.import.fetch(\"" + SHACLValidationBasicTest.class
               .getClassLoader()
               .getResource("shacl/typerestriction-count-shacl.ttl")
               .toURI() + "\",\"Turtle\", {})");
@@ -1863,51 +1466,6 @@ public class SHACLValidationProceduresTest {
       }
       assertEquals(2,count);
   }
-
-  String SHAPES_REQUIRED_EXCLUDED_TYPES = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
-          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "\n" +
-          "ex:womanShape a sh:NodeShape ;\n" +
-          "  sh:targetClass neo4j:Woman ;\n" +
-          "  sh:property [\n" +
-          "    sh:path neo4j:name ;\n" +
-          "    sh:pattern \".*\" ;\n" +
-          "    sh:maxCount 1 ;\n" +
-          "    sh:datatype xsd:string ;\n" +
-          "  ];\n" +
-          "  sh:class neo4j:Person ;\n" +
-          "  sh:class [ sh:not neo4j:Man ] ;\n" +
-          ".\n" +
-          "ex:manShape a sh:NodeShape ;\n" +
-          "  sh:targetClass neo4j:Man ;\n" +
-          "  sh:property [\n" +
-          "    sh:path neo4j:name ;\n" +
-          "    sh:pattern \".*\" ;\n" +
-          "    sh:maxCount 1 ;\n" +
-          "    sh:datatype xsd:string ;\n" +
-          "  ];\n" +
-          "  sh:class neo4j:Person ;\n" +
-          ".\n" ;
-
-  String SHAPES_REQUIRED_EXCLUDED_TYPES_QUERY = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
-          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "\n" +
-          "ex:womanShape a sh:NodeShape ;\n" +
-          "  sh:targetQuery \" (focus)-[:daughter_of]->() \" ;\n" +
-          "  sh:class neo4j:Woman ;\n" +
-          "  sh:class [ sh:not neo4j:Man ] ;\n" +
-          ".\n" +
-          "ex:manShape a sh:NodeShape ;\n" +
-          "  sh:targetQuery \" (focus)-[:son_of]->() \" ;\n" +
-          "  sh:class neo4j:Man ;\n" +
-          "  sh:class [ sh:not neo4j:Woman ] ;\n" +
-          ".\n" ;
 
   @Test
   public void testRequiredAndExcludedTypes() throws Exception {
@@ -1946,7 +1504,7 @@ public class SHACLValidationProceduresTest {
     }
     try (Driver driver = GraphDatabase.driver(neo4j.boltURI(),
             Config.builder().withoutEncryption().build()); Session session = driver.session()) {
-      
+
       Result result = session.run("call n10s.validation.shacl.validate()");
       int resultcount = 0;
       while(result.hasNext()){
@@ -1957,39 +1515,6 @@ public class SHACLValidationProceduresTest {
 
     }
   }
-
-  String SHAPES_BAD_QUERY_1 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
-          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "\n" +
-          "ex:shape01 a sh:NodeShape ;\n" +
-          "  sh:targetQuery \" (focus)-[:daughter_of]->(y) \" ;\n" +
-          "  sh:class neo4j:Pointless ;\n" +
-          ".\n" ;
-
-  String SHAPES_BAD_QUERY_2 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
-          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "\n" +
-          "ex:shape01 a sh:NodeShape ;\n" +
-          "  sh:targetQuery \" true return count(*); create (:HelloThere) ; \" ;\n" +
-          "  sh:class neo4j:Pointless ;\n" +
-          ".\n" ;
-
-  String SHAPES_BAD_QUERY_3 = "@prefix ex: <http://example.neo4j.com/graphvalidation#> .\n" +
-          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
-          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
-          "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
-          "@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n" +
-          "\n" +
-          "ex:shape01 a sh:NodeShape ;\n" +
-          "  sh:targetQuery \" where existis(focus.prop)  \" ;\n" +
-          "  sh:class neo4j:Pointless ;\n" +
-          ".\n" ;
 
   @Test
   public void testBadQueriesInConstraint() throws Exception {
@@ -2015,61 +1540,4 @@ public class SHACLValidationProceduresTest {
     }
   }
 
-  private boolean contains(Set<ValidationResult> set, ValidationResult res) {
-    boolean contained = false;
-    for (ValidationResult vr : set) {
-      contained |= equivalentValidationResult(vr, res);
-    }
-    return contained;
-  }
-
-  private boolean equivalentValidationResult(ValidationResult x, ValidationResult res) {
-    return x.focusNode.equals(res.focusNode) && x.severity.equals(res.severity) &&
-            equivalentNodeTypes(x.nodeType,res.nodeType) && x.propertyShape.equals(res.propertyShape) && x.resultPath
-        .equals(res.resultPath) && equivalentOffendingValues(x.offendingValue, res.offendingValue);
-  }
-
-  private boolean equivalentNodeTypes(String a, String b) {
-    if ((a.equals("[all nodes]") || a.equals("[query-based selection]")) && b.equals("")) {
-      return true ;
-    } else if ((b.equals("[all nodes]") || b.equals("[query-based selection]")) && a.equals("")){
-      return true;
-    }
-    return a.equals(b);
-  }
-
-  private boolean equivalentOffendingValues(Object a, Object b) {
-    if(a==null && b==null){
-      return true;
-    } else if (a!=null && b!=null) {
-      if (a instanceof Collection<?>){
-        a = ((Collection<?>) a).iterator().next();
-      }
-      if (b instanceof Collection<?>){
-        b = ((Collection<?>) b).iterator().next();
-      }
-      return getLocalPart(a.toString()).equals(getLocalPart(b.toString()));
-    } else {
-      return false;
-    }
-  }
-
-  private String getLocalPart(String str) {
-    if (str.indexOf(58) < 0) {
-      int index = str.indexOf("__");
-      if( index < 0 ){
-        return str;
-      } else{
-        return str.substring(index + 2);
-      }
-    } else {
-      return SimpleValueFactory.getInstance().createIRI(str).getLocalName();
-    }
-  }
-
-
 }
-
-
-
-

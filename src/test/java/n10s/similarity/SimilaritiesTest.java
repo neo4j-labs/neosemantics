@@ -1,7 +1,6 @@
 package n10s.similarity;
 
 import n10s.graphconfig.GraphConfigProcedures;
-import n10s.onto.OntoProceduresTest;
 import n10s.onto.load.OntoLoadProcedures;
 import n10s.onto.preview.OntoPreviewProcedures;
 import n10s.rdf.RDFProcedures;
