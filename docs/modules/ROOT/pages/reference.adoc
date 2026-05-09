@@ -147,7 +147,7 @@ The following parameters are  specific to the import/preview/stream method.
 | headerParams      | map {} | parameters to be passed in the HTTP GET request or `payload` if POST request. <br> Example: `{ authorization: 'Basic user:pwd', Accept: 'application/rdf+xml'}`
 | commitSize      | integer (25000) | commit a partial transaction every n triples
 | nodeCacheSize      | integer (10000) | keep n nodes in cache to minimize reads from DB
-| verifyUriSyntax | boolean (true) | by default, uri syntax is checked. This can be disable d by setting this parameter to `false`
+| verifyUriSyntax | boolean (true) | by default, uri syntax is checked and a malformed URI aborts the entire import. Set to `false` to make URI parse errors non-fatal: triples whose subject, predicate, or object has a malformed URI (e.g. `##`-fragment, unencoded braces) are skipped individually and logged as warnings, while the rest of the file continues to import normally.
 |===
 
 

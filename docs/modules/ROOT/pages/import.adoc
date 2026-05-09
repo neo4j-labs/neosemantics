@@ -888,6 +888,32 @@ image::worldofyesterday.png[Graph resulting of importing the data in the British
 Of course you could do achieve this -or something similar- in different ways, in this case we are using a SPARQL CONSTRUCT query in order to be able to limit
 the number of triples returned for each resource as some of them are pretty dense.
 
+[[malformed-uris]]
+== Handling malformed URIs
+
+By default neosemantics validates URI syntax during parsing, and a single malformed URI aborts the entire import with `terminationStatus: KO`.
+
+Some real-world RDF datasets (e.g. Wikidata exports, legacy government data) contain URIs that technically violate the RFC 3986 syntax — for example, double-hash fragments (`##`) or unencoded braces.
+Setting `verifyUriSyntax: false` switches the parser to lenient mode: any triple whose subject, predicate, or object contains a malformed URI is silently skipped and logged as a warning, while all other triples continue to be imported normally.
+
+[source,cypher]
+----
+CALL n10s.rdf.import.fetch("file:///data/wikidata-export.ttl", "Turtle", {
+  verifyUriSyntax: false
+});
+----
+
+.Results — bad URIs skipped, rest of file imported
+[opts="header"]
+|===
+| terminationStatus | triplesLoaded | ...
+| "OK"              | 1234          | ...
+|===
+
+[NOTE]
+With `verifyUriSyntax: false` only the individual triples containing the malformed URI are dropped.
+If you need to inspect which triples were skipped, check the Neo4j server log for `RDF parse error (triple skipped)` warnings.
+
 [[custom-prefixes-for-namespaces]]
 == Defining custom prefixes for namespaces
 
