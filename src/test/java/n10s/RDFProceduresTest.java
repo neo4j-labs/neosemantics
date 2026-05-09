@@ -15,6 +15,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -750,6 +751,59 @@ public class RDFProceduresTest {
   }
 
   @Test
+  public void testImportRDFStarRelationshipIRI() throws Exception {
+    // Regression test for #265: predicate IRI must be stored as 'iri' property on
+    // relationships imported via RDF-star so it is not lost when handleVocabUris is IGNORE
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', applyNeo4jNaming: true, handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <https://example.com/graph/> .\n" +
+              "@prefix ont: <https://example.com/ontology/> .\n" +
+              "ex:item1 a ont:Product .\n" +
+              "ex:item2 a ont:Product .\n" +
+              "<<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 .\n";
+
+      Result importResult = session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+      assertEquals(3L, importResult.single().get("triplesLoaded").asLong());
+
+      // With applyNeo4jNaming:true, the relationship type is UPSELLWITH (local name uppercased)
+      // but the full predicate IRI must still be accessible via the 'iri' property
+      Record rel = session.run(
+              "MATCH ()-[r:UPSELLWITH]->() RETURN r.orderNo as orderNo, r.iri as iri")
+              .single();
+      assertEquals(1L, rel.get("orderNo").asLong());
+      assertEquals("https://example.com/ontology/upsellWith", rel.get("iri").asString());
+    }
+  }
+
+  @Test
+  public void testImportRDFStarRelationshipIRINotStoredWhenKEEP() throws Exception {
+    // With handleVocabUris=KEEP the relationship type name is already the full IRI,
+    // so storing 'iri' as a property would be redundant — verify it is omitted
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <https://example.com/graph/> .\n" +
+              "@prefix ont: <https://example.com/ontology/> .\n" +
+              "ex:item1 a ont:Product .\n" +
+              "ex:item2 a ont:Product .\n" +
+              "<<ex:item1 ont:upsellWith ex:item2>> ont:orderNo 1 .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      Record rel = session.run(
+              "MATCH ()-[r]->() WHERE type(r) = 'https://example.com/ontology/upsellWith' " +
+              "RETURN r.iri as iri, r.`https://example.com/ontology/orderNo` as orderNo")
+              .single();
+      // With KEEP, type name IS the full IRI, so 'iri' property must not be stored
+      assertTrue("iri property should not be set when handleVocabUris=KEEP", rel.get("iri").isNull());
+      assertEquals(1L, rel.get("orderNo").asLong());
+    }
+  }
+
+  @Test
   public void testImportRDFStarWithArrayMultiVal() throws Exception {
     try (Session session = driver.session()) {
 
@@ -873,6 +927,44 @@ public class RDFProceduresTest {
                               "MATCH (r:Resource { uri: 'neo4j://graph.individuals#1'}) return r.ns0__inspectionDates as h")
                       .next().get("h").asZonedDateTime());
 
+    }
+  }
+
+  @Test
+  public void testImportDateTimeWithUTCOffset() throws Exception {
+    // Regression test for #166: ISO 8601 datetimes with bare UTC offset (+00:00)
+    // were falling through to string because ZonedDateTime.parse requires a zone region ID
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(), "{ handleVocabUris: 'IGNORE' }");
+
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n" +
+              "@prefix dcterms: <http://purl.org/dc/terms/> .\n" +
+              "ex:item1 a ex:Example ;\n" +
+              "  dcterms:modified \"2020-06-22T21:41:34.066344+00:00\"^^xsd:dateTime .\n" +
+              "ex:item2 a ex:Example ;\n" +
+              "  dcterms:modified \"2021-03-15T08:30:00.000000-05:00\"^^xsd:dateTime .\n";
+
+      Result importResult = session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle')");
+      assertEquals(4L, importResult.single().get("triplesLoaded").asLong());
+
+      // Verify UTC offset (+00:00) is stored as a temporal, not a string
+      Record item1 = session.run(
+              "MATCH (r:Resource {uri:'http://example.org/item1'}) RETURN r.modified as m")
+              .single();
+      assertFalse("datetime with +00:00 offset should not be a string",
+              item1.get("m").type().name().equals("STRING"));
+      assertEquals(OffsetDateTime.parse("2020-06-22T21:41:34.066344+00:00").toInstant(),
+              item1.get("m").asOffsetDateTime().toInstant());
+
+      // Verify negative offset (-05:00) is also handled correctly
+      Record item2 = session.run(
+              "MATCH (r:Resource {uri:'http://example.org/item2'}) RETURN r.modified as m")
+              .single();
+      assertFalse("datetime with -05:00 offset should not be a string",
+              item2.get("m").type().name().equals("STRING"));
+      assertEquals(OffsetDateTime.parse("2021-03-15T08:30:00.000000-05:00").toInstant(),
+              item2.get("m").asOffsetDateTime().toInstant());
     }
   }
 
@@ -4288,6 +4380,97 @@ public class RDFProceduresTest {
               session.run(
                               "MATCH (n{`one__name` : 'Markus Lanthaler'}) RETURN n.uri AS uri")
                       .hasNext());
+    }
+  }
+
+  @Test
+  public void testPeriodicCommitImportsAllTriples() throws Exception {
+    // Regression test for #297: buffer clearing moved from finally to success path so that
+    // all triples across multiple partial commits are stored correctly.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +
+              "ex:alice a foaf:Person ; foaf:name \"Alice\" ; foaf:age 30 .\n" +
+              "ex:bob   a foaf:Person ; foaf:name \"Bob\"   ; foaf:age 25 .\n" +
+              "ex:carol a foaf:Person ; foaf:name \"Carol\" ; foaf:age 35 .\n" +
+              "ex:dave  a foaf:Person ; foaf:name \"Dave\"  ; foaf:age 28 .\n" +
+              "ex:alice foaf:knows ex:bob .\n" +
+              "ex:bob   foaf:knows ex:carol .\n" +
+              "ex:carol foaf:knows ex:dave .\n";
+
+      // commitSize: 3 forces multiple partial commits across the 12 triples above
+      Result importResults = session.run(
+              "CALL n10s.rdf.import.inline($turtle,'Turtle', { commitSize: 3 })",
+              Map.of("turtle", turtle));
+      long loaded = importResults.single().get("triplesLoaded").asLong();
+      assertTrue("All triples should be imported across partial commits, got: " + loaded,
+              loaded >= 12L);
+
+      long personCount = session.run(
+              "MATCH (n:Person) RETURN count(n) AS c").single().get("c").asLong();
+      assertEquals("All four Person nodes should be present", 4L, personCount);
+
+      long knowsCount = session.run(
+              "MATCH ()-[:knows]->() RETURN count(*) AS c").single().get("c").asLong();
+      assertEquals("All knows relationships should be present", 3L, knowsCount);
+    }
+  }
+
+  @Test
+  public void testRDFStarMultipleAnnotationPredicates() throws Exception {
+    // Two DIFFERENT annotation predicates on the same quoted triple must merge into
+    // ONE relationship with BOTH properties — not two separate relationships.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:s1 a ex:Person .\n" +
+              "ex:s2 a ex:Person .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:since 2020 .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:strength \"strong\" .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      long relCount = session.run("MATCH ()-[r:likes]->() RETURN count(r) AS c")
+              .single().get("c").asLong();
+      assertEquals("Two different annotation predicates must produce exactly one relationship", 1L, relCount);
+
+      Record r = session.run("MATCH ()-[r:likes]->() RETURN r.since AS since, r.strength AS strength")
+              .single();
+      assertEquals(2020L, r.get("since").asLong());
+      assertEquals("strong", r.get("strength").asString());
+    }
+  }
+
+  @Test
+  public void testRDFStarSameAnnotationPredicateMultipleValues() throws Exception {
+    // Same annotation predicate with two values: with handleMultival ARRAY both values are kept.
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'IGNORE', handleRDFTypes: 'LABELS'," +
+              "  handleMultival: 'ARRAY', multivalPropList: ['urn:ex:becauseOf'] }");
+
+      String turtle = "@prefix ex: <urn:ex:> .\n" +
+              "ex:s1 a ex:Person .\n" +
+              "ex:s2 a ex:Person .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:becauseOf \"x\" .\n" +
+              "<<ex:s1 ex:likes ex:s2>> ex:becauseOf \"y\" .\n";
+
+      session.run("CALL n10s.rdf.import.inline('" + turtle + "','Turtle-star')");
+
+      long relCount = session.run("MATCH ()-[r:likes]->() RETURN count(r) AS c")
+              .single().get("c").asLong();
+      assertEquals("Same annotation predicate with two values should produce one relationship", 1L, relCount);
+
+      List<Object> values = session.run("MATCH ()-[r:likes]->() RETURN r.becauseOf AS v")
+              .single().get("v").asList();
+      assertEquals("Both annotation values must be preserved as array", 2, values.size());
+      assertTrue(values.contains("x"));
+      assertTrue(values.contains("y"));
     }
   }
 }

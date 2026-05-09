@@ -20,6 +20,7 @@ import org.neo4j.values.storable.PointValue;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -131,10 +132,16 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
           return ZonedDateTime.parse(object.stringValue(), neo4jZonedDateFormat);
         }catch(DateTimeParseException dtpe2){
           try {
-            return DateUtils.parseDateTime(object.stringValue());
-          } catch (IllegalArgumentException e) {
-            //if date cannot be parsed we return string value
-            return object.stringValue();
+            // ISO 8601 with UTC offset (e.g. "2020-06-22T21:41:34.066344+00:00")
+            // ZonedDateTime requires a zone region ID; OffsetDateTime handles bare offsets
+            return OffsetDateTime.parse(object.stringValue());
+          } catch (DateTimeParseException dtpe3) {
+            try {
+              return DateUtils.parseDateTime(object.stringValue());
+            } catch (IllegalArgumentException e) {
+              //if date cannot be parsed we return string value
+              return object.stringValue();
+            }
           }
         }
       }
@@ -315,7 +322,10 @@ public abstract class RDFToLPGStatementProcessor extends ConfiguredStatementHand
 
   private Map<String, Object> initialiseRelProps(Map<Statement,Map<String, Object>> m, Statement stmt) {
     HashMap<String, Object> props = new HashMap<>();
-    //props.put("uri", subjectUri); this was in the preview version probably removed as an optimisation
+    // Store predicate IRI except when KEEP, where the relationship type name is already the full IRI
+    if (parserConfig.getGraphConf().getHandleVocabUris() != GRAPHCONF_VOC_URI_KEEP) {
+      props.put("iri", stmt.getPredicate().stringValue());
+    }
     m.put(stmt, props);
     return props;
   }

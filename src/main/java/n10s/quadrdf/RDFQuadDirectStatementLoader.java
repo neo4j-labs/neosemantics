@@ -24,6 +24,7 @@ import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.RelationshipType;
 import org.neo4j.graphdb.Result;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.DeadlockDetectedException;
 import org.neo4j.logging.Log;
 
 /**
@@ -243,21 +244,42 @@ public class RDFQuadDirectStatementLoader extends RDFQuadToLPGStatementProcessor
         namespaces.partialRefresh(tempTransaction);
         tempTransaction.commit();
         log.debug("namespace prefixes synced: " + namespaces.toString());
-      }catch (Exception e) {
-        e.printStackTrace();
+      } catch (Exception e) {
+        log.error("Problems syncing up namespace prefixes in partial commit. ", e);
       }
     }
 
-    try (Transaction tempTransaction = graphdb.beginTx()) {
-      this.runPartialTx(tempTransaction);
-      tempTransaction.commit();
-      log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
-          + totalTriplesMapped);
-    }catch (Exception e) {
-      e.printStackTrace();
+    int attempts = 0;
+    while (true) {
+      try (Transaction tempTransaction = graphdb.beginTx()) {
+        this.runPartialTx(tempTransaction);
+        tempTransaction.commit();
+        log.debug("partial commit: " + mappedTripleCounter + " triples ingested. Total so far: "
+            + totalTriplesMapped);
+        totalTriplesMapped += mappedTripleCounter;
+        break;
+      } catch (DeadlockDetectedException e) {
+        attempts++;
+        if (attempts > parserConfig.getDeadlockMaxRetries()) {
+          log.error("Deadlock in partial commit unresolved after " + parserConfig.getDeadlockMaxRetries()
+              + " retries. " + mappedTripleCounter + " triples lost.", e);
+          break;
+        }
+        log.warn("Deadlock in partial commit, retrying (attempt " + attempts + "/"
+            + parserConfig.getDeadlockMaxRetries() + ")");
+        try {
+          Thread.sleep(parserConfig.getDeadlockRetryDelayMs() * attempts);
+        } catch (InterruptedException ie) {
+          Thread.currentThread().interrupt();
+          break;
+        }
+      } catch (Exception e) {
+        log.error("Problems when running partial commit. Partial transaction rolled back. "
+            + mappedTripleCounter + " triples lost.", e);
+        break;
+      }
     }
 
-    totalTriplesMapped += mappedTripleCounter;
     mappedTripleCounter = 0;
 
   }

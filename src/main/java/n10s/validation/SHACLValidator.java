@@ -1536,8 +1536,9 @@ public class SHACLValidator {
     return gc != null ;
   }
 
-  //TODO: not convinced about the GRAPHCONF_VOC_URI_MAP case below. Unit tests please.
   private boolean shallIShorten() {
+    // MAP mode is intentionally excluded: data is stored as local names (or explicit mappings),
+    // not as prefix__localname, so no expansion via n10s.rdf.fullUriFromShortForm is needed.
     return gc != null && (gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN ||
         gc.getHandleVocabUris() == GRAPHCONF_VOC_URI_SHORTEN_STRICT );
   }

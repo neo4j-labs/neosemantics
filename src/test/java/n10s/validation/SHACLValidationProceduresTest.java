@@ -802,6 +802,64 @@ public class SHACLValidationProceduresTest {
   }
 
   @Test
+  public void testShaclValidationWithMAPMode() throws Exception {
+      // Reproduces #237: SHACL validation produces no results under handleVocabUris=MAP
+      // because property/label names in the graph are stored as prefix__localname but the
+      // validator must translate SHACL URIs to the same form.
+      Session session = driver.session();
+
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      // Set up MAP mode and register all namespace prefixes used in the data/SHACL
+      session.run("CALL n10s.graphconfig.init({ handleVocabUris: 'MAP' })");
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE");
+      session.run("CALL n10s.nsprefixes.add('foaf','http://xmlns.com/foaf/0.1/')");
+      session.run("CALL n10s.nsprefixes.add('ex','http://example.org/')");
+
+      // Import two people: Alice has a name (valid), Bob has no name (violates minCount 1)
+      session.run("CALL n10s.rdf.import.inline('\n" +
+              "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +
+              "@prefix ex:   <http://example.org/> .\n" +
+              "\n" +
+              "ex:alice a foaf:Person ; foaf:name \"Alice\" .\n" +
+              "ex:bob   a foaf:Person .\n" +
+              "','Turtle')");
+
+      // In MAP mode without explicit mappings, foaf:Person is stored as label "Person" (local name fallback)
+      assertTrue(session.run("MATCH (p:Person) RETURN p").hasNext());
+
+      // Load SHACL: foaf:Person must have foaf:name (minCount 1)
+      session.run("CALL n10s.validation.shacl.import.inline('\n" +
+              "@prefix sh:   <http://www.w3.org/ns/shacl#> .\n" +
+              "@prefix foaf: <http://xmlns.com/foaf/0.1/> .\n" +
+              "@prefix ex:   <http://example.org/> .\n" +
+              "\n" +
+              "ex:PersonShape\n" +
+              "    a sh:NodeShape ;\n" +
+              "    sh:targetClass foaf:Person ;\n" +
+              "    sh:property [\n" +
+              "        sh:path foaf:name ;\n" +
+              "        sh:minCount 1 ;\n" +
+              "    ] .\n" +
+              "','Turtle')");
+
+      Result validationResults = session.run("CALL n10s.validation.shacl.validate()");
+      List<Record> results = validationResults.list();
+
+      assertTrue("expected a minCount violation for Bob (no foaf:name), but validate() returned nothing",
+              results.size() > 0);
+
+      Record next = results.get(0);
+      // MAP mode without explicit n10s.mapping.add() falls back to local name (same as IGNORE)
+      assertEquals("Person", next.get("nodeType").asString());
+      assertEquals("name", next.get("resultPath").asString());
+      assertEquals("http://www.w3.org/ns/shacl#MinCountConstraintComponent",
+              next.get("propertyShape").asString());
+
+      assertEquals("expected exactly one violation (only Bob)", 1, results.size());
+  }
+
+  @Test
   public void testShacleViewCypher() throws Exception {
     Session session = driver.session();
 
