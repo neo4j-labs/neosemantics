@@ -429,6 +429,39 @@ public class MicroReasoners {
     return is;
   }
 
+  @UserFunction
+  @Description(
+      "n10s.inference.isTypeRel(rel,'relType',{}) - checks whether rel is explicitly or "
+          + "implicitly of type 'relType'.")
+  public boolean isTypeRel(
+      @Name("rel") Relationship rel,
+      @Name("relType") String relTypeName,
+      @Name(value = "params", defaultValue = "{}") Map<String, Object> props) throws MicroReasonerException {
+
+    final GraphConfig gc = getGraphConfig();
+
+    //if no graphconfig (or ontoconfig) and no required in-function params, function cannot be invoked
+    if (gc == null && missingParams(props, "relLabel", "subRelRel", "relNameProp")) {
+      throw new MicroReasonerException("No GraphConfig or in-function params (relLabel, subRelRel, relNameProp). Method cannot be run.");
+    }
+
+    String actualRelType = rel.getType().name();
+    if (actualRelType.equals(relTypeName)) {
+      return true;
+    }
+
+    String queryString = String.format(subcatPathQuery,
+        (props.containsKey("relLabel") ? (String) props.get("relLabel") : gc.getObjectPropertyLabelName()),
+        (props.containsKey("relNameProp") ? (String) props.get("relNameProp") : gc.getRelNamePropName()),
+        (props.containsKey("subRelRel") ? (String) props.get("subRelRel") : gc.getSubPropertyOfRelName()));
+
+    Map<String, Object> params = new HashMap<>();
+    params.put("oneOfCats", actualRelType);
+    params.put("virtLabel", relTypeName);
+
+    return tx.execute(queryString, params).next().get("isTrue").equals(true);
+  }
+
   private boolean missingParams(Map<String, Object> props, String... paramNames) {
     boolean missing = false;
     for (String param:paramNames) {

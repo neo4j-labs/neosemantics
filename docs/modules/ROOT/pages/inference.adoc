@@ -432,3 +432,35 @@ DELETE r
 If we run the same query again, we'll get different results, this time excluding producers.
 Think of this in a large scale DB.
 We can effectively modify relationships globally by adding or deleting a simple link to the hierarchy and without having to modify every single instance.
+
+=== n10s.inference.isTypeRel
+
+`n10s.inference.isTypeRel` is the relationship analogue of `n10s.inference.hasLabel`: rather than asking whether a node carries a given label (directly or through the category hierarchy), it asks whether a relationship is of a given type — directly or via `rdfs:subPropertyOf` inheritance.
+
+Given the movie database example above, where `ACTED_IN` is a subproperty of `WORKED_IN`, we can write a filter predicate that returns `true` for any relationship that is explicitly or implicitly a `WORKED_IN`:
+
+[source,Cypher]
+----
+MATCH (thematrix:Movie {title: "The Matrix"})<-[rel]-(person:Person)
+WHERE n10s.inference.isTypeRel(rel, 'WORKED_IN', { subRelRel: "SPO" })
+RETURN person.name AS name, type(rel) AS actualRelType
+----
+
+.Results
+[options="header"]
+|===
+| name               | actualRelType
+| "Keanu Reeves"     | "ACTED_IN"
+| "Lana Wachowski"   | "DIRECTED"
+| "Lilly Wachowski"  | "DIRECTED"
+| "Carrie-Anne Moss" | "ACTED_IN"
+| "Laurence Fishburne" | "ACTED_IN"
+| "Hugo Weaving"     | "ACTED_IN"
+| "Emil Eifrem"      | "ACTED_IN"
+|===
+
+The function accepts the same optional parameter map as `n10s.inference.getRels` — `relLabel`, `relNameProp`, `subRelRel` — and can be used inline in `WHERE` clauses, making it easy to combine with other predicates.
+
+[NOTE]
+When no GraphConfig is present and the parameter map is empty, the function throws a `MicroReasonerException`.
+Either persist a GraphConfig with `n10s.graphconfig.init` or pass the three parameters inline.

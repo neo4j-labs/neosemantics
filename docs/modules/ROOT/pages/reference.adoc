@@ -245,6 +245,11 @@ a|
 * a node representing an instance
 * a node representing a category
 * parameters as described in table below | checks whether node is explicitly or implicitly in a category
+|n10s.inference.isTypeRel *(function)*
+a|
+* a relationship
+* a relationship type name as a string
+* parameters as described in table below | checks whether the relationship is explicitly or implicitly of the given type, traversing the `rdfs:subPropertyOf` hierarchy
 |===
 
 ==== Inferencing Params
@@ -268,7 +273,7 @@ a|
 | subCatRel | String ('SCO') | relationship type connecting a child category to its parent.
 |===
 
-==== Parameters for method n10s.inference.getRels
+==== Parameters for method n10s.inference.getRels and function n10s.inference.isTypeRel
 
 [options="header"]
 |===
@@ -276,7 +281,7 @@ a|
 | relLabel | String ('Relationship') | Label used for nodes describing relationships.
 | relNameProp | String ('name') | property name containing the name of the relationship.
 | subRelRel | String ('SRO') | relationship type connecting a child relationship to its parent. (Thing are getting pretty meta, right? I hope the examples will help)
-| relDir | '<','>' ('') | direction of the relationship. '>' for outgoing, '<' for incoming and default (none) for both.
+| relDir | '<','>' ('') | direction of the relationship. '>' for outgoing, '<' for incoming and default (none) for both. (getRels only)
 |===
 
 
