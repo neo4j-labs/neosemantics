@@ -74,6 +74,9 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
           resourceProps.get(entry.getKey()).forEach((k, v) -> setProperty(node,k,v));
+          if (parserConfig.getCustomProperties() != null) {
+            parserConfig.getCustomProperties().forEach(node::setProperty);
+          }
         } catch (ExecutionException e) {
           e.printStackTrace();
         }

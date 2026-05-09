@@ -4473,4 +4473,66 @@ public class RDFProceduresTest {
       assertTrue(values.contains("y"));
     }
   }
+
+  @Test
+  public void testCustomPropertiesAppliedToAllImportedNodes() throws Exception {
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      // A small Turtle snippet with two subjects connected by a predicate
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "ex:alice a ex:Person ;\n" +
+              "  ex:name \"Alice\" ;\n" +
+              "  ex:knows ex:bob .\n" +
+              "ex:bob a ex:Person ;\n" +
+              "  ex:name \"Bob\" .\n";
+
+      Result importResult = session.run(
+              "CALL n10s.rdf.import.inline($rdf, 'Turtle', { customProperties: { importBatch: 'test-run-1', importSource: 'unit-test' } })",
+              Map.of("rdf", turtle));
+
+      Map<String, Object> summary = importResult.single().asMap();
+      assertEquals("OK", summary.get("terminationStatus"));
+
+      // All imported Resource nodes must carry the custom properties
+      long nodesWithBatch = session
+              .run("MATCH (n:Resource) WHERE n.importBatch = 'test-run-1' RETURN count(n) AS c")
+              .single().get("c").asLong();
+      long totalNodes = session
+              .run("MATCH (n:Resource) RETURN count(n) AS c")
+              .single().get("c").asLong();
+      assertTrue("At least two Resource nodes should have been created", totalNodes >= 2);
+      assertEquals("Every Resource node must have importBatch set", totalNodes, nodesWithBatch);
+
+      long nodesWithSource = session
+              .run("MATCH (n:Resource) WHERE n.importSource = 'unit-test' RETURN count(n) AS c")
+              .single().get("c").asLong();
+      assertEquals("Every Resource node must have importSource set", totalNodes, nodesWithSource);
+    }
+  }
+
+  @Test
+  public void testNoCustomPropertiesWhenParamAbsent() throws Exception {
+    try (Session session = driver.session()) {
+      initialiseGraphDB(neo4j.defaultDatabaseService(),
+              "{ handleVocabUris: 'KEEP', handleRDFTypes: 'LABELS' }");
+
+      String turtle = "@prefix ex: <http://example.org/> .\n" +
+              "ex:carol a ex:Person ;\n" +
+              "  ex:name \"Carol\" .\n";
+
+      // Import WITHOUT customProperties
+      Result importResult = session.run(
+              "CALL n10s.rdf.import.inline($rdf, 'Turtle')",
+              Map.of("rdf", turtle));
+
+      assertEquals("OK", importResult.single().get("terminationStatus").asString());
+
+      long nodesWithBatch = session
+              .run("MATCH (n:Resource) WHERE n.importBatch IS NOT NULL RETURN count(n) AS c")
+              .single().get("c").asLong();
+      assertEquals("Nodes from an import without customProperties must not have importBatch", 0L, nodesWithBatch);
+    }
+  }
 }
