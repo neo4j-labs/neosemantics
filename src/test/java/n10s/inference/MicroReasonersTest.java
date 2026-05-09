@@ -575,6 +575,127 @@ public class MicroReasonersTest {
 //            assertEquals(false, results.hasNext());
   }
 
+  @Test
+  public void testIsTypeRelNoOnto() throws Exception {
+      Session session = driver.session();
+
+      session.run("CREATE (:A {id:'iamA'})-[:ACTS_IN {role: 'hero'}]->(:B {id:'iamB'})");
+
+      // Without GraphConfig and without in-function params: should throw
+      Result results = null;
+      try {
+        results = session.run(
+                "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'WORKS_IN') as result");
+        results.hasNext();
+        assertTrue(false);
+      } catch (Exception mie) {
+        assertTrue(mie.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: " +
+                "No GraphConfig or in-function params ("));
+      }
+
+      // With in-function params but no matching hierarchy: only exact match
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'ACTS_IN', " +
+                      "{ relLabel: 'Something', subRelRel: 'SPO', relNameProp: 'name'}) as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      // ACTS_IN does not have WORKS_IN as parent in empty graph
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'WORKS_IN', " +
+                      "{ relLabel: 'Something', subRelRel: 'SPO', relNameProp: 'name'}) as result");
+      assertTrue(results.hasNext());
+      assertFalse(results.next().get("result").asBoolean());
+  }
+
+  @Test
+  public void testIsTypeRel() throws Exception {
+      Session session = driver.session();
+
+      // Inline property hierarchy: ACTS_IN is a sub-property of WORKS_IN
+      session.run("CREATE (:A {id:'iamA'})-[:ACTS_IN {role: 'hero'}]->(:B {id:'iamB'})");
+      session.run("CREATE (:Relationship { name: 'ACTS_IN'})-[:SPO]->(:Relationship { name: 'WORKS_IN'})");
+
+      // Without GraphConfig should throw
+      try {
+        Result r = session.run(
+                "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'WORKS_IN') as result");
+        r.hasNext();
+        assertTrue(false);
+      } catch (Exception e) {
+        assertTrue(e.getMessage().contains("Caused by: n10s.inference.MicroReasonerException: No GraphConfig or in-function params ("));
+      }
+
+      // With explicit in-function params
+      Result results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'WORKS_IN', " +
+                      "{ relLabel: 'Relationship', subRelRel: 'SPO', relNameProp: 'name'}) as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      // Exact match also works
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'ACTS_IN', " +
+                      "{ relLabel: 'Relationship', subRelRel: 'SPO', relNameProp: 'name'}) as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      // Unrelated type returns false
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'PLACE_OF_BIRTH', " +
+                      "{ relLabel: 'Relationship', subRelRel: 'SPO', relNameProp: 'name'}) as result");
+      assertTrue(results.hasNext());
+      assertFalse(results.next().get("result").asBoolean());
+
+      // With GraphConfig
+      session.run("call n10s.graphconfig.init({ objectPropertyLabel: 'Relationship', " +
+              "subPropertyOfRel: 'SPO' })");
+
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'WORKS_IN') as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      results = session.run(
+              "MATCH ()-[r:ACTS_IN]->() RETURN n10s.inference.isTypeRel(r, 'PLACE_OF_BIRTH') as result");
+      assertTrue(results.hasNext());
+      assertFalse(results.next().get("result").asBoolean());
+  }
+
+  @Test
+  public void testIsTypeRelWithOntology() throws Exception {
+      Session session = driver.session();
+
+      session.run("CREATE CONSTRAINT n10s_unique_uri FOR (r:Resource) REQUIRE r.uri IS UNIQUE");
+      session.run("call n10s.graphconfig.init({ handleVocabUris: 'IGNORE', classLabel: 'Label', " +
+              "subClassOfRel: 'SLO' })");
+      session.run("call n10s.onto.import.fetch('" +
+              MicroReasonersTest.class.getClassLoader()
+                      .getResource("movies-extended.ttl")
+                      .toURI() + "', 'Turtle')");
+
+      // Create an ACTED_IN relationship
+      session.run("CREATE (:Actor {name:'Keanu Reeves'})-[:ACTED_IN {role:'Neo'}]->(:Movie {title:'The Matrix'})");
+
+      // ACTED_IN rdfs:subPropertyOf creatorToCreation — should return true
+      Result results = session.run(
+              "MATCH ()-[r:ACTED_IN]->() RETURN n10s.inference.isTypeRel(r, 'creatorToCreation') as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      // Exact match
+      results = session.run(
+              "MATCH ()-[r:ACTED_IN]->() RETURN n10s.inference.isTypeRel(r, 'ACTED_IN') as result");
+      assertTrue(results.hasNext());
+      assertTrue(results.next().get("result").asBoolean());
+
+      // Unrelated relationship type
+      results = session.run(
+              "MATCH ()-[r:ACTED_IN]->() RETURN n10s.inference.isTypeRel(r, 'PLACE_OF_BIRTH') as result");
+      assertTrue(results.hasNext());
+      assertFalse(results.next().get("result").asBoolean());
+  }
+
   //TODO: test modifying the ontology
 
   //TODO: test relationship with directions
