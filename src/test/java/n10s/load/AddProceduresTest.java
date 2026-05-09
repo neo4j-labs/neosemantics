@@ -1,6 +1,5 @@
 package n10s.load;
 
-import n10s.RDFProceduresTest;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.inference.MicroReasoners;
 import n10s.nsprefixes.NsPrefixDefProcedures;
@@ -48,7 +47,7 @@ public class AddProceduresTest {
             Session session = driver.session();
             Result importResults
                     = session.run("CALL n10s.rdf.import.fetch('" +
-                    RDFProceduresTest.class.getClassLoader()
+                    AddProceduresTest.class.getClassLoader()
                             .getResource("jeu-de-donnees-des-jeux-de-donnees-open-data-paris.rdf")
                             .toURI()
                     + "','RDF/XML',{ commitSize: 500})");

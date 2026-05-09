@@ -1,7 +1,7 @@
 package n10s.aggregate;
 
 import n10s.ModelTestUtils;
-import n10s.RDFExportTest;
+import n10s.RDFExportCypherTest;
 import n10s.graphconfig.GraphConfigProcedures;
 import n10s.mapping.MappingUtils;
 import n10s.nsprefixes.NsPrefixDefProcedures;
@@ -299,7 +299,7 @@ public class CollectTriplesTest {
             Session session = driver.session();
 
             Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
-                    RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                    RDFExportCypherTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                             .toURI() + "','Turtle-star')");
             assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
 
@@ -354,7 +354,7 @@ public class CollectTriplesTest {
             Session session = driver.session();
 
             Result importResults1 = session.run("CALL n10s.rdf.import.fetch('" +
-                    RDFExportTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
+                    RDFExportCypherTest.class.getClassLoader().getResource("rdfstar/beatles.ttls")
                             .toURI() + "','Turtle-star')");
             assertEquals(14L, importResults1.single().get("triplesLoaded").asLong());
 
