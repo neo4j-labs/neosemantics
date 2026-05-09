@@ -224,3 +224,10 @@ The transaction will not succeed and if run in the browser you'll get a rather c
 ----
 Caused by: n10s.validation.SHACLValidationException: {validationResult={severity=http://www.w3.org/ns/shacl#Violation, propertyShape=http://www.w3.org/ns/shacl#ClassConstraintComponent, shapeId=node1e78vkaeox2, focusNode=8, resultPath=ACTED_IN, offendingValue=175, nodeType=Person, resultMessage=value should be of type Movie}}
 ----
+
+[NOTE]
+====
+*Performance on large graphs*: `validateTransaction` only validates the nodes touched by the current transaction, so it scales independently of overall graph size.
+The generated Cypher queries start from the small touched-node list via `UNWIND`, avoiding a full label scan.
+For a transaction that modifies 10 nodes, at most 10 nodes are validated — regardless of whether the graph contains 10 million nodes of the same type.
+====
