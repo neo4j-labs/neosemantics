@@ -69,6 +69,7 @@ public class SHACLValidator {
           "(GROUP_CONCAT (distinct ?notIn; separator=\"---\") AS ?notins) \n" +
           "(isLiteral(?inFirst) as ?isliteralIns)\n" +
           "(isLiteral(?notInFirst) as ?isliteralNotIns)\n" +
+          "?qualifiedClass ?qualifiedMinCount ?qualifiedMaxCount\n" +
           "{ ?ns a ?shapeOrNodeShape ;\n" +
           "     sh:node?/sh:property ?ps .\n" +
           "  filter ( ?shapeOrNodeShape = sh:Shape || ?shapeOrNodeShape = sh:NodeShape )\n" +
@@ -116,11 +117,14 @@ public class SHACLValidator {
           "    optional { ?ps sh:minLength  ?minStrLen }\n" +
           "    optional { ?ps sh:disjoint  ?disjointProp }\n" +
           "    optional { ?ps exp:mostly  ?mostly }\n" +
+          "    optional { ?ps sh:qualifiedValueShape/sh:class ?qualifiedClass }\n" +
+          "    optional { ?ps sh:qualifiedMinCount  ?qualifiedMinCount }\n" +
+          "    optional { ?ps sh:qualifiedMaxCount  ?qualifiedMaxCount }\n" +
           "   \n" +
           "} group by \n" +
           "?ns ?ps ?path ?mostly ?invPath ?rangeClass  ?rangeKind ?datatype ?severity ?nmsg ?pmsg " +
           "?targetClass ?targetIsQuery ?pattern ?maxCount ?minCount ?minInc ?minExc ?maxInc ?maxExc " +
-          "?minStrLen ?maxStrLen ?inFirst ?notInFirst";
+          "?minStrLen ?maxStrLen ?inFirst ?notInFirst ?qualifiedClass ?qualifiedMinCount ?qualifiedMaxCount";
 
   String NODE_CONSTRAINT_QUERY = "PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>\n" +
           "prefix sh: <http://www.w3.org/ns/shacl#>  \n" +
@@ -880,6 +884,51 @@ public class SHACLValidator {
 
     }
 
+    if (theConstraint.get("qualifiedClass") != null &&
+        (theConstraint.get("qualifiedMinCount") != null || theConstraint.get("qualifiedMaxCount") != null)) {
+
+      String qualifiedClassLabel = translateUri((String) theConstraint.get("qualifiedClass"), tx, gc);
+
+      String paramSetId =
+              theConstraint.get("propShapeUid") + "_" + SHACL.QUALIFIED_VALUE_SHAPE.stringValue();
+      Map<String, Object> params = createNewSetOfParams(vc.getAllParams(), paramSetId);
+      params.put("qualifiedMinCount", theConstraint.get("qualifiedMinCount"));
+      params.put("qualifiedMaxCount", theConstraint.get("qualifiedMaxCount"));
+
+      String constraintSHACLType = (theConstraint.get("qualifiedMinCount") != null && theConstraint.get("qualifiedMaxCount") != null ?
+              SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue() :
+              (theConstraint.get("qualifiedMinCount") != null ?
+                      SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue() :
+                      SHACL.QUALIFIED_MAX_COUNT_CONSTRAINT_COMPONENT.stringValue()));
+
+      addQueriesForTrigger(vc, new ArrayList<String>(Arrays.asList(focusLabel)),
+              "QualifiedMinMaxCount", whereClause, constraintType,
+              buildArgArray(constraintType,
+                      Arrays.asList(paramSetId, focusLabel,
+                              (theConstraint.get("qualifiedMinCount") != null ? " toInteger(params.qualifiedMinCount) <= " : ""),
+                              propOrRel, qualifiedClassLabel,
+                              (theConstraint.get("qualifiedMaxCount") != null ? " <= toInteger(params.qualifiedMaxCount) " : ""),
+                              focusLabel, (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, qualifiedClassLabel, propOrRel, severity, customMsg),
+                      Arrays.asList(paramSetId,
+                              (theConstraint.get("qualifiedMinCount") != null ? " toInteger(params.qualifiedMinCount) <= " : ""),
+                              propOrRel, qualifiedClassLabel,
+                              (theConstraint.get("qualifiedMaxCount") != null ? " <= toInteger(params.qualifiedMaxCount) " : ""),
+                              (String) theConstraint.get("propShapeUid"),
+                              constraintSHACLType, propOrRel, qualifiedClassLabel, propOrRel, severity, customMsg)));
+
+      //ADD constraint to the list
+      if (theConstraint.get("qualifiedMaxCount") != null) {
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
+                printConstraintType(SHACL.QUALIFIED_MAX_COUNT), theConstraint.get("qualifiedMaxCount")));
+      }
+      if (theConstraint.get("qualifiedMinCount") != null) {
+        vc.addConstraintToList(new ConstraintComponent(getTargetForList(constraintType, focusLabel, whereClause), propOrRel,
+                printConstraintType(SHACL.QUALIFIED_MIN_COUNT), theConstraint.get("qualifiedMinCount")));
+      }
+
+    }
+
   }
 
   private void validateWhereClause(String whereClause)  {
@@ -1066,6 +1115,15 @@ public class SHACLValidator {
                   : null);
           record.put("maxStrLen",
               next.hasBinding("maxStrLen") ? ((Literal) next.getValue("maxStrLen")).intValue()
+                  : null);
+          record.put("qualifiedClass",
+              next.hasBinding("qualifiedClass") ? next.getValue("qualifiedClass").stringValue()
+                  : null);
+          record.put("qualifiedMinCount",
+              next.hasBinding("qualifiedMinCount") ? ((Literal) next.getValue("qualifiedMinCount")).intValue()
+                  : null);
+          record.put("qualifiedMaxCount",
+              next.hasBinding("qualifiedMaxCount") ? ((Literal) next.getValue("qualifiedMaxCount")).intValue()
                   : null);
           Value value = next.getValue("ps"); //if  this is null throw exception (?)
           if (value instanceof BNode) {
@@ -1525,6 +1583,15 @@ public class SHACLValidator {
                 "'%s' as propertyShape, '%s' as offendingValue, "
                 + "'" + (gc !=null && gc.getHandleVocabUris() != GRAPHCONF_VOC_URI_IGNORE ? RDF.TYPE : "type") + "' as propertyName, " + severityFragment
                 + " 'type %s: %s' as message , " + customMsgFragment);
+        break;
+      case "QualifiedMinMaxCount":
+        query = getQuery((constraintType == CLASS_BASED_CONSTRAINT ? CYPHER_WITH_PARAMS_MATCH_WHERE : CYPHER_WITH_PARAMS_MATCH_ALL_WHERE),
+                tx, (constraintType == QUERY_BASED_CONSTRAINT ? customWhere + " and " : ""),
+                "NOT %s size([(focus)-[:`%s`]->(x) WHERE x:`%s` | x]) %s RETURN "
+                + nodeIdFragment + nodeTypeFragment + shapeIdFragment
+                + "'%s' as propertyShape, 'qualified cardinality (' + coalesce(size([(focus)-[:`%s`]->(x) WHERE x:`%s` | x]),0) + ') is outside the defined min-max limits' as message, "
+                + propertyNameFragment + severityFragment
+                + "null as offendingValue , " + customMsgFragment);
         break;
     }
 

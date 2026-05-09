@@ -2015,6 +2015,176 @@ public class SHACLValidationProceduresTest {
     }
   }
 
+  // ─── sh:qualifiedValueShape tests (LPG / non-RDF mode) ───────────────────────
+
+  /** qualifiedMinCount only: Person must have at least 1 KNOWS->Employee. */
+  @Test
+  public void testQualifiedValueShapeMinCountOnly() throws Exception {
+    try (Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      // alice has 1 KNOWS->Employee → valid
+      // bob has 0 KNOWS->Employee → violation
+      // carol has 1 KNOWS->Employee and 1 KNOWS->Contractor → valid
+      // dave has 0 KNOWS->Employee → violation
+      session.run(
+          "CREATE (alice:Person {name:'Alice'})-[:KNOWS]->(:Employee {name:'Eve'}) " +
+          "CREATE (bob:Person {name:'Bob'}) " +
+          "CREATE (carol:Person {name:'Carol'})-[:KNOWS]->(:Employee {name:'Ed'}) " +
+          "CREATE (carol)-[:KNOWS]->(:Contractor {name:'Fred'}) " +
+          "CREATE (dave:Person {name:'Dave'}) ");
+
+      String shacl =
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "neo4j:PersonShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Person ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:KNOWS ;\n" +
+          "    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;\n" +
+          "    sh:qualifiedMinCount 1 ;\n" +
+          "  ] .\n";
+
+      session.run("CALL n10s.validation.shacl.import.inline('" + shacl + "', 'Turtle')");
+
+      Result result = session.run("CALL n10s.validation.shacl.validate()");
+
+      int violationCount = 0;
+      while (result.hasNext()) {
+        Record rec = result.next();
+        assertEquals(SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue(),
+                rec.get("propertyShape").asString());
+        assertTrue(rec.get("resultMessage").asString().contains("qualified cardinality"));
+        violationCount++;
+      }
+      // bob and dave have 0 KNOWS->Employee
+      assertEquals(2, violationCount);
+    }
+  }
+
+  /** qualifiedMaxCount only: Person must have at most 1 KNOWS->Employee. */
+  @Test
+  public void testQualifiedValueShapeMaxCountOnly() throws Exception {
+    try (Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      // alice: 1 KNOWS->Employee → valid
+      // bob: 2 KNOWS->Employee → violation
+      session.run(
+          "CREATE (alice:Person {name:'Alice'})-[:KNOWS]->(:Employee {name:'Eve'}) " +
+          "CREATE (bob:Person {name:'Bob'}) " +
+          "CREATE (e1:Employee {name:'E1'}), (e2:Employee {name:'E2'}) " +
+          "WITH bob, e1, e2 MATCH (bob) MERGE (bob)-[:KNOWS]->(e1) MERGE (bob)-[:KNOWS]->(e2)");
+
+      String shacl =
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "neo4j:PersonShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Person ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:KNOWS ;\n" +
+          "    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;\n" +
+          "    sh:qualifiedMaxCount 1 ;\n" +
+          "  ] .\n";
+
+      session.run("CALL n10s.validation.shacl.import.inline('" + shacl + "', 'Turtle')");
+
+      Result result = session.run("CALL n10s.validation.shacl.validate()");
+
+      int violationCount = 0;
+      while (result.hasNext()) {
+        Record rec = result.next();
+        assertEquals(SHACL.QUALIFIED_MAX_COUNT_CONSTRAINT_COMPONENT.stringValue(),
+                rec.get("propertyShape").asString());
+        violationCount++;
+      }
+      assertEquals(1, violationCount);
+    }
+  }
+
+  /** qualifiedMinCount + qualifiedMaxCount: Person must KNOWS between 1 and 2 Employees. */
+  @Test
+  public void testQualifiedValueShapeMinAndMaxCount() throws Exception {
+    try (Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      // alice: 0 Employee → violation (below min)
+      // bob: 1 Employee → valid
+      // carol: 3 Employees → violation (above max)
+      session.run(
+          "CREATE (alice:Person {name:'Alice'}) " +
+          "CREATE (bob:Person {name:'Bob'})-[:KNOWS]->(:Employee {name:'E1'}) " +
+          "CREATE (carol:Person {name:'Carol'}) " +
+          "CREATE (e2:Employee {name:'E2'}), (e3:Employee {name:'E3'}), (e4:Employee {name:'E4'}) " +
+          "WITH carol, e2, e3, e4 MATCH (carol) " +
+          "  MERGE (carol)-[:KNOWS]->(e2) MERGE (carol)-[:KNOWS]->(e3) MERGE (carol)-[:KNOWS]->(e4)");
+
+      String shacl =
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "neo4j:PersonShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Person ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:KNOWS ;\n" +
+          "    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;\n" +
+          "    sh:qualifiedMinCount 1 ;\n" +
+          "    sh:qualifiedMaxCount 2 ;\n" +
+          "  ] .\n";
+
+      session.run("CALL n10s.validation.shacl.import.inline('" + shacl + "', 'Turtle')");
+
+      Result result = session.run("CALL n10s.validation.shacl.validate()");
+
+      int violationCount = 0;
+      while (result.hasNext()) {
+        Record rec = result.next();
+        // both min and max specified → component is QualifiedMinCount
+        assertEquals(SHACL.QUALIFIED_MIN_COUNT_CONSTRAINT_COMPONENT.stringValue(),
+                rec.get("propertyShape").asString());
+        violationCount++;
+      }
+      assertEquals(2, violationCount);
+    }
+  }
+
+  /**
+   * Verify that qualified cardinality counts only rels to nodes with the required class label,
+   * not all rels along the path. Person KNOWS 4 nodes but only 1 is an Employee → with qMin=1
+   * qMax=3 this should produce no violations.
+   */
+  @Test
+  public void testQualifiedValueShapeCountsOnlyMatchingClass() throws Exception {
+    try (Session session = driver.session()) {
+      assertFalse(session.run("MATCH (n) RETURN n").hasNext());
+
+      // focus has 4 KNOWS rels, 1 to Employee → count=1, within [1,3] → valid
+      session.run(
+          "CREATE (p:Person {name:'Alice'}) " +
+          "CREATE (e:Employee {name:'Bob'}), (c1:Customer {name:'C1'}), " +
+          "       (c2:Customer {name:'C2'}), (c3:Customer {name:'C3'}) " +
+          "WITH p, e, c1, c2, c3 MATCH (p) " +
+          "  MERGE (p)-[:KNOWS]->(e) MERGE (p)-[:KNOWS]->(c1) " +
+          "  MERGE (p)-[:KNOWS]->(c2) MERGE (p)-[:KNOWS]->(c3)");
+
+      String shacl =
+          "@prefix sh: <http://www.w3.org/ns/shacl#> .\n" +
+          "@prefix neo4j: <neo4j://graph.schema#> .\n" +
+          "neo4j:PersonShape a sh:NodeShape ;\n" +
+          "  sh:targetClass neo4j:Person ;\n" +
+          "  sh:property [\n" +
+          "    sh:path neo4j:KNOWS ;\n" +
+          "    sh:qualifiedValueShape [ sh:class neo4j:Employee ] ;\n" +
+          "    sh:qualifiedMinCount 1 ;\n" +
+          "    sh:qualifiedMaxCount 3 ;\n" +
+          "  ] .\n";
+
+      session.run("CALL n10s.validation.shacl.import.inline('" + shacl + "', 'Turtle')");
+
+      // no violations expected
+      assertFalse(session.run("CALL n10s.validation.shacl.validate()").hasNext());
+    }
+  }
+
   private boolean contains(Set<ValidationResult> set, ValidationResult res) {
     boolean contained = false;
     for (ValidationResult vr : set) {
