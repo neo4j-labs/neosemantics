@@ -32,6 +32,7 @@ public class RDFParserConfig {
   private boolean singleTx;
   private final int deadlockMaxRetries;
   private final long deadlockRetryDelayMs;
+  private final Map<String, Object> customProps;
 
   public RDFParserConfig(Map<String, Object> props, GraphConfig gc) {
     this.graphConf = gc;
@@ -60,6 +61,8 @@ public class RDFParserConfig {
         ? ((Long) props.get("deadlockMaxRetries")).intValue() : DEFAULT_DEADLOCK_MAX_RETRIES;
     deadlockRetryDelayMs = props.containsKey("deadlockRetryDelayMs")
         ? (Long) props.get("deadlockRetryDelayMs") : DEFAULT_DEADLOCK_RETRY_DELAY_MS;
+    customProps = props.containsKey("customProps")
+        ? (Map<String, Object>) props.get("customProps") : null;
   }
 
   public Set<String> getPredicateExclusionList() {
@@ -106,6 +109,8 @@ public class RDFParserConfig {
 
   public long getDeadlockRetryDelayMs() { return deadlockRetryDelayMs; }
 
+  public Map<String, Object> getCustomProps() { return customProps; }
+
   public Map<String, Object> getConfigSummary() {
     Map<String, Object> summary = new HashMap<>();
 
@@ -143,6 +148,10 @@ public class RDFParserConfig {
 
     if (deadlockRetryDelayMs != DEFAULT_DEADLOCK_RETRY_DELAY_MS) {
       summary.put("deadlockRetryDelayMs", deadlockRetryDelayMs);
+    }
+
+    if (customProps != null && !customProps.isEmpty()) {
+      summary.put("customProps", customProps);
     }
 
     return summary;

@@ -74,6 +74,7 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
 
           entry.getValue().forEach(l -> node.addLabel(Label.label(l)));
           resourceProps.get(entry.getKey()).forEach((k, v) -> setProperty(node,k,v));
+          applyCustomProps(node);
         } catch (ExecutionException e) {
           e.printStackTrace();
         }
@@ -154,6 +155,17 @@ public class DirectStatementLoader extends RDFToLPGStatementProcessor {
       nodeCache.invalidateAll();
 
       return result;
+  }
+
+  private void applyCustomProps(Node node) {
+    Map<String, Object> customProps = parserConfig.getCustomProps();
+    if (customProps != null) {
+      for (Map.Entry<String, Object> entry : customProps.entrySet()) {
+        if (!entry.getKey().equals("uri")) {
+          node.setProperty(entry.getKey(), entry.getValue());
+        }
+      }
+    }
   }
 
   private void setProperty(Entity node, String k, Object v) {
