@@ -5,7 +5,7 @@
 
   <groupId>org.neo4j</groupId>
   <artifactId>neosemantics</artifactId>
-  <version>2025.06.0</version>
+  <version>2025.06.1</version>
   <packaging>jar</packaging>
   <name>neosemantics (n10s)</name>
   <description>n10s is a plugin that enables the use of RDF in Neo4j</description>
@@ -236,6 +236,15 @@
               <goal>shade</goal>
             </goals>
             <configuration>
+              <artifactSet>
+                <excludes>
+                  <exclude>com.fasterxml.jackson.core:*</exclude>
+                  <exclude>com.fasterxml.jackson.datatype:*</exclude>
+                  <exclude>com.fasterxml.jackson.dataformat:*</exclude>
+                  <exclude>com.fasterxml.jackson.module:*</exclude>
+                  <exclude>com.fasterxml.jackson.jaxrs:*</exclude>
+                </excludes>
+              </artifactSet>
               <transformers>
                 <transformer
                   implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
