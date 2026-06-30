@@ -36,7 +36,7 @@
   <properties>
     <neo4j.version>2025.06.2</neo4j.version>
     <sesame.version>4.3.12</sesame.version>
-    <jackson.version>2.19.0</jackson.version>
+    <jackson.version>2.22.0</jackson.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
